@@ -63,6 +63,7 @@ export default function RootLayout() {
             <Stack.Screen name="auction" />
             <Stack.Screen name="sports" />
             <Stack.Screen name="polls" />
+            <Stack.Screen name="commute" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

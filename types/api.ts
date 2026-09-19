@@ -385,6 +385,7 @@ export interface CommunitySettingsDto {
     auction:     boolean;
     jobs:        boolean;
     polls:       boolean;
+    commute:     boolean;
   };
 }
 
@@ -528,4 +529,87 @@ export interface LiveScoreEvent {
   awayWickets?:    number;
   homeSetsWon?:    number;
   awaySetsWon?:    number;
+}
+
+// ── Commute / Carpool ─────────────────────────────────────────
+export type CommuteRideType   = 'OFFER' | 'REQUEST';
+export type CommuteRideStatus = 'ACTIVE' | 'FULL' | 'COMPLETED' | 'CANCELLED';
+export type CommuteBookingStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
+
+export interface CommuteRideDto {
+  id:              number;
+  driverId:        number;
+  driverName:      string;
+  driverFlat?:     string;
+  driverPhoto?:    string;
+  fromLocation:    string;
+  toLocation:      string;
+  fromLat?:        number;
+  fromLng?:        number;
+  toLat?:          number;
+  toLng?:          number;
+  departureTime:   string;
+  rideType:        CommuteRideType;
+  totalSeats:      number;
+  availableSeats:  number;
+  pricePerSeat?:   number;
+  free:            boolean;
+  vehicleType?:    string;
+  vehicleNumber?:  string;
+  notes?:          string;
+  status:          CommuteRideStatus;
+  recurring:       boolean;
+  recurringDays?:  string;
+  recurringTime?:  string;
+  ladiesOnly:      boolean;
+  bookingCount:    number;
+  isMyRide:        boolean;
+  hasBooked:       boolean;
+  myBookingStatus?: CommuteBookingStatus;
+  bookings?:       CommuteBookingDto[];
+  createdAt:       string;
+}
+
+export interface CommuteBookingDto {
+  id:              number;
+  passengerId:     number;
+  passengerName:   string;
+  passengerFlat?:  string;
+  passengerPhoto?: string;
+  seatsBooked:     number;
+  pickupNote?:     string;
+  status:          CommuteBookingStatus;
+  createdAt:       string;
+}
+
+export interface CreateCommuteRideRequest {
+  fromLocation:    string;
+  toLocation:      string;
+  fromLat?:        number;
+  fromLng?:        number;
+  toLat?:          number;
+  toLng?:          number;
+  departureTime:   string;
+  rideType:        CommuteRideType;
+  totalSeats:      number;
+  pricePerSeat?:   number;
+  free:            boolean;
+  vehicleType?:    string;
+  vehicleNumber?:  string;
+  notes?:          string;
+  recurring:       boolean;
+  recurringDays?:  string;
+  recurringTime?:  string;
+  ladiesOnly:      boolean;
+}
+
+export interface CreateCommuteBookingRequest {
+  seatsBooked: number;
+  pickupNote?: string;
+}
+
+export interface CommuteStatsDto {
+  activeRides:    number;
+  myOfferedRides: number;
+  myBookedRides:  number;
 }
