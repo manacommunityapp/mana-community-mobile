@@ -385,7 +385,6 @@ export interface CommunitySettingsDto {
     auction:     boolean;
     jobs:        boolean;
     polls:       boolean;
-    commute:     boolean;
   };
 }
 
@@ -531,85 +530,231 @@ export interface LiveScoreEvent {
   awaySetsWon?:    number;
 }
 
-// ── Commute / Carpool ─────────────────────────────────────────
-export type CommuteRideType   = 'OFFER' | 'REQUEST';
-export type CommuteRideStatus = 'ACTIVE' | 'FULL' | 'COMPLETED' | 'CANCELLED';
-export type CommuteBookingStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
+// ── Job Board ───────────────────────────────────────────────────
+export type JobCategory =
+  | 'HOME_REPAIRS' | 'CLEANING'   | 'CHILDCARE' | 'TUTORING'
+  | 'PET_CARE'     | 'TRANSPORT'  | 'TECH_HELP' | 'COOKING'
+  | 'FITNESS'      | 'MOVING'     | 'GARDEN'    | 'CREATIVE'
+  | 'ERRANDS'      | 'OTHER';
 
-export interface CommuteRideDto {
+export type JobType    = 'ONE_TIME' | 'RECURRING' | 'PART_TIME' | 'FULL_TIME';
+export type PayType    = 'HOURLY'   | 'FIXED'     | 'NEGOTIABLE'| 'VOLUNTEER';
+export type JobStatus  = 'OPEN'     | 'FILLED'    | 'CLOSED'    | 'EXPIRED';
+
+export interface JobDto {
+  id:                   number;
+  posterId:             number;
+  posterName:           string;
+  posterFlat?:          string;
+  title:                string;
+  description:          string;
+  category:             JobCategory;
+  jobType:              JobType;
+  payType:              PayType;
+  payAmount?:           number;
+  location?:            string;
+  status:               JobStatus;
+  applicationCount:     number;
+  hasApplied:           boolean;
+  myApplicationStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  communityId:          number;
+  createdAt:            string;
+  expiresAt?:           string;
+}
+
+export interface JobApplicationDto {
+  id:             number;
+  jobId:          number;
+  applicantId:    number;
+  applicantName:  string;
+  applicantFlat?: string;
+  coverMessage:   string;
+  status:         'PENDING' | 'ACCEPTED' | 'REJECTED';
+  appliedAt:      string;
+}
+
+export interface CreateJobRequest {
+  title:       string;
+  description: string;
+  category:    JobCategory;
+  jobType:     JobType;
+  payType:     PayType;
+  payAmount?:  number;
+  location?:   string;
+  expiresAt?:  string;
+  showFlat:    boolean;
+}
+
+export interface ApplyJobRequest {
+  coverMessage: string;
+}
+
+// ── Onboarding ──────────────────────────────────────────────────
+export interface CommunityPreviewDto {
+  id:          number;
+  name:        string;
+  city:        string;
+  state:       string;
+  area?:       string;
+  memberCount: number;
+  inviteCode:  string;
+}
+
+export type GovtIdType =
+  | 'AADHAAR' | 'PAN' | 'PASSPORT'
+  | 'VOTER_ID' | 'DRIVING_LICENSE';
+
+export interface KycSubmitRequest {
+  govtIdType:        GovtIdType;
+  govtIdNumber:      string;
+  documentFrontUrl:  string;
+  documentBackUrl?:  string;
+}
+
+// ── Cricket Scorecard ──────────────────────────────────────────
+export interface BattingEntryDto {
+  id:         number;
+  playerId:   number;
+  playerName: string;
+  runs:       number;
+  balls:      number;
+  fours:      number;
+  sixes:      number;
+  strikeRate: number;
+  dismissal:  string;
+  isNotOut:   boolean;
+  position:   number;
+}
+
+export interface BowlingEntryDto {
+  id:         number;
+  playerId:   number;
+  playerName: string;
+  overs:      number;
+  maidens:    number;
+  runs:       number;
+  wickets:    number;
+  economy:    number;
+  wides:      number;
+  noBalls:    number;
+}
+
+export interface InningsDto {
   id:              number;
-  driverId:        number;
-  driverName:      string;
-  driverFlat?:     string;
-  driverPhoto?:    string;
-  fromLocation:    string;
-  toLocation:      string;
-  fromLat?:        number;
-  fromLng?:        number;
-  toLat?:          number;
-  toLng?:          number;
-  departureTime:   string;
-  rideType:        CommuteRideType;
-  totalSeats:      number;
-  availableSeats:  number;
-  pricePerSeat?:   number;
-  free:            boolean;
-  vehicleType?:    string;
-  vehicleNumber?:  string;
-  notes?:          string;
-  status:          CommuteRideStatus;
-  recurring:       boolean;
-  recurringDays?:  string;
-  recurringTime?:  string;
-  ladiesOnly:      boolean;
-  bookingCount:    number;
-  isMyRide:        boolean;
-  hasBooked:       boolean;
-  myBookingStatus?: CommuteBookingStatus;
-  bookings?:       CommuteBookingDto[];
-  createdAt:       string;
+  inningsNumber:   1 | 2;
+  battingTeamId:   number;
+  battingTeamName: string;
+  totalRuns:       number;
+  wickets:         number;
+  overs:           string;
+  extras:          number;
+  batting:         BattingEntryDto[];
+  bowling:         BowlingEntryDto[];
 }
 
-export interface CommuteBookingDto {
-  id:              number;
-  passengerId:     number;
-  passengerName:   string;
-  passengerFlat?:  string;
-  passengerPhoto?: string;
-  seatsBooked:     number;
-  pickupNote?:     string;
-  status:          CommuteBookingStatus;
-  createdAt:       string;
+export interface CricketScorecardDto {
+  matchId:        number;
+  matchTitle:     string;
+  firstInnings:   InningsDto;
+  secondInnings?: InningsDto;
+  result?:        string;
+  manOfMatch?:    { playerId: number; playerName: string; contribution: string };
 }
 
-export interface CreateCommuteRideRequest {
-  fromLocation:    string;
-  toLocation:      string;
-  fromLat?:        number;
-  fromLng?:        number;
-  toLat?:          number;
-  toLng?:          number;
-  departureTime:   string;
-  rideType:        CommuteRideType;
-  totalSeats:      number;
-  pricePerSeat?:   number;
-  free:            boolean;
-  vehicleType?:    string;
-  vehicleNumber?:  string;
-  notes?:          string;
-  recurring:       boolean;
-  recurringDays?:  string;
-  recurringTime?:  string;
-  ladiesOnly:      boolean;
+export interface SportStatDto {
+  sport:           SportType;
+  matchesPlayed:   number;
+  wins:            number;
+  losses:          number;
+  draws:           number;
+  winRate:         number;
+  tournaments:     number;
+  trophies:        number;
+  totalRuns?:      number;
+  highestScore?:   number;
+  battingAverage?: number;
+  totalWickets?:   number;
+  bestBowling?:    string;
+  goals?:          number;
+  assists?:        number;
 }
 
-export interface CreateCommuteBookingRequest {
-  seatsBooked: number;
-  pickupNote?: string;
+export interface PlayerProfileDto {
+  userId:          number;
+  name:            string;
+  flatNo?:         string;
+  profilePicUrl?:  string;
+  sportStats:      SportStatDto[];
+  badges:          BadgeDto[];
+  communityRating: number;
+  ratingCount:     number;
+  totalMatches:    number;
+  totalTrophies:   number;
+  recentMatches:   { matchId: number; result: string; sport: SportType; date: string }[];
 }
 
-export interface CommuteStatsDto {
-  activeRides:    number;
-  myOfferedRides: number;
-  myBookedRides:  number;
+export interface BadgeDto {
+  id:          string;
+  name:        string;
+  description: string;
+  emoji:       string;
+  category:    'achievement' | 'milestone' | 'participation';
+  earnedAt?:   string;
+  isEarned:    boolean;
+  rarity:      'common' | 'rare' | 'epic' | 'legendary';
+}
+
+export type LeaderboardCategory =
+  | 'WINS' | 'RUNS' | 'WICKETS' | 'GOALS' | 'MATCHES_PLAYED' | 'TROPHIES' | 'RATING';
+
+export interface LeaderboardEntryDto {
+  rank:          number;
+  userId:        number;
+  name:          string;
+  flatNo?:       string;
+  value:         number;
+  displayValue:  string;
+  topBadge?:     BadgeDto;
+  isCurrentUser: boolean;
+}
+
+export interface MatchPhotoDto {
+  id:           number;
+  matchId:      number;
+  uploadedById: number;
+  uploaderName: string;
+  imageUrl:     string;
+  caption?:     string;
+  likeCount:    number;
+  isLiked:      boolean;
+  createdAt:    string;
+}
+
+export type PlayerReaction = 'BEST_PLAYER' | 'CLUTCH' | 'TEAM_PLAYER' | 'GOOD_SPORT' | 'CONSISTENT';
+
+export interface MatchRatingPlayerDto {
+  playerId:      number;
+  playerName:    string;
+  flatNo?:       string;
+  averageRating: number;
+  ratingCount:   number;
+  topReaction?:  PlayerReaction;
+  isManOfMatch:  boolean;
+}
+
+export interface MatchRatingSummaryDto {
+  matchId:    number;
+  canRate:    boolean;
+  hasRated:   boolean;
+  players:    MatchRatingPlayerDto[];
+  manOfMatch?: { playerId: number; playerName: string; voteCount: number };
+}
+
+export interface SubmitRatingsRequest {
+  ratings: {
+    playerId:     number;
+    stars:        number;
+    reaction?:    PlayerReaction;
+    isManOfMatch: boolean;
+  }[];
 }
