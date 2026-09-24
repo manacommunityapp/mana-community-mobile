@@ -98,3 +98,87 @@ export const sportsService = {
     return res.data;
   },
 };
+
+  // ── Cricket Scorecard ────────────────────────────────────────
+  async getScorecard(matchId: number): Promise<CricketScorecardDto> {
+    const res = await api.get<CricketScorecardDto>(`/sports/matches/${matchId}/scorecard`);
+    return res.data;
+  },
+
+  async saveScorecard(matchId: number, data: any): Promise<CricketScorecardDto> {
+    const res = await api.put<CricketScorecardDto>(`/sports/matches/${matchId}/scorecard`, data);
+    return res.data;
+  },
+
+  // ── Player Profile & Career Stats ────────────────────────────
+  async getPlayerProfile(userId: number): Promise<PlayerProfileDto> {
+    const res = await api.get<PlayerProfileDto>(`/sports/players/${userId}`);
+    return res.data;
+  },
+
+  async getMyProfile(): Promise<PlayerProfileDto> {
+    const res = await api.get<PlayerProfileDto>('/sports/players/me');
+    return res.data;
+  },
+
+  // ── Leaderboard ──────────────────────────────────────────────
+  async getLeaderboard(
+    sport: SportType | 'ALL',
+    category: LeaderboardCategory,
+    period: 'MONTH' | 'SEASON' | 'ALL_TIME' = 'ALL_TIME',
+  ): Promise<LeaderboardEntryDto[]> {
+    const res = await api.get<LeaderboardEntryDto[]>('/sports/leaderboard', {
+      params: {
+        sport:    sport === 'ALL' ? undefined : sport,
+        category,
+        period,
+      },
+    });
+    return res.data;
+  },
+
+  // ── Badges ───────────────────────────────────────────────────
+  async getAllBadges(): Promise<BadgeDto[]> {
+    const res = await api.get<BadgeDto[]>('/sports/badges');
+    return res.data;
+  },
+
+  async getPlayerBadges(userId: number): Promise<BadgeDto[]> {
+    const res = await api.get<BadgeDto[]>(`/sports/players/${userId}/badges`);
+    return res.data;
+  },
+
+  // ── Match Photo Gallery ──────────────────────────────────────
+  async getMatchPhotos(matchId: number): Promise<MatchPhotoDto[]> {
+    const res = await api.get<MatchPhotoDto[]>(`/sports/matches/${matchId}/photos`);
+    return res.data;
+  },
+
+  async uploadMatchPhoto(matchId: number, localUri: string, caption?: string): Promise<MatchPhotoDto> {
+    const filename = localUri.split('/').pop() ?? 'photo.jpg';
+    const form = new FormData();
+    form.append('file', { uri: localUri, name: filename, type: 'image/jpeg' } as any);
+    if (caption) form.append('caption', caption);
+    const res = await api.post<MatchPhotoDto>(`/sports/matches/${matchId}/photos`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  async togglePhotoLike(matchId: number, photoId: number): Promise<void> {
+    await api.post(`/sports/matches/${matchId}/photos/${photoId}/like`);
+  },
+
+  async deleteMatchPhoto(matchId: number, photoId: number): Promise<void> {
+    await api.delete(`/sports/matches/${matchId}/photos/${photoId}`);
+  },
+
+  // ── Peer Ratings ─────────────────────────────────────────────
+  async getMatchRatings(matchId: number): Promise<MatchRatingSummaryDto> {
+    const res = await api.get<MatchRatingSummaryDto>(`/sports/matches/${matchId}/ratings`);
+    return res.data;
+  },
+
+  async submitMatchRatings(matchId: number, data: SubmitRatingsRequest): Promise<void> {
+    await api.post(`/sports/matches/${matchId}/ratings`, data);
+  },
