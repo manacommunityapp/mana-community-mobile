@@ -198,21 +198,45 @@ Access in code: `process.env.EXPO_PUBLIC_API_URL`
 
 ---
 
-## Screens Roadmap
+## Screens & Modules
 
-| Screen              | Status      |
-|---------------------|-------------|
-| Login               | ✅ Done     |
-| Register            | ✅ Done     |
-| Forgot Password     | ✅ Done     |
-| Community Feed      | ✅ Done     |
-| Events + RSVP       | ✅ Done     |
-| Sports Hub          | ✅ Done     |
-| Chat List           | ✅ Done     |
-| Chat Window         | 🔜 Next     |
-| Profile             | ✅ Done     |
-| Edit Profile        | 🔜 Next     |
-| Notifications       | 🔜 Next     |
-| Marketplace         | 🔜 Next     |
-| Auction (live)      | 🔜 Next     |
-| Admin Panel         | 🔜 Next     |
+| Screen / Module       | Status      | Notes                                               |
+|-----------------------|-------------|-----------------------------------------------------|
+| Login                 | ✅ Done     | JWT + refresh token                                 |
+| Register              | ✅ Done     | Community invite code flow                          |
+| Forgot Password       | ✅ Done     |                                                     |
+| Community Feed        | ✅ Done     | Infinite scroll, inline polls, 📊 Poll FAB          |
+| Events + RSVP         | ✅ Done     |                                                     |
+| Chat List             | ✅ Done     |                                                     |
+| Chat Window           | ✅ Done     | STOMP real-time, typing indicators, message bubbles |
+| Profile               | ✅ Done     |                                                     |
+| Edit Profile          | ✅ Done     | Image upload via `/api/media/upload`                |
+| Notifications         | ✅ Done     | In-app notification centre, unread badge            |
+| **Marketplace**       | ✅ Done     | Browse, create, wishlist toggle, image upload, report — URLs aligned to PR #167 |
+| **Auction**           | ✅ Done     | Live bidding via STOMP, countdown timer, bid feed   |
+| **Admin Panel**       | ✅ Done     | Stats dashboard, member approve/reject/suspend, content moderation, announcements, community settings, invite code |
+| **Sports**            | ✅ Done     | Tournament list + detail + standings, match schedule, live score room (STOMP), team registration |
+| **Polls**             | ✅ Done     | Create poll, vote, animated result bars, comments, live refresh |
+
+---
+
+## Backend Modules Built (Spring Boot)
+
+| Module                | Base Path                      | Key Features                                                        |
+|-----------------------|-------------------------------|----------------------------------------------------------------------|
+| Admin                 | `/api/admin/*`                 | Stats, member lifecycle, content moderation, announcements, settings, invite code rotation |
+| Push Notifications    | `/api/users/push-token`        | Expo Push API v2, 100-msg batching, token cleanup, Spring application events |
+| Marketplace URLs      | `/api/marketplace/listings`    | Mobile service aligned to develop branch PR #167 URL contract        |
+
+---
+
+## Remaining Features
+
+| Feature                     | Status         |
+|-----------------------------|----------------|
+| Visitor Passes (QR gate pass)| 🔜 Not built  |
+| Job Board                   | 🔜 Not built   |
+| Onboarding flow             | 🔜 Not built   |
+| Dark mode                   | 🔜 Not built   |
+| CI/CD (GitHub Actions + EAS)| 🔜 Not built   |
+| App Store submission        | 🔜 Not built   |
