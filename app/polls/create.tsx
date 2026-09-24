@@ -22,6 +22,7 @@ export default function CreatePollScreen() {
   const [options,      setOptions]      = useState<string[]>(['', '']);
   const [deadline,     setDeadline]     = useState<Date | null>(null);
   const [showPicker,   setShowPicker]   = useState(false);
+  const [pickerMode,   setPickerMode]   = useState<'date' | 'time' | 'datetime'>(Platform.OS === 'ios' ? 'datetime' : 'date');
   const [multiVote,    setMultiVote]    = useState(false);
   const [anonymous,    setAnonymous]    = useState(false);
 
@@ -151,7 +152,13 @@ export default function CreatePollScreen() {
             <Text style={s.sectionTitle}>Settings</Text>
 
             {/* Deadline */}
-            <TouchableOpacity style={s.settingRow} onPress={() => setShowPicker(true)}>
+            <TouchableOpacity
+              style={s.settingRow}
+              onPress={() => {
+                setPickerMode(Platform.OS === 'ios' ? 'datetime' : 'date');
+                setShowPicker(true);
+              }}
+            >
               <View style={s.settingInfo}>
                 <Text style={s.settingLabel}>⏰ Poll deadline</Text>
                 <Text style={s.settingDesc}>
@@ -236,11 +243,34 @@ export default function CreatePollScreen() {
       {showPicker && (
         <DateTimePicker
           value={deadline ?? new Date(Date.now() + 24 * 60 * 60 * 1000)}
-          mode="datetime"
+          mode={pickerMode as any}
           minimumDate={new Date()}
           onChange={(_, date) => {
-            setShowPicker(false);
-            if (date) setDeadline(date);
+            if (Platform.OS === 'android') {
+              if (pickerMode === 'date') {
+                if (date) {
+                  setDeadline(date);
+                  setPickerMode('time');
+                } else {
+                  setShowPicker(false);
+                }
+              } else {
+                setShowPicker(false);
+                setPickerMode('date');
+                if (date) {
+                  setDeadline((prev) => {
+                    const base = prev ?? new Date();
+                    const combined = new Date(base);
+                    combined.setHours(date.getHours());
+                    combined.setMinutes(date.getMinutes());
+                    return combined;
+                  });
+                }
+              }
+            } else {
+              setShowPicker(false);
+              if (date) setDeadline(date);
+            }
           }}
         />
       )}

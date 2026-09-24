@@ -17,30 +17,41 @@ const queryClient = new QueryClient({
 });
 
 function AuthGuard() {
-  const { isAuthenticated, isLoading, loadUser } = useAuth();
+  const { isAuthenticated, isLoading, isPending, isRejected, loadUser } = useAuth();
   const router   = useRouter();
   const segments = useSegments();
 
-  // 🔔 Initialise push notifications once the user is authenticated
-  usePushNotifications(isAuthenticated);
+  // Initialise push notifications once verified and authenticated
+  usePushNotifications(isAuthenticated && !isPending);
 
-  useEffect(() => {
-    loadUser();
-  }, []);
+  useEffect(() => { loadUser(); }, []);
 
   useEffect(() => {
     if (isLoading) return;
-
     SplashScreen.hideAsync();
 
-    const inAuthGroup = segments[0] === 'auth';
+    const group = segments[0] as string | undefined;
+    const inAuth        = group === 'auth';
+    const inOnboarding  = group === 'onboarding';
+    const inTabs        = group === 'tabs';
 
-    if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/auth/login');
-    } else if (isAuthenticated && inAuthGroup) {
+    if (!isAuthenticated) {
+      // Not logged in → welcome / onboarding entry
+      if (!inOnboarding && !inAuth) router.replace('/onboarding');
+      return;
+    }
+
+    if (isPending || isRejected) {
+      // Logged in but awaiting admin approval (or rejected)
+      if (!inOnboarding) router.replace('/onboarding/pending');
+      return;
+    }
+
+    // Fully verified — send to main app
+    if (inOnboarding || inAuth) {
       router.replace('/tabs/feed');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, isPending, isRejected, segments]);
 
   return null;
 }
@@ -53,6 +64,7 @@ export default function RootLayout() {
           <AuthGuard />
           <StatusBar style="auto" />
           <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="onboarding" />
             <Stack.Screen name="auth" />
             <Stack.Screen name="tabs" />
             <Stack.Screen name="chat" />
@@ -62,7 +74,9 @@ export default function RootLayout() {
             <Stack.Screen name="marketplace" />
             <Stack.Screen name="auction" />
             <Stack.Screen name="sports" />
+            <Stack.Screen name="events" />
             <Stack.Screen name="polls" />
+            <Stack.Screen name="jobs" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

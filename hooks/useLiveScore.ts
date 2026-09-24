@@ -11,6 +11,7 @@ interface UseLiveScoreReturn {
   isLoading:    boolean;
   connected:    boolean;
   matchEnded:   boolean;
+  refetch:      () => Promise<void>;
 }
 
 export function useLiveScore(matchId: number): UseLiveScoreReturn {
@@ -21,28 +22,26 @@ export function useLiveScore(matchId: number): UseLiveScoreReturn {
   const [matchEnded, setMatchEnded] = useState(false);
   const stompRef = useRef<Client | null>(null);
 
+  const fetchMatch = useCallback(async () => {
+    try {
+      const [m, ev] = await Promise.all([
+        sportsService.getMatch(matchId),
+        sportsService.getMatchEvents(matchId),
+      ]);
+      setMatch(m);
+      setEvents(ev);
+      setMatchEnded(m.status === 'COMPLETED' || m.status === 'CANCELLED');
+    } catch (err) {
+      console.error('[LiveScore] Load failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [matchId]);
+
   // Load initial match data + event history
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setIsLoading(true);
-      try {
-        const [m, ev] = await Promise.all([
-          sportsService.getMatch(matchId),
-          sportsService.getMatchEvents(matchId),
-        ]);
-        if (cancelled) return;
-        setMatch(m);
-        setEvents(ev);
-        setMatchEnded(m.status === 'COMPLETED' || m.status === 'CANCELLED');
-      } catch (err) {
-        console.error('[LiveScore] Load failed:', err);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [matchId]);
+    fetchMatch();
+  }, [fetchMatch]);
 
   // STOMP subscription
   useEffect(() => {
@@ -129,5 +128,5 @@ export function useLiveScore(matchId: number): UseLiveScoreReturn {
     }
   }, []);
 
-  return { match, events, isLoading, connected, matchEnded };
+  return { match, events, isLoading, connected, matchEnded, refetch: fetchMatch };
 }

@@ -2,10 +2,12 @@ import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
   TouchableOpacity, ScrollView, ActivityIndicator,
-  RefreshControl, Dimensions,
+  RefreshControl, Dimensions, BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { marketplaceService } from '@/services/marketplaceService';
 import { ListingCard } from '@/components/marketplace/ListingCard';
@@ -29,7 +31,7 @@ const CATEGORIES: { key: MarketplaceCategory; label: string; emoji: string }[] =
   { key: 'OTHER',       label: 'Other',       emoji: '📦' },
 ];
 
-export default function MarketplaceBrowseScreen() {
+export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boolean }) {
   const router     = useRouter();
   const qc         = useQueryClient();
   const searchRef  = useRef<TextInput>(null);
@@ -37,6 +39,25 @@ export default function MarketplaceBrowseScreen() {
   const [search,   setSearch]   = useState('');
   const [category, setCategory] = useState<MarketplaceCategory>('ALL');
   const [freeOnly, setFreeOnly] = useState(false);
+
+  const goHome = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/tabs/feed');
+    }
+  }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isTab) return;
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goHome();
+        return true;
+      });
+      return () => sub.remove();
+    }, [goHome, isTab])
+  );
 
   // Apply free filter if FREE category selected
   const activeCategory = category === 'FREE' ? 'ALL' : category;
@@ -87,11 +108,18 @@ export default function MarketplaceBrowseScreen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerTop}>
-          <View>
-            <Text style={s.headerTitle}>Marketplace</Text>
-            {!isLoading && (
-              <Text style={s.headerSub}>{total} listings in your community</Text>
+          <View style={s.headerLeft}>
+            {!isTab && (
+              <TouchableOpacity onPress={goHome} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={s.backBtn}>
+                <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+              </TouchableOpacity>
             )}
+            <View>
+              <Text style={s.headerTitle}>Marketplace</Text>
+              {!isLoading && (
+                <Text style={s.headerSub}>{total} listings in your community</Text>
+              )}
+            </View>
           </View>
           <View style={s.headerActions}>
             <TouchableOpacity
@@ -205,7 +233,9 @@ export default function MarketplaceBrowseScreen() {
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: COLORS.background },
   header:       { backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingTop: 4 },
-  headerTop:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 10 },
+  headerTop:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 10 },
+  headerLeft:   { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   headerTitle:  { fontSize: 22, fontWeight: '800', color: COLORS.text },
   headerSub:    { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   headerActions:{ flexDirection: 'row', gap: 8, alignItems: 'center' },

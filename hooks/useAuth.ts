@@ -38,12 +38,30 @@ export const useAuth = create<AuthState>((set) => ({
 
   login: async (data) => {
     const res = await authService.login(data);
-    set({ user: res.user, isAuthenticated: true });
+    const user: UserProfileResponse = {
+      id: Number(res.userId),
+      name: res.fullName,
+      email: res.email,
+      role: res.role,
+      status: 'ACTIVE',
+      communityId: res.communityId,
+      createdAt: new Date().toISOString(),
+    };
+    set({ user, isAuthenticated: true });
   },
 
   register: async (data) => {
     const res = await authService.register(data);
-    set({ user: res.user, isAuthenticated: true });
+    const user: UserProfileResponse = {
+      id: Number(res.userId),
+      name: res.fullName,
+      email: res.email,
+      role: res.role,
+      status: 'ACTIVE',
+      communityId: res.communityId,
+      createdAt: new Date().toISOString(),
+    };
+    set({ user, isAuthenticated: true });
   },
 
   logout: async () => {

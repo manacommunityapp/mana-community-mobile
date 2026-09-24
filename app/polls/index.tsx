@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { pollService } from '@/services/pollService';
 import { PollCard } from '@/components/polls/PollCard';
@@ -71,6 +73,24 @@ export default function PollsScreen() {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('ACTIVE');
 
+  const goHome = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/tabs/feed');
+    }
+  }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goHome();
+        return true;
+      });
+      return () => sub.remove();
+    }, [goHome])
+  );
+
   const isMine = tab === 'MINE';
 
   const {
@@ -99,8 +119,8 @@ export default function PollsScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={s.back}>‹</Text>
+        <TouchableOpacity onPress={goHome} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Community Polls</Text>
         <TouchableOpacity
@@ -161,7 +181,7 @@ export default function PollsScreen() {
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: COLORS.background },
   header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
-  back:         { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
+  backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   headerTitle:  { fontSize: 18, fontWeight: '700', color: COLORS.text, flex: 1 },
   createBtn:    { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 },
   createBtnText:{ color: '#fff', fontWeight: '700', fontSize: 14 },
@@ -171,6 +191,7 @@ const s = StyleSheet.create({
   tabText:      { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
   tabTextActive:{ color: COLORS.primary, fontWeight: '700' },
   tabCount:     { backgroundColor: COLORS.primary, borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  tabCountText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   item:         { backgroundColor: COLORS.surface, marginHorizontal: 12, marginVertical: 5, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 10 },
   authorRow:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar:       { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },

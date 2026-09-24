@@ -87,10 +87,25 @@ export function useChatWindow(
             (frame: IMessage) => {
               try {
                 const msg: ChatMessageDto = JSON.parse(frame.body);
-                // Ignore echo of own messages sent via STOMP (REST fallback handles it)
-                if (msg.senderId === currentUserId) return;
                 setMessages((prev) => {
                   if (prev.find((m) => m.id === msg.id)) return prev;
+
+                  // Reconcile optimistic self message
+                  if (msg.senderId === currentUserId) {
+                    const optIdx = prev.findIndex(
+                      (m) =>
+                        m.senderId === currentUserId &&
+                        m.content === msg.content &&
+                        typeof m.id === 'number' &&
+                        m.id > 1000000000000
+                    );
+                    if (optIdx !== -1) {
+                      const updated = [...prev];
+                      updated[optIdx] = msg;
+                      return updated;
+                    }
+                  }
+
                   return [...prev, msg];
                 });
                 chatService.markRead(conversationId).catch(() => {});

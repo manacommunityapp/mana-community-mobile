@@ -14,7 +14,7 @@ export const pollService = {
   },
 
   async getMyPolls(page = 0): Promise<PageResponse<PostDto>> {
-    const res = await api.get<PageResponse<PostDto>>('/polls/my', {
+    const res = await api.get<PageResponse<PostDto>>('/polls/mine', {
       params: { page, size: 20 },
     });
     return res.data;

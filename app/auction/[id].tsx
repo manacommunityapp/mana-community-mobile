@@ -50,7 +50,7 @@ function AnimatedPrice({
 
 const ap = StyleSheet.create({
   wrap:  { alignItems: 'center', position: 'relative' },
-  flash: { ...StyleSheet.absoluteFillObject, backgroundColor: '#FEF9C3', borderRadius: 12 },
+  flash: { ...StyleSheet.absoluteFill, backgroundColor: '#FEF9C3', borderRadius: 12 },
   label: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 4, letterSpacing: 0.5 },
   price: { fontSize: 42, fontWeight: '900', color: COLORS.primary, fontVariant: ['tabular-nums'] as any },
 });

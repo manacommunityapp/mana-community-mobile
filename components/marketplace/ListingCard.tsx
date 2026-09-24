@@ -111,7 +111,7 @@ const s = StyleSheet.create({
   image:                { width: '100%', height: '100%' },
   imagePlaceholder:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
   imagePlaceholderEmoji:{ fontSize: 40 },
-  soldOverlay:          { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  soldOverlay:          { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   soldText:             { color: '#fff', fontWeight: '900', fontSize: 18, letterSpacing: 2 },
   freeBadge:            { position: 'absolute', top: 8, left: 8, backgroundColor: COLORS.success, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   freeBadgeText:        { color: '#fff', fontWeight: '800', fontSize: 11 },

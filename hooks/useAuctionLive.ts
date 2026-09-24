@@ -144,20 +144,22 @@ export function useAuctionLive(
           const updated = prev.map((b) => ({ ...b, isWinning: false }));
           return [...updated, newBid];
         });
-        // Update auction state
-        setAuction((prev) => prev ? {
-          ...prev,
-          currentBid:      event.amount!,
-          currentBidder:   event.bidderName!,
-          currentBidderId: event.bidderId!,
-          bidCount:        prev.bidCount + 1,
-          status:          'LIVE',
-        } : prev);
+        // Update auction state & only trigger outbid if current user was previously leading
+        setAuction((prev) => {
+          if (!prev) return prev;
+          if (prev.currentBidderId === currentUserId && event.bidderId !== currentUserId) {
+            setWasOutbid(true);
+          }
+          return {
+            ...prev,
+            currentBid:      event.amount!,
+            currentBidder:   event.bidderName!,
+            currentBidderId: event.bidderId!,
+            bidCount:        prev.bidCount + 1,
+            status:          'LIVE',
+          };
+        });
         triggerFlash();
-        // If current user was outbid
-        if (event.bidderId !== currentUserId) {
-          setWasOutbid(true);
-        }
         break;
       }
 

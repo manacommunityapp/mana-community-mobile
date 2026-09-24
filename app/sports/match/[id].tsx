@@ -1,14 +1,16 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList,
   ActivityIndicator, TouchableOpacity, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useLiveScore } from '@/hooks/useLiveScore';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS } from '@/constants/config';
+import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { format, formatDistanceToNow } from 'date-fns';
+import { LiveScoringModal } from '@/components/sports/LiveScoringModal';
 import type { MatchDto, MatchEventDto } from '@/types/api';
 
 const SPORT_EMOJI: Record<string, string> = {
@@ -160,10 +162,16 @@ const er = StyleSheet.create({
 export default function LiveMatchScreen() {
   const { id }    = useLocalSearchParams<{ id: string }>();
   const router    = useRouter();
-  const feedRef   = useRef<FlatList<MatchEventDto>>(null);
+  const { user }  = useAuth();
   const flashAnim = useRef(new Animated.Value(0)).current;
+  const [showScorer, setShowScorer] = useState(false);
 
-  const { match, events, isLoading, connected, matchEnded } = useLiveScore(Number(id));
+  const { match, events, isLoading, connected, matchEnded, refetch } = useLiveScore(Number(id));
+
+  const canScore = user != null && (
+    ['ADMIN', 'SUPER_ADMIN', 'SPORTS_ADMIN', 'SPORTS_REFEREE', 'MODERATOR'].includes(user.role) ||
+    __DEV__
+  );
 
   const prevEventsLen = useRef(0);
 
@@ -175,7 +183,6 @@ export default function LiveMatchScreen() {
         Animated.timing(flashAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
         Animated.timing(flashAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
       ]).start();
-      feedRef.current?.scrollToEnd({ animated: true });
     }
   }, [events.length]);
 
@@ -235,6 +242,21 @@ export default function LiveMatchScreen() {
             <Scoreboard match={match} />
           </Animated.View>
 
+          {/* Official Scorer trigger button */}
+          {canScore && !isDone && (
+            <TouchableOpacity
+              style={scr.scorerTriggerBtn}
+              onPress={() => setShowScorer(true)}
+              activeOpacity={0.85}
+            >
+              <View style={scr.scorerTriggerBadge}>
+                <Ionicons name="flash" size={12} color="#fff" />
+              </View>
+              <Text style={scr.scorerTriggerText}>Live Umpire Scoring Sheet</Text>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+            </TouchableOpacity>
+          )}
+
           {isDone && (
             <View style={scr.resultBanner}>
               <Text style={scr.resultText}>
@@ -268,6 +290,32 @@ export default function LiveMatchScreen() {
           [...events].reverse().map((ev) => <EventRow key={ev.id} ev={ev} />)
         )}
 
+        {/* Action buttons row */}
+        <View style={scr.actionRow}>
+          <TouchableOpacity
+            style={scr.actionBtn}
+            onPress={() => router.push(`/sports/photos/${match.id}`)}
+          >
+            <Text style={scr.actionBtnText}>📸 Photos</Text>
+          </TouchableOpacity>
+          {match.sport === 'CRICKET' && (
+            <TouchableOpacity
+              style={scr.actionBtn}
+              onPress={() => router.push(`/sports/scorecard/${match.id}`)}
+            >
+              <Text style={scr.actionBtnText}>📋 Scorecard</Text>
+            </TouchableOpacity>
+          )}
+          {isDone && (
+            <TouchableOpacity
+              style={scr.actionBtn}
+              onPress={() => router.push(`/sports/rate/${match.id}`)}
+            >
+              <Text style={scr.actionBtnText}>⭐ Rate Players</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Scheduled info */}
         {match.status === 'SCHEDULED' && (
           <View style={scr.scheduledCard}>
@@ -281,6 +329,16 @@ export default function LiveMatchScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* Live Umpire / Scorer Modal */}
+      {match && (
+        <LiveScoringModal
+          visible={showScorer}
+          match={match}
+          onClose={() => setShowScorer(false)}
+          onRefreshMatch={refetch}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -302,11 +360,41 @@ const scr = StyleSheet.create({
   scheduledTime:  { fontSize: 13, color: COLORS.textMuted, textAlign: 'center' },
   venue:          { fontSize: 12, color: COLORS.textMuted, textAlign: 'center' },
   scoreboard:     { paddingVertical: 8 },
+  scorerTriggerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryMid,
+    borderRadius: RADIUS.lg,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 4,
+    ...SHADOWS.sm,
+  },
+  scorerTriggerBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scorerTriggerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
   resultBanner:   { backgroundColor: '#EEF2FF', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
   resultText:     { fontSize: 16, fontWeight: '800', color: COLORS.primary },
   feedHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   feedTitle:      { fontSize: 14, fontWeight: '700', color: COLORS.text },
   feedCount:      { fontSize: 12, color: COLORS.textMuted },
+  actionRow:      { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  actionBtn:      { flex: 1, backgroundColor: '#EEF2FF', borderRadius: 10, paddingVertical: 9, alignItems: 'center', borderWidth: 1, borderColor: '#C7D2FE' },
+  actionBtnText:  { fontSize: 12, fontWeight: '700', color: COLORS.primary },
   noEvents:       { padding: 32, alignItems: 'center' },
   noEventsText:   { fontSize: 14, color: COLORS.textMuted, textAlign: 'center' },
   scheduledCard:  { alignItems: 'center', padding: 40, gap: 10 },
@@ -314,3 +402,4 @@ const scr = StyleSheet.create({
   scheduledTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
   scheduledSub:   { fontSize: 14, color: COLORS.textMuted, textAlign: 'center' },
 });
+

@@ -1,44 +1,74 @@
 // ── Auth ───────────────────────────────────────────────────────
 export interface LoginRequest {
-  email: string;
+  identifier: string;
   password: string;
 }
 
 export interface LoginResponse {
-  accessToken: string;
+  userId: string;
+  message: string;
+  token: string;
   refreshToken: string;
-  tokenType: string;
-  expiresIn: number;
-  user: UserProfileResponse;
+  fullName: string;
+  email: string;
+  role: string;
+  communityId: number;
+  dateOfBirth?: string;
+  enabledModules?: string[];
+  occupancyStatus?: string;
+  userType?: string;
+  residentType?: string;
 }
 
 export interface RegisterRequest {
-  name: string;
+  fullName: string;
   email: string;
-  mobile: string;
+  phone: string;
   password: string;
-  communityCode?: string;
-  flatNumber?: string;
-  tower?: string;
+  inviteCode: string;
+  dateOfBirth?: string;
+  gender: string;
+  flatNo: string;
+  block: string;
+  userType?: string;
+  occupancyStatus?: string;
+  residentType?: string;
+  aadharNumber?: string;
+  emailOtpCode?: string;
 }
 
 // ── User / Profile ─────────────────────────────────────────────
 export interface UserProfileResponse {
   id: number;
+  fullName?: string;
   name: string;
   email: string;
+  phone?: string;
   mobile?: string;
+  flatNo?: string;
   flatNumber?: string;
+  block?: string;
   tower?: string;
   profession?: string;
   bio?: string;
+  profilePicUrl?: string;
   profilePhoto?: string;
   role: string;
+  roles?: string[];
+  kycStatus?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  residentType?: string;
+  occupancyStatus?: string;
+  userType?: string;
   status: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
+  isActive?: boolean;
   verifiedAt?: string;
   createdAt: string;
   communityId?: number;
   communityName?: string;
+  enabledModules?: string[];
+  permissions?: string[];
 }
 
 // ── Community ──────────────────────────────────────────────────
@@ -115,20 +145,83 @@ export interface CreatePostRequest {
 }
 
 // ── Events ─────────────────────────────────────────────────────
+export type EventType = 'COMMUNITY' | 'SOCIAL' | 'SPORTS' | 'CULTURAL' | 'RELIGIOUS' | 'MEETING' | 'WORKSHOP' | 'OTHER';
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED';
+export type EventPriceType = 'FREE' | 'PAID' | 'DONATION';
+export type EventLocationType = 'PHYSICAL' | 'ONLINE' | 'HYBRID';
+
 export interface EventDto {
   id: number;
   title: string;
   description: string;
-  category: string;
-  communityId: number;
+  type: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  locationType: string;
+  location: string;
+  priceType: string;
+  price: number | null;
+  capacity: number | null;
+  maxAttendees: number | null;
+  imageUrl: string | null;
   organizerName: string;
-  startAt: string;
-  endAt: string;
+  organizerContact: string | null;
   venue: string;
-  capacity: number;
-  rsvpCount: number;
-  rsvped: boolean;
+  city: string | null;
+  category: string;
+  status: string;
+  notes: string | null;
+  registrationDeadline: string | null;
+  registrationCount: number;
+  isRegistered: boolean;
+  createdById: number;
+  createdByName: string;
+  communityId: number;
+  attendees: number;
   createdAt: string;
+  // Legacy compatibility
+  startAt?: string;
+  endAt?: string;
+  rsvpCount?: number;
+  rsvped?: boolean;
+}
+
+export interface CreateEventRequest {
+  title: string;
+  description?: string;
+  type?: string;
+  startDate: string;
+  endDate?: string;
+  startTime: string;
+  endTime?: string;
+  locationType?: string;
+  location?: string;
+  priceType?: string;
+  price?: number;
+  capacity?: number;
+  imageUrl?: string;
+  organizerName?: string;
+  organizerContact?: string;
+  venue?: string;
+  city?: string;
+  category?: string;
+  status?: string;
+  notes?: string;
+  maxAttendees?: number;
+  registrationDeadline?: string;
+}
+
+export interface EventRegistrationDto {
+  id: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  eventId: number;
+  status: string;
+  checkedIn: boolean;
+  registeredAt: string;
 }
 
 // ── Chat ───────────────────────────────────────────────────────
@@ -385,6 +478,7 @@ export interface CommunitySettingsDto {
     auction:     boolean;
     jobs:        boolean;
     polls:       boolean;
+    commute:     boolean;
   };
 }
 
@@ -528,4 +622,312 @@ export interface LiveScoreEvent {
   awayWickets?:    number;
   homeSetsWon?:    number;
   awaySetsWon?:    number;
+}
+
+export interface BallEventRequest {
+  matchId:            number;
+  inningsNumber:      number;
+  batsmanId?:         number;
+  nonStrikerId?:      number;
+  bowlerId?:          number;
+  runsScored:         number;
+  isBoundary?:        boolean;
+  isSix?:             boolean;
+  extrasType?:        string;
+  extrasRuns?:        number;
+  isWicket?:          boolean;
+  dismissalType?:     string;
+  dismissedPlayerId?: number;
+  fielderId?:         number;
+}
+
+export interface GenericScoreRequest {
+  matchId:        number;
+  teamId:         number;
+  eventType:      string;
+  periodNumber?:  number;
+  pointsAwarded?: number;
+  playerId?:      number;
+  matchMinute?:   number;
+}
+
+// ── Sports Dashboard & Event Registrations ──────────────────────
+export interface DashboardStatsDto {
+  yourRegistrations: number;
+  liveEvents: number;
+  openRegistrations: number;
+  upcomingTournaments: number;
+}
+
+export interface DashboardEventCardDto {
+  id: number;
+  uuid: string | null;
+  name: string;
+  eventDateStart: string | null;
+  eventDateEnd: string | null;
+  sportName: string | null;
+  categoryName: string | null;
+  venueName: string | null;
+  maxParticipants: number | null;
+  registeredCount?: number | null;
+  registrationStatus: string | null;
+  auctionStatus: string | null;
+  teamSport: boolean;
+  myRegistrationId: number | null;
+  myRegistrationStatus: string | null;
+}
+
+export interface DashboardTournamentCardDto {
+  id: number;
+  name: string;
+  bannerImage: string | null;
+  eventDateStart: string | null;
+  eventDateEnd: string | null;
+  registrationStatus: string | null;
+  communityId: number | null;
+  communityName: string | null;
+  events: DashboardEventCardDto[];
+}
+
+export interface DashboardUpcomingEventDto {
+  id: number;
+  name: string;
+  sportName: string | null;
+  venueName: string | null;
+  categoryName: string | null;
+  registrationStatus: string | null;
+  eventDateStart: string | null;
+  startTime: string | null;
+  tournamentId?: number | null;
+  tournamentName?: string | null;
+  familyMemberId?: number | null;
+  playerName?: string | null;
+  relation?: string | null;
+}
+
+export interface DashboardMyRegistrationDto {
+  id: number;
+  eventId: number | null;
+  eventName: string | null;
+  eventDateStart: string | null;
+  sportName: string | null;
+  categoryName: string | null;
+  eventRegistrationStatus: string | null;
+  status: string | null;
+  matchType: string | null;
+  captainNomination: boolean | null;
+  captainConfirmation: boolean | null;
+  familyMemberId?: number | null;
+  playerName?: string | null;
+  relation?: string | null;
+}
+
+export interface SportsDashboardResponseDto {
+  stats: DashboardStatsDto;
+  openRegistrations: DashboardEventCardDto[];
+  closedRegistrations: DashboardEventCardDto[];
+  myUpcomingEvents: DashboardUpcomingEventDto[];
+  myRegistrations: DashboardMyRegistrationDto[];
+  openTournaments: DashboardTournamentCardDto[];
+}
+
+export interface SportsFamilyMemberRef {
+  id: number;
+  name: string;
+  relation?: string;
+  gender?: string;
+  age?: number;
+}
+
+export interface SportsRegistrationResponseDto {
+  id: number;
+  status: string;
+  matchType?: string;
+  playerName?: string;
+  email?: string;
+  relation?: string;
+  flatNumber?: string;
+  age?: number;
+  role?: string;
+  captainNomination?: boolean;
+  captainConfirmation?: boolean;
+  proposedTeamName?: string;
+  familyMember?: SportsFamilyMemberRef;
+  partnerFamilyMember?: SportsFamilyMemberRef;
+  registeredAt?: string;
+}
+
+export interface SportsEventRegistrationRequest {
+  eventId: number;
+  familyMemberId?: number;
+  playerName: string;
+  email?: string;
+  flatNumber?: string;
+  relation?: string;
+  age?: number;
+  gender?: string;
+  matchType?: string;
+  role?: string;
+  categoryId?: number;
+  partnerUserId?: number;
+  partnerFamilyMemberId?: number;
+}
+
+// ── Commute / Carpool ─────────────────────────────────────────
+export type CommuteRideType   = 'OFFER' | 'REQUEST';
+export type CommuteRideStatus = 'ACTIVE' | 'FULL' | 'COMPLETED' | 'CANCELLED';
+export type CommuteBookingStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
+
+export interface CommuteRideDto {
+  id:              number;
+  driverId:        number;
+  driverName:      string;
+  driverFlat?:     string;
+  driverPhoto?:    string;
+  driverRating:    number;
+  fromLocation:    string;
+  toLocation:      string;
+  fromLat?:        number;
+  fromLng?:        number;
+  toLat?:          number;
+  toLng?:          number;
+  departureTime:   string;
+  rideType:        CommuteRideType;
+  totalSeats:      number;
+  availableSeats:  number;
+  pricePerSeat?:   number;
+  free:            boolean;
+  vehicleType?:    string;
+  vehicleNumber?:  string;
+  notes?:          string;
+  status:          CommuteRideStatus;
+  recurring:       boolean;
+  recurringDays?:  string;
+  recurringTime?:  string;
+  ladiesOnly:      boolean;
+  distanceKm?:     number;
+  bookingCount:    number;
+  isMyRide:        boolean;
+  hasBooked:       boolean;
+  myBookingStatus?: CommuteBookingStatus;
+  bookings?:       CommuteBookingDto[];
+  createdAt:       string;
+}
+
+export interface CommuteBookingDto {
+  id:              number;
+  passengerId:     number;
+  passengerName:   string;
+  passengerFlat?:  string;
+  passengerPhoto?: string;
+  seatsBooked:     number;
+  pickupNote?:     string;
+  status:          CommuteBookingStatus;
+  createdAt:       string;
+}
+
+export interface CreateCommuteRideRequest {
+  fromLocation:    string;
+  toLocation:      string;
+  fromLat?:        number;
+  fromLng?:        number;
+  toLat?:          number;
+  toLng?:          number;
+  departureTime:   string;
+  rideType:        CommuteRideType;
+  totalSeats:      number;
+  pricePerSeat?:   number;
+  free:            boolean;
+  vehicleType?:    string;
+  vehicleNumber?:  string;
+  notes?:          string;
+  recurring:       boolean;
+  recurringDays?:  string;
+  recurringTime?:  string;
+  ladiesOnly:      boolean;
+}
+
+export interface CreateCommuteBookingRequest {
+  seatsBooked: number;
+  pickupNote?: string;
+}
+
+export interface CommuteStatsDto {
+  activeRides:    number;
+  myOfferedRides: number;
+  myBookedRides:  number;
+}
+
+// ── Commute Ratings ──
+export interface CommuteRatingDto {
+  id:          number;
+  rideId:      number;
+  raterId:     number;
+  raterName:   string;
+  ratedId:     number;
+  ratedName:   string;
+  score:       number;
+  comment?:    string;
+  createdAt:   string;
+}
+
+export interface CreateCommuteRatingRequest {
+  score:      number;
+  comment?:   string;
+  ratedUserId?: number;
+}
+
+// ── Commute Vehicles ──
+export interface CommuteVehicleDto {
+  id:          number;
+  vehicleType: string;
+  model?:      string;
+  color?:      string;
+  numberPlate: string;
+  isDefault:   boolean;
+  createdAt:   string;
+}
+
+export interface CreateCommuteVehicleRequest {
+  vehicleType: string;
+  model?:      string;
+  color?:      string;
+  numberPlate: string;
+  isDefault:   boolean;
+}
+
+// ── Commute Favourite Routes ──
+export interface CommuteFavouriteRouteDto {
+  id:           number;
+  label:        string;
+  fromLocation: string;
+  toLocation:   string;
+  fromLat?:     number;
+  fromLng?:     number;
+  toLat?:       number;
+  toLng?:       number;
+  createdAt:    string;
+}
+
+export interface CreateCommuteFavouriteRouteRequest {
+  label:        string;
+  fromLocation: string;
+  toLocation:   string;
+  fromLat?:     number;
+  fromLng?:     number;
+  toLat?:       number;
+  toLng?:       number;
+}
+
+// ── Commute User Profile ──
+export interface CommuteUserProfileDto {
+  userId:        number;
+  name:          string;
+  flat?:         string;
+  photo?:        string;
+  averageRating: number;
+  totalRatings:  number;
+  ridesOffered:  number;
+  ridesBooked:   number;
+  kycVerified:   boolean;
 }

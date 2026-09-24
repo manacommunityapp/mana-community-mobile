@@ -4,30 +4,41 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, getAvatarColor } from '@/constants/config';
+
+type IoniconsName = keyof typeof Ionicons.glyphMap;
 
 interface MenuItemProps {
-  emoji: string;
+  icon: IoniconsName;
   label: string;
   onPress: () => void;
   danger?: boolean;
-  admin?: boolean;
+  iconColor?: string;
+  iconBg?: string;
+  badge?: string;
 }
 
-function MenuItem({ emoji, label, onPress, danger, admin }: MenuItemProps) {
+function MenuItem({ icon, label, onPress, danger, iconColor, iconBg, badge }: MenuItemProps) {
   return (
-    <TouchableOpacity
-      style={[styles.menuItem, admin && styles.menuItemAdmin]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Text style={styles.menuEmoji}>{emoji}</Text>
-      <Text style={[styles.menuLabel, danger && styles.dangerText, admin && styles.adminText]}>{label}</Text>
-      {admin && <Text style={styles.adminBadge}>ADMIN</Text>}
-      <Text style={styles.menuChevron}>›</Text>
+    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.6}>
+      <View style={[styles.menuIconWrap, { backgroundColor: iconBg || COLORS.surfaceAlt }]}>
+        <Ionicons name={icon} size={18} color={danger ? COLORS.error : (iconColor || COLORS.primary)} />
+      </View>
+      <Text style={[styles.menuLabel, danger && styles.dangerText]}>{label}</Text>
+      {badge && (
+        <View style={styles.menuBadge}>
+          <Text style={styles.menuBadgeText}>{badge}</Text>
+        </View>
+      )}
+      <Ionicons name="chevron-forward" size={16} color={COLORS.border} />
     </TouchableOpacity>
   );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return <Text style={styles.sectionHeader}>{title}</Text>;
 }
 
 export default function ProfileScreen() {
@@ -52,40 +63,108 @@ export default function ProfileScreen() {
     );
   }
 
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'].includes(user.role);
+  const avatarColor = getAvatarColor(user.name);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user.name[0]}</Text>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* ── Hero Banner ─────────────────────────────────────── */}
+        <View style={styles.hero}>
+          {/* Background pattern dots */}
+          <View style={styles.heroBgDot1} />
+          <View style={styles.heroBgDot2} />
+
+          {/* Avatar */}
+          <View style={[styles.heroAvatar, { backgroundColor: avatarColor.bg }]}>
+            <Text style={[styles.heroAvatarText, { color: avatarColor.text }]}>
+              {user.name[0].toUpperCase()}
+            </Text>
           </View>
-          <Text style={styles.name}>{user.name}</Text>
-          <Text style={styles.email}>{user.email}</Text>
-          {(user.flatNumber || user.tower) && (
-            <View style={styles.tagRow}>
-              {user.flatNumber && <View style={styles.tag}><Text style={styles.tagText}>🏠 {user.flatNumber}</Text></View>}
-              {user.tower    && <View style={styles.tag}><Text style={styles.tagText}>🏢 {user.tower}</Text></View>}
+
+          {/* Name & info */}
+          <Text style={styles.heroName}>{user.name}</Text>
+          <Text style={styles.heroEmail}>{user.email}</Text>
+
+          {/* Flat / Tower tags */}
+          <View style={styles.heroTagRow}>
+            {user.flatNumber && (
+              <View style={styles.heroTag}>
+                <Ionicons name="home-outline" size={12} color="rgba(255,255,255,0.9)" />
+                <Text style={styles.heroTagText}>{user.flatNumber}</Text>
+              </View>
+            )}
+            {user.tower && (
+              <View style={styles.heroTag}>
+                <Ionicons name="business-outline" size={12} color="rgba(255,255,255,0.9)" />
+                <Text style={styles.heroTagText}>{user.tower}</Text>
+              </View>
+            )}
+            {/* Status badge */}
+            <View style={[styles.heroStatusBadge, user.status === 'ACTIVE' ? styles.heroStatusActive : styles.heroStatusInactive]}>
+              <View style={[styles.statusDot, user.status === 'ACTIVE' ? styles.dotActive : styles.dotInactive]} />
+              <Text style={styles.heroStatusText}>{user.status}</Text>
             </View>
-          )}
-          <View style={[styles.statusBadge, user.status === 'ACTIVE' && styles.statusActive]}>
-            <Text style={styles.statusText}>{user.status}</Text>
           </View>
+
+          {/* Edit profile button */}
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => router.push('/profile/edit')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="pencil-outline" size={14} color={COLORS.primary} />
+            <Text style={styles.editBtnText}>Edit Profile</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Menu */}
+        {/* ── Explore ─────────────────────────────────────────── */}
+        <SectionHeader title="Explore" />
         <View style={styles.menuSection}>
-          <MenuItem emoji="✏️"  label="Edit Profile"       onPress={() => router.push('/profile/edit')} />
-          <MenuItem emoji="🔔"  label="Notifications"      onPress={() => router.push('/notifications')} />
-          <MenuItem emoji="🔒"  label="Change Password"    onPress={() => router.push('/settings/password')} />
-          <MenuItem emoji="🏘️"  label="My Community"       onPress={() => router.push('/community')} />
-          <MenuItem emoji="📋"  label="My Activity"        onPress={() => router.push('/activity')} />
-          <MenuItem emoji="⚙️"  label="Settings"           onPress={() => router.push('/settings')} />
-          {/* Admin panel — only visible to admins and moderators */}
-          {['ADMIN', 'SUPER_ADMIN', 'MODERATOR'].includes(user.role) && (
-            <MenuItem emoji="🛡️"  label="Admin Panel"      onPress={() => router.push('/admin')} admin />
-          )}
-          <MenuItem emoji="🚪"  label="Sign Out"           onPress={handleLogout} danger />
+          <MenuItem icon="football-outline"    label="Sports"      onPress={() => router.push('/sports')}      iconColor="#059669" iconBg="#D1FAE5" />
+          <MenuItem icon="car-outline"         label="Commute"     onPress={() => router.push('/commute')}     iconColor="#2563EB" iconBg="#DBEAFE" />
+          <MenuItem icon="stats-chart-outline" label="Polls"       onPress={() => router.push('/polls')}       iconColor="#7C3AED" iconBg="#EDE9FE" />
+          <MenuItem icon="pricetag-outline"    label="Auction"     onPress={() => router.push('/auction')}     iconColor="#D97706" iconBg="#FEF3C7" />
+          <MenuItem icon="storefront-outline"  label="Marketplace" onPress={() => router.push('/tabs/marketplace')} iconColor="#DC2626" iconBg="#FEE2E2" />
+        </View>
+
+        {/* ── Account ─────────────────────────────────────────── */}
+        <SectionHeader title="Account" />
+        <View style={styles.menuSection}>
+          <MenuItem icon="notifications-outline"  label="Notifications"   onPress={() => router.push('/notifications')} />
+          <MenuItem icon="lock-closed-outline"    label="Change Password"  onPress={() => router.push('/settings/password')} />
+          <MenuItem icon="people-outline"         label="My Community"    onPress={() => router.push('/community')} />
+          <MenuItem icon="time-outline"           label="My Activity"     onPress={() => router.push('/activity')} />
+          <MenuItem icon="settings-outline"       label="Settings"        onPress={() => router.push('/settings')} />
+        </View>
+
+        {/* ── Admin ───────────────────────────────────────────── */}
+        {isAdmin && (
+          <>
+            <SectionHeader title="Admin" />
+            <View style={styles.menuSection}>
+              <MenuItem
+                icon="shield-checkmark-outline"
+                label="Admin Panel"
+                onPress={() => router.push('/admin')}
+                badge="ADMIN"
+                iconColor={COLORS.primary}
+                iconBg={COLORS.primaryLight}
+              />
+            </View>
+          </>
+        )}
+
+        {/* ── Sign Out ─────────────────────────────────────────── */}
+        <View style={[styles.menuSection, { marginTop: 8 }]}>
+          <MenuItem
+            icon="log-out-outline"
+            label="Sign Out"
+            onPress={handleLogout}
+            danger
+            iconBg={COLORS.errorLight}
+          />
         </View>
 
         <Text style={styles.version}>Mana Community v1.0.0</Text>
@@ -95,28 +174,202 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: COLORS.background },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll:           { padding: 16, gap: 16 },
-  profileCard:      { backgroundColor: COLORS.surface, borderRadius: 16, padding: 24, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: COLORS.border },
-  avatar:           { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  avatarText:       { color: '#fff', fontWeight: '800', fontSize: 32 },
-  name:             { fontSize: 20, fontWeight: '700', color: COLORS.text },
-  email:            { fontSize: 14, color: COLORS.textMuted },
-  tagRow:           { flexDirection: 'row', gap: 8 },
-  tag:              { backgroundColor: '#EEF2FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  tagText:          { fontSize: 13, color: COLORS.primary, fontWeight: '500' },
-  statusBadge:      { backgroundColor: '#FEF3C7', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 },
-  statusActive:     { backgroundColor: '#D1FAE5' },
-  statusText:       { fontSize: 12, fontWeight: '600', color: COLORS.text },
-  menuSection:      { backgroundColor: COLORS.surface, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
-  menuItem:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 12 },
-  menuEmoji:        { fontSize: 20, width: 28 },
-  menuLabel:        { flex: 1, fontSize: 15, color: COLORS.text, fontWeight: '500' },
-  menuChevron:      { fontSize: 20, color: COLORS.textMuted },
-  dangerText:       { color: COLORS.error },
-  menuItemAdmin:    { backgroundColor: '#EEF2FF' },
-  adminText:        { color: COLORS.primary },
-  adminBadge:       { fontSize: 10, fontWeight: '800', color: COLORS.primary, backgroundColor: '#C7D2FE', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginRight: 4 },
-  version:          { textAlign: 'center', color: COLORS.textMuted, fontSize: 12, paddingBottom: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scroll: {
+    paddingBottom: 32,
+  },
+  // ── Hero ──────────────────────────────────────────────────────
+  hero: {
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    paddingTop: 28,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    overflow: 'hidden',
+  },
+  /** Decorative circles in hero background */
+  heroBgDot1: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    top: -60,
+    right: -60,
+  },
+  heroBgDot2: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    bottom: -40,
+    left: -40,
+  },
+  heroAvatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.35)',
+    marginBottom: 14,
+    ...SHADOWS.md,
+  },
+  heroAvatarText: {
+    fontWeight: '800',
+    fontSize: 34,
+  },
+  heroName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  heroEmail: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  heroTagRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  heroTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  heroTagText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  heroStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  heroStatusActive: {
+    backgroundColor: 'rgba(16,185,129,0.25)',
+  },
+  heroStatusInactive: {
+    backgroundColor: 'rgba(245,158,11,0.25)',
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  dotActive: {
+    backgroundColor: '#34D399',
+  },
+  dotInactive: {
+    backgroundColor: COLORS.warning,
+  },
+  heroStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    marginTop: 18,
+    ...SHADOWS.sm,
+  },
+  editBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  // ── Menu sections ─────────────────────────────────────────────
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 22,
+    marginBottom: 8,
+    marginLeft: 20,
+  },
+  menuSection: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 16,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 12,
+  },
+  menuIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  dangerText: {
+    color: COLORS.error,
+  },
+  menuBadge: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  menuBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  version: {
+    textAlign: 'center',
+    color: COLORS.textMuted,
+    fontSize: 12,
+    paddingTop: 24,
+    paddingBottom: 8,
+  },
 });

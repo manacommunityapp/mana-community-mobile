@@ -1,13 +1,35 @@
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/config';
 
-// Simple icon labels (replace with react-native-vector-icons or expo-symbols as needed)
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+type IoniconsName = keyof typeof Ionicons.glyphMap;
+
+function TabIcon({
+  icon,
+  iconFocused,
+  label,
+  focused,
+}: {
+  icon: IoniconsName;
+  iconFocused: IoniconsName;
+  label: string;
+  focused: boolean;
+}) {
   return (
     <View style={styles.iconWrap}>
-      <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={[styles.iconLabel, focused && styles.iconLabelActive]}>{label}</Text>
+      {/* Active pill indicator above icon */}
+      <View style={[styles.pill, focused && styles.pillActive]} />
+      <View style={[styles.iconBg, focused && styles.iconBgActive]}>
+        <Ionicons
+          name={focused ? iconFocused : icon}
+          size={22}
+          color={focused ? COLORS.primary : COLORS.textMuted}
+        />
+      </View>
+      <Text style={[styles.iconLabel, focused && styles.iconLabelActive]}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -26,31 +48,41 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="feed"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏘️" label="Feed" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="home-outline" iconFocused="home" label="Home" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="marketplace"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🛒" label="Shop" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="storefront-outline" iconFocused="storefront" label="Shop" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="events"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📅" label="Events" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="calendar-outline" iconFocused="calendar" label="Events" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💬" label="Chat" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="chatbubbles-outline" iconFocused="chatbubbles" label="Chat" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" label="Profile" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="person-outline" iconFocused="person" label="Profile" focused={focused} />
+          ),
         }}
       />
       {/* Hidden tabs — accessible via stack navigation, not the tab bar */}
@@ -60,9 +92,56 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabBar:          { height: 72, paddingBottom: 8, paddingTop: 8, borderTopColor: COLORS.border, backgroundColor: COLORS.surface, elevation: 8, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8 },
-  iconWrap:        { alignItems: 'center', gap: 2 },
-  emoji:           { fontSize: 22 },
-  iconLabel:       { fontSize: 10, color: COLORS.textMuted, fontWeight: '500' },
-  iconLabelActive: { color: COLORS.primary, fontWeight: '700' },
+  tabBar: {
+    height: Platform.OS === 'ios' ? 86 : 70,
+    paddingTop: 0,
+    paddingBottom: Platform.OS === 'ios' ? 22 : 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    // Stronger shadow so the bar floats above content
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 12,
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 6,
+    gap: 3,
+    minWidth: 56,
+  },
+  /** Slim pill indicator shown above the icon when focused */
+  pill: {
+    width: 24,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'transparent',
+    marginBottom: 4,
+  },
+  pillActive: {
+    backgroundColor: COLORS.primary,
+  },
+  iconBg: {
+    width: 38,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBgActive: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  iconLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: COLORS.textMuted,
+    letterSpacing: 0.1,
+  },
+  iconLabelActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
 });

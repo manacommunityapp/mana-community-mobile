@@ -14,7 +14,7 @@ const QUICK_ACTIONS = [
   { emoji: '🏆', label: 'Tournaments',  route: '/sports/tournaments' },
   { emoji: '📅', label: 'Schedule',     route: '/sports/matches'     },
   { emoji: '👥', label: 'My Teams',     route: '/sports/my-teams'    },
-  { emoji: '🔨', label: 'Live Auction', route: '/auction'            },
+  { emoji: '📊', label: 'Leaderboard',  route: '/sports/leaderboard' },
 ];
 
 export default function SportsHubScreen() {
