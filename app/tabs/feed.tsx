@@ -110,6 +110,13 @@ export default function FeedScreen() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.pollFab}
+            onPress={() => router.push('/jobs')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.pollFabText}>💼 Jobs</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.pollFab}
             onPress={() => router.push('/polls/create')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
