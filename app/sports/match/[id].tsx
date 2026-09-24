@@ -268,6 +268,32 @@ export default function LiveMatchScreen() {
           [...events].reverse().map((ev) => <EventRow key={ev.id} ev={ev} />)
         )}
 
+        {/* Action buttons row */}
+        <View style={scr.actionRow}>
+          <TouchableOpacity
+            style={scr.actionBtn}
+            onPress={() => router.push(`/sports/photos/${match.id}`)}
+          >
+            <Text style={scr.actionBtnText}>📸 Photos</Text>
+          </TouchableOpacity>
+          {match.sport === 'CRICKET' && (
+            <TouchableOpacity
+              style={scr.actionBtn}
+              onPress={() => router.push(`/sports/scorecard/${match.id}`)}
+            >
+              <Text style={scr.actionBtnText}>📋 Scorecard</Text>
+            </TouchableOpacity>
+          )}
+          {isDone && (
+            <TouchableOpacity
+              style={scr.actionBtn}
+              onPress={() => router.push(`/sports/rate/${match.id}`)}
+            >
+              <Text style={scr.actionBtnText}>⭐ Rate Players</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Scheduled info */}
         {match.status === 'SCHEDULED' && (
           <View style={scr.scheduledCard}>
@@ -307,6 +333,9 @@ const scr = StyleSheet.create({
   feedHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   feedTitle:      { fontSize: 14, fontWeight: '700', color: COLORS.text },
   feedCount:      { fontSize: 12, color: COLORS.textMuted },
+  actionRow:      { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  actionBtn:      { flex: 1, backgroundColor: '#EEF2FF', borderRadius: 10, paddingVertical: 9, alignItems: 'center', borderWidth: 1, borderColor: '#C7D2FE' },
+  actionBtnText:  { fontSize: 12, fontWeight: '700', color: COLORS.primary },
   noEvents:       { padding: 32, alignItems: 'center' },
   noEventsText:   { fontSize: 14, color: COLORS.textMuted, textAlign: 'center' },
   scheduledCard:  { alignItems: 'center', padding: 40, gap: 10 },
