@@ -271,9 +271,96 @@ export const sportsService = {
     return res.data;
   },
 
+  // ── Live Scoring & Umpire Actions ─────────────────────────────
+  async recordCricketBall(matchId: number, data: import('@/types/api').BallEventRequest): Promise<any> {
+    try {
+      const res = await api.post(`/tournament/match/${matchId}/ball`, data);
+      return res.data;
+    } catch {
+      // Fallback for standalone / mock mode
+      const res = await api.post(`/sports/matches/${matchId}/events`, data);
+      return res.data;
+    }
+  },
+
+  async undoCricketBall(matchId: number, inningsNumber = 1): Promise<any> {
+    const res = await api.post(`/tournament/match/${matchId}/undo`, null, {
+      params: { inningsNumber },
+    });
+    return res.data;
+  },
+
+  async recordGenericScore(data: import('@/types/api').GenericScoreRequest): Promise<any> {
+    try {
+      const res = await api.post('/tournament/match/generic/score', data);
+      return res.data;
+    } catch {
+      const res = await api.post(`/sports/matches/${data.matchId}/events`, data);
+      return res.data;
+    }
+  },
+
+  async undoGenericScore(matchId: number): Promise<any> {
+    const res = await api.post(`/tournament/match/generic/${matchId}/undo`);
+    return res.data;
+  },
+
+  async completeGenericPeriod(matchId: number, periodNumber: number): Promise<void> {
+    await api.post(`/tournament/match/generic/${matchId}/period/${periodNumber}/complete`);
+  },
+
+  async recordPeriodScore(matchId: number, periodNumber: number, scoreA: number, scoreB: number): Promise<any> {
+    const res = await api.post(`/tournament/match/generic/${matchId}/period/${periodNumber}/score`, { scoreA, scoreB });
+    return res.data;
+  },
+
+  async updateMatchStatus(matchId: number, status: string): Promise<MatchDto> {
+    const res = await api.patch<MatchDto>(`/sports/matches/${matchId}`, { status });
+    return res.data;
+  },
+
   // ── Standings ─────────────────────────────────────────────────
   async getStandings(tournamentId: number): Promise<StandingDto[]> {
     const res = await api.get<StandingDto[]>(`/sports/tournaments/${tournamentId}/standings`);
+    return res.data;
+  },
+
+  // ── Dashboard & Event Registrations ───────────────────────────
+  async getDashboard(): Promise<import('@/types/api').SportsDashboardResponseDto> {
+    const res = await api.get<import('@/types/api').SportsDashboardResponseDto>('/sports/dashboard');
+    return res.data;
+  },
+
+  async getDashboardStats(): Promise<import('@/types/api').DashboardStatsDto> {
+    const res = await api.get<import('@/types/api').DashboardStatsDto>('/sports/dashboard/stats');
+    return res.data;
+  },
+
+  async getUpcomingEvents(): Promise<import('@/types/api').DashboardUpcomingEventDto[]> {
+    const res = await api.get<import('@/types/api').DashboardUpcomingEventDto[]>('/sports/dashboard/upcoming-events');
+    return res.data;
+  },
+
+  async getOpenTournaments(): Promise<import('@/types/api').DashboardTournamentCardDto[]> {
+    const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/tournaments/open');
+    return res.data;
+  },
+
+  async getClosedTournaments(): Promise<import('@/types/api').DashboardTournamentCardDto[]> {
+    const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/tournaments/closed');
+    return res.data;
+  },
+
+  async getMyRegistrations(): Promise<import('@/types/api').DashboardMyRegistrationDto[]> {
+    const res = await api.get<import('@/types/api').DashboardMyRegistrationDto[]>('/sports/dashboard/my-registrations');
+    return res.data;
+  },
+
+  async registerForEvent(
+    eventId: number,
+    data: import('@/types/api').SportsEventRegistrationRequest
+  ): Promise<import('@/types/api').SportsRegistrationResponseDto> {
+    const res = await api.post<import('@/types/api').SportsRegistrationResponseDto>(`/sports/events/${eventId}/register`, data);
     return res.data;
   },
 };

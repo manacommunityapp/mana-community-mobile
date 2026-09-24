@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { commuteService } from '@/services/commuteService';
+import { StarRating } from '@/components/commute/StarRating';
 import { COLORS } from '@/constants/config';
 
 export default function RideDetailScreen() {
@@ -16,11 +17,16 @@ export default function RideDetailScreen() {
   const queryClient = useQueryClient();
   const [pickupNote, setPickupNote] = useState('');
   const [seats, setSeats] = useState('1');
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+
+  const rideId = Number(id);
+  const isValidId = !!id && Number.isInteger(rideId) && rideId > 0;
 
   const { data: ride, isLoading } = useQuery({
     queryKey: ['commute-ride', id],
-    queryFn:  () => commuteService.getRide(Number(id)),
-    enabled:  !!id,
+    queryFn:  () => commuteService.getRide(rideId),
+    enabled:  isValidId,
   });
 
   const invalidate = () => {
@@ -55,12 +61,41 @@ export default function RideDetailScreen() {
   const confirmMutation = useMutation({
     mutationFn: (bookingId: number) => commuteService.confirmBooking(bookingId),
     onSuccess: invalidate,
+    onError: (e: any) => Alert.alert('Error', e?.response?.data?.message || 'Could not confirm booking.'),
   });
 
   const rejectMutation = useMutation({
     mutationFn: (bookingId: number) => commuteService.rejectBooking(bookingId),
     onSuccess: invalidate,
+    onError: (e: any) => Alert.alert('Error', e?.response?.data?.message || 'Could not reject booking.'),
   });
+
+  const rateMutation = useMutation({
+    mutationFn: () => commuteService.rateRide(Number(id), {
+      score: ratingScore,
+      comment: ratingComment.trim() || undefined,
+    }),
+    onSuccess: () => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ['commute-ratings', id] });
+      Alert.alert('Thanks!', 'Your rating has been submitted.');
+    },
+    onError: (e: any) => Alert.alert('Error', e?.response?.data?.message || 'Could not submit rating.'),
+  });
+
+  const { data: ratings } = useQuery({
+    queryKey: ['commute-ratings', id],
+    queryFn:  () => commuteService.getRideRatings(Number(id)),
+    enabled:  !!ride && ride.status === 'COMPLETED',
+  });
+
+  if (!isValidId) {
+    return (
+      <SafeAreaView style={s.container} edges={['top']}>
+        <Text style={{ marginTop: 60, textAlign: 'center', color: COLORS.error }}>Invalid ride ID</Text>
+      </SafeAreaView>
+    );
+  }
 
   if (isLoading || !ride) {
     return (
@@ -167,6 +202,7 @@ export default function RideDetailScreen() {
                     value={seats}
                     onChangeText={setSeats}
                     keyboardType="number-pad"
+                    maxLength={2}
                   />
                 </View>
                 <View style={{ flex: 2 }}>
@@ -177,6 +213,7 @@ export default function RideDetailScreen() {
                     placeholderTextColor={COLORS.textMuted}
                     value={pickupNote}
                     onChangeText={setPickupNote}
+                    maxLength={255}
                   />
                 </View>
               </View>
@@ -246,6 +283,62 @@ export default function RideDetailScreen() {
                 )}
               </View>
             ))}
+          </View>
+        )}
+
+        {/* Rating section for completed rides */}
+        {ride.status === 'COMPLETED' && (
+          <View style={s.card}>
+            {!rateMutation.isSuccess && (
+              <>
+                <Text style={s.cardTitle}>Rate this Ride</Text>
+                <StarRating rating={ratingScore} onRate={setRatingScore} />
+                <TextInput
+                  style={[s.bookInput, { marginTop: 8 }]}
+                  placeholder="Leave a comment (optional)"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={ratingComment}
+                  onChangeText={setRatingComment}
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity
+                  style={[s.bookBtn, (ratingScore === 0 || rateMutation.isPending) && { opacity: 0.5 }]}
+                  onPress={() => rateMutation.mutate()}
+                  disabled={ratingScore === 0 || rateMutation.isPending}
+                >
+                  <Text style={s.bookBtnText}>
+                    {rateMutation.isPending ? 'Submitting...' : 'Submit Rating'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {ratings && ratings.length > 0 && (
+              <View style={{ marginTop: 12, gap: 8 }}>
+                <Text style={s.cardTitle}>Ratings</Text>
+                {ratings.map(r => (
+                  <View key={r.id} style={s.ratingItem}>
+                    <View style={s.ratingHeader}>
+                      <Text style={s.passengerName}>{r.raterName}</Text>
+                      <StarRating rating={r.score} readonly size={14} />
+                    </View>
+                    {r.comment && <Text style={s.notesText}>{r.comment}</Text>}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Driver rating */}
+        {ride.driverRating > 0 && (
+          <View style={s.card}>
+            <View style={s.driverRow}>
+              <Text style={s.cardTitle}>Driver Rating</Text>
+              <StarRating rating={ride.driverRating} readonly size={18} />
+              <Text style={s.detailValue}>{ride.driverRating.toFixed(1)}</Text>
+            </View>
           </View>
         )}
 
@@ -331,4 +424,6 @@ const s = StyleSheet.create({
   rejectText:       { fontSize: 16, color: COLORS.error, fontWeight: '700' },
   cancelRideBtn:    { backgroundColor: '#FEE2E2', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   cancelRideText:   { color: COLORS.error, fontSize: 14, fontWeight: '700' },
+  ratingItem:       { backgroundColor: COLORS.background, borderRadius: 8, padding: 10 },
+  ratingHeader:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

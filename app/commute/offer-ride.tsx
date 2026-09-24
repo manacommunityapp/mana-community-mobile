@@ -6,11 +6,22 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { commuteService } from '@/services/commuteService';
 import { COLORS } from '@/constants/config';
 import type { CommuteRideType } from '@/types/api';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function pad(n: number) { return n.toString().padStart(2, '0'); }
+
+function formatDate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function formatTime(d: Date) {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function OfferRideScreen() {
   const router = useRouter();
@@ -19,8 +30,10 @@ export default function OfferRideScreen() {
   const [rideType, setRideType] = useState<CommuteRideType>('OFFER');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  const [departureDate, setDepartureDate] = useState(new Date());
+  const [departureTime, setDepartureTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [seats, setSeats] = useState('2');
   const [isFree, setIsFree] = useState(true);
   const [price, setPrice] = useState('');
@@ -37,6 +50,16 @@ export default function OfferRideScreen() {
     );
   };
 
+  const onDateChange = (_: DateTimePickerEvent, selected?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selected) setDepartureDate(selected);
+  };
+
+  const onTimeChange = (_: DateTimePickerEvent, selected?: Date) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selected) setDepartureTime(selected);
+  };
+
   const createMutation = useMutation({
     mutationFn: commuteService.createRide,
     onSuccess: () => {
@@ -49,19 +72,29 @@ export default function OfferRideScreen() {
   });
 
   const handleSubmit = () => {
-    if (!from.trim() || !to.trim() || !date.trim() || !time.trim()) {
-      Alert.alert('Missing fields', 'Please fill in all required fields.');
+    if (!from.trim() || !to.trim()) {
+      Alert.alert('Missing fields', 'Please fill in the route fields.');
       return;
     }
 
-    const departureTime = `${date.trim()}T${time.trim()}:00`;
+    const seatCount = parseInt(seats, 10) || 2;
+    if (seatCount < 1 || seatCount > 20) {
+      Alert.alert('Invalid seats', 'Seats must be between 1 and 20.');
+      return;
+    }
+
+    const offset = -new Date().getTimezoneOffset();
+    const sign = offset >= 0 ? '+' : '-';
+    const absH = pad(Math.floor(Math.abs(offset) / 60));
+    const absM = pad(Math.abs(offset) % 60);
+    const dt = `${formatDate(departureDate)}T${formatTime(departureTime)}:00${sign}${absH}:${absM}`;
 
     createMutation.mutate({
       fromLocation: from.trim(),
       toLocation: to.trim(),
-      departureTime,
+      departureTime: dt,
       rideType,
-      totalSeats: parseInt(seats, 10) || 2,
+      totalSeats: seatCount,
       free: isFree,
       pricePerSeat: isFree ? undefined : parseFloat(price) || undefined,
       vehicleType: vehicleType.trim() || undefined,
@@ -97,7 +130,7 @@ export default function OfferRideScreen() {
               onPress={() => setRideType('OFFER')}
             >
               <Text style={[s.typeText, rideType === 'OFFER' && s.typeTextActive]}>
-                🚗 Offer Ride
+                Offer Ride
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -105,33 +138,54 @@ export default function OfferRideScreen() {
               onPress={() => setRideType('REQUEST')}
             >
               <Text style={[s.typeText, rideType === 'REQUEST' && s.typeTextActive]}>
-                🙋 Request Ride
+                Request Ride
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Route */}
           <Text style={s.label}>From *</Text>
-          <TextInput style={s.input} placeholder="e.g. Mana Community, Tower A" placeholderTextColor={COLORS.textMuted} value={from} onChangeText={setFrom} />
+          <TextInput style={s.input} placeholder="e.g. Mana Community, Tower A" placeholderTextColor={COLORS.textMuted} value={from} onChangeText={setFrom} maxLength={255} />
 
           <Text style={s.label}>To *</Text>
-          <TextInput style={s.input} placeholder="e.g. Hitec City, Mindspace" placeholderTextColor={COLORS.textMuted} value={to} onChangeText={setTo} />
+          <TextInput style={s.input} placeholder="e.g. Hitec City, Mindspace" placeholderTextColor={COLORS.textMuted} value={to} onChangeText={setTo} maxLength={255} />
 
-          {/* Date & Time */}
+          {/* Date & Time pickers */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>Date * (YYYY-MM-DD)</Text>
-              <TextInput style={s.input} placeholder="2026-09-20" placeholderTextColor={COLORS.textMuted} value={date} onChangeText={setDate} />
+              <Text style={s.label}>Date *</Text>
+              <TouchableOpacity style={s.pickerBtn} onPress={() => setShowDatePicker(true)}>
+                <Text style={s.pickerText}>{formatDate(departureDate)}</Text>
+              </TouchableOpacity>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>Time * (HH:MM)</Text>
-              <TextInput style={s.input} placeholder="08:30" placeholderTextColor={COLORS.textMuted} value={time} onChangeText={setTime} />
+              <Text style={s.label}>Time *</Text>
+              <TouchableOpacity style={s.pickerBtn} onPress={() => setShowTimePicker(true)}>
+                <Text style={s.pickerText}>{formatTime(departureTime)}</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
+          {showDatePicker && (
+            <DateTimePicker
+              value={departureDate}
+              mode="date"
+              minimumDate={new Date()}
+              onChange={onDateChange}
+            />
+          )}
+          {showTimePicker && (
+            <DateTimePicker
+              value={departureTime}
+              mode="time"
+              is24Hour
+              onChange={onTimeChange}
+            />
+          )}
+
           {/* Seats */}
           <Text style={s.label}>Available Seats</Text>
-          <TextInput style={s.input} placeholder="2" placeholderTextColor={COLORS.textMuted} value={seats} onChangeText={setSeats} keyboardType="number-pad" />
+          <TextInput style={s.input} placeholder="2" placeholderTextColor={COLORS.textMuted} value={seats} onChangeText={setSeats} keyboardType="number-pad" maxLength={2} />
 
           {/* Pricing */}
           <View style={s.switchRow}>
@@ -140,7 +194,7 @@ export default function OfferRideScreen() {
           </View>
           {!isFree && (
             <>
-              <Text style={s.label}>Price per seat (₹)</Text>
+              <Text style={s.label}>Price per seat</Text>
               <TextInput style={s.input} placeholder="50" placeholderTextColor={COLORS.textMuted} value={price} onChangeText={setPrice} keyboardType="numeric" />
             </>
           )}
@@ -149,10 +203,10 @@ export default function OfferRideScreen() {
           {rideType === 'OFFER' && (
             <>
               <Text style={s.label}>Vehicle type</Text>
-              <TextInput style={s.input} placeholder="e.g. Sedan, SUV, Hatchback" placeholderTextColor={COLORS.textMuted} value={vehicleType} onChangeText={setVehicleType} />
+              <TextInput style={s.input} placeholder="e.g. Sedan, SUV, Hatchback" placeholderTextColor={COLORS.textMuted} value={vehicleType} onChangeText={setVehicleType} maxLength={50} />
 
               <Text style={s.label}>Vehicle number</Text>
-              <TextInput style={s.input} placeholder="e.g. TS 09 AB 1234" placeholderTextColor={COLORS.textMuted} value={vehicleNumber} onChangeText={setVehicleNumber} autoCapitalize="characters" />
+              <TextInput style={s.input} placeholder="e.g. TS 09 AB 1234" placeholderTextColor={COLORS.textMuted} value={vehicleNumber} onChangeText={setVehicleNumber} autoCapitalize="characters" maxLength={20} />
             </>
           )}
 
@@ -190,6 +244,7 @@ export default function OfferRideScreen() {
             value={notes}
             onChangeText={setNotes}
             multiline
+            maxLength={500}
           />
 
           {/* Submit */}
@@ -224,6 +279,8 @@ const s = StyleSheet.create({
   label:         { fontSize: 13, fontWeight: '600', color: COLORS.text, marginTop: 4 },
   input:         { backgroundColor: COLORS.surface, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: COLORS.text },
   row:           { flexDirection: 'row', gap: 10 },
+  pickerBtn:     { backgroundColor: COLORS.surface, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center' },
+  pickerText:    { fontSize: 15, fontWeight: '600', color: COLORS.primary },
   switchRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   switchLabel:   { fontSize: 14, fontWeight: '600', color: COLORS.text },
   daysRow:       { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },

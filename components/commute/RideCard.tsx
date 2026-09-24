@@ -67,6 +67,7 @@ export function RideCard({ ride, compact }: Props) {
         <View style={s.footer}>
           <Text style={s.driverText}>
             {ride.driverName}{ride.driverFlat ? ` · ${ride.driverFlat}` : ''}
+            {ride.driverRating > 0 ? ` · ⭐ ${ride.driverRating.toFixed(1)}` : ''}
           </Text>
           {ride.vehicleType && (
             <Text style={s.vehicleText}>{ride.vehicleType}</Text>

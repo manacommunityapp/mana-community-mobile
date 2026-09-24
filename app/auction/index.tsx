@@ -1,14 +1,16 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Image, ActivityIndicator, RefreshControl,
+  Image, ActivityIndicator, RefreshControl, BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { auctionService } from '@/services/auctionService';
 import { CompactCountdown } from '@/components/auction/CountdownTimer';
-import { COLORS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { format } from 'date-fns';
 import type { AuctionDto } from '@/types/api';
 
@@ -127,6 +129,24 @@ export default function AuctionListScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<AuctionTab>('LIVE');
 
+  const goHome = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/tabs/feed');
+    }
+  }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goHome();
+        return true;
+      });
+      return () => sub.remove();
+    }, [goHome])
+  );
+
   const {
     data, isLoading, fetchNextPage, hasNextPage,
     isFetchingNextPage, refetch, isRefetching,
@@ -157,48 +177,67 @@ export default function AuctionListScreen() {
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={s.back}>‹</Text>
+        <TouchableOpacity onPress={goHome} hitSlop={8} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <View>
+        <View style={s.headerCenter}>
           <Text style={s.title}>Community Auction</Text>
-          {!isLoading && tab === 'LIVE' && total > 0 && (
-            <Text style={s.liveCount}>🔴 {total} live auction{total !== 1 ? 's' : ''}</Text>
-          )}
+          <Text style={s.subTitle}>
+            {!isLoading && tab === 'LIVE' && total > 0 ? `${total} active auctions live` : 'Bid on community items'}
+          </Text>
         </View>
-        <View style={{ width: 32 }} />
+        {tab === 'LIVE' && total > 0 && (
+          <View style={s.liveHeaderPill}>
+            <View style={s.liveHeaderDot} />
+            <Text style={s.liveHeaderText}>{total} Live</Text>
+          </View>
+        )}
       </View>
 
-      {/* Tabs */}
-      <View style={s.tabs}>
-        {TABS.map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            style={[s.tab, tab === t.key && s.tabActive]}
-            onPress={() => setTab(t.key)}
-          >
-            <Text style={[s.tabText, tab === t.key && s.tabTextActive]}>
-              {t.emoji} {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      {/* Segmented Tabs */}
+      <View style={s.tabsWrap}>
+        <View style={s.tabsSegment}>
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            return (
+              <TouchableOpacity
+                key={t.key}
+                style={[s.tabBtn, active && s.tabBtnActive]}
+                onPress={() => setTab(t.key)}
+                activeOpacity={0.75}
+              >
+                <Text style={s.tabEmoji}>{t.emoji}</Text>
+                <Text style={[s.tabText, active && s.tabTextActive]}>
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 60 }} color={COLORS.primary} size="large" />
+        <View style={s.loaderContainer}>
+          <ActivityIndicator color={COLORS.primary} size="large" />
+          <Text style={s.loaderText}>Loading auctions...</Text>
+        </View>
       ) : (
         <FlatList
           data={auctions}
           keyExtractor={(a) => String(a.id)}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingVertical: 8 }}
+          contentContainerStyle={s.listContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
           onEndReached={() => hasNextPage && fetchNextPage()}
           onEndReachedThreshold={0.4}
           ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} color={COLORS.primary} /> : null}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Text style={s.emptyEmoji}>{EMPTY[tab].emoji}</Text>
+              <View style={s.emptyIconCircle}>
+                <Text style={{ fontSize: 32 }}>{EMPTY[tab].emoji}</Text>
+              </View>
+              <Text style={s.emptyTitle}>No auctions found</Text>
               <Text style={s.emptyText}>{EMPTY[tab].text}</Text>
             </View>
           }
@@ -209,17 +248,151 @@ export default function AuctionListScreen() {
 }
 
 const s = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: COLORS.background },
-  header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  back:          { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:         { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
-  liveCount:     { fontSize: 12, color: COLORS.error, fontWeight: '600', textAlign: 'center' },
-  tabs:          { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  tab:           { flex: 1, paddingVertical: 13, alignItems: 'center' },
-  tabActive:     { borderBottomWidth: 2.5, borderBottomColor: COLORS.primary },
-  tabText:       { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
-  tabTextActive: { color: COLORS.primary, fontWeight: '700' },
-  empty:         { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyEmoji:    { fontSize: 52 },
-  emptyText:     { fontSize: 15, color: COLORS.textMuted, textAlign: 'center', lineHeight: 22 },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 12,
+    ...SHADOWS.sm,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  subTitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 1,
+    fontWeight: '500',
+  },
+  liveHeaderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FEE2E2',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  liveHeaderDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: COLORS.error,
+  },
+  liveHeaderText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.error,
+  },
+
+  // ── Tabs Segment ───────────────────────────────────────────────
+  tabsWrap: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  tabsSegment: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    gap: 6,
+  },
+  tabBtnActive: {
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.sm,
+  },
+  tabEmoji: {
+    fontSize: 13,
+  },
+  tabText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+
+  // ── List & Empty ───────────────────────────────────────────────
+  listContent: {
+    paddingVertical: 10,
+  },
+  loaderContainer: {
+    paddingTop: 60,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loaderText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  empty: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 32,
+    gap: 10,
+  },
+  emptyIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  emptyText: {
+    fontSize: 13.5,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });

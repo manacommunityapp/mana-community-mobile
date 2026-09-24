@@ -94,7 +94,7 @@ export default function CommunitySettingsScreen() {
   const [maxMembers,  setMaxMembers]  = useState('');
   const [inviteCode,  setInviteCode]  = useState('');
   const [features, setFeatures] = useState<CommunitySettingsDto['features']>({
-    marketplace: true, sports: true, auction: true, jobs: true, polls: true,
+    marketplace: true, sports: true, auction: true, jobs: true, polls: true, commute: true,
   });
 
   useEffect(() => {

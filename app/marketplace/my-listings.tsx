@@ -90,7 +90,7 @@ const rc = StyleSheet.create({
   thumbWrap:      { width: 88, height: 88, position: 'relative', backgroundColor: '#F3F4F6', flexShrink: 0 },
   thumb:          { width: '100%', height: '100%' },
   thumbPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  soldOverlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
+  soldOverlay:    { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
   soldText:       { color: '#fff', fontWeight: '900', fontSize: 11, letterSpacing: 1 },
   info:           { flex: 1, padding: 12, gap: 3 },
   title:          { fontSize: 14, fontWeight: '700', color: COLORS.text, lineHeight: 19 },

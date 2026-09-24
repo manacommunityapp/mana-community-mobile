@@ -163,7 +163,7 @@ export default function TournamentDetailScreen() {
             )}
             <View style={scr.card}>
               <Text style={scr.cardTitle}>Details</Text>
-              {[
+              {([
                 ['📅 Dates',      `${format(new Date(tournament.startDate),'dd MMM')} – ${format(new Date(tournament.endDate),'dd MMM yyyy')}`],
                 ['📋 Format',     FORMAT_LABEL[tournament.format]],
                 ['👥 Team size',  `${tournament.teamSize} players`],
@@ -173,7 +173,7 @@ export default function TournamentDetailScreen() {
                 tournament.registrationDeadline
                   ? ['⏰ Reg. deadline', format(new Date(tournament.registrationDeadline),'dd MMM, h:mm a')]
                   : null,
-              ].filter(Boolean).map(([label, value]) => (
+              ] as ([string, string] | null)[]).filter((x): x is [string, string] => x !== null).map(([label, value]) => (
                 <View key={label!} style={scr.detailRow}>
                   <Text style={scr.detailLabel}>{label}</Text>
                   <Text style={scr.detailValue}>{value}</Text>

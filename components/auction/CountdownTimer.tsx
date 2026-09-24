@@ -67,7 +67,7 @@ export function CountdownTimer({ endTime, onExpired, size = 'md' }: CountdownTim
       pulseAnim.setValue(1);
     }
     return () => pulseRef.current?.stop();
-  }, [secs <= 10]);
+  }, [secs <= 10 && secs > 0]);
 
   const color    = getColor(secs);
   const { h, m, s, label } = formatTime(secs);

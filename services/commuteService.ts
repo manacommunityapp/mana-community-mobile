@@ -2,6 +2,10 @@ import api from './apiClient';
 import type {
   CommuteRideDto, CommuteBookingDto, CommuteStatsDto,
   CreateCommuteRideRequest, CreateCommuteBookingRequest,
+  CommuteRatingDto, CreateCommuteRatingRequest,
+  CommuteVehicleDto, CreateCommuteVehicleRequest,
+  CommuteFavouriteRouteDto, CreateCommuteFavouriteRouteRequest,
+  CommuteUserProfileDto,
   PageResponse, CommuteRideType,
 } from '@/types/api';
 
@@ -85,5 +89,56 @@ export const commuteService = {
   async getStats(): Promise<CommuteStatsDto> {
     const res = await api.get<CommuteStatsDto>('/commute/stats');
     return res.data;
+  },
+
+  // ── Ratings ──────────────────────────────────────────────────
+  async rateRide(rideId: number, data: CreateCommuteRatingRequest): Promise<CommuteRatingDto> {
+    const res = await api.post<CommuteRatingDto>(`/commute/rides/${rideId}/rate`, data);
+    return res.data;
+  },
+
+  async getRideRatings(rideId: number): Promise<CommuteRatingDto[]> {
+    const res = await api.get<CommuteRatingDto[]>(`/commute/rides/${rideId}/ratings`);
+    return res.data;
+  },
+
+  async getUserProfile(userId: number): Promise<CommuteUserProfileDto> {
+    const res = await api.get<CommuteUserProfileDto>(`/commute/users/${userId}/profile`);
+    return res.data;
+  },
+
+  // ── Vehicles ─────────────────────────────────────────────────
+  async getMyVehicles(): Promise<CommuteVehicleDto[]> {
+    const res = await api.get<CommuteVehicleDto[]>('/commute/vehicles');
+    return res.data;
+  },
+
+  async addVehicle(data: CreateCommuteVehicleRequest): Promise<CommuteVehicleDto> {
+    const res = await api.post<CommuteVehicleDto>('/commute/vehicles', data);
+    return res.data;
+  },
+
+  async updateVehicle(id: number, data: CreateCommuteVehicleRequest): Promise<CommuteVehicleDto> {
+    const res = await api.put<CommuteVehicleDto>(`/commute/vehicles/${id}`, data);
+    return res.data;
+  },
+
+  async deleteVehicle(id: number): Promise<void> {
+    await api.delete(`/commute/vehicles/${id}`);
+  },
+
+  // ── Favourite Routes ─────────────────────────────────────────
+  async getMyFavouriteRoutes(): Promise<CommuteFavouriteRouteDto[]> {
+    const res = await api.get<CommuteFavouriteRouteDto[]>('/commute/favourite-routes');
+    return res.data;
+  },
+
+  async addFavouriteRoute(data: CreateCommuteFavouriteRouteRequest): Promise<CommuteFavouriteRouteDto> {
+    const res = await api.post<CommuteFavouriteRouteDto>('/commute/favourite-routes', data);
+    return res.data;
+  },
+
+  async deleteFavouriteRoute(id: number): Promise<void> {
+    await api.delete(`/commute/favourite-routes/${id}`);
   },
 };

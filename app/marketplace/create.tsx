@@ -87,7 +87,7 @@ const pg = StyleSheet.create({
   grid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   thumb:         { width: 96, height: 96, borderRadius: 10, overflow: 'hidden', position: 'relative' },
   image:         { width: '100%', height: '100%' },
-  overlay:       { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
+  overlay:       { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
   errorText:     { color: '#EF4444', fontSize: 22, fontWeight: '800' },
   mainBadge:     { position: 'absolute', bottom: 4, left: 4, backgroundColor: COLORS.primary, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
   mainBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },

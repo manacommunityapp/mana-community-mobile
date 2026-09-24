@@ -74,6 +74,7 @@ export default function RootLayout() {
             <Stack.Screen name="marketplace" />
             <Stack.Screen name="auction" />
             <Stack.Screen name="sports" />
+            <Stack.Screen name="events" />
             <Stack.Screen name="polls" />
             <Stack.Screen name="jobs" />
           </Stack>
