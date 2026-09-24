@@ -1,5 +1,8 @@
 import api, { tokenStore } from './apiClient';
-import type { LoginRequest, LoginResponse, RegisterRequest, UserProfileResponse } from '@/types/api';
+import type {
+  LoginRequest, LoginResponse, RegisterRequest,
+  UserProfileResponse, CommunityPreviewDto, KycSubmitRequest,
+} from '@/types/api';
 
 export const authService = {
   async login(data: LoginRequest): Promise<LoginResponse> {
@@ -28,5 +31,25 @@ export const authService = {
 
   async forgotPassword(email: string): Promise<void> {
     await api.post('/auth/forgot-password', { email });
+  },
+
+  /** Look up a community by invite code — shown on Step 2 before registering. */
+  async lookupCommunity(inviteCode: string): Promise<CommunityPreviewDto> {
+    const res = await api.get<CommunityPreviewDto>(
+      `/communities/lookup?code=${encodeURIComponent(inviteCode.trim().toUpperCase())}`,
+    );
+    return res.data;
+  },
+
+  /** Submit KYC document details after registration. */
+  async submitKyc(data: KycSubmitRequest): Promise<UserProfileResponse> {
+    const res = await api.put<UserProfileResponse>('/auth/kyc', data);
+    return res.data;
+  },
+
+  /** Poll for approval — returns fresh profile (check kycStatus). */
+  async pollApprovalStatus(): Promise<UserProfileResponse> {
+    const res = await api.get<UserProfileResponse>('/users/me');
+    return res.data;
   },
 };
