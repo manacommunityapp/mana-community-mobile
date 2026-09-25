@@ -17,9 +17,11 @@ const queryClient = new QueryClient({
 });
 
 function AuthGuard() {
-  const { isAuthenticated, isLoading, isPending, isRejected, loadUser } = useAuth();
+  const { isAuthenticated, isLoading, user, loadUser } = useAuth();
   const router   = useRouter();
   const segments = useSegments();
+
+  const isPending  = user?.status === 'PENDING' || user?.status === 'SUSPENDED';
 
   // Initialise push notifications once verified and authenticated
   usePushNotifications(isAuthenticated && !isPending);
@@ -41,8 +43,8 @@ function AuthGuard() {
       return;
     }
 
-    if (isPending || isRejected) {
-      // Logged in but awaiting admin approval (or rejected)
+    if (isPending) {
+      // Logged in but awaiting admin approval
       if (!inOnboarding) router.replace('/onboarding/pending');
       return;
     }
@@ -51,7 +53,7 @@ function AuthGuard() {
     if (inOnboarding || inAuth) {
       router.replace('/tabs/feed');
     }
-  }, [isAuthenticated, isLoading, isPending, isRejected, segments]);
+  }, [isAuthenticated, isLoading, isPending, segments]);
 
   return null;
 }

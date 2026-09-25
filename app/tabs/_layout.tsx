@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '@/constants/config';
+import { useQuery } from '@tanstack/react-query';
+import { chatService } from '@/services/chatService';
+import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -10,23 +12,34 @@ function TabIcon({
   iconFocused,
   label,
   focused,
+  badgeCount,
 }: {
   icon: IoniconsName;
   iconFocused: IoniconsName;
   label: string;
   focused: boolean;
+  badgeCount?: number;
 }) {
   return (
     <View style={styles.iconWrap}>
-      {/* Active pill indicator above icon */}
+      {/* Active top indicator pill */}
       <View style={[styles.pill, focused && styles.pillActive]} />
+
       <View style={[styles.iconBg, focused && styles.iconBgActive]}>
         <Ionicons
           name={focused ? iconFocused : icon}
           size={22}
           color={focused ? COLORS.primary : COLORS.textMuted}
         />
+        {badgeCount != null && badgeCount > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              {badgeCount > 99 ? '99+' : badgeCount}
+            </Text>
+          </View>
+        )}
       </View>
+
       <Text style={[styles.iconLabel, focused && styles.iconLabelActive]}>
         {label}
       </Text>
@@ -35,6 +48,14 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: chatService.getConversations,
+    refetchInterval: 15_000,
+  });
+
+  const chatUnreadCount = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+
   return (
     <Tabs
       screenOptions={{
@@ -43,6 +64,7 @@ export default function TabsLayout() {
         tabBarShowLabel: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarHideOnKeyboard: true,
       }}
     >
       <Tabs.Screen
@@ -73,7 +95,13 @@ export default function TabsLayout() {
         name="chat"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="chatbubbles-outline" iconFocused="chatbubbles" label="Chat" focused={focused} />
+            <TabIcon
+              icon="chatbubbles-outline"
+              iconFocused="chatbubbles"
+              label="Chat"
+              focused={focused}
+              badgeCount={chatUnreadCount}
+            />
           ),
         }}
       />
@@ -85,7 +113,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* Hidden tabs — accessible via stack navigation, not the tab bar */}
+      {/* Hidden tabs — accessible via stack navigation */}
       <Tabs.Screen name="sports" options={{ href: null }} />
     </Tabs>
   );
@@ -93,31 +121,25 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: Platform.OS === 'ios' ? 86 : 70,
+    height: Platform.OS === 'ios' ? 88 : 68,
     paddingTop: 0,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 10,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.surface,
-    // Stronger shadow so the bar floats above content
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 12,
+    ...SHADOWS.md,
+    elevation: 16,
   },
   iconWrap: {
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 6,
-    gap: 3,
-    minWidth: 56,
+    justifyContent: 'center',
+    paddingTop: 2,
+    minWidth: 54,
   },
-  /** Slim pill indicator shown above the icon when focused */
   pill: {
-    width: 24,
+    width: 20,
     height: 3,
-    borderRadius: 2,
+    borderRadius: RADIUS.full,
     backgroundColor: 'transparent',
     marginBottom: 4,
   },
@@ -125,23 +147,44 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   iconBg: {
-    width: 38,
-    height: 34,
-    borderRadius: 12,
+    width: 44,
+    height: 32,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   iconBgActive: {
     backgroundColor: COLORS.primaryLight,
   },
   iconLabel: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '600',
     color: COLORS.textMuted,
+    marginTop: 2,
     letterSpacing: 0.1,
   },
   iconLabelActive: {
     color: COLORS.primary,
     fontWeight: '700',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: 2,
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.full,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: COLORS.surface,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
   },
 });

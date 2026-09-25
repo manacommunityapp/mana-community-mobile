@@ -21,7 +21,7 @@ const EMERGENCY_CATEGORIES: EmergencyTrigger[] = [
   { id: 'MEDICAL', label: 'Medical Emergency', icon: 'medkit-outline', color: '#DC2626', bg: '#FEE2E2' },
   { id: 'FIRE', label: 'Fire Hazard', icon: 'flame-outline', color: '#EA580C', bg: '#FFEDD5' },
   { id: 'LIFT', label: 'Lift Stuck', icon: 'git-compare-outline', color: '#D97706', bg: '#FEF3C7' },
-  { id: 'SECURITY', label: 'Security Threat', icon: 'shield-alert-outline', color: '#2563EB', bg: '#DBEAFE' },
+  { id: 'SECURITY', label: 'Security Threat', icon: 'shield-outline', color: '#2563EB', bg: '#DBEAFE' },
   { id: 'GAS_LEAK', label: 'Gas Leakage', icon: 'warning-outline', color: '#059669', bg: '#D1FAE5' },
   { id: 'FLOOD', label: 'Water Seepage/Flood', icon: 'water-outline', color: '#0891B2', bg: '#CFFAFE' },
 ];
