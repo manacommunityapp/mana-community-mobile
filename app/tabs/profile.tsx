@@ -7,6 +7,18 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SHADOWS, RADIUS, getAvatarColor } from '@/constants/config';
+import {
+  VIEW_EMERGENCY,
+  VIEW_GROUP_BUYING,
+  VIEW_TRIPS,
+  VIEW_TICKETS,
+  VIEW_DISCOVER,
+  VIEW_MAINTENANCE_DUES,
+  VIEW_SPORTS_MENU,
+  VIEW_POLLS,
+  VIEW_MARKETPLACE,
+  VIEW_ADMIN,
+} from '@/constants/permissions';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -63,8 +75,24 @@ export default function ProfileScreen() {
     );
   }
 
+  const isSuperAdmin = user.role === 'SUPER_ADMIN';
+  const hasPerm = (perm: string) => isSuperAdmin || (user?.permissions || []).includes(perm);
   const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'].includes(user.role);
   const avatarColor = getAvatarColor(user.name);
+
+  // Check if any community service items are visible
+  const showEmergency = hasPerm(VIEW_EMERGENCY);
+  const showFinance = hasPerm(VIEW_MAINTENANCE_DUES);
+  const showHelpdesk = hasPerm(VIEW_TICKETS);
+  const showGroupBuying = hasPerm(VIEW_GROUP_BUYING);
+  const showTrips = hasPerm(VIEW_TRIPS);
+  const showDiscover = hasPerm(VIEW_DISCOVER);
+  const hasCommunityServices = showEmergency || showFinance || showHelpdesk || showGroupBuying || showTrips || showDiscover;
+
+  // Explore items permission check
+  const showSports = hasPerm(VIEW_SPORTS_MENU);
+  const showPolls = hasPerm(VIEW_POLLS);
+  const showMarketplace = hasPerm(VIEW_MARKETPLACE);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -119,14 +147,83 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── Community Services ────────────────────────────────── */}
+        {hasCommunityServices && (
+          <>
+            <SectionHeader title="Community Services" />
+            <View style={styles.menuSection}>
+              {showEmergency && (
+                <MenuItem
+                  icon="alert-circle-outline"
+                  label="Emergency SOS"
+                  onPress={() => router.push('/emergency')}
+                  iconColor="#EF4444"
+                  iconBg="#FEE2E2"
+                />
+              )}
+              {showFinance && (
+                <MenuItem
+                  icon="card-outline"
+                  label="Maintenance & Dues"
+                  onPress={() => router.push('/finance')}
+                  iconColor="#10B981"
+                  iconBg="#D1FAE5"
+                />
+              )}
+              {showHelpdesk && (
+                <MenuItem
+                  icon="construct-outline"
+                  label="Smart Helpdesk"
+                  onPress={() => router.push('/helpdesk')}
+                  iconColor="#F59E0B"
+                  iconBg="#FEF3C7"
+                />
+              )}
+              {showGroupBuying && (
+                <MenuItem
+                  icon="cart-outline"
+                  label="Group Buying"
+                  onPress={() => router.push('/group-buying')}
+                  iconColor="#3B82F6"
+                  iconBg="#DBEAFE"
+                />
+              )}
+              {showTrips && (
+                <MenuItem
+                  icon="bus-outline"
+                  label="Community Trips"
+                  onPress={() => router.push('/trips')}
+                  iconColor="#8B5CF6"
+                  iconBg="#EDE9FE"
+                />
+              )}
+              {showDiscover && (
+                <MenuItem
+                  icon="compass-outline"
+                  label="Community Discover"
+                  onPress={() => router.push('/discover')}
+                  iconColor="#EC4899"
+                  iconBg="#FCE7F3"
+                />
+              )}
+            </View>
+          </>
+        )}
+
         {/* ── Explore ─────────────────────────────────────────── */}
         <SectionHeader title="Explore" />
         <View style={styles.menuSection}>
-          <MenuItem icon="football-outline"    label="Sports"      onPress={() => router.push('/sports')}      iconColor="#059669" iconBg="#D1FAE5" />
+          {showSports && (
+            <MenuItem icon="football-outline"    label="Sports"      onPress={() => router.push('/sports')}      iconColor="#059669" iconBg="#D1FAE5" />
+          )}
           <MenuItem icon="car-outline"         label="Commute"     onPress={() => router.push('/commute')}     iconColor="#2563EB" iconBg="#DBEAFE" />
-          <MenuItem icon="stats-chart-outline" label="Polls"       onPress={() => router.push('/polls')}       iconColor="#7C3AED" iconBg="#EDE9FE" />
+          {showPolls && (
+            <MenuItem icon="stats-chart-outline" label="Polls"       onPress={() => router.push('/polls')}       iconColor="#7C3AED" iconBg="#EDE9FE" />
+          )}
           <MenuItem icon="pricetag-outline"    label="Auction"     onPress={() => router.push('/auction')}     iconColor="#D97706" iconBg="#FEF3C7" />
-          <MenuItem icon="storefront-outline"  label="Marketplace" onPress={() => router.push('/tabs/marketplace')} iconColor="#DC2626" iconBg="#FEE2E2" />
+          {showMarketplace && (
+            <MenuItem icon="storefront-outline"  label="Marketplace" onPress={() => router.push('/tabs/marketplace')} iconColor="#DC2626" iconBg="#FEE2E2" />
+          )}
         </View>
 
         {/* ── Account ─────────────────────────────────────────── */}
@@ -140,7 +237,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── Admin ───────────────────────────────────────────── */}
-        {isAdmin && (
+        {(isAdmin && (isSuperAdmin || (user?.permissions || []).includes(VIEW_ADMIN))) && (
           <>
             <SectionHeader title="Admin" />
             <View style={styles.menuSection}>
