@@ -6,8 +6,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import * as Notifications from 'expo-notifications';
 import { authService } from '@/services/authService';
+
+let Notifications: typeof import('expo-notifications') | null = null;
+try {
+  Notifications = require('expo-notifications');
+} catch {
+  // expo-notifications not available in Expo Go SDK 53+
+}
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS } from '@/constants/config';
 import api from '@/services/apiClient';
@@ -53,6 +59,10 @@ export default function PendingScreen() {
   }, [freshProfile]);
 
   async function requestPushPermission() {
+    if (!Notifications) {
+      Alert.alert('Not available', 'Push notifications require a development build. They are not supported in Expo Go.');
+      return;
+    }
     const { status: existing } = await Notifications.getPermissionsAsync();
     if (existing === 'granted') {
       Alert.alert('Already enabled', 'You\'ll get notified when your account is approved.');
@@ -67,7 +77,7 @@ export default function PendingScreen() {
           platform: require('react-native').Platform.OS,
         });
       } catch { /* non-fatal */ }
-      Alert.alert('Notifications on ✅', 'We\'ll ping you the moment your account is approved!');
+      Alert.alert('Notifications on', 'We\'ll ping you the moment your account is approved!');
     } else {
       Alert.alert('Notifications off', 'You can enable them later in your device settings.');
     }
