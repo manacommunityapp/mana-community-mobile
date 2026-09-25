@@ -363,7 +363,6 @@ export const sportsService = {
     const res = await api.post<import('@/types/api').SportsRegistrationResponseDto>(`/sports/events/${eventId}/register`, data);
     return res.data;
   },
-};
 
   // ── Cricket Scorecard ────────────────────────────────────────
   async getScorecard(matchId: number): Promise<CricketScorecardDto> {
@@ -448,3 +447,5 @@ export const sportsService = {
   async submitMatchRatings(matchId: number, data: SubmitRatingsRequest): Promise<void> {
     await api.post(`/sports/matches/${matchId}/ratings`, data);
   },
+};
+
