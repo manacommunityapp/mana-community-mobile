@@ -938,18 +938,28 @@ export interface JobDto {
   title: string;
   company: string;
   location: string;
+  category?: string;
+  status?: string;
   type: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'FREELANCE';
+  jobType?: string;
   experienceLevel: 'ENTRY' | 'MID' | 'SENIOR' | 'LEAD' | 'EXECUTIVE';
   description: string;
   requirements?: string[];
   salaryRange?: string;
+  payType?: string;
+  payAmount?: number;
   contactEmail?: string;
   postedById: number;
   postedByName: string;
+  posterName?: string;
   postedByFlat?: string;
+  posterFlat?: string;
   postedAt: string;
+  createdAt?: string;
   applicantCount?: number;
+  applicationCount?: number;
   hasApplied?: boolean;
+  myApplicationStatus?: string;
 }
 
 export interface CreateJobRequest {
@@ -1001,10 +1011,14 @@ export interface LeaderboardEntryDto {
 
 export interface BadgeDto {
   id: string;
+  name?: string;
   title: string;
   description: string;
   icon: string;
+  emoji?: string;
+  rarity?: 'legendary' | 'epic' | 'rare' | 'common';
   tier: 'legendary' | 'epic' | 'rare' | 'common';
+  isEarned?: boolean;
   earnedAt?: string;
 }
 
@@ -1018,12 +1032,19 @@ export interface SportStatDto {
 
 export interface PlayerProfileDto {
   userId: number;
+  name?: string;
   fullName: string;
   avatarUrl?: string;
+  flatNo?: string;
   flatNumber?: string;
+  communityRating?: number;
+  ratingCount?: number;
+  totalMatches?: number;
+  totalTrophies?: number;
+  sportStats?: any[];
   stats: SportStatDto[];
   badges: BadgeDto[];
-  recentMatches: MatchDto[];
+  recentMatches: any[];
 }
 
 export interface MatchPhotoDto {
@@ -1036,8 +1057,12 @@ export interface MatchPhotoDto {
 }
 
 export interface MatchRatingPlayerDto {
+  id?: number;
+  playerId?: number;
   userId: number;
   name: string;
+  playerName?: string;
+  flatNo?: string;
   teamName: string;
   rating?: number;
   reaction?: string;
@@ -1048,30 +1073,40 @@ export interface MatchRatingSummaryDto {
   totalVotes: number;
   mvpUserId?: number;
   mvpName?: string;
+  canRate?: boolean;
+  hasRated?: boolean;
+  manOfMatch?: any;
+  players?: any[];
 }
 
 export interface SubmitRatingsRequest {
   matchId: number;
+  ratings?: any[];
   playerRatings: Array<{ userId: number; rating: number; reaction?: string }>;
   mvpUserId?: number;
 }
 
-export type PlayerReaction = '🔥' | '👏' | '⚡' | '🎯' | '🛡️';
+export type PlayerReaction = '🔥' | '👏' | '⚡' | '🎯' | '🛡️' | 'BEST_PLAYER' | 'CLUTCH' | 'TEAM_PLAYER' | 'CONSISTENT' | 'GOOD_SPORT';
 
 export interface BattingEntryDto {
+  id?: number;
   batsmanId: number;
   batsmanName: string;
+  playerName?: string;
   runs: number;
   balls: number;
   fours: number;
   sixes: number;
   strikeRate: number;
+  isNotOut?: boolean;
   dismissal?: string;
 }
 
 export interface BowlingEntryDto {
+  id?: number;
   bowlerId: number;
   bowlerName: string;
+  playerName?: string;
   overs: string;
   maidens: number;
   runs: number;
@@ -1082,15 +1117,24 @@ export interface BowlingEntryDto {
 export interface InningsDto {
   inningsNumber: number;
   teamName: string;
+  battingTeamName?: string;
   totalRuns: number;
+  wickets?: number;
   totalWickets: number;
+  overs?: string;
   totalOvers: string;
+  extras?: number;
   batting: BattingEntryDto[];
   bowling: BowlingEntryDto[];
 }
 
 export interface CricketScorecardDto {
   matchId: number;
+  matchTitle?: string;
+  result?: string;
+  manOfMatch?: { name: string; performance: string; team: string };
+  firstInnings?: InningsDto;
+  secondInnings?: InningsDto;
   innings: InningsDto[];
 }
 

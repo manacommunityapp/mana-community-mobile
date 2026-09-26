@@ -80,6 +80,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="services"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="construct-outline" iconFocused="construct" label="Services" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="events"
         options={{
           tabBarIcon: ({ focused }) => (
@@ -129,7 +137,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 2,
-    minWidth: 54,
+    minWidth: 46,
   },
   iconBg: {
     width: 44,

@@ -43,20 +43,22 @@ const SAMPLE_PROVIDERS: ServiceProvider[] = [
   { id: 6, name: 'Fix-It Appliance Repair',  category: 'APPLIANCE',  phone: '+919876543215', rating: 4.4, reviewCount: 29, priceRange: '₹300-1000',  verified: true,  available: true,  speciality: 'AC, washing machine, fridge' },
 ];
 
-export default function ServicesScreen() {
+export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   const router = useRouter();
   const [filter, setFilter] = useState<ServiceCategory>('ALL');
 
   const goHome = useCallback(() => {
+    if (isTab) return;
     if (router.canGoBack()) router.back();
     else router.replace('/tabs/feed');
-  }, [router]);
+  }, [router, isTab]);
 
   useFocusEffect(
     useCallback(() => {
+      if (isTab) return;
       const sub = BackHandler.addEventListener('hardwareBackPress', () => { goHome(); return true; });
       return () => sub.remove();
-    }, [goHome])
+    }, [goHome, isTab])
   );
 
   const filtered = filter === 'ALL' ? SAMPLE_PROVIDERS : SAMPLE_PROVIDERS.filter(p => p.category === filter);
@@ -111,12 +113,14 @@ export default function ServicesScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={goHome} style={s.backBtn} hitSlop={8}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
-        </TouchableOpacity>
+        {!isTab && (
+          <TouchableOpacity onPress={goHome} style={s.backBtn} hitSlop={8}>
+            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+          </TouchableOpacity>
+        )}
         <View style={s.headerCenter}>
-          <Text style={s.headerTitle}>Services</Text>
-          <Text style={s.headerSub}>Trusted local service providers</Text>
+          <Text style={s.headerTitle}>Home Services</Text>
+          <Text style={s.headerSub}>Verified local technicians & helpers</Text>
         </View>
         <TouchableOpacity style={s.backBtn} hitSlop={8}>
           <Ionicons name="search-outline" size={20} color={COLORS.text} />
