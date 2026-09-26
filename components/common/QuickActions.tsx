@@ -191,7 +191,7 @@ const s = StyleSheet.create({
   seeAll: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.accent,
+    color: COLORS.primary,
   },
   scroll: {
     paddingHorizontal: 12,

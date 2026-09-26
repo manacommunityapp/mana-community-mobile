@@ -224,7 +224,7 @@ export default function ProfileScreen() {
           {showMarketplace && (
             <MenuItem icon="storefront-outline"  label="Marketplace" onPress={() => router.push('/tabs/marketplace')} iconColor="#DC2626" iconBg="#FEE2E2" />
           )}
-          <MenuItem icon="restaurant-outline"  label="Community Kitchen" onPress={() => router.push('/food')} iconColor="#E67E22" iconBg="#FFF5EB" />
+          <MenuItem icon="restaurant-outline"  label="Community Kitchen" onPress={() => router.push('/food')} iconColor="#4F46E5" iconBg="#EEF2FF" />
           <MenuItem icon="shield-checkmark-outline" label="Gate & Visitors" onPress={() => router.push('/visitors')} iconColor="#0891B2" iconBg="#CFFAFE" />
           <MenuItem icon="car-outline"         label="Parking"           onPress={() => router.push('/parking')} iconColor="#4F46E5" iconBg="#EEF2FF" />
           <MenuItem icon="fitness-outline"     label="Facilities"        onPress={() => router.push('/facilities')} iconColor="#0D9488" iconBg="#CCFBF1" />

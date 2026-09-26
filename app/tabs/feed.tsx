@@ -103,7 +103,7 @@ const es = StyleSheet.create({
   dateBadge: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLORS.accent,
+    color: COLORS.primary,
     paddingHorizontal: 12,
     paddingTop: 10,
     letterSpacing: 0.3,
@@ -146,7 +146,7 @@ const es = StyleSheet.create({
   moreText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.accent,
+    color: COLORS.primary,
     marginLeft: 10,
   },
 });
@@ -328,7 +328,7 @@ export default function FeedScreen() {
       {latestAnnouncement && (
         <View style={styles.announcementCard}>
           <View style={styles.announcementIconWrap}>
-            <Ionicons name="volume-high" size={22} color={COLORS.accent} />
+            <Ionicons name="volume-high" size={22} color={COLORS.primary} />
           </View>
           <View style={styles.announcementContent}>
             <Text style={styles.announcementLabel}>COMMUNITY UPDATE</Text>
@@ -509,7 +509,7 @@ export default function FeedScreen() {
 
       {/* ── Feed List ─────────────────────────────────────────── */}
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 60 }} color={COLORS.accent} size="large" />
+        <ActivityIndicator style={{ marginTop: 60 }} color={COLORS.primary} size="large" />
       ) : (
         <FlatList
           data={filteredPosts}
@@ -519,19 +519,19 @@ export default function FeedScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.accent} />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
           }
           onEndReached={() => hasNextPage && fetchNextPage()}
           onEndReachedThreshold={0.4}
           ListFooterComponent={
             isFetchingNextPage ? (
-              <ActivityIndicator style={{ padding: 20 }} color={COLORS.accent} />
+              <ActivityIndicator style={{ padding: 20 }} color={COLORS.primary} />
             ) : null
           }
           ListEmptyComponent={
             <View style={styles.empty}>
               <View style={styles.emptyIconWrap}>
-                <Ionicons name="chatbubbles-outline" size={36} color={COLORS.accent} />
+                <Ionicons name="chatbubbles-outline" size={36} color={COLORS.primary} />
               </View>
               <Text style={styles.emptyTitle}>No posts in this category</Text>
               <Text style={styles.emptyText}>Be the first to share an update with your neighbors!</Text>
@@ -601,15 +601,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   communityBadge: {
-    backgroundColor: COLORS.accentLight,
+    backgroundColor: COLORS.primaryLight,
     borderRadius: RADIUS.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: COLORS.accent,
+    borderColor: COLORS.primaryMid,
   },
   communityBadgeText: {
-    color: COLORS.accent,
+    color: COLORS.primary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.accentLight,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   announcementLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: COLORS.accent,
+    color: COLORS.primary,
     letterSpacing: 0.5,
     marginBottom: 2,
   },
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
   seeAll: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.accent,
+    color: COLORS.primary,
   },
   eventsScroll: {
     paddingHorizontal: 16,
@@ -932,7 +932,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: COLORS.accentLight,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.md,
     paddingHorizontal: 18,
     paddingVertical: 10,
