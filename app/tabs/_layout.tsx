@@ -22,11 +22,12 @@ function TabIcon({
 }) {
   return (
     <View style={styles.iconWrap}>
+      <View style={[styles.pill, focused && styles.pillActive]} />
       <View style={[styles.iconBg, focused && styles.iconBgActive]}>
         <Ionicons
           name={focused ? iconFocused : icon}
           size={22}
-          color={focused ? COLORS.accent : COLORS.textMuted}
+          color={focused ? COLORS.primary : COLORS.textMuted}
         />
         {badgeCount != null && badgeCount > 0 && (
           <View style={styles.badge}>
@@ -58,7 +59,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: COLORS.accent,
+        tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarHideOnKeyboard: true,
       }}
@@ -140,6 +141,16 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     minWidth: 54,
   },
+  pill: {
+    width: 20,
+    height: 3,
+    borderRadius: RADIUS.full,
+    backgroundColor: 'transparent',
+    marginBottom: 3,
+  },
+  pillActive: {
+    backgroundColor: COLORS.primary,
+  },
   iconBg: {
     width: 44,
     height: 32,
@@ -149,7 +160,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconBgActive: {
-    backgroundColor: COLORS.accentLight,
+    backgroundColor: COLORS.primaryLight,
   },
   iconLabel: {
     fontSize: 10,
@@ -159,7 +170,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   iconLabelActive: {
-    color: COLORS.accent,
+    color: COLORS.primary,
     fontWeight: '700',
   },
   badge: {
