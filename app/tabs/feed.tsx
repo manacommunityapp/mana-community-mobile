@@ -443,9 +443,13 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* ── Welcome Top Bar (matches Figma) ──────────────────────── */}
+      {/* ── Welcome Top Bar (Profile on top side header) ────────── */}
       <View style={styles.topBar}>
-        <View style={styles.welcomeRow}>
+        <TouchableOpacity
+          style={styles.welcomeRow}
+          onPress={() => router.push('/tabs/profile')}
+          activeOpacity={0.7}
+        >
           <View style={[styles.profileAvatar, { backgroundColor: avatarColor.bg }]}>
             <Text style={styles.profileAvatarText}>{userInitial}</Text>
           </View>
@@ -453,7 +457,7 @@ export default function FeedScreen() {
             <Text style={styles.welcomeLabel}>{greeting} 👋</Text>
             <Text style={styles.welcomeName}>{userName}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.topBarRight}>
           {!!communityName && (

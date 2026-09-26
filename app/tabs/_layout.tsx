@@ -112,12 +112,13 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          href: null,
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="person-outline" iconFocused="person" label="Profile" focused={focused} />
           ),
         }}
       />
-      {/* Hidden tabs — accessible via stack navigation */}
+      {/* Hidden tabs — accessible via top header & stack navigation */}
       <Tabs.Screen name="sports" options={{ href: null }} />
     </Tabs>
   );
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 2,
-    minWidth: 46,
+    minWidth: 54,
   },
   iconBg: {
     width: 44,
