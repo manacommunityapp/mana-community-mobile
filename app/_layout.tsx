@@ -78,7 +78,20 @@ export default function RootLayout() {
             <Stack.Screen name="sports" />
             <Stack.Screen name="events" />
             <Stack.Screen name="polls" />
+            <Stack.Screen name="food" />
+            <Stack.Screen name="visitors" />
+            <Stack.Screen name="parking" />
+            <Stack.Screen name="facilities" />
+            <Stack.Screen name="services" />
+            <Stack.Screen name="pets" />
             <Stack.Screen name="jobs" />
+            <Stack.Screen name="commute" />
+            <Stack.Screen name="discover" />
+            <Stack.Screen name="emergency" />
+            <Stack.Screen name="finance" />
+            <Stack.Screen name="group-buying" />
+            <Stack.Screen name="helpdesk" />
+            <Stack.Screen name="trips" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

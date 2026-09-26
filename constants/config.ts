@@ -18,6 +18,9 @@ export const COLORS = {
   primaryLight: '#EEF2FF',  // indigo-50
   primaryMid:   '#C7D2FE',  // indigo-200
   secondary:    '#818CF8',  // indigo-400
+  accent:       '#E67E22',  // warm amber-orange (Figma accent)
+  accentDark:   '#D35400',
+  accentLight:  '#FFF5EB',  // amber-orange tint
   background:   '#F9FAFB',  // gray-50
   surface:      '#FFFFFF',
   surfaceAlt:   '#F3F4F6',  // gray-100

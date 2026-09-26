@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { CONFIG } from '@/constants/config';
 
@@ -6,19 +7,27 @@ const ACCESS_TOKEN_KEY  = 'mana_access_token';
 const REFRESH_TOKEN_KEY = 'mana_refresh_token';
 const PUSH_TOKEN_KEY    = 'mana_push_token';
 
+const webStore = {
+  getItemAsync: (key: string) => Promise.resolve(typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null),
+  setItemAsync: (key: string, value: string) => { try { localStorage.setItem(key, value); } catch {} return Promise.resolve(); },
+  deleteItemAsync: (key: string) => { try { localStorage.removeItem(key); } catch {} return Promise.resolve(); },
+};
+
+const store = Platform.OS === 'web' ? webStore : SecureStore;
+
 // ── Token helpers ──────────────────────────────────────────────
 export const tokenStore = {
-  getAccess:      () => SecureStore.getItemAsync(ACCESS_TOKEN_KEY),
-  getRefresh:     () => SecureStore.getItemAsync(REFRESH_TOKEN_KEY),
-  getPushToken:   () => SecureStore.getItemAsync(PUSH_TOKEN_KEY),
-  setAccess:      (t: string) => SecureStore.setItemAsync(ACCESS_TOKEN_KEY, t),
-  setRefresh:     (t: string) => SecureStore.setItemAsync(REFRESH_TOKEN_KEY, t),
-  setPushToken:   (t: string) => SecureStore.setItemAsync(PUSH_TOKEN_KEY, t),
-  clearPushToken: () => SecureStore.deleteItemAsync(PUSH_TOKEN_KEY),
+  getAccess:      () => store.getItemAsync(ACCESS_TOKEN_KEY),
+  getRefresh:     () => store.getItemAsync(REFRESH_TOKEN_KEY),
+  getPushToken:   () => store.getItemAsync(PUSH_TOKEN_KEY),
+  setAccess:      (t: string) => store.setItemAsync(ACCESS_TOKEN_KEY, t),
+  setRefresh:     (t: string) => store.setItemAsync(REFRESH_TOKEN_KEY, t),
+  setPushToken:   (t: string) => store.setItemAsync(PUSH_TOKEN_KEY, t),
+  clearPushToken: () => store.deleteItemAsync(PUSH_TOKEN_KEY),
   clearAll:       async () => {
-    await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
-    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-    await SecureStore.deleteItemAsync(PUSH_TOKEN_KEY);
+    await store.deleteItemAsync(ACCESS_TOKEN_KEY);
+    await store.deleteItemAsync(REFRESH_TOKEN_KEY);
+    await store.deleteItemAsync(PUSH_TOKEN_KEY);
   },
 };
 

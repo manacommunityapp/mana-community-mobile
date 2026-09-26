@@ -22,14 +22,11 @@ function TabIcon({
 }) {
   return (
     <View style={styles.iconWrap}>
-      {/* Active top indicator pill */}
-      <View style={[styles.pill, focused && styles.pillActive]} />
-
       <View style={[styles.iconBg, focused && styles.iconBgActive]}>
         <Ionicons
           name={focused ? iconFocused : icon}
           size={22}
-          color={focused ? COLORS.primary : COLORS.textMuted}
+          color={focused ? COLORS.accent : COLORS.textMuted}
         />
         {badgeCount != null && badgeCount > 0 && (
           <View style={styles.badge}>
@@ -39,7 +36,6 @@ function TabIcon({
           </View>
         )}
       </View>
-
       <Text style={[styles.iconLabel, focused && styles.iconLabelActive]}>
         {label}
       </Text>
@@ -62,7 +58,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: COLORS.primary,
+        tabBarActiveTintColor: COLORS.accent,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarHideOnKeyboard: true,
       }}
@@ -122,12 +118,11 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     height: Platform.OS === 'ios' ? 88 : 68,
-    paddingTop: 0,
+    paddingTop: 4,
     paddingBottom: Platform.OS === 'ios' ? 24 : 8,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopWidth: 0,
     backgroundColor: COLORS.surface,
-    ...SHADOWS.md,
+    ...SHADOWS.lg,
     elevation: 16,
   },
   iconWrap: {
@@ -135,16 +130,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 2,
     minWidth: 54,
-  },
-  pill: {
-    width: 20,
-    height: 3,
-    borderRadius: RADIUS.full,
-    backgroundColor: 'transparent',
-    marginBottom: 4,
-  },
-  pillActive: {
-    backgroundColor: COLORS.primary,
   },
   iconBg: {
     width: 44,
@@ -155,7 +140,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconBgActive: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.accentLight,
   },
   iconLabel: {
     fontSize: 10,
@@ -165,13 +150,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   iconLabelActive: {
-    color: COLORS.primary,
+    color: COLORS.accent,
     fontWeight: '700',
   },
   badge: {
     position: 'absolute',
-    top: -2,
-    right: 2,
+    top: -4,
+    right: 0,
     backgroundColor: COLORS.error,
     borderRadius: RADIUS.full,
     minWidth: 16,
