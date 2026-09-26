@@ -931,3 +931,178 @@ export interface CommuteUserProfileDto {
   ridesBooked:   number;
   kycVerified:   boolean;
 }
+
+// ── Jobs & Career ──────────────────────────────────────────────
+export interface JobDto {
+  id: number;
+  title: string;
+  company: string;
+  location: string;
+  type: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'FREELANCE';
+  experienceLevel: 'ENTRY' | 'MID' | 'SENIOR' | 'LEAD' | 'EXECUTIVE';
+  description: string;
+  requirements?: string[];
+  salaryRange?: string;
+  contactEmail?: string;
+  postedById: number;
+  postedByName: string;
+  postedByFlat?: string;
+  postedAt: string;
+  applicantCount?: number;
+  hasApplied?: boolean;
+}
+
+export interface CreateJobRequest {
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  experienceLevel?: string;
+  description: string;
+  requirements?: string[];
+  salaryRange?: string;
+  contactEmail?: string;
+}
+
+export interface JobApplicationDto {
+  id: number;
+  jobId: number;
+  jobTitle: string;
+  applicantId: number;
+  applicantName: string;
+  applicantEmail: string;
+  resumeUrl?: string;
+  coverNote?: string;
+  status: 'PENDING' | 'REVIEWED' | 'SHORTLISTED' | 'REJECTED';
+  appliedAt: string;
+}
+
+export interface ApplyJobRequest {
+  jobId: number;
+  coverNote?: string;
+  resumeUrl?: string;
+}
+
+// ── Extended Sports Scoring & Gamification ─────────────────────
+export type LeaderboardCategory = 'RUNS' | 'WICKETS' | 'GOALS' | 'MVP' | 'MOST_VALUABLE' | 'FAIR_PLAY';
+
+export interface LeaderboardEntryDto {
+  rank: number;
+  userId: number;
+  playerName: string;
+  avatarUrl?: string;
+  flatNumber?: string;
+  teamName?: string;
+  score: number;
+  matchesPlayed: number;
+  strikeRate?: number;
+  economyRate?: number;
+}
+
+export interface BadgeDto {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  tier: 'legendary' | 'epic' | 'rare' | 'common';
+  earnedAt?: string;
+}
+
+export interface SportStatDto {
+  sport: string;
+  matches: number;
+  wins: number;
+  mvps: number;
+  totalPoints: number;
+}
+
+export interface PlayerProfileDto {
+  userId: number;
+  fullName: string;
+  avatarUrl?: string;
+  flatNumber?: string;
+  stats: SportStatDto[];
+  badges: BadgeDto[];
+  recentMatches: MatchDto[];
+}
+
+export interface MatchPhotoDto {
+  id: string;
+  matchId: number;
+  url: string;
+  caption?: string;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+export interface MatchRatingPlayerDto {
+  userId: number;
+  name: string;
+  teamName: string;
+  rating?: number;
+  reaction?: string;
+}
+
+export interface MatchRatingSummaryDto {
+  matchId: number;
+  totalVotes: number;
+  mvpUserId?: number;
+  mvpName?: string;
+}
+
+export interface SubmitRatingsRequest {
+  matchId: number;
+  playerRatings: Array<{ userId: number; rating: number; reaction?: string }>;
+  mvpUserId?: number;
+}
+
+export type PlayerReaction = '🔥' | '👏' | '⚡' | '🎯' | '🛡️';
+
+export interface BattingEntryDto {
+  batsmanId: number;
+  batsmanName: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  strikeRate: number;
+  dismissal?: string;
+}
+
+export interface BowlingEntryDto {
+  bowlerId: number;
+  bowlerName: string;
+  overs: string;
+  maidens: number;
+  runs: number;
+  wickets: number;
+  economy: number;
+}
+
+export interface InningsDto {
+  inningsNumber: number;
+  teamName: string;
+  totalRuns: number;
+  totalWickets: number;
+  totalOvers: string;
+  batting: BattingEntryDto[];
+  bowling: BowlingEntryDto[];
+}
+
+export interface CricketScorecardDto {
+  matchId: number;
+  innings: InningsDto[];
+}
+
+// ── Onboarding & KYC ───────────────────────────────────────────
+export interface CommunityPreviewDto {
+  id: number;
+  name: string;
+  city: string;
+  state: string;
+  unitsCount: number;
+  bannerImage?: string;
+}
+
+export type GovtIdType = 'AADHAAR' | 'PASSPORT' | 'VOTER_ID' | 'DRIVING_LICENSE';
+

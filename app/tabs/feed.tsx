@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, StyleSheet, RefreshControl, Image,
   TouchableOpacity, ActivityIndicator, ListRenderItemInfo,
-  Share, ScrollView, Dimensions,
+  Share, ScrollView, Dimensions, TextInput, Platform,
 } from 'react-native';
 import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -255,6 +255,7 @@ export default function FeedScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [filter, setFilter] = useState<FeedFilter>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const {
     data, fetchNextPage, hasNextPage,
@@ -281,12 +282,21 @@ export default function FeedScreen() {
   const allPosts = useMemo(() => data?.pages.flatMap((p) => p.content) ?? [], [data]);
 
   const filteredPosts = useMemo(() => {
-    if (filter === 'ALL') return allPosts;
-    if (filter === 'ANNOUNCEMENT') return allPosts.filter(p => p.type === 'announcement');
-    if (filter === 'POLL') return allPosts.filter(p => p.type === 'poll');
-    if (filter === 'GENERAL') return allPosts.filter(p => p.type === 'post');
-    return allPosts;
-  }, [allPosts, filter]);
+    let list = allPosts;
+    if (filter === 'ANNOUNCEMENT') list = list.filter(p => p.type === 'announcement');
+    if (filter === 'POLL') list = list.filter(p => p.type === 'poll');
+    if (filter === 'GENERAL') list = list.filter(p => p.type === 'post');
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(p =>
+        p.content?.toLowerCase().includes(q) ||
+        p.authorName?.toLowerCase().includes(q) ||
+        p.authorFlat?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allPosts, filter, searchQuery]);
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<PostDto>) => <PostCard post={item} />,
@@ -469,6 +479,30 @@ export default function FeedScreen() {
         </View>
       </View>
 
+      {/* ── Curved Search Bar (Below Header) ────────────────────── */}
+      <View style={styles.searchBarWrap}>
+        <View style={styles.searchBarCurved}>
+          <Ionicons name="search-outline" size={17} color={COLORS.textMuted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search updates, notices, events, neighbors..."
+            placeholderTextColor={COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.searchFilterBtn}>
+              <Ionicons name="options-outline" size={14} color={COLORS.primary} />
+            </View>
+          )}
+        </View>
+      </View>
+
       {/* ── Feed List ─────────────────────────────────────────── */}
       {isLoading ? (
         <ActivityIndicator style={{ marginTop: 60 }} color={COLORS.accent} size="large" />
@@ -601,6 +635,44 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 9,
     fontWeight: '800',
+  },
+
+  // ── Curved Search Bar ───────────────────────────────────────────────
+  searchBarWrap: {
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 10,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  searchBarCurved: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 8 : 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchIcon: {
+    marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.text,
+    paddingVertical: 6,
+  },
+  searchFilterBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
   },
 
   // ── Header Stack ───────────────────────────────────────────────

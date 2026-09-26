@@ -92,6 +92,7 @@ export default function RootLayout() {
             <Stack.Screen name="group-buying" />
             <Stack.Screen name="helpdesk" />
             <Stack.Screen name="trips" />
+            <Stack.Screen name="notices" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
