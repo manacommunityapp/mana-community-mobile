@@ -25,6 +25,7 @@ export const COLORS = {
   surface:      '#FFFFFF',  // web --mana-bg-card
   surfaceAlt:   '#e8edf8',  // web --mana-bg-elevated
   border:       'rgba(99, 102, 241, 0.18)',  // web --mana-border
+  borderLight:  'rgba(99, 102, 241, 0.10)',  // lighter border
   text:         '#0d0d2b',  // web --mana-text-primary
   textSecondary:'#6b7094',  // web --mana-text-muted
   textMuted:    '#6b7094',  // web --mana-text-muted
@@ -36,6 +37,18 @@ export const COLORS = {
   warningLight: '#FEF9C3',  // amber-50
   info:         '#06b6d4',  // web --mana-info
   infoLight:    '#CFFAFE',  // cyan-100
+  overlay:      'rgba(13, 13, 43, 0.55)', // dark overlay
+} as const;
+
+// ── Gradient Pairs ─────────────────────────────────────────────
+export const GRADIENTS = {
+  primary:    ['#4F46E5', '#6366F1'] as const,
+  primaryDeep:['#3730A3', '#4F46E5'] as const,
+  hero:       ['#4338CA', '#4F46E5', '#6366F1'] as const,
+  warm:       ['#F59E0B', '#D97706'] as const,
+  success:    ['#059669', '#10B981'] as const,
+  surface:    ['#FFFFFF', '#f0f4ff'] as const,
+  card:       ['#f8f9ff', '#FFFFFF'] as const,
 } as const;
 
 // ── Typography ─────────────────────────────────────────────────
@@ -52,6 +65,18 @@ export const FONTS = {
   bold:           'DMSans-Bold',
 } as const;
 
+// ── Typography Scale ──────────────────────────────────────────
+export const TEXT = {
+  xs:   { fontSize: 11, lineHeight: 16 },
+  sm:   { fontSize: 13, lineHeight: 18 },
+  base: { fontSize: 15, lineHeight: 22 },
+  md:   { fontSize: 16, lineHeight: 24 },
+  lg:   { fontSize: 18, lineHeight: 26 },
+  xl:   { fontSize: 20, lineHeight: 28 },
+  xxl:  { fontSize: 24, lineHeight: 32 },
+  xxxl: { fontSize: 28, lineHeight: 36 },
+} as const;
+
 // ── Spacing ───────────────────────────────────────────────────
 export const SPACING = {
   xs: 4,
@@ -65,10 +90,12 @@ export const SPACING = {
 
 // ── Border Radius ─────────────────────────────────────────────
 export const RADIUS = {
+  xs: 4,
   sm: 6,
   md: 10,
   lg: 14,
   xl: 20,
+  xxl: 28,
   full: 9999,
 } as const;
 
@@ -77,23 +104,30 @@ export const SHADOWS = {
   sm: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
     elevation: 2,
   },
   md: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.09,
+    shadowRadius: 8,
     elevation: 4,
   },
   lg: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
     elevation: 8,
+  },
+  primary: {
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
 } as const;
 

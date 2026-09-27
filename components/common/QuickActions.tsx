@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '@/constants/config';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, RADIUS, SHADOWS, FONTS } from '@/constants/config';
 
 export interface QuickActionItem {
   id: string;
@@ -51,11 +52,18 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'facilities', icon: 'fitness-outline', label: 'Amenities Booking', route: '/facilities', bg: '#CCFBF1', color: '#0D9488', category: 'Facilities' },
 ];
 
+const CATEGORY_ICONS: Record<QuickActionItem['category'], keyof typeof Ionicons.glyphMap> = {
+  'Safety & Help':   'shield-checkmark-outline',
+  'Living & Bills':  'home-outline',
+  'Social & Sports': 'people-outline',
+  'Commerce & Food': 'bag-handle-outline',
+  'Facilities':      'fitness-outline',
+};
+
 export function QuickActions() {
   const router = useRouter();
   const [showAllModal, setShowAllModal] = useState(false);
 
-  // Top popular highlights in horizontal scroll (events, services, shop are in footer tabs; emergency in top header)
   const highlightedServices = [
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'dues')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'offers')!,
@@ -86,8 +94,14 @@ export function QuickActions() {
     <View style={s.wrapper}>
       <View style={s.headerRow}>
         <Text style={s.heading}>Community Services</Text>
-        <TouchableOpacity onPress={() => setShowAllModal(true)} activeOpacity={0.7} hitSlop={8}>
-          <Text style={s.seeAll}>See All ({ALL_COMMUNITY_SERVICES.length}) →</Text>
+        <TouchableOpacity
+          style={s.seeAllBtn}
+          onPress={() => setShowAllModal(true)}
+          activeOpacity={0.7}
+          hitSlop={8}
+        >
+          <Text style={s.seeAll}>All {ALL_COMMUNITY_SERVICES.length}</Text>
+          <Ionicons name="grid-outline" size={12} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
 
@@ -104,43 +118,56 @@ export function QuickActions() {
             activeOpacity={0.7}
           >
             <View style={[s.iconCircle, { backgroundColor: action.bg }]}>
-              <Ionicons name={action.icon} size={19} color={action.color} />
+              <Ionicons name={action.icon} size={20} color={action.color} />
               {action.badge && (
-                <View style={s.miniBadge}>
+                <View style={[s.miniBadge, { backgroundColor: action.color }]}>
                   <Text style={s.miniBadgeText}>{action.badge}</Text>
                 </View>
               )}
             </View>
-            <Text style={s.label} numberOfLines={1}>
+            <Text style={s.label} numberOfLines={2}>
               {action.label}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* ── Full Services Hub Modal ── */}
+      {/* Full Services Hub Modal */}
       <Modal visible={showAllModal} animationType="slide" presentationStyle="pageSheet">
         <View style={s.modalContainer}>
-          <View style={s.modalHeader}>
+          {/* Modal Header with gradient */}
+          <LinearGradient
+            colors={['#4338CA', '#4F46E5', '#6366F1']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.modalHeader}
+          >
+            <View style={s.modalHeaderDecCircle} />
             <View>
-              <Text style={s.modalTitle}>{"Community Hub & Services"}</Text>
-              <Text style={s.modalSub}>All amenities, modules, and utilities</Text>
+              <Text style={s.modalTitle}>Community Hub</Text>
+              <Text style={s.modalSub}>{ALL_COMMUNITY_SERVICES.length} services & amenities</Text>
             </View>
             <TouchableOpacity
               style={s.closeButton}
               onPress={() => setShowAllModal(false)}
               hitSlop={8}
             >
-              <Ionicons name="close" size={24} color={COLORS.text} />
+              <Ionicons name="close" size={20} color="#fff" />
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
 
           <ScrollView contentContainerStyle={s.modalScroll} showsVerticalScrollIndicator={false}>
             {categories.map((cat) => {
               const items = ALL_COMMUNITY_SERVICES.filter((item) => item.category === cat);
               return (
                 <View key={cat} style={s.categorySection}>
-                  <Text style={s.categoryTitle}>{cat}</Text>
+                  <View style={s.categoryHeader}>
+                    <View style={s.categoryIconWrap}>
+                      <Ionicons name={CATEGORY_ICONS[cat]} size={14} color={COLORS.primary} />
+                    </View>
+                    <Text style={s.categoryTitle}>{cat}</Text>
+                    <Text style={s.categoryCount}>{items.length}</Text>
+                  </View>
                   <View style={s.grid}>
                     {items.map((action) => (
                       <TouchableOpacity
@@ -150,10 +177,10 @@ export function QuickActions() {
                           setShowAllModal(false);
                           router.push(action.route as any);
                         }}
-                        activeOpacity={0.7}
+                        activeOpacity={0.75}
                       >
                         <View style={[s.gridIconCircle, { backgroundColor: action.bg }]}>
-                          <Ionicons name={action.icon} size={24} color={action.color} />
+                          <Ionicons name={action.icon} size={22} color={action.color} />
                         </View>
                         <Text style={s.gridLabel} numberOfLines={2}>
                           {action.label}
@@ -180,8 +207,8 @@ export function QuickActions() {
 
 const s = StyleSheet.create({
   wrapper: {
-    paddingTop: 10,
-    gap: 8,
+    paddingTop: 14,
+    gap: 10,
   },
   headerRow: {
     flexDirection: 'row',
@@ -194,26 +221,39 @@ const s = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.2,
+    fontFamily: FONTS.displayBold,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primaryMid,
   },
   seeAll: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: COLORS.primary,
+    fontFamily: FONTS.bold,
   },
   scroll: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    gap: 2,
+    gap: 4,
   },
   item: {
     alignItems: 'center',
-    width: 62,
-    gap: 4,
+    width: 68,
+    gap: 5,
   },
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -222,22 +262,27 @@ const s = StyleSheet.create({
   miniBadge: {
     position: 'absolute',
     top: -4,
-    right: -4,
-    backgroundColor: '#DC2626',
+    right: -5,
     borderRadius: RADIUS.full,
     paddingHorizontal: 4,
-    paddingVertical: 1,
+    paddingVertical: 1.5,
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
   miniBadgeText: {
     color: '#FFFFFF',
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: '800',
+    fontFamily: FONTS.bold,
+    letterSpacing: 0.2,
   },
   label: {
     fontSize: 10,
     fontWeight: '600',
     color: COLORS.textSecondary,
     textAlign: 'center',
+    lineHeight: 14,
+    fontFamily: FONTS.semiBold,
   },
 
   // Modal styles
@@ -249,41 +294,79 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 20 : 16,
+    paddingBottom: 20,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  modalHeaderDecCircle: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    top: -60,
+    right: -40,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
-    color: COLORS.text,
+    color: '#fff',
+    fontFamily: FONTS.displayEB,
+    letterSpacing: -0.4,
   },
   modalSub: {
     fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 2,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 3,
+    fontFamily: FONTS.regular,
   },
   closeButton: {
-    padding: 6,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalScroll: {
     padding: 16,
     paddingBottom: 40,
-    gap: 20,
+    gap: 22,
   },
   categorySection: {
     gap: 10,
   },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   categoryTitle: {
-    fontSize: 14,
+    flex: 1,
+    fontSize: 13,
     fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: 0.1,
+    fontFamily: FONTS.bold,
+  },
+  categoryCount: {
+    fontSize: 11,
     color: COLORS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontFamily: FONTS.medium,
+    backgroundColor: COLORS.surfaceAlt,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   grid: {
     flexDirection: 'row',
@@ -293,18 +376,18 @@ const s = StyleSheet.create({
   gridCard: {
     width: '31%',
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
+    borderRadius: 16,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
-    minHeight: 100,
+    minHeight: 96,
     justifyContent: 'center',
     ...SHADOWS.sm,
   },
   gridIconCircle: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -315,15 +398,18 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.text,
     textAlign: 'center',
+    lineHeight: 15,
+    fontFamily: FONTS.bold,
   },
   gridBadge: {
-    marginTop: 4,
-    paddingHorizontal: 6,
+    marginTop: 5,
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: RADIUS.sm,
+    borderRadius: 6,
   },
   gridBadgeText: {
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: FONTS.bold,
   },
 });
