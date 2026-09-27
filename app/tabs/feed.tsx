@@ -256,6 +256,7 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<FeedFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const {
     data, fetchNextPage, hasNextPage,
@@ -510,11 +511,27 @@ export default function FeedScreen() {
         </TouchableOpacity>
 
         <View style={styles.topBarRight}>
-          {!!communityName && (
+          {!!communityName && !isSearchOpen && (
             <View style={styles.communityBadge}>
               <Text style={styles.communityBadgeText}>{communityName}</Text>
             </View>
           )}
+          <TouchableOpacity
+            style={[styles.headerIconBtn, isSearchOpen && styles.headerIconBtnActive]}
+            onPress={() => {
+              setIsSearchOpen((prev) => !prev);
+              if (isSearchOpen) setSearchQuery('');
+            }}
+            activeOpacity={0.7}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={isSearchOpen ? 'close-outline' : 'search-outline'}
+              size={22}
+              color={isSearchOpen ? COLORS.primary : COLORS.text}
+            />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.notifBtn}
             onPress={() => router.push('/notifications')}
@@ -533,29 +550,38 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* ── Curved Search Bar (Below Header) ────────────────────── */}
-      <View style={styles.searchBarWrap}>
-        <View style={styles.searchBarCurved}>
-          <Ionicons name="search-outline" size={17} color={COLORS.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search updates, notices, events, neighbors..."
-            placeholderTextColor={COLORS.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.searchFilterBtn}>
-              <Ionicons name="options-outline" size={14} color={COLORS.primary} />
-            </View>
-          )}
+      {/* ── Expandable Search Bar (Revealed when search button is clicked) ────── */}
+      {isSearchOpen && (
+        <View style={styles.searchBarWrap}>
+          <View style={styles.searchBarCurved}>
+            <Ionicons name="search-outline" size={17} color={COLORS.primary} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search updates, notices, events, neighbors..."
+              placeholderTextColor={COLORS.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => {
+                  setIsSearchOpen(false);
+                  setSearchQuery('');
+                }}
+                hitSlop={8}
+              >
+                <Ionicons name="close-outline" size={18} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* ── Feed List ─────────────────────────────────────────── */}
       {isLoading ? (
@@ -739,9 +765,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  headerIconBtnActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primaryMid,
+  },
   notifBtn: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
