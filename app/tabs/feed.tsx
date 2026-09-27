@@ -351,11 +351,11 @@ export default function FeedScreen() {
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
-    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length, color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
-    { id: 'polls',   label: 'Active Polls',   value: 3,                    color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'stats-chart' as keyof typeof Ionicons.glyphMap, route: '/polls' },
-    { id: 'notifs',  label: 'Notifications',  value: unreadCount,          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
-    { id: 'sports',  label: 'Live Matches',   value: 1,                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy' as keyof typeof Ionicons.glyphMap, route: '/sports' },
-    { id: 'tickets', label: 'Open Tickets',   value: 0,                    color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
+    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length, color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'polls',   label: 'Active Polls',   value: 3,                    color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
+    { id: 'notifs',  label: 'Notifications',  value: unreadCount,          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'sports',  label: 'Live Matches',   value: 1,                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
+    { id: 'tickets', label: 'Open Tickets',   value: 0,                    color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
   ], [upcomingEvents.length, unreadCount]);
 
   const StatsRow = useMemo(() => (
@@ -458,7 +458,7 @@ export default function FeedScreen() {
               activeOpacity={0.7}
               hitSlop={4}
             >
-              <Ionicons name="stats-chart" size={15} color="#7C3AED" />
+              <Ionicons name="bar-chart-outline" size={15} color="#7C3AED" />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconChip, { backgroundColor: '#DBEAFE' }]}
@@ -466,7 +466,7 @@ export default function FeedScreen() {
               activeOpacity={0.7}
               hitSlop={4}
             >
-              <Ionicons name="chatbubble-ellipses" size={15} color="#2563EB" />
+              <Ionicons name="chatbubble-ellipses-outline" size={15} color="#2563EB" />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconChip, { backgroundColor: '#CCFBF1' }]}
@@ -474,14 +474,14 @@ export default function FeedScreen() {
               activeOpacity={0.7}
               hitSlop={4}
             >
-              <Ionicons name="calendar" size={15} color="#0D9488" />
+              <Ionicons name="calendar-outline" size={15} color="#0D9488" />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconChip, { backgroundColor: '#FEF3C7' }]}
               activeOpacity={0.7}
               hitSlop={4}
             >
-              <Ionicons name="camera" size={15} color="#D97706" />
+              <Ionicons name="camera-outline" size={15} color="#D97706" />
             </TouchableOpacity>
           </View>
         </View>
