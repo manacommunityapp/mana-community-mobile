@@ -101,7 +101,7 @@ export function QuickActions() {
             activeOpacity={0.7}
           >
             <View style={[s.iconCircle, { backgroundColor: action.bg }]}>
-              <Ionicons name={action.icon} size={22} color={action.color} />
+              <Ionicons name={action.icon} size={19} color={action.color} />
               {action.badge && (
                 <View style={s.miniBadge}>
                   <Text style={s.miniBadgeText}>{action.badge}</Text>
@@ -177,8 +177,8 @@ export function QuickActions() {
 
 const s = StyleSheet.create({
   wrapper: {
-    paddingTop: 14,
-    gap: 10,
+    paddingTop: 10,
+    gap: 8,
   },
   headerRow: {
     flexDirection: 'row',
@@ -187,30 +187,30 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
   },
   heading: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.2,
   },
   seeAll: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: COLORS.primary,
   },
   scroll: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 4,
+    paddingVertical: 4,
+    gap: 2,
   },
   item: {
     alignItems: 'center',
-    width: 76,
-    gap: 6,
+    width: 62,
+    gap: 4,
   },
   iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -231,7 +231,7 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   label: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: COLORS.textSecondary,
     textAlign: 'center',
