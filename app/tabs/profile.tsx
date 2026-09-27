@@ -230,6 +230,7 @@ export default function ProfileScreen() {
           <MenuItem icon="fitness-outline"     label="Facilities"        onPress={() => router.push('/facilities')} iconColor="#0D9488" iconBg="#CCFBF1" />
           <MenuItem icon="construct-outline"   label="Services"          onPress={() => router.push('/services')} iconColor="#B45309" iconBg="#FEF3C7" />
           <MenuItem icon="paw-outline"         label="Pet Corner"        onPress={() => router.push('/pets')} iconColor="#9333EA" iconBg="#F3E8FF" />
+          <MenuItem icon="shield-half-outline" label="Governance & Voting" onPress={() => router.push('/governance')} iconColor="#4F46E5" iconBg="#EEF2FF" />
         </View>
 
         {/* ── Account ─────────────────────────────────────────── */}
