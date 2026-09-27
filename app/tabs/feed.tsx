@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.65;
+const STAT_TILE_W = Math.max(74, Math.floor((SCREEN_W - 24 - (3 * 6)) / 4));
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
@@ -373,7 +374,7 @@ export default function FeedScreen() {
         >
           <View style={styles.statTileTop}>
             <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
-            <Ionicons name={tile.icon} size={16} color={tile.color} style={{ opacity: 0.7 }} />
+            <Ionicons name={tile.icon} size={14} color={tile.color} style={{ opacity: 0.7 }} />
           </View>
           <Text style={[styles.statLabel, { color: tile.labelColor }]}>{tile.label}</Text>
         </TouchableOpacity>
@@ -718,31 +719,32 @@ const styles = StyleSheet.create({
   // ── Quick Stats Row ───────────────────────────────────────────────
   statsContainer: { flexGrow: 0 },
   statsScroll: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
   },
   statTile: {
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minWidth: 108,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    width: STAT_TILE_W,
     ...SHADOWS.sm,
   },
   statTileTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   statNum: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 9.5,
     fontWeight: '600',
+    lineHeight: 12,
   },
 
   // ── Welcome Top Bar ───────────────────────────────────────────────
