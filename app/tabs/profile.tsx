@@ -234,6 +234,7 @@ export default function ProfileScreen() {
           <MenuItem icon="pricetags-outline"   label="Deals & Offers"      onPress={() => router.push('/offers')}     iconColor="#059669" iconBg="#D1FAE5" />
           <MenuItem icon="school-outline"      label="Academy & Classes"   onPress={() => router.push('/academy')}    iconColor="#7C3AED" iconBg="#EDE9FE" />
           <MenuItem icon="business-outline"    label="Property & Flats"    onPress={() => router.push('/cpos')}       iconColor="#0284C7" iconBg="#E0F2FE" />
+          <MenuItem icon="briefcase-outline"   label="Professional Network" onPress={() => router.push('/cpn')}      iconColor="#4F46E5" iconBg="#EEF2FF" />
         </View>
 
         {/* ── Account ─────────────────────────────────────────── */}

@@ -36,7 +36,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'governance', icon: 'shield-half', label: 'Governance & AGM', route: '/governance', bg: '#EEF2FF', color: '#4F46E5', category: 'Social & Sports', badge: 'Voting' },
   { id: 'academy', icon: 'school', label: 'Mana Academy', route: '/academy', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports', badge: 'Learn' },
   { id: 'polls', icon: 'stats-chart', label: 'Polls & Votes', route: '/polls', bg: '#FFF7ED', color: '#EA580C', category: 'Social & Sports' },
-  { id: 'jobs', icon: 'briefcase', label: 'Jobs & CPN', route: '/jobs', bg: '#EFF6FF', color: '#2563EB', category: 'Social & Sports' },
+  { id: 'jobs', icon: 'briefcase', label: 'CPN & Jobs', route: '/cpn', bg: '#EFF6FF', color: '#2563EB', category: 'Social & Sports', badge: 'Referrals' },
   { id: 'commute', icon: 'car-sport', label: 'Carpool & Rides', route: '/commute', bg: '#F3E8FF', color: '#7C3AED', category: 'Social & Sports' },
   { id: 'pets', icon: 'paw', label: 'Pet Care', route: '/pets', bg: '#FCE7F3', color: '#DB2777', category: 'Social & Sports' },
 
