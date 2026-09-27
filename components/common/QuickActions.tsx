@@ -39,8 +39,9 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'pets', icon: 'paw', label: 'Pet Care', route: '/pets', bg: '#FCE7F3', color: '#DB2777', category: 'Social & Sports' },
 
   // Commerce & Food
+  { id: 'offers', icon: 'pricetags', label: 'Deals & Offers', route: '/offers', bg: '#D1FAE5', color: '#059669', category: 'Commerce & Food', badge: 'Save ₹' },
   { id: 'market', icon: 'storefront', label: 'Marketplace', route: '/tabs/marketplace', bg: '#D1FAE5', color: '#059669', category: 'Commerce & Food' },
-  { id: 'group_buying', icon: 'bag-handle', label: 'Group Buying', route: '/group-buying', bg: '#ECFDF5', color: '#059669', category: 'Commerce & Food', badge: 'Save ₹' },
+  { id: 'group_buying', icon: 'bag-handle', label: 'Group Buying', route: '/group-buying', bg: '#ECFDF5', color: '#059669', category: 'Commerce & Food' },
   { id: 'food', icon: 'restaurant', label: 'Food & Kitchen', route: '/food', bg: '#FFE4E6', color: '#E11D48', category: 'Commerce & Food' },
   { id: 'auction', icon: 'pricetag', label: 'Sports Auction', route: '/auction', bg: '#ECFDF5', color: '#10B981', category: 'Commerce & Food' },
 

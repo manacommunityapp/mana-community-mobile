@@ -231,6 +231,7 @@ export default function ProfileScreen() {
           <MenuItem icon="construct-outline"   label="Services"          onPress={() => router.push('/services')} iconColor="#B45309" iconBg="#FEF3C7" />
           <MenuItem icon="paw-outline"         label="Pet Corner"        onPress={() => router.push('/pets')} iconColor="#9333EA" iconBg="#F3E8FF" />
           <MenuItem icon="shield-half-outline" label="Governance & Voting" onPress={() => router.push('/governance')} iconColor="#4F46E5" iconBg="#EEF2FF" />
+          <MenuItem icon="pricetags-outline"   label="Deals & Offers"      onPress={() => router.push('/offers')}     iconColor="#059669" iconBg="#D1FAE5" />
         </View>
 
         {/* ── Account ─────────────────────────────────────────── */}
