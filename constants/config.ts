@@ -11,7 +11,7 @@ export const CONFIG = {
   VERSION:      '1.0.0',
 } as const;
 
-// ── Theme Colors (matches your Tailwind indigo palette) ────────
+// ── Theme Colors (matches web app Mana indigo palette) ────────
 export const COLORS = {
   primary:      '#4F46E5',  // indigo-600
   primaryDark:  '#3730A3',  // indigo-800
@@ -21,28 +21,35 @@ export const COLORS = {
   accent:       '#4F46E5',  // primary indigo
   accentDark:   '#3730A3',  // indigo-800
   accentLight:  '#EEF2FF',  // indigo-50
-  background:   '#F9FAFB',  // gray-50
-  surface:      '#FFFFFF',
-  surfaceAlt:   '#F3F4F6',  // gray-100
-  border:       '#E5E7EB',  // gray-200
-  text:         '#111827',  // gray-900
-  textSecondary:'#374151',  // gray-700
-  textMuted:    '#6B7280',  // gray-500
+  background:   '#f0f4ff',  // web --mana-bg-base
+  surface:      '#FFFFFF',  // web --mana-bg-card
+  surfaceAlt:   '#e8edf8',  // web --mana-bg-elevated
+  border:       'rgba(99, 102, 241, 0.18)',  // web --mana-border
+  text:         '#0d0d2b',  // web --mana-text-primary
+  textSecondary:'#6b7094',  // web --mana-text-muted
+  textMuted:    '#6b7094',  // web --mana-text-muted
   success:      '#10B981',  // emerald-500
   successLight: '#D1FAE5',  // emerald-100
   error:        '#EF4444',  // red-500
   errorLight:   '#FEE2E2',  // red-100
-  warning:      '#F59E0B',  // amber-500
-  warningLight: '#FEF3C7',  // amber-100
-  info:         '#3B82F6',  // blue-500
-  infoLight:    '#DBEAFE',  // blue-100
+  warning:      '#F59E0B',  // amber-500 (status only)
+  warningLight: '#FEF9C3',  // amber-50
+  info:         '#06b6d4',  // web --mana-info
+  infoLight:    '#CFFAFE',  // cyan-100
 } as const;
 
 // ── Typography ─────────────────────────────────────────────────
 export const FONTS = {
-  regular: 'System',
-  medium:  'System',
-  bold:    'System',
+  // Outfit — headings, numbers, prices, display
+  displayBold:    'Outfit-Bold',
+  displayEB:      'Outfit-ExtraBold',
+  displaySemi:    'Outfit-SemiBold',
+  displayReg:     'Outfit-Regular',
+  // DM Sans — body, labels, metadata
+  regular:        'DMSans-Regular',
+  medium:         'DMSans-Medium',
+  semiBold:       'DMSans-SemiBold',
+  bold:           'DMSans-Bold',
 } as const;
 
 // ── Spacing ───────────────────────────────────────────────────
@@ -95,13 +102,13 @@ export const SHADOWS = {
 export const AVATAR_COLORS = [
   { bg: '#4F46E5', text: '#fff' }, // indigo
   { bg: '#059669', text: '#fff' }, // emerald
-  { bg: '#D97706', text: '#fff' }, // amber
+  { bg: '#0891B2', text: '#fff' }, // cyan
   { bg: '#DC2626', text: '#fff' }, // red
   { bg: '#7C3AED', text: '#fff' }, // violet
-  { bg: '#0891B2', text: '#fff' }, // cyan
+  { bg: '#4338CA', text: '#fff' }, // indigo-700
   { bg: '#DB2777', text: '#fff' }, // pink
   { bg: '#65A30D', text: '#fff' }, // lime
-  { bg: '#EA580C', text: '#fff' }, // orange
+  { bg: '#0D9488', text: '#fff' }, // teal
   { bg: '#2563EB', text: '#fff' }, // blue
 ] as const;
 

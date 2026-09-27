@@ -1,7 +1,11 @@
 import { useEffect } from 'react';
+import { LogBox, Text as RNText, TextInput as RNTextInput } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Font from 'expo-font';
+
+LogBox.ignoreAllLogs();
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -59,6 +63,21 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = Font.useFonts({
+    'Outfit-Regular':    require('../assets/fonts/Outfit-Regular.ttf'),
+    'Outfit-SemiBold':   require('../assets/fonts/Outfit-SemiBold.ttf'),
+    'Outfit-Bold':       require('../assets/fonts/Outfit-Bold.ttf'),
+    'Outfit-ExtraBold':  require('../assets/fonts/Outfit-ExtraBold.ttf'),
+    'DMSans-Regular':    require('../assets/fonts/DMSans-Regular.ttf'),
+    'DMSans-Medium':     require('../assets/fonts/DMSans-Medium.ttf'),
+    'DMSans-SemiBold':   require('../assets/fonts/DMSans-SemiBold.ttf'),
+    'DMSans-Bold':       require('../assets/fonts/DMSans-Bold.ttf'),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -92,7 +111,6 @@ export default function RootLayout() {
             <Stack.Screen name="group-buying" />
             <Stack.Screen name="helpdesk" />
             <Stack.Screen name="trips" />
-            <Stack.Screen name="notices" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

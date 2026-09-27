@@ -32,7 +32,7 @@ const FEED_FILTERS: { key: FeedFilter; label: string; icon: keyof typeof Ionicon
 
 const POST_TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
   poll:         { label: 'POLL',      color: '#7C3AED', bg: '#EDE9FE' },
-  announcement: { label: 'NOTICE',    color: '#D97706', bg: '#FEF3C7' },
+  announcement: { label: 'NOTICE',    color: '#4F46E5', bg: '#EEF2FF' },
   post:         { label: 'COMMUNITY', color: '#2563EB', bg: '#DBEAFE' },
 };
 
@@ -71,7 +71,7 @@ function UpcomingEventCard({ event, onPress }: { event: EventDto; onPress: () =>
       <View style={es.attendeeRow}>
         <View style={es.avatarStack}>
           {[0, 1, 2].map(i => (
-            <View key={i} style={[es.miniAvatar, { left: i * 14, backgroundColor: ['#4F46E5','#059669','#D97706'][i] }]}>
+            <View key={i} style={[es.miniAvatar, { left: i * 14, backgroundColor: ['#4F46E5','#059669','#0891B2'][i] }]}>
               <Text style={es.miniAvatarText}>{['A','B','C'][i]}</Text>
             </View>
           ))}
@@ -319,8 +319,52 @@ export default function FeedScreen() {
   const announcements = allPosts.filter(p => p.type === 'announcement');
   const latestAnnouncement = announcements.length > 0 ? announcements[0] : null;
 
+  // ── Finance Banner ─────────────────────────────────────────────────
+  const FinanceBanner = useMemo(() => (
+    <View style={styles.financeBanner}>
+      <View style={styles.financeIcon}>
+        <Ionicons name="card-outline" size={18} color="#fff" />
+      </View>
+      <View style={styles.financeText}>
+        <Text style={styles.financeLabel}>Outstanding Balance</Text>
+        <Text style={styles.financeAmount}>₹4,500 <Text style={styles.financeDue}>due 15th Oct</Text></Text>
+      </View>
+      <TouchableOpacity
+        style={styles.payBtn}
+        onPress={() => router.push('/finance')}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.payBtnText}>Pay Now</Text>
+      </TouchableOpacity>
+    </View>
+  ), [router]);
+
+  // ── Quick Stats Row ────────────────────────────────────────────────
+  const StatsRow = useMemo(() => (
+    <View style={styles.statsRow}>
+      <View style={[styles.statTile, { backgroundColor: '#FEF3C7' }]}>
+        <Text style={[styles.statNum, { color: '#D97706' }]}>2</Text>
+        <Text style={[styles.statLabel, { color: '#92400E' }]}>Events Today</Text>
+      </View>
+      <View style={[styles.statTile, { backgroundColor: '#DBEAFE' }]}>
+        <Text style={[styles.statNum, { color: '#2563EB' }]}>8</Text>
+        <Text style={[styles.statLabel, { color: '#1E40AF' }]}>Unread Msgs</Text>
+      </View>
+      <View style={[styles.statTile, { backgroundColor: '#EDE9FE' }]}>
+        <Text style={[styles.statNum, { color: '#7C3AED' }]}>3</Text>
+        <Text style={[styles.statLabel, { color: '#5B21B6' }]}>Active Polls</Text>
+      </View>
+    </View>
+  ), []);
+
   const ListHeader = useMemo(() => (
     <View style={styles.headerStack}>
+      {/* Finance Banner */}
+      {FinanceBanner}
+
+      {/* Quick Stats Row */}
+      {StatsRow}
+
       {/* Quick Action Services */}
       <QuickActions />
 
@@ -404,10 +448,10 @@ export default function FeedScreen() {
             <Text style={[styles.chipText, { color: '#0D9488' }]}>Event</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.chipBtn} activeOpacity={0.7}>
-            <View style={[styles.chipIcon, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="camera" size={13} color="#D97706" />
+            <View style={[styles.chipIcon, { backgroundColor: '#CFFAFE' }]}>
+              <Ionicons name="camera" size={13} color="#0891B2" />
             </View>
-            <Text style={[styles.chipText, { color: '#D97706' }]}>Photo</Text>
+            <Text style={[styles.chipText, { color: '#0891B2' }]}>Photo</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -439,7 +483,7 @@ export default function FeedScreen() {
         </ScrollView>
       </View>
     </View>
-  ), [filter, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents]);
+  ), [filter, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -553,6 +597,82 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+
+  // ── Finance Banner ────────────────────────────────────────────────
+  financeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FEF3C7',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FCD34D',
+  },
+  financeIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: '#D97706',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  financeText: { flex: 1 },
+  financeLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#92400E',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  financeAmount: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#D97706',
+  },
+  financeDue: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#78716C',
+  },
+  payBtn: {
+    backgroundColor: '#D97706',
+    borderRadius: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  payBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+  },
+
+  // ── Quick Stats Row ───────────────────────────────────────────────
+  statsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  statTile: {
+    flex: 1,
+    borderRadius: 10,
+    padding: 8,
+  },
+  statNum: {
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 24,
+  },
+  statLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+    marginTop: 1,
+  },
 
   // ── Welcome Top Bar ───────────────────────────────────────────────
   topBar: {

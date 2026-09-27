@@ -22,7 +22,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'visitors', icon: 'shield-checkmark', label: 'Visitors Gate', route: '/visitors', bg: '#DBEAFE', color: '#2563EB', category: 'Safety & Help' },
 
   // Living & Essentials
-  { id: 'dues', icon: 'card', label: 'Maintenance Dues', route: '/finance', bg: '#FEF3C7', color: '#D97706', category: 'Living & Bills', badge: 'Bills' },
+  { id: 'dues', icon: 'card', label: 'Maintenance Dues', route: '/finance', bg: '#EEF2FF', color: '#4F46E5', category: 'Living & Bills', badge: 'Bills' },
   { id: 'services', icon: 'construct', label: 'Home Services', route: '/services', bg: '#FCE7F3', color: '#DB2777', category: 'Living & Bills' },
   { id: 'notices', icon: 'megaphone', label: 'Notices', route: '/admin/announcements', bg: '#EDE9FE', color: '#7C3AED', category: 'Living & Bills' },
   { id: 'parking', icon: 'car', label: 'Parking Slots', route: '/parking', bg: '#E0E7FF', color: '#4338CA', category: 'Living & Bills' },
@@ -30,12 +30,12 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
 
   // Social & Community
   { id: 'events', icon: 'calendar', label: 'Events & Passes', route: '/tabs/events', bg: '#EEF2FF', color: '#4F46E5', category: 'Social & Sports' },
-  { id: 'sports', icon: 'trophy', label: 'Sports & Leagues', route: '/sports', bg: '#FEF3C7', color: '#D97706', category: 'Social & Sports' },
+  { id: 'sports', icon: 'trophy', label: 'Sports & Leagues', route: '/sports', bg: '#EEF2FF', color: '#4338CA', category: 'Social & Sports' },
   { id: 'trips', icon: 'compass', label: 'Community Trips', route: '/trips', bg: '#CCFBF1', color: '#0D9488', category: 'Social & Sports' },
   { id: 'discover', icon: 'sparkles', label: 'Discover Neighbors', route: '/discover', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports' },
   { id: 'governance', icon: 'shield-half', label: 'Governance & AGM', route: '/governance', bg: '#EEF2FF', color: '#4F46E5', category: 'Social & Sports', badge: 'Voting' },
   { id: 'academy', icon: 'school', label: 'Mana Academy', route: '/academy', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports', badge: 'Learn' },
-  { id: 'polls', icon: 'stats-chart', label: 'Polls & Votes', route: '/polls', bg: '#FFF7ED', color: '#EA580C', category: 'Social & Sports' },
+  { id: 'polls', icon: 'stats-chart', label: 'Polls & Votes', route: '/polls', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports' },
   { id: 'jobs', icon: 'briefcase', label: 'CPN & Jobs', route: '/cpn', bg: '#EFF6FF', color: '#2563EB', category: 'Social & Sports', badge: 'Referrals' },
   { id: 'commute', icon: 'car-sport', label: 'Carpool & Rides', route: '/commute', bg: '#F3E8FF', color: '#7C3AED', category: 'Social & Sports' },
   { id: 'pets', icon: 'paw', label: 'Pet Care', route: '/pets', bg: '#FCE7F3', color: '#DB2777', category: 'Social & Sports' },

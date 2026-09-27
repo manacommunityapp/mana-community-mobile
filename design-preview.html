@@ -1,0 +1,402 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mana Community Mobile - Design Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+<style>
+:root{--p:#4F46E5;--pd:#3730A3;--pl:#EEF2FF;--pm:#C7D2FE;--bg:#f0f4ff;--sf:#fff;--sa:#e8edf8;--bd:#e0e5f5;--tx:#0d0d2b;--ts:#374151;--tm:#6b7094;--ok:#10B981;--er:#EF4444;--wn:#F59E0B;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:#dde3f5;font-family:'DM Sans',sans-serif;color:var(--tx);padding:24px 16px 60px;}
+h1{font-family:'Outfit',sans-serif;font-size:28px;font-weight:800;text-align:center;color:var(--pd);letter-spacing:-.5px;margin-bottom:4px;}
+.sub{text-align:center;color:var(--tm);font-size:13px;margin-bottom:24px;}
+.tabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;}
+.tab{background:#fff;border:1.5px solid var(--bd);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--tm);cursor:pointer;}
+.tab.active{background:var(--p);border-color:var(--p);color:#fff;}
+.stage{display:flex;justify-content:center;}
+.frame{width:375px;height:812px;background:var(--bg);border-radius:44px;border:8px solid #c8cfe8;overflow:hidden;position:relative;box-shadow:0 24px 64px rgba(79,70,229,.18);display:flex;flex-direction:column;}
+.notch{width:110px;height:26px;background:#c8cfe8;border-radius:0 0 14px 14px;position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:10;}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:10px 22px 6px;font-size:12px;font-weight:700;background:#fff;flex-shrink:0;}
+.scnt{flex:1;overflow-y:auto;overflow-x:hidden;}
+.scr{display:none;flex-direction:column;min-height:100%;}
+.scr.on{display:flex;}
+.tbar{display:flex;justify-content:space-around;padding:4px 0 20px;background:#fff;border-top:1px solid var(--bd);flex-shrink:0;box-shadow:0 -4px 12px rgba(79,70,229,.07);}
+.ti{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px;cursor:pointer;position:relative;padding-top:2px;}
+.tind{position:absolute;top:0;left:50%;transform:translateX(-50%);width:22px;height:2.5px;border-radius:2px;background:transparent;}
+.ti.active .tind{background:var(--p);}
+.tibg{width:34px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.ti.active .tibg{background:var(--pl);}
+.tibg svg{width:20px;height:20px;stroke:var(--tm);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.ti.active .tibg svg{stroke:var(--p);}
+.tlbl{font-size:9px;font-weight:600;color:var(--tm);}
+.ti.active .tlbl{color:var(--p);font-weight:700;}
+.tbadge{position:absolute;top:0;right:4px;background:var(--er);color:#fff;font-size:8px;font-weight:800;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:1.5px solid #fff;}
+.hdr{background:#fff;border-bottom:1px solid var(--bd);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.hav{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;color:#fff;background:var(--p);border:2px solid var(--pm);flex-shrink:0;position:relative;}
+.hav .od{position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:5px;background:#34D399;border:2px solid #fff;}
+.hg{font-size:11px;color:var(--tm);}
+.hn{font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:var(--tx);}
+.cbadge{background:var(--pl);border:1px solid var(--pm);border-radius:9px;padding:4px 9px;font-size:11px;font-weight:600;color:var(--p);white-space:nowrap;}
+.nb{width:36px;height:36px;border-radius:18px;background:var(--sa);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;position:relative;}
+.nb svg{width:18px;height:18px;stroke:var(--ts);fill:none;stroke-width:1.8;stroke-linecap:round;}
+.nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:4px;background:var(--er);border:1.5px solid #fff;}
+.fin{display:flex;align-items:center;gap:10px;padding:8px 16px;background:linear-gradient(90deg,#FFFBEB,#FEF3C7);border-bottom:1px solid #FCD34D;flex-shrink:0;}
+.fic{width:32px;height:32px;border-radius:9px;background:#D97706;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;}
+.fl{font-size:9px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:.5px;}
+.fa{font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;color:#D97706;}
+.fd{font-size:10px;font-weight:400;color:#78716C;}
+.pb{background:#D97706;border-radius:9px;padding:7px 11px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;margin-left:auto;}
+.sw{background:#fff;border-bottom:1px solid var(--sa);padding:8px 16px;flex-shrink:0;}
+.sb{background:#F3F4F6;border:1px solid var(--bd);border-radius:999px;padding:8px 12px;display:flex;align-items:center;gap:8px;}
+.sb svg{width:15px;height:15px;stroke:var(--tm);fill:none;stroke-width:2;flex-shrink:0;}
+.sp{font-size:13px;color:var(--tm);flex:1;}
+.sf2{width:22px;height:22px;border-radius:11px;background:var(--pl);display:flex;align-items:center;justify-content:center;}
+.sf2 svg{width:11px;height:11px;stroke:var(--p);fill:none;stroke-width:2;}
+.hb{flex:1;overflow-y:auto;padding:12px 16px 24px;display:flex;flex-direction:column;gap:14px;}
+.sr{display:flex;gap:6px;}
+.st{flex:1;border-radius:10px;padding:8px;}
+.sn{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;line-height:1.1;}
+.sl{font-size:9px;font-weight:500;margin-top:1px;}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.stl{font-family:'Outfit',sans-serif;font-size:17px;font-weight:700;color:var(--tx);}
+.sa2{font-size:13px;font-weight:600;color:var(--p);}
+.qg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.qi{display:flex;flex-direction:column;align-items:center;gap:5px;background:#fff;border:1px solid var(--bd);border-radius:12px;padding:10px 6px;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.qic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.ql{font-size:11px;font-weight:600;color:var(--tx);text-align:center;}
+.qb{background:var(--er);border-radius:999px;padding:1px 5px;font-size:8px;font-weight:800;color:#fff;}
+.cc{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:12px;box-shadow:0 1px 6px rgba(0,0,0,.05);}
+.ct{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.cav{width:34px;height:34px;border-radius:17px;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;color:#fff;border:2px solid var(--pm);flex-shrink:0;}
+.ci{flex:1;background:#F3F4F6;border:1px solid var(--bd);border-radius:999px;padding:9px 14px;font-size:13px;color:var(--tm);}
+.cdiv{height:1px;background:#F3F4F6;margin:0 -12px 10px;}
+.cch{display:flex;justify-content:space-around;}
+.chp{display:flex;align-items:center;gap:5px;}
+.chi{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.chi svg{width:12px;height:12px;stroke-width:2;}
+.chla{font-size:11px;font-weight:700;}
+.nc{background:#fff;border:1.5px solid #D97706;border-radius:12px;padding:12px;display:flex;gap:10px;box-shadow:0 2px 8px rgba(217,119,6,.10);}
+.ni{width:30px;height:30px;border-radius:15px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.ni svg{width:14px;height:14px;stroke:#D97706;fill:none;stroke-width:2;}
+.ntl{font-size:8px;font-weight:800;color:#D97706;text-transform:uppercase;letter-spacing:.5px;background:#FEF3C7;border-radius:4px;padding:1px 5px;}
+.nti{font-size:10px;color:var(--tm);}
+.ntit{font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;color:var(--tx);margin-top:3px;}
+.nde{font-size:11px;color:var(--tm);line-height:1.4;margin-top:2px;}
+.ac{border-radius:14px;background:linear-gradient(135deg,#164E63,#0891B2,#06B6D4);padding:12px;box-shadow:0 3px 12px rgba(8,145,178,.22);}
+.al{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.ald{width:6px;height:6px;border-radius:3px;background:var(--er);margin-right:5px;display:inline-block;animation:pl 1.5s infinite;}
+@keyframes pl{0%,100%{opacity:1}50%{opacity:.4}}
+.all{font-size:10px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.8px;}
+.atp{background:rgba(255,255,255,.2);border-radius:7px;padding:2px 7px;font-size:10px;font-weight:700;color:#fff;}
+.att{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:#fff;margin-bottom:8px;}
+.ab{display:flex;align-items:flex-end;justify-content:space-between;}
+.abl{font-size:10px;color:rgba(255,255,255,.7);}
+.aba{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:#fff;line-height:1.1;}
+.abc{font-size:10px;color:rgba(255,255,255,.7);}
+.abtn{background:#fff;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;color:#0891B2;white-space:nowrap;}
+.fc{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+.fc::-webkit-scrollbar{display:none;}
+.fch{display:flex;align-items:center;gap:5px;white-space:nowrap;border-radius:999px;border:none;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+.fch.on{background:var(--p);color:#fff;}
+.fch:not(.on){background:#F3F4F6;color:var(--tm);}
+.fch svg{width:13px;height:13px;stroke-width:2;fill:none;}
+.es{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px;scrollbar-width:none;}
+.es::-webkit-scrollbar{display:none;}
+.ecs{width:200px;flex-shrink:0;background:#fff;border:1px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.ei{height:88px;background:var(--pl);position:relative;display:flex;align-items:center;justify-content:center;}
+.ei svg{width:32px;height:32px;stroke:var(--pm);fill:none;stroke-width:1.5;}
+.etb{position:absolute;top:8px;left:8px;background:var(--p);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:800;color:#fff;}
+.ecb{padding:10px;}
+.ed{font-size:10px;font-weight:700;color:var(--p);letter-spacing:.3px;}
+.en{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--tx);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ecf{display:flex;align-items:center;justify-content:space-between;margin-top:6px;}
+.rb{background:var(--pl);border-radius:7px;padding:4px 8px;font-size:9px;font-weight:700;color:var(--p);}
+.rb.go{background:#DCFCE7;color:#16A34A;}
+.pc{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.pb2{background:#EDE9FE;border-radius:4px;padding:1px 5px;display:inline-block;font-size:8px;font-weight:800;color:#7C3AED;text-transform:uppercase;}
+.pm2{font-size:10px;color:var(--tm);margin-top:1px;}
+.pq{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--tx);margin:6px 0 10px;}
+.po{border:1px solid var(--bd);border-radius:9px;overflow:hidden;position:relative;margin-bottom:7px;cursor:pointer;}
+.pob{position:absolute;top:0;left:0;height:100%;border-radius:9px;background:#F3F4F6;}
+.pob.vt{background:#EDE9FE;}
+.poi{position:relative;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;}
+.pol{font-size:12px;font-weight:600;color:var(--tx);}
+.pop{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#7C3AED;}
+.pca{background:#fff;border:1px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.pha{padding:12px 12px 0;display:flex;align-items:flex-start;justify-content:space-between;}
+.pav{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;color:#fff;flex-shrink:0;}
+.pai{flex:1;padding:0 10px;}
+.pna{font-size:13px;font-weight:700;color:var(--tx);}
+.pme{font-size:10px;color:var(--tm);margin-top:1px;display:flex;align-items:center;gap:5px;}
+.ptc{background:#DBEAFE;border-radius:4px;padding:1px 5px;font-size:8px;font-weight:800;color:#2563EB;text-transform:uppercase;}
+.ptx{font-size:13px;color:var(--ts);line-height:1.5;padding:8px 12px 10px;}
+.pim{height:140px;background:var(--sa);display:flex;align-items:center;justify-content:center;}
+.pim svg{width:40px;height:40px;stroke:var(--pm);fill:none;stroke-width:1.2;}
+.pact{display:flex;gap:16px;align-items:center;padding:10px 12px;border-top:1px solid #F3F4F6;}
+.pa{display:flex;align-items:center;gap:4px;}
+.pa svg{width:16px;height:16px;stroke:var(--tm);fill:none;stroke-width:2;stroke-linecap:round;}
+.pa span{font-size:12px;font-weight:600;color:var(--tm);}
+.sc{background:#fff;border:1px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.sch{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #F3F4F6;}
+.sib{width:28px;height:28px;border-radius:8px;background:#DCFCE7;display:flex;align-items:center;justify-content:center;margin-right:8px;}
+.sib svg{width:14px;height:14px;stroke:#16A34A;fill:none;stroke-width:2;}
+.stit{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--tx);}
+.ssu{font-size:10px;color:var(--tm);}
+.lc{display:flex;align-items:center;gap:4px;background:#FEF2F2;border-radius:7px;padding:3px 7px;}
+.lcd{width:5px;height:5px;border-radius:3px;background:var(--er);}
+.lcl{font-size:10px;font-weight:700;color:var(--er);}
+.sr2{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #F9FAFB;}
+.srk{font-size:12px;font-weight:700;color:var(--tm);width:14px;text-align:center;flex-shrink:0;}
+.srt{width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.srn{flex:1;font-size:12px;font-weight:600;color:var(--tx);}
+.srp{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--tx);text-align:right;}
+.srpl{font-size:8px;color:var(--tm);text-align:right;}
+.sfo{padding:9px;text-align:center;background:#F9FAFB;border-top:1px solid #F3F4F6;font-size:11px;font-weight:600;color:var(--tm);}
+.ehdr{background:#fff;border-bottom:1px solid var(--bd);padding:12px 16px;flex-shrink:0;}
+.ehr{display:flex;align-items:center;justify-content:space-between;}
+.etit{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--tx);}
+.ecb2{background:var(--p);border-radius:8px;padding:5px 10px;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#fff;}
+.ecb2 svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.5;}
+.ecc{font-size:12px;color:var(--tm);margin-top:2px;}
+.efr{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none;}
+.efr::-webkit-scrollbar{display:none;}
+.ech{display:flex;align-items:center;gap:5px;white-space:nowrap;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;}
+.ech.on{background:var(--p);color:#fff;}
+.ech:not(.on){background:#F3F4F6;color:var(--tm);border:1px solid var(--bd);}
+.ech svg{width:13px;height:13px;stroke-width:2;fill:none;}
+.eb{flex:1;overflow-y:auto;padding:12px 16px 24px;display:flex;flex-direction:column;gap:10px;}
+.ebc{background:#fff;border:1px solid var(--bd);border-radius:14px;overflow:hidden;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.ebc.td{border-color:var(--wn);border-width:1.5px;}
+.eci{height:80px;background:var(--pl);display:flex;align-items:center;justify-content:center;position:relative;}
+.eci svg{width:30px;height:30px;stroke:var(--pm);fill:none;stroke-width:1.5;}
+.tdb{position:absolute;top:8px;right:8px;background:var(--er);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:800;color:#fff;text-transform:uppercase;}
+.ecr{display:flex;gap:12px;padding:12px;}
+.db{width:46px;height:50px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+.dbd{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;line-height:1;}
+.dbm{font-size:9px;font-weight:700;letter-spacing:.5px;margin-top:1px;}
+.ei2{flex:1;}
+.etc{border-radius:4px;padding:1px 6px;display:inline-block;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px;}
+.ebt{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--tx);}
+.emr{display:flex;align-items:center;gap:3px;margin-top:3px;}
+.emr svg{width:11px;height:11px;stroke:var(--tm);fill:none;stroke-width:2;flex-shrink:0;}
+.emr span{font-size:11px;color:var(--tm);}
+.ecbo{display:flex;align-items:center;justify-content:space-between;margin-top:6px;}
+.gc{display:flex;align-items:center;gap:4px;}
+.gc svg{width:12px;height:12px;stroke:var(--tm);fill:none;stroke-width:2;}
+.gc span{font-size:11px;color:var(--tm);}
+.regb{border:1.5px solid var(--p);border-radius:7px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--p);}
+.regb.go{background:var(--p);color:#fff;border-color:var(--p);display:flex;align-items:center;gap:3px;}
+.regb.go svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2.5;}
+.chb{flex:1;overflow-y:auto;}
+.csw{background:#fff;border-bottom:1px solid var(--bd);padding:10px 14px;flex-shrink:0;}
+.csr{display:flex;align-items:center;gap:8px;background:#F3F4F6;border:1px solid var(--bd);border-radius:999px;padding:0 12px;}
+.csr svg{width:15px;height:15px;stroke:var(--tm);fill:none;stroke-width:2;flex-shrink:0;}
+.csi{flex:1;padding:9px 0;font-size:13px;color:var(--tm);background:none;border:none;}
+.cmb{width:22px;height:22px;border-radius:11px;background:var(--p);display:flex;align-items:center;justify-content:center;}
+.cmb svg{width:10px;height:10px;stroke:#fff;fill:none;stroke-width:2;}
+.chi2{display:flex;align-items:center;padding:12px 16px;gap:12px;border-bottom:1px solid var(--bd);background:#fff;}
+.chi2.ur{background:#F5F7FF;}
+.caw{position:relative;width:44px;height:44px;flex-shrink:0;}
+.cav2{width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;color:#fff;}
+.od2{position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:6px;background:#34D399;border:2.5px solid #fff;}
+.gb{position:absolute;bottom:0;right:0;width:16px;height:16px;border-radius:8px;background:var(--p);border:2px solid #fff;display:flex;align-items:center;justify-content:center;}
+.gb svg{width:8px;height:8px;stroke:#fff;fill:none;stroke-width:2.5;}
+.cco{flex:1;min-width:0;}
+.chr{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.cna{font-size:14px;font-weight:500;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cna.bo{font-weight:700;}
+.ctm{font-size:11px;color:var(--tm);flex-shrink:0;margin-left:8px;}
+.ctm.ac{color:var(--p);font-weight:600;}
+.cfr{display:flex;align-items:center;justify-content:space-between;}
+.cls{font-size:12px;color:var(--tm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.cls.bo{color:var(--ts);font-weight:500;}
+.cub{background:var(--p);color:#fff;font-size:10px;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 5px;margin-left:8px;flex-shrink:0;}
+.ph{background:linear-gradient(145deg,#4338CA,#4F46E5,#6366F1);padding:24px 20px 22px;text-align:center;position:relative;overflow:hidden;flex-shrink:0;}
+.phd1{position:absolute;width:180px;height:180px;border-radius:90px;background:rgba(255,255,255,.07);top:-50px;right:-50px;}
+.phd2{position:absolute;width:120px;height:120px;border-radius:60px;background:rgba(255,255,255,.05);bottom:-30px;left:-30px;}
+.paw{position:relative;display:inline-block;margin-bottom:10px;}
+.pava{width:76px;height:76px;border-radius:38px;background:#4338CA;border:3px solid rgba(255,255,255,.30);display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:30px;font-weight:800;color:#fff;}
+.pao{position:absolute;bottom:0;right:0;width:16px;height:16px;border-radius:8px;background:#34D399;border:2.5px solid var(--p);}
+.pnm{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:#fff;}
+.pem{font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;}
+.ptg{display:flex;gap:6px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.ptag{display:flex;align-items:center;gap:3px;background:rgba(255,255,255,.15);border-radius:999px;padding:3px 10px;font-size:11px;color:#fff;font-weight:600;}
+.ptag svg{width:11px;height:11px;stroke:rgba(255,255,255,.9);fill:none;stroke-width:2;}
+.pst{display:flex;align-items:center;gap:4px;background:rgba(16,185,129,.25);border-radius:999px;padding:3px 10px;font-size:10px;font-weight:800;color:#fff;}
+.psd{width:6px;height:6px;border-radius:3px;background:#34D399;}
+.peb{display:inline-flex;align-items:center;gap:5px;background:#fff;border-radius:999px;padding:7px 16px;margin-top:14px;font-size:12px;font-weight:700;color:var(--p);}
+.peb svg{width:12px;height:12px;stroke:var(--p);fill:none;stroke-width:2;}
+.psr{display:flex;gap:8px;padding:12px 16px 0;}
+.pstat{flex:1;border-radius:11px;padding:8px 10px;display:flex;flex-direction:column;align-items:center;}
+.psn{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;line-height:1.1;}
+.psl{font-size:10px;font-weight:500;margin-top:1px;}
+.pbo{flex:1;overflow-y:auto;padding-bottom:24px;}
+.sec{font-size:11px;font-weight:700;color:var(--tm);text-transform:uppercase;letter-spacing:1px;padding:16px 16px 6px;}
+.ms{background:#fff;margin:0 16px;border-radius:14px;overflow:hidden;border:1px solid var(--bd);box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.mi{display:flex;align-items:center;padding:12px 14px;gap:10px;border-bottom:1px solid var(--bd);cursor:pointer;}
+.mi:last-child{border-bottom:none;}
+.mic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mic svg{width:16px;height:16px;stroke-width:2;fill:none;stroke-linecap:round;}
+.mil{flex:1;font-size:14px;font-weight:500;color:var(--tx);}
+.mil.dng{color:var(--er);}
+.mb{background:var(--pl);border-radius:5px;padding:1px 6px;font-size:9px;font-weight:700;color:var(--p);}
+.mch svg{width:14px;height:14px;stroke:var(--bd);fill:none;stroke-width:2;}
+.ls{display:flex;flex-direction:column;justify-content:center;padding:32px 24px;flex:1;}
+.llo{width:64px;height:64px;border-radius:18px;background:var(--p);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Outfit',sans-serif;font-size:28px;font-weight:800;margin:0 auto 16px;box-shadow:0 8px 24px rgba(79,70,229,.25);}
+.lt{font-family:'Outfit',sans-serif;font-size:24px;font-weight:800;text-align:center;color:var(--tx);letter-spacing:-.5px;margin-bottom:4px;}
+.lsu{font-size:14px;color:var(--tm);text-align:center;margin-bottom:28px;}
+.lf{margin-bottom:14px;}
+.ll{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:5px;display:block;}
+.liw{display:flex;align-items:center;gap:10px;border:1.5px solid var(--bd);border-radius:10px;background:#fff;padding:0 12px;}
+.liw svg{width:16px;height:16px;stroke:var(--tm);fill:none;stroke-width:2;flex-shrink:0;}
+.lin{flex:1;padding:12px 0;font-size:14px;color:var(--tm);}
+.lfg{text-align:right;font-size:13px;font-weight:600;color:var(--p);margin:-4px 0 16px;}
+.lbtn{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--p);border-radius:10px;padding:14px;margin-bottom:20px;box-shadow:0 4px 12px rgba(79,70,229,.22);}
+.lbtn span{color:#fff;font-size:15px;font-weight:700;}
+.lbtn svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;}
+.lfo{text-align:center;font-size:13px;color:var(--tm);}
+.lfo a{color:var(--p);font-weight:700;}
+.mhdr{display:flex;align-items:center;gap:10px;background:var(--p);padding:12px 16px;flex-shrink:0;}
+.mbk{width:32px;height:32px;border-radius:16px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;}
+.mbk svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5;}
+.mht{font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;color:#fff;flex:1;}
+.mbo{flex:1;overflow-y:auto;padding:14px 16px 24px;background:var(--bg);display:flex;flex-direction:column;gap:12px;}
+.mtabs{display:flex;background:#fff;padding:0 16px;border-bottom:1px solid var(--bd);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.mtabs::-webkit-scrollbar{display:none;}
+.mtab{padding:10px 14px;font-size:12px;font-weight:600;color:var(--tm);white-space:nowrap;border-bottom:2px solid transparent;cursor:pointer;}
+.mtab.on{color:var(--p);border-bottom-color:var(--p);font-weight:700;}
+.mcard{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.mch2{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+.mctit{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--tx);}
+.mcbdg{border-radius:6px;padding:2px 7px;font-size:9px;font-weight:800;text-transform:uppercase;}
+.mcd{font-size:12px;color:var(--tm);line-height:1.5;}
+.mact{background:var(--p);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:#fff;display:inline-flex;align-items:center;gap:5px;margin-top:10px;}
+.mact svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.5;}
+.msr{display:flex;gap:8px;}
+.mst{flex:1;border-radius:10px;padding:10px 8px;text-align:center;}
+.msn{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;}
+.msl{font-size:9px;font-weight:500;margin-top:2px;}
+.hi{background:#111827;height:4px;border-radius:2px;width:110px;margin:4px auto 0;}
+.dn{max-width:800px;margin:36px auto 0;}
+.ncard{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:20px;margin-bottom:12px;}
+.ncard h3{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;color:var(--tx);}
+.ncard p{font-size:13px;color:var(--ts);line-height:1.6;}
+.csw2{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.sw2{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;background:var(--sa);border-radius:8px;}
+.swd{width:20px;height:20px;border-radius:6px;flex-shrink:0;}
+.swl{font-size:11px;color:var(--ts);font-weight:500;}
+.swh{font-size:10px;color:var(--tm);font-family:monospace;}
+.mg{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:12px;}
+.mp{background:var(--pl);border-radius:10px;padding:8px 12px;}
+.mpt{font-size:12px;font-weight:700;color:var(--p);}
+.mpr{font-family:monospace;font-size:10px;color:var(--tm);margin-top:1px;}
+</style>
+</head>
+<body>
+<h1>&#127968; Mana Community Mobile</h1>
+<p class="sub">Static design preview &mdash; all screens from the mobile repo</p>
+<div class="tabs" id="tabs">
+<button class="tab active" data-s="home">&#127968; Home</button>
+<button class="tab" data-s="events">&#128197; Events</button>
+<button class="tab" data-s="chat">&#128172; Chat</button>
+<button class="tab" data-s="profile">&#128100; Profile</button>
+<button class="tab" data-s="login">&#128274; Login</button>
+<button class="tab" data-s="gov">&#127963; Governance</button>
+<button class="tab" data-s="offers">&#128717; Offers</button>
+<button class="tab" data-s="academy">&#127891; Academy</button>
+<button class="tab" data-s="cpos">&#127968; CPOS</button>
+<button class="tab" data-s="cpn">&#128188; CPN</button>
+</div>
+<div class="stage"><div class="frame">
+<div class="notch"></div>
+<div class="sbar"><span style="font-weight:800">9:41</span><div style="display:flex;gap:4px;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 7l4.5 4.5L12 5l6.5 6.5L23 7"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="7" width="4" height="13" rx="1" opacity=".3"/><rect x="7" y="5" width="4" height="15" rx="1" opacity=".5"/><rect x="13" y="3" width="4" height="17" rx="1" opacity=".7"/><rect x="19" y="1" width="4" height="19" rx="1"/></svg></div></div>
+<div class="scnt">
+<!-- HOME -->
+<div class="scr on" id="s-home">
+<div class="hdr"><div style="display:flex;align-items:center;gap:10px"><div class="hav">R<div class="od"></div></div><div><div class="hg">Good morning &#128075;</div><div class="hn">Rahul Sharma</div></div></div><div style="display:flex;align-items:center;gap:8px"><div class="cbadge">Mana Serene</div><div class="nb"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="nd"></div></div></div></div>
+<div class="fin"><div class="fic">&#8377;</div><div><div class="fl">Outstanding Balance</div><div class="fa">&#8377;4,500 <span class="fd">due Oct 15</span></div></div><div class="pb">Pay Now</div></div>
+<div class="sw"><div class="sb"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="sp">Search updates, notices, events&hellip;</span><div class="sf2"><svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div></div></div>
+<div class="hb">
+<div class="sr"><div class="st" style="background:#FEF3C7"><div class="sn" style="color:#D97706">2</div><div class="sl" style="color:#92400E">Events Today</div></div><div class="st" style="background:#DBEAFE"><div class="sn" style="color:#2563EB">8</div><div class="sl" style="color:#1E40AF">Unread Msgs</div></div><div class="st" style="background:#EDE9FE"><div class="sn" style="color:#7C3AED">3</div><div class="sl" style="color:#5B21B6">Active Polls</div></div></div>
+<div><div class="sh"><div class="stl">Quick Actions</div></div><div class="qg"><div class="qi"><div class="qic" style="background:#EEF2FF">&#128197;</div><div class="ql">Events</div></div><div class="qi"><div class="qic" style="background:#DCFCE7">&#127942;</div><div class="ql">Sports</div></div><div class="qi"><div class="qic" style="background:#DBEAFE">&#128172;</div><div class="ql">Chat</div></div><div class="qi"><div class="qic" style="background:#FEE2E2">&#128680;</div><div class="ql">Emergency</div></div><div class="qi"><div class="qic" style="background:#CFFAFE">&#128663;</div><div class="ql">Commute</div></div><div class="qi"><div class="qic" style="background:#EDE9FE">&#127963;</div><div class="ql">Governance</div><div class="qb">NEW</div></div><div class="qi"><div class="qic" style="background:#FEF3C7">&#128717;</div><div class="ql">Offers</div><div class="qb">NEW</div></div><div class="qi"><div class="qic" style="background:#F3E8FF">&#127891;</div><div class="ql">Academy</div><div class="qb">NEW</div></div><div class="qi"><div class="qic" style="background:#DCFCE7">&#127968;</div><div class="ql">Property</div><div class="qb">NEW</div></div></div></div>
+<div class="cc"><div class="ct"><div class="cav">R</div><div class="ci">Share something with your neighbors&hellip;</div></div><div class="cdiv"></div><div class="cch"><div class="chp"><div class="chi" style="background:#EDE9FE"><svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div><span class="chla" style="color:#7C3AED">Poll</span></div><div class="chp"><div class="chi" style="background:#DBEAFE"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><span class="chla" style="color:#2563EB">Discuss</span></div><div class="chp"><div class="chi" style="background:#CCFBF1"><svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div><span class="chla" style="color:#0D9488">Event</span></div><div class="chp"><div class="chi" style="background:#FEF3C7"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><span class="chla" style="color:#D97706">Photo</span></div></div></div>
+<div class="nc"><div class="ni"><svg viewBox="0 0 24 24"><path d="m11 5-7 6H2v2h2l7 6z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></div><div><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span class="ntl">Notice</span><span class="nti">Today, 9:00 AM</span></div><div class="ntit">Scheduled Water Maintenance</div><div class="nde">Water supply suspended tomorrow 10 AM&ndash;1 PM for pump cleansing.</div></div></div>
+<div class="ac"><div class="al"><div style="display:flex;align-items:center"><div class="ald"></div><span class="all">Live Auction</span></div><div class="atp">38:42 left</div></div><div class="att">MacBook Air M3 &mdash; Like New</div><div class="ab"><div><div class="abl">Current bid</div><div class="aba">&#8377;52,000</div><div class="abc">8 active bidders</div></div><div class="abtn">Bid Now &rarr;</div></div></div>
+<div><div class="sh"><div class="stl">Upcoming Events</div><div class="sa2">See All</div></div><div class="es"><div class="ecs"><div class="ei"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/></svg><div class="etb">Today</div></div><div class="ecb"><div class="ed">FRI, 18 OCT &bull; 7 PM</div><div class="en">Amphitheatre Film Night</div><div class="ecf"><span style="font-size:10px;color:var(--tm)">+21 going</span><div class="rb">RSVP</div></div></div></div><div class="ecs"><div class="ei"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/></svg></div><div class="ecb"><div class="ed">SUN, 20 OCT &bull; 9 AM</div><div class="en">Organic Flea Market</div><div class="ecf"><span style="font-size:10px;color:var(--tm)">+34 going</span><div class="rb go">&#10003; Going</div></div></div></div></div></div>
+<div><div class="sh"><div class="stl">Community Feed</div></div><div class="fc"><div class="fch on">All Updates</div><div class="fch">Notices</div><div class="fch">Polls</div><div class="fch">Community</div></div></div>
+<div class="pc"><div style="display:flex;align-items:center;gap:8px"><div class="pb2">Poll</div><div class="pm2">234 votes &middot; 2 days left</div></div><div class="pq">Best time for playground maintenance?</div><div class="po"><div class="pob vt" style="width:47%"></div><div class="poi"><span class="pol">Morning (6&ndash;9 AM)</span><span class="pop">47%</span></div></div><div class="po"><div class="pob" style="width:53%"></div><div class="poi"><span class="pol">Evening (5&ndash;8 PM)</span><span style="font-family:Outfit,sans-serif;font-size:13px;font-weight:700;color:var(--tm)">53%</span></div></div></div>
+<div class="sc"><div class="sch"><div style="display:flex;align-items:center"><div class="sib"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div><div><div class="stit">Tower Cricket League</div><div class="ssu">Season 3 &middot; 6 teams</div></div></div><div class="lc"><div class="lcd"></div><span class="lcl">LIVE</span></div></div><div class="sr2"><span class="srk">1</span><div class="srt" style="background:#D97706aa"><span style="font-size:11px;font-weight:800;color:#D97706">P</span></div><span class="srn">Team Phoenix</span><div><div class="srp">9</div><div class="srpl">pts</div></div></div><div class="sr2"><span class="srk">2</span><div class="srt" style="background:#4F46E5aa"><span style="font-size:11px;font-weight:800;color:#4F46E5">M</span></div><span class="srn">Team Mavericks</span><div><div class="srp">7</div><div class="srpl">pts</div></div></div><div class="sr2" style="border-bottom:none"><span class="srk">3</span><div class="srt" style="background:#10B981aa"><span style="font-size:11px;font-weight:800;color:#10B981">T</span></div><span class="srn">Team Titans</span><div><div class="srp">4</div><div class="srpl">pts</div></div></div><div class="sfo">View Full Standings &rarr;</div></div>
+<div class="pca"><div class="pha"><div class="pav" style="background:#059669">S</div><div class="pai"><div class="pna">Sasha Dev (T3-402)</div><div class="pme">2h ago <div class="ptc">Community</div></div></div></div><div class="ptx">Anyone lost this lovely tortoiseshell cat near Tower 3 playground? &#128049;</div><div class="pim"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div class="pact"><div class="pa"><svg viewBox="0 0 24 24" fill="#EF4444" stroke="none"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><span style="color:#EF4444">15</span></div><div class="pa"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>6</span></div><div class="pa" style="margin-left:auto"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div></div></div>
+</div></div>
+<!-- EVENTS -->
+<div class="scr" id="s-events">
+<div class="ehdr"><div class="ehr"><div><div class="etit">Events</div><div class="ecc">5 upcoming events</div></div><div class="ecb2"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Create</div></div><div class="efr"><div class="ech on">All</div><div class="ech">Social</div><div class="ech">Sports</div><div class="ech">Cultural</div><div class="ech">Community</div><div class="ech">Workshop</div></div></div>
+<div class="eb">
+<div class="ebc td"><div class="eci"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/></svg><div class="tdb">TODAY</div></div><div class="ecr"><div class="db" style="background:#D1FAE5"><div class="dbd" style="color:#059669">18</div><div class="dbm" style="color:#059669">OCT</div></div><div class="ei2"><div class="etc" style="background:#D1FAE5;color:#059669">Entertainment</div><div class="ebt">Serene Amphitheatre Film Night</div><div class="emr"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Amphitheatre</span></div><div class="emr"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>7:00 PM</span></div><div class="ecbo"><div class="gc"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>21 going</span></div><div class="regb">Register</div></div></div></div></div>
+<div class="ebc"><div class="ecr"><div class="db" style="background:#DBEAFE"><div class="dbd" style="color:#2563EB">20</div><div class="dbm" style="color:#2563EB">OCT</div></div><div class="ei2"><div class="etc" style="background:#DBEAFE;color:#2563EB">Community</div><div class="ebt">Weekend Organic Flea Market</div><div class="emr"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Community Ground</span></div><div class="emr"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>9:00 AM</span></div><div class="ecbo"><div class="gc"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>34 going</span></div><div class="regb go"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Going</div></div></div></div></div>
+<div class="ebc"><div class="ecr"><div class="db" style="background:#EDE9FE"><div class="dbd" style="color:#7C3AED">26</div><div class="dbm" style="color:#7C3AED">OCT</div></div><div class="ei2"><div class="etc" style="background:#EDE9FE;color:#7C3AED">Sports</div><div class="ebt">Kids Sports Day &mdash; Under-12</div><div class="emr"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Sports Court</span></div><div class="emr"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>10:00 AM</span></div><div class="ecbo"><div class="gc"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>40 going</span></div><div class="regb">Register</div></div></div></div></div>
+<div class="ebc"><div class="ecr"><div class="db" style="background:#FEF3C7"><div class="dbd" style="color:#D97706">01</div><div class="dbm" style="color:#D97706">NOV</div></div><div class="ei2"><div class="etc" style="background:#FEF3C7;color:#D97706">Festival</div><div class="ebt">Diwali Lights &amp; Mela Night</div><div class="emr"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Main Lawn</span></div><div class="emr"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>7:00 PM</span></div><div class="ecbo"><div class="gc"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>92 going</span></div><div class="regb">Register</div></div></div></div></div>
+</div></div>
+<!-- CHAT -->
+<div class="scr" id="s-chat">
+<div class="hdr"><div><div class="hn">Messages</div><div style="font-size:11px;color:var(--tm)">3 unread</div></div><div class="nb" style="background:var(--p)"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div></div>
+<div class="csw"><div class="csr"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><div class="csi">Search conversations&hellip;</div><div class="cmb"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></div></div></div>
+<div class="chb">
+<div class="chi2 ur"><div class="caw"><div class="cav2" style="background:#DC2626">A</div><div class="od2"></div></div><div class="cco"><div class="chr"><div class="cna bo">Ananya Gupta</div><div class="ctm ac">2m</div></div><div class="cfr"><div class="cls bo">Hey, is the gym open today?</div><div class="cub">2</div></div></div></div>
+<div class="chi2 ur"><div class="caw"><div class="cav2" style="background:#4F46E5">B</div><div class="gb"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div></div><div class="cco"><div class="chr"><div class="cna bo">B-Tower Group</div><div class="ctm ac">15m</div></div><div class="cfr"><div class="cls bo">Vikram: Has anyone seen a delivery&hellip;</div><div class="cub">5</div></div></div></div>
+<div class="chi2"><div class="caw"><div class="cav2" style="background:#059669">T</div><div class="gb"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div></div><div class="cco"><div class="chr"><div class="cna">Tower 3 General</div><div class="ctm">1h</div></div><div class="cfr"><div class="cls">Priya: Did anyone call the lift guy?</div></div></div></div>
+<div class="chi2"><div class="caw"><div class="cav2" style="background:#7C3AED">S</div><div class="gb"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div></div><div class="cco"><div class="chr"><div class="cna">Sports Hub</div><div class="ctm">2h</div></div><div class="cfr"><div class="cls">Rajan: Match at 6 PM Court B!</div></div></div></div>
+<div class="chi2"><div class="caw"><div class="cav2" style="background:#2563EB">R</div><div class="od2"></div></div><div class="cco"><div class="chr"><div class="cna">Raj Mehta</div><div class="ctm">1d</div></div><div class="cfr"><div class="cls">Sure, let me check!</div></div></div></div>
+<div class="chi2"><div class="caw"><div class="cav2" style="background:#0D9488">G</div><div class="gb"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div></div><div class="cco"><div class="chr"><div class="cna">Group Buy &mdash; Organic Veg</div><div class="ctm">1d</div></div><div class="cfr"><div class="cls">You: Count me in for 2kg tomatoes</div></div></div></div>
+<div class="chi2"><div class="caw"><div class="cav2" style="background:#DB2777">C</div><div class="gb"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div></div><div class="cco"><div class="chr"><div class="cna">Commute Pool</div><div class="ctm">2d</div></div><div class="cfr"><div class="cls">Anil: Anyone going Hitech City at 9?</div></div></div></div>
+</div></div>
+<!-- PROFILE -->
+<div class="scr" id="s-profile">
+<div class="ph"><div class="phd1"></div><div class="phd2"></div><div class="paw"><div class="pava">R</div><div class="pao"></div></div><div class="pnm">Rahul Sharma</div><div class="pem">rahul.sharma@email.com</div><div class="ptg"><div class="ptag">Flat A-201</div><div class="ptag">Tower A</div><div class="pst"><div class="psd"></div>ACTIVE</div></div><div class="peb"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>Edit Profile</div></div>
+<div class="psr"><div class="pstat" style="background:#FEF3C7"><div class="psn" style="color:#D97706">12</div><div class="psl" style="color:#D97706cc">Events</div></div><div class="pstat" style="background:#EEF2FF"><div class="psn" style="color:#4F46E5">8</div><div class="psl" style="color:#4F46E5cc">Listings</div></div><div class="pstat" style="background:#DCFCE7"><div class="psn" style="color:#10B981">3</div><div class="psl" style="color:#10B981cc">Teams</div></div></div>
+<div class="pbo">
+<div class="sec">Community Services</div>
+<div class="ms"><div class="mi"><div class="mic" style="background:#D1FAE5"><svg viewBox="0 0 24 24" stroke="#10B981"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div class="mil">Maintenance &amp; Dues</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#FEE2E2"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="mil">Emergency SOS</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#FEF3C7"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06"/></svg></div><div class="mil">Smart Helpdesk</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#DBEAFE"><svg viewBox="0 0 24 24" stroke="#3B82F6"><path d="M2 3h20l-2 9H4L2 3z"/><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/></svg></div><div class="mil">Group Buying</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#FCE7F3"><svg viewBox="0 0 24 24" stroke="#EC4899"><circle cx="12" cy="12" r="10"/></svg></div><div class="mil">Discover Deals</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div></div>
+<div class="sec">Explore</div>
+<div class="ms"><div class="mi"><div class="mic" style="background:#D1FAE5"><svg viewBox="0 0 24 24" stroke="#059669"><circle cx="12" cy="12" r="10"/></svg></div><div class="mil">Sports Leagues</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#DBEAFE"><svg viewBox="0 0 24 24" stroke="#2563EB"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 6v3h-7V8z"/></svg></div><div class="mil">Commute Pool</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#EDE9FE"><svg viewBox="0 0 24 24" stroke="#7C3AED"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div><div class="mil">Polls &amp; Voting</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#FEF3C7"><svg viewBox="0 0 24 24" stroke="#D97706"><path d="M15 12l-8.5 8.5c-.83.83-2.17.83-3 0a2.12 2.12 0 0 1 0-3L12 9"/></svg></div><div class="mil">Auctions</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#F3E8FF"><svg viewBox="0 0 24 24" stroke="#9333EA"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/></svg></div><div class="mil">Pet Corner</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#CFFAFE"><svg viewBox="0 0 24 24" stroke="#0891B2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div><div class="mil">Gate &amp; Visitors</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#EDE9FE"><svg viewBox="0 0 24 24" stroke="#7C3AED"><rect x="3" y="2" width="18" height="20" rx="2"/></svg></div><div class="mil">Governance</div><div class="mb">NEW</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#FEF3C7"><svg viewBox="0 0 24 24" stroke="#D97706"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg></div><div class="mil">Offers &amp; Deals</div><div class="mb">NEW</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#EDE9FE"><svg viewBox="0 0 24 24" stroke="#7C3AED"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div><div class="mil">Academy</div><div class="mb">NEW</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#D1FAE5"><svg viewBox="0 0 24 24" stroke="#059669"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div><div class="mil">Property OS (CPOS)</div><div class="mb">NEW</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#DBEAFE"><svg viewBox="0 0 24 24" stroke="#2563EB"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="mil">Pro Network (CPN)</div><div class="mb">NEW</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div></div>
+<div class="sec">Account</div>
+<div class="ms"><div class="mi"><div class="mic" style="background:#EEF2FF"><svg viewBox="0 0 24 24" stroke="#4F46E5"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="mil">Notifications</div><div class="mb">3</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#F3F4F6"><svg viewBox="0 0 24 24" stroke="#374151"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="mil">Change Password</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="mi"><div class="mic" style="background:#F3F4F6"><svg viewBox="0 0 24 24" stroke="#6B7280"><circle cx="12" cy="12" r="3"/></svg></div><div class="mil">Settings</div><div class="mch"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div></div>
+<div style="margin:12px 16px 0"><div class="ms"><div class="mi"><div class="mic" style="background:#FEE2E2"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="mil dng">Sign Out</div></div></div></div>
+<div style="text-align:center;font-size:11px;color:var(--tm);padding:16px 0 8px">Mana Community v1.0.0</div>
+</div></div>
+<!-- LOGIN -->
+<div class="scr" id="s-login"><div class="ls"><div class="llo">M</div><div class="lt">Mana Community</div><div class="lsu">Sign in to your account</div><div class="lf"><label class="ll">Email address</label><div class="liw"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><div class="lin">you@example.com</div></div></div><div class="lf"><label class="ll">Password</label><div class="liw"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div class="lin">Enter your password</div><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div></div><div class="lfg">Forgot password?</div><div class="lbtn"><span>Sign In</span><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div class="lfo">Don't have an account? <a>Register</a></div></div></div>
+<!-- GOVERNANCE -->
+<div class="scr" id="s-gov"><div class="mhdr"><div class="mbk"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="mht">&#127963; Governance &amp; Voting</div></div><div class="mtabs"><div class="mtab on">Meetings</div><div class="mtab">Voting</div><div class="mtab">Proposals</div><div class="mtab">Resolutions</div><div class="mtab">Vault</div></div><div class="mbo"><div class="msr"><div class="mst" style="background:#EEF2FF"><div class="msn" style="color:#4F46E5">3</div><div class="msl" style="color:#4F46E5cc">Meetings</div></div><div class="mst" style="background:#EDE9FE"><div class="msn" style="color:#7C3AED">2</div><div class="msl" style="color:#7C3AEDcc">Active Votes</div></div><div class="mst" style="background:#DCFCE7"><div class="msn" style="color:#059669">5</div><div class="msl" style="color:#059669cc">Proposals</div></div></div><div class="mcard"><div class="mch2"><div><div class="mctit">Annual General Meeting 2025</div><div style="font-size:11px;color:var(--tm);margin-top:2px">&#128197; Nov 15 &middot; 10:00 AM &middot; Clubhouse</div></div><div class="mcbdg" style="background:#FEF3C7;color:#D97706">UPCOMING</div></div><div style="background:#F3F4F6;border-radius:8px;padding:8px;margin:8px 0"><div style="font-size:10px;font-weight:700;color:var(--tm);margin-bottom:4px">QUORUM STATUS</div><div style="background:#4F46E5;height:6px;border-radius:3px;width:65%"></div><div style="font-size:10px;color:var(--tm);margin-top:3px">65/100 residents confirmed</div></div><div class="mcd">10-point agenda: budget approval, lift maintenance, and society elections.</div><div class="mact">RSVP &mdash; I'll Attend</div></div><div class="mcard"><div class="mch2"><div class="mctit">&#128505; Active Ballot: New Gym Equipment</div><div class="mcbdg" style="background:#EEF2FF;color:#4F46E5">VOTING</div></div><div class="mcd">Should we allocate &#8377;2L for new gym equipment?</div><div style="margin-top:8px"><div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;position:relative;margin-bottom:6px"><div style="position:absolute;top:0;left:0;height:100%;width:67%;background:#EEF2FF;border-radius:8px"></div><div style="position:relative;display:flex;justify-content:space-between;padding:8px 12px"><span style="font-size:12px;font-weight:600">Yes &mdash; Approve</span><span style="font-family:Outfit,sans-serif;font-size:13px;font-weight:700;color:#4F46E5">67%</span></div></div><div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;position:relative"><div style="position:absolute;top:0;left:0;height:100%;width:33%;background:#F9FAFB;border-radius:8px"></div><div style="position:relative;display:flex;justify-content:space-between;padding:8px 12px"><span style="font-size:12px;font-weight:600">No &mdash; Defer</span><span style="font-family:Outfit,sans-serif;font-size:13px;font-weight:700;color:var(--tm)">33%</span></div></div></div></div></div></div>
+<!-- OFFERS -->
+<div class="scr" id="s-offers"><div class="mhdr"><div class="mbk"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="mht">&#128717; Deals &amp; Local Commerce</div></div><div class="mtabs"><div class="mtab on">All Deals</div><div class="mtab">My Vouchers</div><div class="mtab">Group Demand</div><div class="mtab">Directory</div></div><div class="mbo"><div class="mcard" style="border-color:#059669"><div class="mch2"><div><div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase">&#127978; Fresh Greens Organic</div><div class="mctit" style="margin-top:2px">30% Off All Vegetables</div></div><div class="mcbdg" style="background:#DCFCE7;color:#059669">ACTIVE</div></div><div class="mcd">Valid till Oct 31 &middot; Min order &#8377;200 &middot; 47 residents claimed</div><div class="mact" style="background:#059669">Claim Voucher</div></div><div class="mcard"><div class="mch2"><div><div style="font-size:10px;font-weight:700;color:#2563EB;text-transform:uppercase">&#9749; Brew &amp; Bean Caf&eacute;</div><div class="mctit" style="margin-top:2px">Buy 2 Get 1 Free Coffee</div></div><div class="mcbdg" style="background:#DBEAFE;color:#2563EB">LIMITED</div></div><div class="mcd">Valid weekdays &middot; 12 remaining &middot; Scan QR at counter</div><div class="mact" style="background:#2563EB">Claim Voucher</div></div><div class="mcard" style="background:linear-gradient(135deg,#EEF2FF,#fff)"><div style="font-size:12px;font-weight:700;color:#4F46E5;margin-bottom:8px">&#129309; Group Demand Pool</div><div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px">Bulk Organic Rice Order</div><div style="background:#E5E7EB;border-radius:4px;height:6px;margin-bottom:4px;overflow:hidden"><div style="background:#4F46E5;height:100%;width:72%;border-radius:4px"></div></div><div style="font-size:11px;color:var(--tm)">36/50 households joined &middot; &#8377;850/10kg vs &#8377;1,200 retail</div><div class="mact" style="margin-top:8px">Join Pool</div></div></div></div>
+<!-- ACADEMY -->
+<div class="scr" id="s-academy"><div class="mhdr"><div class="mbk"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="mht">&#127891; Mana Academy</div></div><div class="mtabs"><div class="mtab on">Workshops</div><div class="mtab">My Learning</div><div class="mtab">Faculty</div></div><div class="mbo"><div class="msr"><div class="mst" style="background:#EDE9FE"><div class="msn" style="color:#7C3AED">8</div><div class="msl" style="color:#7C3AEDcc">Workshops</div></div><div class="mst" style="background:#DCFCE7"><div class="msn" style="color:#059669">3</div><div class="msl" style="color:#059669cc">Enrolled</div></div><div class="mst" style="background:#FEF3C7"><div class="msn" style="color:#D97706">12</div><div class="msl" style="color:#D97706cc">Instructors</div></div></div><div class="mcard"><div class="mch2"><div class="mctit">Yoga &amp; Mindfulness &mdash; Beginner</div><div class="mcbdg" style="background:#DCFCE7;color:#059669">OPEN</div></div><div style="display:flex;gap:6px;margin:6px 0;flex-wrap:wrap"><span style="background:#EEF2FF;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#4F46E5">Sat 7 AM</span><span style="background:#EEF2FF;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#4F46E5">Terrace Garden</span><span style="background:#FEF3C7;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#D97706">Free</span></div><div class="mcd">8-week program with resident instructor Priya Sharma. 12/20 spots filled.</div><div class="mact">Enroll Now</div></div><div class="mcard"><div class="mch2"><div class="mctit">Python for Beginners</div><div class="mcbdg" style="background:#DBEAFE;color:#2563EB">STARTING SOON</div></div><div style="display:flex;gap:6px;margin:6px 0;flex-wrap:wrap"><span style="background:#EEF2FF;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#4F46E5">Sun 4 PM</span><span style="background:#EEF2FF;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#4F46E5">Community Hall</span><span style="background:#FEF3C7;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#D97706">&#8377;299</span></div><div class="mcd">6-week coding bootcamp by Arun Kumar (Google SWE). Certificate on completion.</div><div class="mact">Enroll Now</div></div></div></div>
+<!-- CPOS -->
+<div class="scr" id="s-cpos"><div class="mhdr"><div class="mbk"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="mht">&#127968; Property OS (CPOS)</div></div><div class="mtabs"><div class="mtab on">My Flat</div><div class="mtab">Tenants</div><div class="mtab">NOC</div><div class="mtab">Vault</div><div class="mtab">AI Advisor</div></div><div class="mbo"><div class="mcard" style="background:linear-gradient(135deg,#4338CA,#4F46E5);border:none;color:#fff"><div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px">Your Property</div><div style="font-family:Outfit,sans-serif;font-size:22px;font-weight:800;margin:4px 0">Flat A-201</div><div style="display:flex;gap:8px;margin-top:8px"><div style="background:rgba(255,255,255,.15);border-radius:8px;padding:6px 10px;text-align:center"><div style="font-size:14px;font-weight:800">1,250</div><div style="font-size:9px;color:rgba(255,255,255,.7)">sq.ft</div></div><div style="background:rgba(255,255,255,.15);border-radius:8px;padding:6px 10px;text-align:center"><div style="font-size:14px;font-weight:800">3 BHK</div><div style="font-size:9px;color:rgba(255,255,255,.7)">config</div></div><div style="background:rgba(16,185,129,.25);border-radius:8px;padding:6px 10px;text-align:center"><div style="font-size:14px;font-weight:800">Owner</div><div style="font-size:9px;color:rgba(255,255,255,.7)">status</div></div></div></div><div class="mcard"><div class="mch2"><div class="mctit">Active Tenant &mdash; Vikram Reddy</div><div class="mcbdg" style="background:#DCFCE7;color:#059669">ACTIVE</div></div><div class="mcd">Lease: Jan 2025 &ndash; Dec 2025 &middot; Rent: &#8377;28,000/mo &middot; NOC: Valid</div><div class="mact">View Lease Details</div></div><div class="mcard"><div style="font-size:12px;font-weight:700;color:#4F46E5;margin-bottom:8px">&#129302; AI Property Advisor</div><div style="background:#EEF2FF;border-radius:10px;padding:10px;font-size:12px;color:var(--ts);line-height:1.5">"Your flat's rental value is &#8377;30,000&ndash;34,000/mo. Tenant is paying 8% below market &mdash; consider renegotiating at next renewal."</div></div></div></div>
+<!-- CPN -->
+<div class="scr" id="s-cpn"><div class="mhdr"><div class="mbk"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div><div class="mht">&#128188; Pro Network (CPN)</div></div><div class="mtabs"><div class="mtab on">Directory</div><div class="mtab">Jobs</div><div class="mtab">Mentorship</div><div class="mtab">AI Coach</div></div><div class="mbo"><div class="msr"><div class="mst" style="background:#DBEAFE"><div class="msn" style="color:#2563EB">47</div><div class="msl" style="color:#2563EBcc">Professionals</div></div><div class="mst" style="background:#DCFCE7"><div class="msn" style="color:#059669">8</div><div class="msl" style="color:#059669cc">Jobs Posted</div></div><div class="mst" style="background:#EDE9FE"><div class="msn" style="color:#7C3AED">5</div><div class="msl" style="color:#7C3AEDcc">Mentors</div></div></div><div class="mcard"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:44px;height:44px;border-radius:22px;background:#4F46E5;display:flex;align-items:center;justify-content:center;font-family:Outfit,sans-serif;font-size:18px;font-weight:800;color:#fff;flex-shrink:0">A</div><div><div style="font-size:13px;font-weight:700;color:var(--tx)">Arun Kumar</div><div style="font-size:11px;color:var(--tm)">Software Engineer @ Google &middot; T3-504</div></div><div style="background:#DCFCE7;border-radius:5px;padding:2px 6px;margin-left:auto;font-size:8px;font-weight:800;color:#059669">VERIFIED</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="background:#EEF2FF;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#4F46E5">Python</span><span style="background:#EEF2FF;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#4F46E5">React</span><span style="background:#EEF2FF;border-radius:6px;padding:2px 7px;font-size:9px;font-weight:700;color:#4F46E5">AI/ML</span></div><div class="mact">Connect &amp; Refer</div></div><div class="mcard" style="background:linear-gradient(135deg,#EEF2FF,#fff)"><div style="font-size:12px;font-weight:700;color:#4F46E5;margin-bottom:8px">&#129302; AI Career Coach</div><div style="background:#EEF2FF;border-radius:10px;padding:10px;font-size:12px;color:var(--ts);line-height:1.5">"Your community has 5 software engineers &amp; 3 doctors. 2 neighbors have referral connections at companies you're interested in."</div><div class="mact" style="margin-top:8px">Ask AI Coach</div></div><div class="mcard"><div class="mch2"><div><div style="font-size:10px;font-weight:700;color:#D97706;text-transform:uppercase">Job Opportunity</div><div class="mctit" style="margin-top:2px">Frontend Developer &mdash; Startup</div></div><div class="mcbdg" style="background:#FEF3C7;color:#D97706">NEIGHBOR REF</div></div><div class="mcd">Posted by Resident Priya N. &middot; &#8377;18&ndash;25L &middot; Hybrid &middot; 2-4 yrs exp</div><div class="mact" style="background:#D97706">Apply via Referral</div></div></div></div>
+</div>
+<!-- TAB BAR -->
+<div class="tbar" id="tbar">
+<div class="ti active" data-s="home"><div class="tind"></div><div class="tibg"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></svg></div><div class="tlbl">Home</div></div>
+<div class="ti" data-s="events"><div class="tind"></div><div class="tibg"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="tlbl">Events</div></div>
+<div class="ti" data-s="chat"><div class="tind"></div><div class="tibg" style="position:relative"><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg><div class="tbadge">3</div></div><div class="tlbl">Chat</div></div>
+<div class="ti" data-s="profile"><div class="tind"></div><div class="tibg"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div><div class="tlbl">Profile</div></div>
+</div>
+<div class="hi"></div>
+</div></div>
+<div class="dn">
+<div class="ncard"><h3>&#127912; Color Palette &mdash; Mana Indigo Design System</h3><p>All screens use the official Mana indigo brand from <code>constants/config.ts</code>. Orange accent removed.</p><div class="csw2"><div class="sw2"><div class="swd" style="background:#4F46E5"></div><div><div class="swl">Primary</div><div class="swh">#4F46E5</div></div></div><div class="sw2"><div class="swd" style="background:#3730A3"></div><div><div class="swl">PrimaryDark</div><div class="swh">#3730A3</div></div></div><div class="sw2"><div class="swd" style="background:#EEF2FF;border:1px solid #e0e5f5"></div><div><div class="swl">PrimaryLight</div><div class="swh">#EEF2FF</div></div></div><div class="sw2"><div class="swd" style="background:#C7D2FE"></div><div><div class="swl">PrimaryMid</div><div class="swh">#C7D2FE</div></div></div><div class="sw2"><div class="swd" style="background:#10B981"></div><div><div class="swl">Success</div><div class="swh">#10B981</div></div></div><div class="sw2"><div class="swd" style="background:#EF4444"></div><div><div class="swl">Error</div><div class="swh">#EF4444</div></div></div><div class="sw2"><div class="swd" style="background:#F59E0B"></div><div><div class="swl">Warning</div><div class="swh">#F59E0B</div></div></div></div></div>
+<div class="ncard"><h3>&#128297; Typography</h3><p><strong>Outfit</strong> (ExtraBold/Bold) for all headings, names, prices &amp; numbers. <strong>DM Sans</strong> (Regular/Medium/SemiBold) for body text, labels &amp; metadata.</p></div>
+<div class="ncard"><h3>&#128640; All Modules in the Mobile Repo</h3><p>Accessible via Profile &rarr; Explore menu or Quick Actions on Home.</p><div class="mg"><div class="mp"><div class="mpt">&#127963; Governance</div><div class="mpr">/governance</div></div><div class="mp"><div class="mpt">&#128717; Offers</div><div class="mpr">/offers</div></div><div class="mp"><div class="mpt">&#127891; Academy</div><div class="mpr">/academy</div></div><div class="mp"><div class="mpt">&#127968; CPOS</div><div class="mpr">/cpos</div></div><div class="mp"><div class="mpt">&#128188; CPN</div><div class="mpr">/cpn</div></div><div class="mp"><div class="mpt">&#128680; Emergency</div><div class="mpr">/emergency</div></div><div class="mp"><div class="mpt">&#127942; Sports</div><div class="mpr">/sports</div></div><div class="mp"><div class="mpt">&#128663; Commute</div><div class="mpr">/commute</div></div><div class="mp"><div class="mpt">&#129683; Auction</div><div class="mpr">/auction</div></div><div class="mp"><div class="mpt">&#128062; Pets</div><div class="mpr">/pets</div></div><div class="mp"><div class="mpt">&#128203; Helpdesk</div><div class="mpr">/helpdesk</div></div><div class="mp"><div class="mpt">&#128179; Finance</div><div class="mpr">/finance</div></div><div class="mp"><div class="mpt">&#128202; Polls</div><div class="mpr">/polls</div></div><div class="mp"><div class="mpt">&#128722; Marketplace</div><div class="mpr">/marketplace</div></div><div class="mp"><div class="mpt">&#128101; Visitors</div><div class="mpr">/visitors</div></div><div class="mp"><div class="mpt">&#128663; Parking</div><div class="mpr">/parking</div></div><div class="mp"><div class="mpt">&#127860; Food</div><div class="mpr">/food</div></div><div class="mp"><div class="mpt">&#128188; Jobs</div><div class="mpr">/jobs</div></div><div class="mp"><div class="mpt">&#128269; Discover</div><div class="mpr">/discover</div></div><div class="mp"><div class="mpt">&#128138; Notices</div><div class="mpr">/notices</div></div></div></div>
+</div>
+<script>
+const ts=document.querySelectorAll('.tab'),ss=document.querySelectorAll('.scr'),ti=document.querySelectorAll('.ti'),tb=document.getElementById('tbar');
+const TAB=['home','events','chat','profile'];
+function sw(n){ts.forEach(t=>t.classList.toggle('active',t.dataset.s===n));ss.forEach(s=>s.classList.toggle('on',s.id==='s-'+n));ti.forEach(t=>t.classList.toggle('active',t.dataset.s===n));tb.style.display=TAB.includes(n)?'flex':'none';}
+ts.forEach(t=>t.addEventListener('click',()=>sw(t.dataset.s)));
+ti.forEach(t=>t.addEventListener('click',()=>sw(t.dataset.s)));
+</script>
+</body></html>

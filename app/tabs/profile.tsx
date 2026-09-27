@@ -3,6 +3,7 @@ import {
   ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
@@ -99,7 +100,12 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Hero Banner ─────────────────────────────────────── */}
-        <View style={styles.hero}>
+        <LinearGradient
+          colors={['#4338CA', '#4F46E5', '#6366F1']}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={styles.hero}
+        >
           {/* Background pattern dots */}
           <View style={styles.heroBgDot1} />
           <View style={styles.heroBgDot2} />
@@ -145,6 +151,22 @@ export default function ProfileScreen() {
             <Ionicons name="pencil-outline" size={14} color={COLORS.primary} />
             <Text style={styles.editBtnText}>Edit Profile</Text>
           </TouchableOpacity>
+        </LinearGradient>
+
+        {/* ── Profile Stats Row ─────────────────────────────────────── */}
+        <View style={styles.profileStatsRow}>
+          <View style={[styles.profileStatTile, { backgroundColor: '#FEF3C7' }]}>
+            <Text style={[styles.profileStatNum, { color: '#D97706' }]}>12</Text>
+            <Text style={[styles.profileStatLabel, { color: '#D97706' }]}>Events</Text>
+          </View>
+          <View style={[styles.profileStatTile, { backgroundColor: COLORS.primaryLight }]}>
+            <Text style={[styles.profileStatNum, { color: COLORS.primary }]}>8</Text>
+            <Text style={[styles.profileStatLabel, { color: COLORS.primary }]}>Listings</Text>
+          </View>
+          <View style={[styles.profileStatTile, { backgroundColor: '#DCFCE7' }]}>
+            <Text style={[styles.profileStatNum, { color: '#059669' }]}>3</Text>
+            <Text style={[styles.profileStatLabel, { color: '#059669' }]}>Teams</Text>
+          </View>
         </View>
 
         {/* ── Community Services ────────────────────────────────── */}
@@ -175,8 +197,8 @@ export default function ProfileScreen() {
                   icon="construct-outline"
                   label="Smart Helpdesk"
                   onPress={() => router.push('/helpdesk')}
-                  iconColor="#F59E0B"
-                  iconBg="#FEF3C7"
+                  iconColor="#4F46E5"
+                  iconBg="#EEF2FF"
                 />
               )}
               {showGroupBuying && (
@@ -220,7 +242,7 @@ export default function ProfileScreen() {
           {showPolls && (
             <MenuItem icon="stats-chart-outline" label="Polls"       onPress={() => router.push('/polls')}       iconColor="#7C3AED" iconBg="#EDE9FE" />
           )}
-          <MenuItem icon="pricetag-outline"    label="Auction"     onPress={() => router.push('/auction')}     iconColor="#D97706" iconBg="#FEF3C7" />
+          <MenuItem icon="pricetag-outline"    label="Auction"     onPress={() => router.push('/auction')}     iconColor="#4F46E5" iconBg="#EEF2FF" />
           {showMarketplace && (
             <MenuItem icon="storefront-outline"  label="Marketplace" onPress={() => router.push('/tabs/marketplace')} iconColor="#DC2626" iconBg="#FEE2E2" />
           )}
@@ -228,7 +250,7 @@ export default function ProfileScreen() {
           <MenuItem icon="shield-checkmark-outline" label="Gate & Visitors" onPress={() => router.push('/visitors')} iconColor="#0891B2" iconBg="#CFFAFE" />
           <MenuItem icon="car-outline"         label="Parking"           onPress={() => router.push('/parking')} iconColor="#4F46E5" iconBg="#EEF2FF" />
           <MenuItem icon="fitness-outline"     label="Facilities"        onPress={() => router.push('/facilities')} iconColor="#0D9488" iconBg="#CCFBF1" />
-          <MenuItem icon="construct-outline"   label="Services"          onPress={() => router.push('/services')} iconColor="#B45309" iconBg="#FEF3C7" />
+          <MenuItem icon="construct-outline"   label="Services"          onPress={() => router.push('/services')} iconColor="#DB2777" iconBg="#FCE7F3" />
           <MenuItem icon="paw-outline"         label="Pet Corner"        onPress={() => router.push('/pets')} iconColor="#9333EA" iconBg="#F3E8FF" />
           <MenuItem icon="shield-half-outline" label="Governance & Voting" onPress={() => router.push('/governance')} iconColor="#4F46E5" iconBg="#EEF2FF" />
           <MenuItem icon="pricetags-outline"   label="Deals & Offers"      onPress={() => router.push('/offers')}     iconColor="#059669" iconBg="#D1FAE5" />
@@ -416,6 +438,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  // ── Profile Stats Row ─────────────────────────────────────────────
+  profileStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 2,
+  },
+  profileStatTile: {
+    flex: 1,
+    borderRadius: 11,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  profileStatNum: {
+    fontSize: 24,
+    fontWeight: '800',
+    lineHeight: 28,
+  },
+  profileStatLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 1,
   },
   // ── Menu sections ─────────────────────────────────────────────
   sectionHeader: {
