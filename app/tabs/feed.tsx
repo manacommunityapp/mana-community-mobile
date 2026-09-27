@@ -533,6 +533,18 @@ export default function FeedScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={styles.emergencyBtn}
+            onPress={() => router.push('/emergency')}
+            activeOpacity={0.7}
+            hitSlop={8}
+          >
+            <Ionicons name="alert-circle" size={22} color="#DC2626" />
+            <View style={styles.emergencyBadge}>
+              <Text style={styles.emergencyBadgeText}>24*7</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.notifBtn}
             onPress={() => router.push('/notifications')}
             activeOpacity={0.7}
@@ -778,6 +790,33 @@ const styles = StyleSheet.create({
   headerIconBtnActive: {
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primaryMid,
+  },
+  emergencyBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  emergencyBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -6,
+    backgroundColor: '#DC2626',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderWidth: 1,
+    borderColor: COLORS.surface,
+  },
+  emergencyBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 7.5,
+    fontWeight: '800',
   },
   notifBtn: {
     width: 38,
