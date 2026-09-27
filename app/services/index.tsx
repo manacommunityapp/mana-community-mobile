@@ -1,24 +1,45 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, ScrollView, BackHandler, Linking,
+  TextInput, Modal, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 
-type ServiceCategory = 'ALL' | 'PLUMBING' | 'ELECTRICAL' | 'CLEANING' | 'CARPENTRY' | 'PAINTING' | 'APPLIANCE';
+type ServiceCategory =
+  | 'ALL'
+  | 'PLUMBING'
+  | 'ELECTRICAL'
+  | 'CLEANING'
+  | 'APPLIANCE'
+  | 'CARPENTRY'
+  | 'PAINTING'
+  | 'MAID'
+  | 'PEST_CONTROL';
 
-const CATEGORIES: { value: ServiceCategory; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'ALL',        label: 'All',         icon: 'grid-outline' },
-  { value: 'PLUMBING',   label: 'Plumbing',    icon: 'water-outline' },
-  { value: 'ELECTRICAL', label: 'Electrical',  icon: 'flash-outline' },
-  { value: 'CLEANING',   label: 'Cleaning',    icon: 'sparkles-outline' },
-  { value: 'CARPENTRY',  label: 'Carpentry',   icon: 'hammer-outline' },
-  { value: 'PAINTING',   label: 'Painting',    icon: 'color-palette-outline' },
-  { value: 'APPLIANCE',  label: 'Appliance',   icon: 'settings-outline' },
+interface CategoryConfig {
+  value: ServiceCategory;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  bg: string;
+}
+
+const CATEGORIES: CategoryConfig[] = [
+  { value: 'ALL',          label: 'All Services', icon: 'grid-outline',          color: '#4F46E5', bg: '#EEF2FF' },
+  { value: 'PLUMBING',     label: 'Plumbing',     icon: 'water-outline',         color: '#0284C7', bg: '#E0F2FE' },
+  { value: 'ELECTRICAL',   label: 'Electrical',   icon: 'flash-outline',         color: '#D97706', bg: '#FEF3C7' },
+  { value: 'CLEANING',     label: 'Cleaning',     icon: 'sparkles-outline',      color: '#059669', bg: '#D1FAE5' },
+  { value: 'APPLIANCE',    label: 'Appliance',    icon: 'tv-outline',            color: '#7C3AED', bg: '#EDE9FE' },
+  { value: 'CARPENTRY',    label: 'Carpentry',    icon: 'hammer-outline',        color: '#B45309', bg: '#FEF3C7' },
+  { value: 'PAINTING',     label: 'Painting',     icon: 'color-palette-outline', color: '#DB2777', bg: '#FCE7F3' },
+  { value: 'MAID',         label: 'Maid & Cook',  icon: 'people-outline',        color: '#4F46E5', bg: '#EEF2FF' },
+  { value: 'PEST_CONTROL', label: 'Pest Control', icon: 'bug-outline',           color: '#DC2626', bg: '#FEE2E2' },
 ];
 
 interface ServiceProvider {
@@ -31,21 +52,186 @@ interface ServiceProvider {
   priceRange: string;
   verified: boolean;
   available: boolean;
+  statusText: string;
   speciality: string;
+  experience: string;
+  flatsServed: number;
+  workingInTowers: string;
+  badge?: string;
 }
 
 const SAMPLE_PROVIDERS: ServiceProvider[] = [
-  { id: 1, name: 'Raju Plumbing Services',  category: 'PLUMBING',   phone: '+919876543210', rating: 4.7, reviewCount: 42, priceRange: '₹200-500',   verified: true,  available: true,  speciality: 'Pipe fitting, leaks, bathroom' },
-  { id: 2, name: 'Spark Electricals',        category: 'ELECTRICAL', phone: '+919876543211', rating: 4.5, reviewCount: 38, priceRange: '₹300-800',   verified: true,  available: true,  speciality: 'Wiring, MCB, fan & light' },
-  { id: 3, name: 'CleanPro Services',        category: 'CLEANING',   phone: '+919876543212', rating: 4.8, reviewCount: 65, priceRange: '₹500-1500',  verified: true,  available: true,  speciality: 'Deep clean, kitchen, bathroom' },
-  { id: 4, name: 'Kumar Carpenter',          category: 'CARPENTRY',  phone: '+919876543213', rating: 4.3, reviewCount: 21, priceRange: '₹400-2000',  verified: false, available: true,  speciality: 'Furniture repair, modular work' },
-  { id: 5, name: 'Perfect Paint Works',      category: 'PAINTING',   phone: '+919876543214', rating: 4.6, reviewCount: 33, priceRange: '₹15-25/sqft', verified: true,  available: false, speciality: 'Interior, exterior, texture' },
-  { id: 6, name: 'Fix-It Appliance Repair',  category: 'APPLIANCE',  phone: '+919876543215', rating: 4.4, reviewCount: 29, priceRange: '₹300-1000',  verified: true,  available: true,  speciality: 'AC, washing machine, fridge' },
+  {
+    id: 1,
+    name: 'Raju Sharma (Master Plumber)',
+    category: 'PLUMBING',
+    phone: '+919876543210',
+    rating: 4.8,
+    reviewCount: 54,
+    priceRange: '₹200 - ₹500',
+    verified: true,
+    available: true,
+    statusText: 'Available Today',
+    speciality: 'Pipe leaks, taps, bathroom fittings, flush tanks',
+    experience: '9 yrs exp',
+    flatsServed: 140,
+    workingInTowers: 'Tower A, B, C',
+    badge: 'TOP RATED',
+  },
+  {
+    id: 2,
+    name: 'Spark Electrical Works (Vinod)',
+    category: 'ELECTRICAL',
+    phone: '+919876543211',
+    rating: 4.7,
+    reviewCount: 62,
+    priceRange: '₹250 - ₹800',
+    verified: true,
+    available: true,
+    statusText: 'Available (30 min response)',
+    speciality: 'MCB tripping, fan, chandelier, geyser & smart switches',
+    experience: '12 yrs exp',
+    flatsServed: 210,
+    workingInTowers: 'All Towers',
+    badge: 'FAST RESPONSE',
+  },
+  {
+    id: 3,
+    name: 'Urban CleanPro Team',
+    category: 'CLEANING',
+    phone: '+919876543212',
+    rating: 4.9,
+    reviewCount: 88,
+    priceRange: '₹600 - ₹2,200',
+    verified: true,
+    available: true,
+    statusText: 'Slots Open Tomorrow',
+    speciality: 'Deep kitchen, bathroom scrub, sofa & balcony cleaning',
+    experience: '6 yrs in society',
+    flatsServed: 95,
+    workingInTowers: 'Tower B, D, E',
+    badge: 'POPULAR',
+  },
+  {
+    id: 4,
+    name: 'QuickFix AC & Appliances',
+    category: 'APPLIANCE',
+    phone: '+919876543215',
+    rating: 4.6,
+    reviewCount: 39,
+    priceRange: '₹350 - ₹1,200',
+    verified: true,
+    available: true,
+    statusText: 'Available Today',
+    speciality: 'AC gas refill, filter cleaning, fridge, washing machine',
+    experience: '8 yrs exp',
+    flatsServed: 120,
+    workingInTowers: 'Tower A, C, F',
+  },
+  {
+    id: 5,
+    name: 'Kumar Wooden Craft',
+    category: 'CARPENTRY',
+    phone: '+919876543213',
+    rating: 4.4,
+    reviewCount: 28,
+    priceRange: '₹300 - ₹1,500',
+    verified: true,
+    available: false,
+    statusText: 'Busy till 4 PM',
+    speciality: 'Door locks, hinge fixing, modular kitchen & wardrobe work',
+    experience: '15 yrs exp',
+    flatsServed: 70,
+    workingInTowers: 'Tower C, D',
+  },
+  {
+    id: 6,
+    name: 'Sunil Wall Paints & Textures',
+    category: 'PAINTING',
+    phone: '+919876543214',
+    rating: 4.5,
+    reviewCount: 31,
+    priceRange: '₹18 - ₹28/sqft',
+    verified: true,
+    available: true,
+    statusText: 'Book in Advance',
+    speciality: 'Interior touch-up, waterproof coating, balcony paint',
+    experience: '10 yrs exp',
+    flatsServed: 45,
+    workingInTowers: 'All Towers',
+  },
+  {
+    id: 7,
+    name: 'Laxmi Domestic Services',
+    category: 'MAID',
+    phone: '+919876543216',
+    rating: 4.8,
+    reviewCount: 47,
+    priceRange: '₹3,000 - ₹7,000/mo',
+    verified: true,
+    available: true,
+    statusText: 'Morning / Evening Slots',
+    speciality: 'Home cooking (North & South Indian), housekeeping, utensil wash',
+    experience: '5 yrs verified resident helper',
+    flatsServed: 18,
+    workingInTowers: 'Tower A, B',
+    badge: 'RECOMMENDED',
+  },
+  {
+    id: 8,
+    name: 'Shield Pest Solutions',
+    category: 'PEST_CONTROL',
+    phone: '+919876543217',
+    rating: 4.7,
+    reviewCount: 26,
+    priceRange: '₹750 - ₹1,800',
+    verified: true,
+    available: true,
+    statusText: 'Available This Weekend',
+    speciality: 'Cockroach herbal gel, termite, mosquito & rodent control',
+    experience: '7 yrs exp',
+    flatsServed: 60,
+    workingInTowers: 'All Towers',
+  },
+];
+
+interface BookingItem {
+  id: string;
+  providerName: string;
+  category: ServiceCategory;
+  date: string;
+  timeSlot: string;
+  status: 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED';
+  phone: string;
+  issue: string;
+}
+
+const INITIAL_BOOKINGS: BookingItem[] = [
+  {
+    id: 'BK-101',
+    providerName: 'Spark Electrical Works (Vinod)',
+    category: 'ELECTRICAL',
+    date: 'Today, 28 Sep',
+    timeSlot: '3:00 PM - 4:00 PM',
+    status: 'CONFIRMED',
+    phone: '+919876543211',
+    issue: 'Balcony light switch fixing & MCB check',
+  },
 ];
 
 export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   const router = useRouter();
-  const [filter, setFilter] = useState<ServiceCategory>('ALL');
+  const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'PROVIDERS' | 'BOOKINGS'>('PROVIDERS');
+  const [bookings, setBookings] = useState<BookingItem[]>(INITIAL_BOOKINGS);
+
+  // Booking modal state
+  const [bookingModalVisible, setBookingModalVisible] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
+  const [bookIssue, setBookIssue] = useState('');
+  const [bookDate, setBookDate] = useState('Today');
+  const [bookTimeSlot, setBookTimeSlot] = useState('Morning (9 AM - 12 PM)');
 
   const goHome = useCallback(() => {
     if (isTab) return;
@@ -56,55 +242,187 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   useFocusEffect(
     useCallback(() => {
       if (isTab) return;
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => { goHome(); return true; });
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goHome();
+        return true;
+      });
       return () => sub.remove();
     }, [goHome, isTab])
   );
 
-  const filtered = filter === 'ALL' ? SAMPLE_PROVIDERS : SAMPLE_PROVIDERS.filter(p => p.category === filter);
+  const filteredProviders = useMemo(() => {
+    let list = SAMPLE_PROVIDERS;
+    if (selectedCategory !== 'ALL') {
+      list = list.filter((p) => p.category === selectedCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.speciality.toLowerCase().includes(q) ||
+          p.workingInTowers.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [selectedCategory, searchQuery]);
 
-  const renderItem = ({ item }: { item: ServiceProvider }) => (
-    <View style={[s.providerCard, !item.available && s.unavailable]}>
-      <View style={s.providerTop}>
-        <View style={s.providerIcon}>
-          <Ionicons
-            name={CATEGORIES.find(c => c.value === item.category)?.icon || 'build-outline'}
-            size={22}
-            color={COLORS.primary}
-          />
-        </View>
-        <View style={s.providerInfo}>
-          <View style={s.nameRow}>
-            <Text style={s.providerName} numberOfLines={1}>{item.name}</Text>
-            {item.verified && (
-              <Ionicons name="checkmark-circle" size={14} color="#059669" />
-            )}
+  const handleOpenBooking = (provider: ServiceProvider) => {
+    setSelectedProvider(provider);
+    setBookIssue('');
+    setBookingModalVisible(true);
+  };
+
+  const handleConfirmBooking = () => {
+    if (!selectedProvider) return;
+    const newBooking: BookingItem = {
+      id: `BK-${Math.floor(1000 + Math.random() * 9000)}`,
+      providerName: selectedProvider.name,
+      category: selectedProvider.category,
+      date: bookDate,
+      timeSlot: bookTimeSlot,
+      status: 'CONFIRMED',
+      phone: selectedProvider.phone,
+      issue: bookIssue.trim() || `${selectedProvider.category} service visit`,
+    };
+    setBookings((prev) => [newBooking, ...prev]);
+    setBookingModalVisible(false);
+    Alert.alert(
+      'Booking Confirmed! 🎉',
+      `Your service request has been assigned to ${selectedProvider.name}. They will reach out shortly.`,
+      [{ text: 'View Bookings', onPress: () => setActiveTab('BOOKINGS') }, { text: 'OK' }]
+    );
+  };
+
+  const renderProviderCard = ({ item }: { item: ServiceProvider }) => {
+    const catConfig = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[0];
+    return (
+      <View style={[s.card, !item.available && s.cardDimmed]}>
+        {/* Top Header Row */}
+        <View style={s.cardTop}>
+          <View style={[s.providerIconWrap, { backgroundColor: catConfig.bg }]}>
+            <Ionicons name={catConfig.icon} size={22} color={catConfig.color} />
           </View>
-          <Text style={s.speciality} numberOfLines={1}>{item.speciality}</Text>
-          <View style={s.metaRow}>
-            <View style={s.ratingBadge}>
-              <Ionicons name="star" size={11} color="#F59E0B" />
-              <Text style={s.ratingText}>{item.rating}</Text>
-              <Text style={s.reviewCount}>({item.reviewCount})</Text>
+
+          <View style={s.cardHeaderInfo}>
+            <View style={s.nameBadgeRow}>
+              <Text style={s.providerName} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {item.verified && (
+                <View style={s.verifiedPill}>
+                  <Ionicons name="checkmark-circle" size={11} color="#059669" />
+                  <Text style={s.verifiedText}>VERIFIED</Text>
+                </View>
+              )}
             </View>
-            <Text style={s.priceRange}>{item.priceRange}</Text>
+
+            <Text style={s.specialityText} numberOfLines={2}>
+              {item.speciality}
+            </Text>
           </View>
+        </View>
+
+        {/* Rating, Price & Status Bar */}
+        <View style={s.metricsRow}>
+          <View style={s.ratingPill}>
+            <Ionicons name="star" size={12} color="#F59E0B" />
+            <Text style={s.ratingNum}>{item.rating}</Text>
+            <Text style={s.reviewCount}>({item.reviewCount})</Text>
+          </View>
+
+          <View style={s.pricePill}>
+            <Text style={s.priceText}>{item.priceRange}</Text>
+          </View>
+
+          <View style={[s.statusPill, item.available ? s.statusAvailable : s.statusBusy]}>
+            <View style={[s.statusDot, item.available ? s.dotGreen : s.dotAmber]} />
+            <Text style={[s.statusText, item.available ? s.textGreen : s.textAmber]}>
+              {item.statusText}
+            </Text>
+          </View>
+        </View>
+
+        {/* Experience & Flats tag row */}
+        <View style={s.tagsRow}>
+          <View style={s.tagItem}>
+            <Ionicons name="ribbon-outline" size={12} color={COLORS.textMuted} />
+            <Text style={s.tagText}>{item.experience}</Text>
+          </View>
+          <View style={s.tagItem}>
+            <Ionicons name="business-outline" size={12} color={COLORS.textMuted} />
+            <Text style={s.tagText}>{item.workingInTowers}</Text>
+          </View>
+          <View style={s.tagItem}>
+            <Ionicons name="home-outline" size={12} color={COLORS.textMuted} />
+            <Text style={s.tagText}>{item.flatsServed}+ flats served</Text>
+          </View>
+        </View>
+
+        {/* Action Buttons Row */}
+        <View style={s.actionRow}>
+          <TouchableOpacity
+            style={s.callBtn}
+            onPress={() => Linking.openURL(`tel:${item.phone}`)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="call" size={15} color="#fff" />
+            <Text style={s.callBtnText}>Call</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.chatBtn}
+            onPress={() => Linking.openURL(`https://wa.me/${item.phone.replace(/[^0-9]/g, '')}`)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={15} color={COLORS.primary} />
+            <Text style={s.chatBtnText}>Chat</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.bookBtn}
+            onPress={() => handleOpenBooking(item)}
+            activeOpacity={0.8}
+          >
+            <Text style={s.bookBtnText}>Book Visit</Text>
+          </TouchableOpacity>
         </View>
       </View>
-      <View style={s.providerActions}>
+    );
+  };
+
+  const renderBookingCard = ({ item }: { item: BookingItem }) => (
+    <View style={s.bookingCard}>
+      <View style={s.bookingTop}>
+        <View style={s.bookingBadgeConfirmed}>
+          <Ionicons name="checkmark-circle" size={13} color="#059669" />
+          <Text style={s.bookingBadgeText}>{item.status}</Text>
+        </View>
+        <Text style={s.bookingIdText}>{item.id}</Text>
+      </View>
+
+      <Text style={s.bookingProvider}>{item.providerName}</Text>
+      <Text style={s.bookingIssue}>{item.issue}</Text>
+
+      <View style={s.bookingMetaRow}>
+        <View style={s.bookingMetaItem}>
+          <Ionicons name="calendar-outline" size={13} color={COLORS.primary} />
+          <Text style={s.bookingMetaText}>{item.date}</Text>
+        </View>
+        <View style={s.bookingMetaItem}>
+          <Ionicons name="time-outline" size={13} color={COLORS.primary} />
+          <Text style={s.bookingMetaText}>{item.timeSlot}</Text>
+        </View>
+      </View>
+
+      <View style={s.bookingActionRow}>
         <TouchableOpacity
-          style={[s.callBtn, !item.available && s.callBtnDisabled]}
-          onPress={() => item.available && Linking.openURL(`tel:${item.phone}`)}
-          activeOpacity={0.7}
-          disabled={!item.available}
+          style={s.bookingCallBtn}
+          onPress={() => Linking.openURL(`tel:${item.phone}`)}
+          activeOpacity={0.8}
         >
-          <Ionicons name="call-outline" size={16} color={item.available ? '#fff' : COLORS.textMuted} />
-          <Text style={[s.callBtnText, !item.available && { color: COLORS.textMuted }]}>
-            {item.available ? 'Call Now' : 'Unavailable'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.chatBtn} activeOpacity={0.7}>
-          <Ionicons name="chatbubble-outline" size={16} color={COLORS.primary} />
+          <Ionicons name="call" size={14} color="#fff" />
+          <Text style={s.bookingCallText}>Call Technician</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -112,112 +430,956 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
+      {/* ── Top Header ────────────────────────────────────────────── */}
       <View style={s.header}>
         {!isTab && (
           <TouchableOpacity onPress={goHome} style={s.backBtn} hitSlop={8}>
-            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
           </TouchableOpacity>
         )}
-        <View style={s.headerCenter}>
+        <View style={s.headerTextWrap}>
           <Text style={s.headerTitle}>Home Services</Text>
-          <Text style={s.headerSub}>Verified local technicians & helpers</Text>
+          <Text style={s.headerSub}>Verified community technicians & helpers</Text>
         </View>
-        <TouchableOpacity style={s.backBtn} hitSlop={8}>
-          <Ionicons name="search-outline" size={20} color={COLORS.text} />
+        <TouchableOpacity
+          style={[s.headerIconBtn, activeTab === 'BOOKINGS' && s.headerIconBtnActive]}
+          onPress={() => setActiveTab(activeTab === 'PROVIDERS' ? 'BOOKINGS' : 'PROVIDERS')}
+          hitSlop={8}
+        >
+          <Ionicons
+            name={activeTab === 'BOOKINGS' ? 'construct' : 'receipt-outline'}
+            size={20}
+            color={activeTab === 'BOOKINGS' ? COLORS.primary : COLORS.text}
+          />
+          {bookings.length > 0 && (
+            <View style={s.headerBadge}>
+              <Text style={s.headerBadgeText}>{bookings.length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.filterRow} style={s.filterScroll}
-      >
-        {CATEGORIES.map(c => (
-          <TouchableOpacity
-            key={c.value}
-            style={[s.filterChip, filter === c.value && s.filterChipActive]}
-            onPress={() => setFilter(c.value)}
-          >
-            <Ionicons name={c.icon} size={14} color={filter === c.value ? '#fff' : COLORS.textMuted} />
-            <Text style={[s.filterText, filter === c.value && s.filterTextActive]}>{c.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {activeTab === 'PROVIDERS' ? (
+        <FlatList
+          data={filteredProviders}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderProviderCard}
+          contentContainerStyle={s.listContent}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <>
+              {/* ── Hero Gradient Banner ─────────────────────────────── */}
+              <LinearGradient
+                colors={['#3730A3', '#4F46E5', '#6366F1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.heroBanner}
+              >
+                <View style={s.heroContent}>
+                  <View style={s.heroBadge}>
+                    <Ionicons name="shield-checkmark" size={12} color="#4F46E5" />
+                    <Text style={s.heroBadgeText}>SOCIETY VERIFIED TECHS</Text>
+                  </View>
+                  <Text style={s.heroTitle}>Need quick repairs at home?</Text>
+                  <Text style={s.heroSub}>
+                    Plumbing, electrical, AC, cleaning & carpentry by trusted on-campus helpers.
+                  </Text>
+                </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={item => String(item.id)}
-        renderItem={renderItem}
-        contentContainerStyle={s.list}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={s.empty}>
-            <Ionicons name="construct-outline" size={48} color={COLORS.textMuted} />
-            <Text style={s.emptyTitle}>No providers found</Text>
-            <Text style={s.emptyDesc}>Try a different category or check back later</Text>
+                {/* 24x7 On-Duty Hotline Strip */}
+                <View style={s.hotlineRow}>
+                  <View style={s.hotlineLeft}>
+                    <Ionicons name="flash" size={14} color="#FDE047" />
+                    <Text style={s.hotlineText}>24x7 Electrician & Plumber on Duty</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={s.hotlineCallBtn}
+                    onPress={() => Linking.openURL('tel:+919876543210')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="call" size={12} color="#1E1B4B" />
+                    <Text style={s.hotlineCallText}>Emergency Call</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+
+              {/* ── Search Bar ───────────────────────────────────────── */}
+              <View style={s.searchWrap}>
+                <View style={s.searchBar}>
+                  <Ionicons name="search-outline" size={17} color={COLORS.textMuted} />
+                  <TextInput
+                    style={s.searchInput}
+                    placeholder="Search electrician, plumber, AC repair, maid..."
+                    placeholderTextColor={COLORS.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                      <Ionicons name="close-circle" size={17} color={COLORS.textMuted} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              {/* ── Category Chips Carousel ──────────────────────────── */}
+              <View style={s.categoriesSection}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.categoriesScroll}
+                >
+                  {CATEGORIES.map((c) => {
+                    const active = selectedCategory === c.value;
+                    return (
+                      <TouchableOpacity
+                        key={c.value}
+                        style={[
+                          s.categoryChip,
+                          active && { backgroundColor: c.color, borderColor: c.color },
+                        ]}
+                        onPress={() => setSelectedCategory(c.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={c.icon}
+                          size={15}
+                          color={active ? '#fff' : c.color}
+                        />
+                        <Text style={[s.categoryChipText, active && s.categoryChipTextActive]}>
+                          {c.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* ── Section Title ─────────────────────────────────────── */}
+              <View style={s.sectionHeaderRow}>
+                <Text style={s.sectionTitle}>
+                  {selectedCategory === 'ALL'
+                    ? 'Available Technicians'
+                    : `${CATEGORIES.find((c) => c.value === selectedCategory)?.label} Specialists`}
+                </Text>
+                <Text style={s.sectionCount}>{filteredProviders.length} providers</Text>
+              </View>
+            </>
+          }
+          ListEmptyComponent={
+            <View style={s.emptyState}>
+              <Ionicons name="construct-outline" size={48} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No technicians found</Text>
+              <Text style={s.emptySub}>
+                Try adjusting your search query or selecting a different service category.
+              </Text>
+            </View>
+          }
+        />
+      ) : (
+        /* ── My Bookings Tab View ─────────────────────────────────── */
+        <FlatList
+          data={bookings}
+          keyExtractor={(item) => item.id}
+          renderItem={renderBookingCard}
+          contentContainerStyle={s.listContent}
+          ListHeaderComponent={
+            <View style={s.bookingsHeader}>
+              <Text style={s.sectionTitle}>My Service Requests</Text>
+              <Text style={s.sectionCount}>{bookings.length} active</Text>
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={s.emptyState}>
+              <Ionicons name="receipt-outline" size={48} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No service bookings yet</Text>
+              <Text style={s.emptySub}>
+                Book a technician from the services directory and your scheduled visits will appear here.
+              </Text>
+            </View>
+          }
+        />
+      )}
+
+      {/* ── Booking Modal ─────────────────────────────────────────── */}
+      <Modal visible={bookingModalVisible} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <View>
+                <Text style={s.modalTitle}>Book Service Visit</Text>
+                <Text style={s.modalSub}>{selectedProvider?.name}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setBookingModalVisible(false)}
+                style={s.modalCloseBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={20} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.modalBody}>
+              {/* Preferred Day */}
+              <Text style={s.fieldLabel}>PREFERRED DAY</Text>
+              <View style={s.pillRow}>
+                {['Today', 'Tomorrow', 'This Weekend'].map((day) => (
+                  <TouchableOpacity
+                    key={day}
+                    style={[s.modalPill, bookDate === day && s.modalPillActive]}
+                    onPress={() => setBookDate(day)}
+                  >
+                    <Text style={[s.modalPillText, bookDate === day && s.modalPillTextActive]}>
+                      {day}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Preferred Time Slot */}
+              <Text style={[s.fieldLabel, { marginTop: 14 }]}>TIME SLOT</Text>
+              <View style={s.slotColumn}>
+                {[
+                  { slot: 'Morning (9 AM - 12 PM)', icon: 'sunny-outline' },
+                  { slot: 'Afternoon (12 PM - 3 PM)', icon: 'partly-sunny-outline' },
+                  { slot: 'Evening (3 PM - 7 PM)', icon: 'moon-outline' },
+                ].map(({ slot, icon }) => (
+                  <TouchableOpacity
+                    key={slot}
+                    style={[s.slotCard, bookTimeSlot === slot && s.slotCardActive]}
+                    onPress={() => setBookTimeSlot(slot)}
+                  >
+                    <Ionicons
+                      name={icon as any}
+                      size={16}
+                      color={bookTimeSlot === slot ? COLORS.primary : COLORS.textMuted}
+                    />
+                    <Text style={[s.slotText, bookTimeSlot === slot && s.slotTextActive]}>
+                      {slot}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Problem Description */}
+              <Text style={[s.fieldLabel, { marginTop: 14 }]}>DESCRIBE ISSUE (OPTIONAL)</Text>
+              <TextInput
+                style={s.issueInput}
+                placeholder="e.g. Bathroom pipe leakage under sink, water pressure issue..."
+                placeholderTextColor={COLORS.textMuted}
+                value={bookIssue}
+                onChangeText={setBookIssue}
+                multiline
+                numberOfLines={3}
+              />
+
+              <View style={s.estimateBox}>
+                <Ionicons name="information-circle-outline" size={16} color={COLORS.primary} />
+                <Text style={s.estimateText}>
+                  Standard visiting fee: {selectedProvider?.priceRange}. Direct payment upon completion.
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={s.modalFooter}>
+              <TouchableOpacity
+                style={s.modalConfirmBtn}
+                onPress={handleConfirmBooking}
+                activeOpacity={0.85}
+              >
+                <Text style={s.modalConfirmText}>Confirm Booking Request</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        }
-      />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+
+  // ── Header ────────────────────────────────────────────────────────
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingVertical: 10,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
-  headerSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  filterScroll: { backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  filterRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  filterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.full,
-    paddingHorizontal: 14, paddingVertical: 7,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
-  filterChipActive: { backgroundColor: COLORS.accent },
-  filterText: { fontSize: 13, fontWeight: '500', color: COLORS.textMuted },
-  filterTextActive: { color: '#fff', fontWeight: '600' },
-  list: { padding: 12, gap: 10 },
-  providerCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 14,
-    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm, gap: 12,
+  headerTextWrap: { flex: 1 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.3,
   },
-  unavailable: { opacity: 0.6 },
-  providerTop: { flexDirection: 'row', gap: 12 },
-  providerIcon: {
-    width: 48, height: 48, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
+  headerSub: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 1,
   },
-  providerInfo: { flex: 1, gap: 2 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  providerName: { fontSize: 15, fontWeight: '700', color: COLORS.text, flex: 1 },
-  speciality: { fontSize: 12, color: COLORS.textMuted },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  ratingBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#FFFBEB', borderRadius: RADIUS.sm, paddingHorizontal: 6, paddingVertical: 2,
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    position: 'relative',
   },
-  ratingText: { fontSize: 11, fontWeight: '700', color: '#92400E' },
-  reviewCount: { fontSize: 10, color: COLORS.textMuted },
-  priceRange: { fontSize: 12, fontWeight: '700', color: COLORS.accent },
-  providerActions: { flexDirection: 'row', gap: 8 },
+  headerIconBtnActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primaryMid,
+  },
+  headerBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.full,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  headerBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+
+  // ── Hero Banner ───────────────────────────────────────────────────
+  heroBanner: {
+    marginHorizontal: 14,
+    marginTop: 12,
+    borderRadius: RADIUS.xl,
+    padding: 16,
+    ...SHADOWS.md,
+    gap: 12,
+  },
+  heroContent: { gap: 4 },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+  },
+  heroBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.primary,
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
+  heroSub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 16,
+  },
+  hotlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  hotlineLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  hotlineText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  hotlineCallBtn: {
+    backgroundColor: '#FDE047',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  hotlineCallText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#1E1B4B',
+  },
+
+  // ── Search Bar ───────────────────────────────────────────────────
+  searchWrap: {
+    paddingHorizontal: 14,
+    marginTop: 10,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 8,
+    ...SHADOWS.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.text,
+    paddingVertical: 0,
+  },
+
+  // ── Categories ────────────────────────────────────────────────────
+  categoriesSection: {
+    marginTop: 12,
+  },
+  categoriesScroll: {
+    paddingHorizontal: 14,
+    gap: 7,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  categoryChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  categoryChipTextActive: {
+    color: '#fff',
+  },
+
+  // ── Section Titles ────────────────────────────────────────────────
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.2,
+  },
+  sectionCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+
+  // ── Provider Card ─────────────────────────────────────────────────
+  listContent: {
+    paddingBottom: 30,
+    gap: 12,
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 14,
+    borderRadius: RADIUS.xl,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+    gap: 10,
+  },
+  cardDimmed: {
+    opacity: 0.85,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  providerIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  cardHeaderInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  nameBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  providerName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.text,
+    flex: 1,
+    letterSpacing: -0.2,
+  },
+  verifiedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#DCFCE7',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  verifiedText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  specialityText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    lineHeight: 16,
+  },
+
+  // ── Metrics Bar ───────────────────────────────────────────────────
+  metricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  ratingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  ratingNum: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  reviewCount: {
+    fontSize: 10,
+    color: '#B45309',
+    fontWeight: '600',
+  },
+  pricePill: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  priceText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    marginLeft: 'auto',
+  },
+  statusAvailable: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusBusy: {
+    backgroundColor: '#F3F4F6',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dotGreen: { backgroundColor: '#10B981' },
+  dotAmber: { backgroundColor: '#F59E0B' },
+  statusText: { fontSize: 10, fontWeight: '700' },
+  textGreen: { color: '#059669' },
+  textAmber: { color: COLORS.textMuted },
+
+  // ── Tags Row ──────────────────────────────────────────────────────
+  tagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceAlt,
+  },
+  tagItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  tagText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+
+  // ── Card Action Buttons ───────────────────────────────────────────
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
   callBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: COLORS.accent, borderRadius: RADIUS.md,
-    paddingVertical: 10,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingVertical: 9,
+    ...SHADOWS.sm,
   },
-  callBtnDisabled: { backgroundColor: COLORS.surfaceAlt },
-  callBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  callBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   chatBtn: {
-    width: 44, height: 44, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: COLORS.primaryMid,
   },
-  empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text, marginTop: 12 },
-  emptyDesc: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginTop: 4 },
+  chatBtnText: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  bookBtn: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookBtnText: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // ── Booking Cards (My Requests) ───────────────────────────────────
+  bookingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  bookingCard: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 14,
+    borderRadius: RADIUS.xl,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+    gap: 8,
+  },
+  bookingTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bookingBadgeConfirmed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#DCFCE7',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  bookingBadgeText: {
+    color: '#059669',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  bookingIdText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '700',
+  },
+  bookingProvider: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  bookingIssue: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 16,
+  },
+  bookingMetaRow: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingVertical: 4,
+  },
+  bookingMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  bookingMetaText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  bookingActionRow: {
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceAlt,
+    paddingTop: 8,
+  },
+  bookingCallBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  bookingCallText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // ── Empty State ───────────────────────────────────────────────────
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 30,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 6,
+  },
+  emptySub: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+
+  // ── Booking Modal ─────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xxl,
+    borderTopRightRadius: RADIUS.xxl,
+    maxHeight: '85%',
+    paddingBottom: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  fieldLabel: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  modalPill: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    paddingVertical: 9,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalPillActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+  },
+  modalPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  modalPillTextActive: {
+    color: COLORS.primary,
+  },
+  slotColumn: {
+    gap: 7,
+  },
+  slotCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  slotCardActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+  },
+  slotText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  slotTextActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  issueInput: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    fontSize: 13,
+    color: COLORS.text,
+    textAlignVertical: 'top',
+    minHeight: 70,
+  },
+  estimateBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.md,
+    padding: 10,
+    marginTop: 14,
+  },
+  estimateText: {
+    fontSize: 11.5,
+    color: COLORS.primaryDark,
+    flex: 1,
+    lineHeight: 16,
+  },
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  modalConfirmBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: 13,
+    alignItems: 'center',
+    ...SHADOWS.md,
+  },
+  modalConfirmText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
 });
