@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { feedService } from '@/services/feedService';
 import { notificationService } from '@/services/notificationService';
 import { eventService } from '@/services/eventService';
+import { chatService } from '@/services/chatService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
 import { PostDto, EventDto } from '@/types/api';
@@ -280,6 +281,13 @@ export default function FeedScreen() {
     queryFn: () => eventService.getUpcomingEvents(),
   });
 
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: chatService.getConversations,
+    refetchInterval: 15_000,
+  });
+  const unreadMsgs = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+
   const allPosts = useMemo(() => data?.pages.flatMap((p) => p.content) ?? [], [data]);
 
   const filteredPosts = useMemo(() => {
@@ -340,23 +348,38 @@ export default function FeedScreen() {
     </View>
   ), [router]);
 
-  // ── Quick Stats Row ────────────────────────────────────────────────
+  // ── Quick Stats Row (dynamic) ───────────────────────────────────────
+  const statTiles = useMemo(() => [
+    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length, color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'polls',   label: 'Active Polls',   value: 3,                    color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'stats-chart' as keyof typeof Ionicons.glyphMap, route: '/polls' },
+    { id: 'notifs',  label: 'Notifications',  value: unreadCount,          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'sports',  label: 'Live Matches',   value: 1,                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy' as keyof typeof Ionicons.glyphMap, route: '/sports' },
+    { id: 'tickets', label: 'Open Tickets',   value: 0,                    color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
+  ], [upcomingEvents.length, unreadCount]);
+
   const StatsRow = useMemo(() => (
-    <View style={styles.statsRow}>
-      <View style={[styles.statTile, { backgroundColor: '#FEF3C7' }]}>
-        <Text style={[styles.statNum, { color: '#D97706' }]}>2</Text>
-        <Text style={[styles.statLabel, { color: '#92400E' }]}>Events Today</Text>
-      </View>
-      <View style={[styles.statTile, { backgroundColor: '#DBEAFE' }]}>
-        <Text style={[styles.statNum, { color: '#2563EB' }]}>8</Text>
-        <Text style={[styles.statLabel, { color: '#1E40AF' }]}>Unread Msgs</Text>
-      </View>
-      <View style={[styles.statTile, { backgroundColor: '#EDE9FE' }]}>
-        <Text style={[styles.statNum, { color: '#7C3AED' }]}>3</Text>
-        <Text style={[styles.statLabel, { color: '#5B21B6' }]}>Active Polls</Text>
-      </View>
-    </View>
-  ), []);
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.statsScroll}
+      style={styles.statsContainer}
+    >
+      {statTiles.map(tile => (
+        <TouchableOpacity
+          key={tile.id}
+          style={[styles.statTile, { backgroundColor: tile.bg }]}
+          onPress={() => router.push(tile.route as any)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.statTileTop}>
+            <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
+            <Ionicons name={tile.icon} size={16} color={tile.color} style={{ opacity: 0.7 }} />
+          </View>
+          <Text style={[styles.statLabel, { color: tile.labelColor }]}>{tile.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  ), [statTiles, router]);
 
   const ListHeader = useMemo(() => (
     <View style={styles.headerStack}>
@@ -693,29 +716,33 @@ const styles = StyleSheet.create({
   },
 
   // ── Quick Stats Row ───────────────────────────────────────────────
-  statsRow: {
-    flexDirection: 'row',
-    gap: 6,
+  statsContainer: { flexGrow: 0 },
+  statsScroll: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    gap: 8,
   },
   statTile: {
-    flex: 1,
-    borderRadius: 10,
-    padding: 8,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minWidth: 108,
+    ...SHADOWS.sm,
+  },
+  statTileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
   },
   statNum: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    lineHeight: 24,
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 9,
-    fontWeight: '500',
-    marginTop: 1,
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   // ── Welcome Top Bar ───────────────────────────────────────────────
