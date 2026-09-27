@@ -55,20 +55,23 @@ export function QuickActions() {
   const router = useRouter();
   const [showAllModal, setShowAllModal] = useState(false);
 
-  // Top popular highlights in horizontal scroll (Emergency is accessible in top header)
+  // Top popular highlights in horizontal scroll (events, services, shop are in footer tabs; emergency in top header)
   const highlightedServices = [
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'dues')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'offers')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'group_buying')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'events')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'sports')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'services')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'market')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'trips')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'governance')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'academy')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'cpos')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'jobs')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'helpdesk')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'visitors')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'facilities')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'food')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'visitors')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'governance')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'trips')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'commute')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'pets')!,
   ].filter(Boolean);
 
   const categories: Array<QuickActionItem['category']> = [
