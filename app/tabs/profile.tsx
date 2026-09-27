@@ -194,38 +194,38 @@ export default function ProfileScreen() {
               )}
               {showHelpdesk && (
                 <MenuItem
-                  icon="construct-outline"
+                  icon="headset-outline"
                   label="Smart Helpdesk"
                   onPress={() => router.push('/helpdesk')}
-                  iconColor="#4F46E5"
-                  iconBg="#EEF2FF"
+                  iconColor="#F59E0B"
+                  iconBg="#FEF3C7"
                 />
               )}
               {showGroupBuying && (
                 <MenuItem
-                  icon="cart-outline"
+                  icon="bag-handle-outline"
                   label="Group Buying"
                   onPress={() => router.push('/group-buying')}
-                  iconColor="#3B82F6"
-                  iconBg="#DBEAFE"
+                  iconColor="#059669"
+                  iconBg="#ECFDF5"
                 />
               )}
               {showTrips && (
                 <MenuItem
-                  icon="bus-outline"
+                  icon="compass-outline"
                   label="Community Trips"
                   onPress={() => router.push('/trips')}
-                  iconColor="#8B5CF6"
-                  iconBg="#EDE9FE"
+                  iconColor="#0D9488"
+                  iconBg="#CCFBF1"
                 />
               )}
               {showDiscover && (
                 <MenuItem
-                  icon="compass-outline"
+                  icon="sparkles-outline"
                   label="Community Discover"
                   onPress={() => router.push('/discover')}
-                  iconColor="#EC4899"
-                  iconBg="#FCE7F3"
+                  iconColor="#7C3AED"
+                  iconBg="#EDE9FE"
                 />
               )}
             </View>
@@ -236,27 +236,27 @@ export default function ProfileScreen() {
         <SectionHeader title="Explore" />
         <View style={styles.menuSection}>
           {showSports && (
-            <MenuItem icon="football-outline"    label="Sports"      onPress={() => router.push('/sports')}      iconColor="#059669" iconBg="#D1FAE5" />
+            <MenuItem icon="trophy-outline"      label="Sports Leagues"    onPress={() => router.push('/sports')}      iconColor="#059669" iconBg="#DCFCE7" />
           )}
-          <MenuItem icon="car-outline"         label="Commute"     onPress={() => router.push('/commute')}     iconColor="#2563EB" iconBg="#DBEAFE" />
+          <MenuItem icon="car-sport-outline"   label="Commute Pool"      onPress={() => router.push('/commute')}     iconColor="#2563EB" iconBg="#DBEAFE" />
           {showPolls && (
-            <MenuItem icon="stats-chart-outline" label="Polls"       onPress={() => router.push('/polls')}       iconColor="#7C3AED" iconBg="#EDE9FE" />
+            <MenuItem icon="bar-chart-outline"   label="Polls & Voting"    onPress={() => router.push('/polls')}       iconColor="#7C3AED" iconBg="#EDE9FE" />
           )}
-          <MenuItem icon="pricetag-outline"    label="Auction"     onPress={() => router.push('/auction')}     iconColor="#4F46E5" iconBg="#EEF2FF" />
+          <MenuItem icon="pricetag-outline"    label="Auctions"          onPress={() => router.push('/auction')}     iconColor="#D97706" iconBg="#FEF3C7" />
           {showMarketplace && (
-            <MenuItem icon="storefront-outline"  label="Marketplace" onPress={() => router.push('/tabs/marketplace')} iconColor="#DC2626" iconBg="#FEE2E2" />
+            <MenuItem icon="storefront-outline"  label="Marketplace"       onPress={() => router.push('/tabs/marketplace')} iconColor="#059669" iconBg="#D1FAE5" />
           )}
-          <MenuItem icon="restaurant-outline"  label="Community Kitchen" onPress={() => router.push('/food')} iconColor="#4F46E5" iconBg="#EEF2FF" />
-          <MenuItem icon="shield-checkmark-outline" label="Gate & Visitors" onPress={() => router.push('/visitors')} iconColor="#0891B2" iconBg="#CFFAFE" />
-          <MenuItem icon="car-outline"         label="Parking"           onPress={() => router.push('/parking')} iconColor="#4F46E5" iconBg="#EEF2FF" />
-          <MenuItem icon="fitness-outline"     label="Facilities"        onPress={() => router.push('/facilities')} iconColor="#0D9488" iconBg="#CCFBF1" />
-          <MenuItem icon="construct-outline"   label="Services"          onPress={() => router.push('/services')} iconColor="#DB2777" iconBg="#FCE7F3" />
-          <MenuItem icon="paw-outline"         label="Pet Corner"        onPress={() => router.push('/pets')} iconColor="#9333EA" iconBg="#F3E8FF" />
-          <MenuItem icon="shield-half-outline" label="Governance & Voting" onPress={() => router.push('/governance')} iconColor="#4F46E5" iconBg="#EEF2FF" />
-          <MenuItem icon="pricetags-outline"   label="Deals & Offers"      onPress={() => router.push('/offers')}     iconColor="#059669" iconBg="#D1FAE5" />
-          <MenuItem icon="school-outline"      label="Academy & Classes"   onPress={() => router.push('/academy')}    iconColor="#7C3AED" iconBg="#EDE9FE" />
-          <MenuItem icon="business-outline"    label="Property & Flats"    onPress={() => router.push('/cpos')}       iconColor="#0284C7" iconBg="#E0F2FE" />
-          <MenuItem icon="briefcase-outline"   label="Professional Network" onPress={() => router.push('/cpn')}      iconColor="#4F46E5" iconBg="#EEF2FF" />
+          <MenuItem icon="restaurant-outline"  label="Community Kitchen" onPress={() => router.push('/food')}        iconColor="#E11D48" iconBg="#FFE4E6" />
+          <MenuItem icon="shield-checkmark-outline" label="Gate & Visitors" onPress={() => router.push('/visitors')}  iconColor="#0891B2" iconBg="#CFFAFE" />
+          <MenuItem icon="car-outline"         label="Parking"           onPress={() => router.push('/parking')}      iconColor="#4338CA" iconBg="#E0E7FF" />
+          <MenuItem icon="fitness-outline"     label="Facilities"        onPress={() => router.push('/facilities')}  iconColor="#0D9488" iconBg="#CCFBF1" />
+          <MenuItem icon="construct-outline"   label="Home Services"     onPress={() => router.push('/services')}    iconColor="#DB2777" iconBg="#FCE7F3" />
+          <MenuItem icon="paw-outline"         label="Pet Corner"        onPress={() => router.push('/pets')}        iconColor="#9333EA" iconBg="#F3E8FF" />
+          <MenuItem icon="business-outline"    label="Governance & AGM"  onPress={() => router.push('/governance')}  iconColor="#7C3AED" iconBg="#EDE9FE" badge="NEW" />
+          <MenuItem icon="pricetag-outline"    label="Offers & Deals"    onPress={() => router.push('/offers')}      iconColor="#D97706" iconBg="#FEF3C7" badge="NEW" />
+          <MenuItem icon="school-outline"      label="Mana Academy"      onPress={() => router.push('/academy')}     iconColor="#7C3AED" iconBg="#F3E8FF" badge="NEW" />
+          <MenuItem icon="home-outline"        label="Property OS (CPOS)" onPress={() => router.push('/cpos')}      iconColor="#059669" iconBg="#DCFCE7" badge="NEW" />
+          <MenuItem icon="briefcase-outline"   label="Pro Network (CPN)" onPress={() => router.push('/cpn')}        iconColor="#2563EB" iconBg="#EFF6FF" badge="NEW" />
         </View>
 
         {/* ── Account ─────────────────────────────────────────── */}

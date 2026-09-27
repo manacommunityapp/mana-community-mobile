@@ -38,7 +38,7 @@ export function CommunityStats() {
     {
       id: 'events',
       label: 'Events Today',
-      icon: 'calendar',
+      icon: 'calendar-outline',
       value: 2,
       color: '#D97706',
       labelColor: '#92400E',
@@ -48,7 +48,7 @@ export function CommunityStats() {
     {
       id: 'messages',
       label: 'Unread Msgs',
-      icon: 'chatbubbles',
+      icon: 'chatbubbles-outline',
       value: unreadMsgs,
       color: '#2563EB',
       labelColor: '#1E40AF',
@@ -58,7 +58,7 @@ export function CommunityStats() {
     {
       id: 'polls',
       label: 'Active Polls',
-      icon: 'stats-chart',
+      icon: 'bar-chart-outline',
       value: 3,
       color: '#7C3AED',
       labelColor: '#5B21B6',
@@ -68,7 +68,7 @@ export function CommunityStats() {
     {
       id: 'notifications',
       label: 'Notifications',
-      icon: 'notifications',
+      icon: 'notifications-outline',
       value: unreadNotifs,
       color: '#EF4444',
       labelColor: '#991B1B',
@@ -78,7 +78,7 @@ export function CommunityStats() {
     {
       id: 'sports',
       label: 'Live Matches',
-      icon: 'trophy',
+      icon: 'trophy-outline',
       value: 1,
       color: '#059669',
       labelColor: '#065F46',
@@ -88,7 +88,7 @@ export function CommunityStats() {
     {
       id: 'tickets',
       label: 'Open Tickets',
-      icon: 'construct',
+      icon: 'construct-outline',
       value: 0,
       color: '#0891B2',
       labelColor: '#155E75',
