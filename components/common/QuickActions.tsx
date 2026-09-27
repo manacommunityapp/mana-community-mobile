@@ -26,6 +26,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'services', icon: 'construct', label: 'Home Services', route: '/services', bg: '#FCE7F3', color: '#DB2777', category: 'Living & Bills' },
   { id: 'notices', icon: 'megaphone', label: 'Notices', route: '/admin/announcements', bg: '#EDE9FE', color: '#7C3AED', category: 'Living & Bills' },
   { id: 'parking', icon: 'car', label: 'Parking Slots', route: '/parking', bg: '#E0E7FF', color: '#4338CA', category: 'Living & Bills' },
+  { id: 'cpos', icon: 'business', label: 'Property & Flats', route: '/cpos', bg: '#E0F2FE', color: '#0284C7', category: 'Living & Bills' },
 
   // Social & Community
   { id: 'events', icon: 'calendar', label: 'Events & Passes', route: '/tabs/events', bg: '#EEF2FF', color: '#4F46E5', category: 'Social & Sports' },
