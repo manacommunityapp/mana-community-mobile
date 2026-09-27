@@ -413,7 +413,7 @@ export default function FeedScreen() {
 
       {/* Composer Card */}
       <View style={styles.composerCard}>
-        <View style={styles.composerTop}>
+        <View style={styles.composerRow}>
           <View style={[styles.composerAvatar, { backgroundColor: avatarColor.bg }]}>
             <Text style={styles.composerAvatarText}>{userInitial}</Text>
           </View>
@@ -422,37 +422,43 @@ export default function FeedScreen() {
             onPress={() => router.push('/polls/create')}
             activeOpacity={0.8}
           >
-            <Text style={styles.composerPlaceholder}>
-              Share something with your neighbors...
+            <Text style={styles.composerPlaceholder} numberOfLines={1}>
+              Share with neighbors...
             </Text>
           </TouchableOpacity>
-        </View>
-        <View style={styles.composerDivider} />
-        <View style={styles.composerActions}>
-          <TouchableOpacity style={styles.chipBtn} onPress={() => router.push('/polls/create')} activeOpacity={0.7}>
-            <View style={[styles.chipIcon, { backgroundColor: '#EDE9FE' }]}>
-              <Ionicons name="stats-chart" size={13} color="#7C3AED" />
-            </View>
-            <Text style={[styles.chipText, { color: '#7C3AED' }]}>Poll</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.chipBtn} onPress={() => router.push('/polls/create')} activeOpacity={0.7}>
-            <View style={[styles.chipIcon, { backgroundColor: '#DBEAFE' }]}>
-              <Ionicons name="chatbubble-ellipses" size={13} color="#2563EB" />
-            </View>
-            <Text style={[styles.chipText, { color: '#2563EB' }]}>Discussion</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.chipBtn} onPress={() => router.push('/events/create')} activeOpacity={0.7}>
-            <View style={[styles.chipIcon, { backgroundColor: '#CCFBF1' }]}>
-              <Ionicons name="calendar" size={13} color="#0D9488" />
-            </View>
-            <Text style={[styles.chipText, { color: '#0D9488' }]}>Event</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.chipBtn} activeOpacity={0.7}>
-            <View style={[styles.chipIcon, { backgroundColor: '#CFFAFE' }]}>
-              <Ionicons name="camera" size={13} color="#0891B2" />
-            </View>
-            <Text style={[styles.chipText, { color: '#0891B2' }]}>Photo</Text>
-          </TouchableOpacity>
+          <View style={styles.composerIconRow}>
+            <TouchableOpacity
+              style={[styles.iconChip, { backgroundColor: '#EDE9FE' }]}
+              onPress={() => router.push('/polls/create')}
+              activeOpacity={0.7}
+              hitSlop={4}
+            >
+              <Ionicons name="stats-chart" size={15} color="#7C3AED" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconChip, { backgroundColor: '#DBEAFE' }]}
+              onPress={() => router.push('/polls/create')}
+              activeOpacity={0.7}
+              hitSlop={4}
+            >
+              <Ionicons name="chatbubble-ellipses" size={15} color="#2563EB" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconChip, { backgroundColor: '#CCFBF1' }]}
+              onPress={() => router.push('/events/create')}
+              activeOpacity={0.7}
+              hitSlop={4}
+            >
+              <Ionicons name="calendar" size={15} color="#0D9488" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconChip, { backgroundColor: '#FEF3C7' }]}
+              activeOpacity={0.7}
+              hitSlop={4}
+            >
+              <Ionicons name="camera" size={15} color="#D97706" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -877,55 +883,51 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: RADIUS.lg,
-    padding: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
     ...SHADOWS.sm,
   },
-  composerTop: {
+  composerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   composerAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   composerAvatarText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 14,
   },
   composerInput: {
     flex: 1,
     backgroundColor: COLORS.surfaceAlt,
     borderRadius: RADIUS.full,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
+    justifyContent: 'center',
   },
-  composerPlaceholder: { fontSize: 13, color: COLORS.textMuted },
-  composerDivider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 12,
-    marginHorizontal: -2,
-  },
-  composerActions: {
+  composerPlaceholder: { fontSize: 12, color: COLORS.textMuted },
+  composerIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    gap: 5,
   },
-  chipBtn: {
-    flexDirection: 'row',
+  iconChip: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    justifyContent: 'center',
   },
   chipIcon: {
     width: 28,
