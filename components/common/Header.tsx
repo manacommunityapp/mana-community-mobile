@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS } from '@/constants/config';
+import { COLORS, SHADOWS, FONTS } from '@/constants/config';
 
 interface HeaderAction {
   icon: keyof typeof Ionicons.glyphMap;
@@ -14,7 +14,6 @@ interface HeaderProps {
   actions?: HeaderAction[];
   leftIcon?: keyof typeof Ionicons.glyphMap;
   onLeftPress?: () => void;
-  /** When true, shows the brand logo style (used on feed/home screen) */
   branded?: boolean;
 }
 
@@ -28,16 +27,13 @@ export function Header({
 }: HeaderProps) {
   return (
     <View style={styles.header}>
-      {/* Left accent stripe for branded header */}
-      {branded && <View style={styles.brandAccent} />}
-
       <View style={styles.left}>
         {leftIcon && onLeftPress && (
           <TouchableOpacity onPress={onLeftPress} hitSlop={8} style={styles.leftBtn}>
-            <Ionicons name={leftIcon} size={24} color={COLORS.text} />
+            <Ionicons name={leftIcon} size={22} color={COLORS.text} />
           </TouchableOpacity>
         )}
-        <View>
+        <View style={styles.titleBlock}>
           {branded ? (
             <View style={styles.brandRow}>
               <View style={styles.brandDot} />
@@ -59,7 +55,7 @@ export function Header({
               hitSlop={8}
               style={styles.actionBtn}
             >
-              <Ionicons name={action.icon} size={22} color={COLORS.text} />
+              <Ionicons name={action.icon} size={21} color={COLORS.text} />
               {action.badge != null && action.badge > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
@@ -87,16 +83,6 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     ...SHADOWS.sm,
   },
-  brandAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    backgroundColor: COLORS.primary,
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 4,
-  },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -104,12 +90,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   leftBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: COLORS.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  titleBlock: {
+    flex: 1,
   },
   brandRow: {
     flexDirection: 'row',
@@ -117,27 +108,30 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   brandDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: COLORS.primary,
   },
   brandTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
     color: COLORS.primary,
     letterSpacing: -0.5,
+    fontFamily: FONTS.displayEB,
   },
   title: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '700',
     color: COLORS.text,
     letterSpacing: -0.3,
+    fontFamily: FONTS.displayBold,
   },
   subtitle: {
     fontSize: 12,
     color: COLORS.textMuted,
     marginTop: 1,
+    fontFamily: FONTS.regular,
   },
   actions: {
     flexDirection: 'row',
@@ -147,7 +141,7 @@ const styles = StyleSheet.create({
   actionBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 12,
     backgroundColor: COLORS.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
@@ -160,8 +154,8 @@ const styles = StyleSheet.create({
     right: 1,
     backgroundColor: COLORS.error,
     borderRadius: 9,
-    minWidth: 17,
-    height: 17,
+    minWidth: 16,
+    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
@@ -172,5 +166,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: FONTS.bold,
   },
 });

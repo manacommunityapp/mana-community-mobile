@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { chatService } from '@/services/chatService';
-import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { COLORS, RADIUS, SHADOWS, FONTS } from '@/constants/config';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -22,7 +22,6 @@ function TabIcon({
 }) {
   return (
     <View style={styles.iconWrap}>
-      <View style={[styles.pill, focused && styles.pillActive]} />
       <View style={[styles.iconBg, focused && styles.iconBgActive]}>
         <Ionicons
           name={focused ? iconFocused : icon}
@@ -40,6 +39,7 @@ function TabIcon({
       <Text style={[styles.iconLabel, focused && styles.iconLabelActive]}>
         {label}
       </Text>
+      {focused && <View style={styles.activeDot} />}
     </View>
   );
 }
@@ -127,34 +127,26 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: Platform.OS === 'ios' ? 88 : 68,
-    paddingTop: 4,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
-    borderTopWidth: 0,
+    height: Platform.OS === 'ios' ? 86 : 66,
+    paddingTop: 6,
+    paddingBottom: Platform.OS === 'ios' ? 22 : 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(99,102,241,0.12)',
     backgroundColor: COLORS.surface,
     ...SHADOWS.lg,
-    elevation: 16,
+    elevation: 20,
   },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 2,
     minWidth: 54,
-  },
-  pill: {
-    width: 20,
-    height: 3,
-    borderRadius: RADIUS.full,
-    backgroundColor: 'transparent',
-    marginBottom: 3,
-  },
-  pillActive: {
-    backgroundColor: COLORS.primary,
+    gap: 2,
   },
   iconBg: {
-    width: 44,
-    height: 32,
-    borderRadius: RADIUS.md,
+    width: 46,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -166,17 +158,25 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: COLORS.textMuted,
-    marginTop: 2,
     letterSpacing: 0.1,
+    fontFamily: FONTS.semiBold,
   },
   iconLabelActive: {
     color: COLORS.primary,
     fontWeight: '700',
+    fontFamily: FONTS.bold,
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.primary,
+    marginTop: 1,
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: 0,
+    top: -3,
+    right: 1,
     backgroundColor: COLORS.error,
     borderRadius: RADIUS.full,
     minWidth: 16,
@@ -191,5 +191,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: FONTS.bold,
   },
 });
