@@ -33,6 +33,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'trips', icon: 'compass', label: 'Community Trips', route: '/trips', bg: '#CCFBF1', color: '#0D9488', category: 'Social & Sports' },
   { id: 'discover', icon: 'sparkles', label: 'Discover Neighbors', route: '/discover', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports' },
   { id: 'governance', icon: 'shield-half', label: 'Governance & AGM', route: '/governance', bg: '#EEF2FF', color: '#4F46E5', category: 'Social & Sports', badge: 'Voting' },
+  { id: 'academy', icon: 'school', label: 'Mana Academy', route: '/academy', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports', badge: 'Learn' },
   { id: 'polls', icon: 'stats-chart', label: 'Polls & Votes', route: '/polls', bg: '#FFF7ED', color: '#EA580C', category: 'Social & Sports' },
   { id: 'jobs', icon: 'briefcase', label: 'Jobs & CPN', route: '/jobs', bg: '#EFF6FF', color: '#2563EB', category: 'Social & Sports' },
   { id: 'commute', icon: 'car-sport', label: 'Carpool & Rides', route: '/commute', bg: '#F3E8FF', color: '#7C3AED', category: 'Social & Sports' },
