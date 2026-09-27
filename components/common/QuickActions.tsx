@@ -55,9 +55,8 @@ export function QuickActions() {
   const router = useRouter();
   const [showAllModal, setShowAllModal] = useState(false);
 
-  // Top 10 popular highlights in horizontal scroll
+  // Top popular highlights in horizontal scroll (Emergency is accessible in top header)
   const highlightedServices = [
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'emergency')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'dues')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'group_buying')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'events')!,
@@ -69,6 +68,7 @@ export function QuickActions() {
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'facilities')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'food')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'visitors')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'governance')!,
   ].filter(Boolean);
 
   const categories: Array<QuickActionItem['category']> = [
