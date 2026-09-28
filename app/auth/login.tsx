@@ -19,9 +19,15 @@ export default function LoginScreen() {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused]   = useState(false);
 
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Validation', 'Please enter your email and password.');
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      Alert.alert('Validation', 'Please enter a valid email address.');
       return;
     }
     setLoading(true);

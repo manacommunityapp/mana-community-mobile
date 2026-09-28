@@ -12,7 +12,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { feedService } from '@/services/feedService';
 import { notificationService } from '@/services/notificationService';
 import { eventService } from '@/services/eventService';
-import { chatService } from '@/services/chatService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
 import { PostDto, EventDto } from '@/types/api';
@@ -61,7 +60,7 @@ function UpcomingEventCard({ event, onPress }: { event: EventDto; onPress: () =>
     ['#059669', '#10B981'],
     ['#DB2777', '#EC4899'],
   ];
-  const gIdx = (event.id || 0) % gradientColors.length;
+  const gIdx = Math.abs(parseInt(String(event.id ?? 0), 10) || 0) % gradientColors.length;
 
   return (
     <TouchableOpacity style={es.card} onPress={onPress} activeOpacity={0.85}>
@@ -207,7 +206,11 @@ function PostCard({ post }: { post: PostDto }) {
   const avatarColor = getAvatarColor(post.authorName || 'Neighbor');
   const typeMeta = POST_TYPE_META[post.type] || POST_TYPE_META.post;
   const flatLabel = post.authorFlat ? ` · ${post.authorFlat}` : '';
-  const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: false });
+  const timeAgo = (() => {
+    if (!post.createdAt) return 'recently';
+    try { return formatDistanceToNow(new Date(post.createdAt), { addSuffix: false }); }
+    catch { return 'recently'; }
+  })();
 
   return (
     <View style={styles.card}>
@@ -329,12 +332,6 @@ export default function FeedScreen() {
     queryFn: () => eventService.getUpcomingEvents(),
   });
 
-  const { data: conversations = [] } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: chatService.getConversations,
-    refetchInterval: 15_000,
-  });
-  const unreadMsgs = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
 
   const allPosts = useMemo(() => data?.pages.flatMap((p) => p.content) ?? [], [data]);
 
@@ -376,34 +373,8 @@ export default function FeedScreen() {
   const latestAnnouncement = announcements.length > 0 ? announcements[0] : null;
 
   // ── Finance Banner ─────────────────────────────────────────────────
-  const FinanceBanner = useMemo(() => (
-    <TouchableOpacity
-      style={styles.financeBanner}
-      onPress={() => router.push('/finance')}
-      activeOpacity={0.9}
-    >
-      <LinearGradient
-        colors={['#FEF3C7', '#FDE68A']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.financeIconCircle}>
-        <Ionicons name="card" size={18} color="#fff" />
-      </View>
-      <View style={styles.financeText}>
-        <Text style={styles.financeLabel}>OUTSTANDING BALANCE</Text>
-        <View style={styles.financeAmountRow}>
-          <Text style={styles.financeAmount}>₹4,500</Text>
-          <Text style={styles.financeDue}> · due 15th Oct</Text>
-        </View>
-      </View>
-      <View style={styles.payBtn}>
-        <Text style={styles.payBtnText}>Pay</Text>
-        <Ionicons name="arrow-forward" size={13} color="#fff" />
-      </View>
-    </TouchableOpacity>
-  ), [router]);
+  // Hidden until finance API is wired up — avoids showing stale hardcoded amounts
+  const FinanceBanner = null;
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
