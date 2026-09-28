@@ -17,7 +17,7 @@ import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
 import { PostDto, EventDto } from '@/types/api';
-import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -223,7 +223,7 @@ function PostCard({ post }: { post: PostDto }) {
         <View style={styles.authorRow}>
           <View style={[styles.avatar, { backgroundColor: avatarColor.bg }]}>
             <Text style={[styles.avatarText, { color: avatarColor.text }]}>
-              {(post.authorName || 'N')[0].toUpperCase()}
+              {getInitials(post.authorName)}
             </Text>
           </View>
 
@@ -378,7 +378,7 @@ export default function FeedScreen() {
 
   const userName = user?.name?.split(' ')[0] || 'Neighbor';
   const communityName = user?.communityName || '';
-  const userInitial = (user?.name || 'R')[0].toUpperCase();
+  const userInitial = getInitials(user?.name);
   const avatarColor = getAvatarColor(user?.name || 'Resident');
 
   const announcements = allPosts.filter(p => p.type === 'announcement');
@@ -390,11 +390,11 @@ export default function FeedScreen() {
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
-    { id: 'events',  label: 'Events',   value: upcomingEvents.length,                color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'events',  label: 'Events',   value: upcomingEvents.length,                color: '#4F46E5', labelColor: '#3730A3', bg: '#EEF2FF', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
     { id: 'polls',   label: 'Polls',    value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
     { id: 'tickets', label: 'Tickets',  value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'headset-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
     { id: 'sports',  label: 'Live',     value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#DCFCE7', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
-    { id: 'notifs',  label: 'Notifs',   value: unreadCount,                          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'notifs',  label: 'Notifs',   value: unreadCount,                          color: '#2563EB', labelColor: '#1E40AF', bg: '#DBEAFE', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
   ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
 
   const StatsRow = useMemo(() => (
