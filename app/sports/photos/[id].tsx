@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { sportsService } from '@/services/sportsService';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS } from '@/constants/config';
+import { validateImageFile, showFileValidationError, getSafeErrorMessage } from '@/security';
 import { formatDistanceToNow } from 'date-fns';
 import type { MatchPhotoDto } from '@/types/api';
 
@@ -50,7 +51,13 @@ export default function MatchPhotoGalleryScreen() {
       allowsMultipleSelection: false,
     });
     if (result.canceled) return;
-    setCaptionFor(result.assets[0].uri);
+    const asset = result.assets[0];
+    const validation = validateImageFile(asset.uri, asset.fileSize);
+    if (!validation.valid) {
+      showFileValidationError(validation);
+      return;
+    }
+    setCaptionFor(asset.uri);
     setCaption('');
   }
 
@@ -63,7 +70,7 @@ export default function MatchPhotoGalleryScreen() {
       setCaptionFor(null);
       setCaption('');
     } catch (err: any) {
-      Alert.alert('Upload failed', err?.response?.data?.message ?? 'Try again.');
+      Alert.alert('Upload failed', getSafeErrorMessage(err));
     } finally {
       setUploading(false);
     }

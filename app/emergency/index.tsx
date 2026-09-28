@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, Linking, Modal, TextInput, ActivityIndicator,
@@ -6,6 +6,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
+import { emergencyService } from '@/services/emergencyService';
+import type { EmergencyAlertDto, EmergencyContact } from '@/services/emergencyService';
+import { showSafeError } from '@/security';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -26,44 +29,86 @@ const EMERGENCY_CATEGORIES: EmergencyTrigger[] = [
   { id: 'FLOOD', label: 'Water Seepage/Flood', icon: 'water-outline', color: '#0891B2', bg: '#CFFAFE' },
 ];
 
-const EMERGENCY_CONTACTS = [
-  { role: 'Society Main Gate', phone: '+91 98450 12345', available: '24x7 Intercom 100' },
-  { role: 'Security Supervisor (Ramesh)', phone: '+91 98450 23456', available: 'On Duty' },
-  { role: 'Otis Lift Rescue Hotline', phone: '+91 1800 123 4567', available: 'Toll Free SLA 15m' },
-  { role: 'On-Call Paramedic / Ambulance', phone: '+91 98450 34567', available: 'Society First Aid Room' },
-];
-
 export default function EmergencyScreen() {
   const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<EmergencyTrigger | null>(null);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeAlert, setActiveAlert] = useState<{ id: string; category: string; status: string; time: string } | null>(null);
+  const [activeAlert, setActiveAlert] = useState<EmergencyAlertDto | null>(null);
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(true);
+
+  useEffect(() => {
+    loadContacts();
+    loadActiveAlerts();
+  }, []);
+
+  async function loadContacts() {
+    try {
+      const data = await emergencyService.getContacts();
+      setContacts(data);
+    } catch {
+      setContacts([]);
+    } finally {
+      setContactsLoading(false);
+    }
+  }
+
+  async function loadActiveAlerts() {
+    try {
+      const alerts = await emergencyService.getActiveAlerts();
+      const active = alerts.find(a => a.status !== 'RESOLVED');
+      if (active) setActiveAlert(active);
+    } catch {
+      // No active alerts or API unavailable
+    }
+  }
 
   const handleTriggerSOS = (cat: EmergencyTrigger) => {
     setSelectedCategory(cat);
   };
 
-  const handleConfirmSOS = () => {
+  const handleConfirmSOS = async () => {
     if (!selectedCategory) return;
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const newAlert = {
-        id: `SOS-${Date.now().toString().slice(-4)}`,
-        category: selectedCategory.label,
-        status: 'DISPATCHED',
-        time: 'Just now',
-      };
-      setActiveAlert(newAlert);
+    try {
+      const alert = await emergencyService.triggerSOS({
+        category: selectedCategory.id,
+        description: description || undefined,
+        tower: user?.tower,
+        flatNumber: user?.flatNumber,
+      });
+      setActiveAlert(alert);
       setSelectedCategory(null);
       setDescription('');
       Alert.alert(
-        '🚨 Emergency Dispatched',
+        'Emergency Dispatched',
         `Security marshals and on-duty responders have been notified for Tower ${user?.tower || 'A'}, Flat ${user?.flatNumber || '101'}.`,
         [{ text: 'OK' }]
       );
-    }, 1000);
+    } catch (err) {
+      showSafeError(err, 'Failed to send emergency alert. Please call security directly.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResolve = async () => {
+    if (!activeAlert) return;
+    Alert.alert('Resolve Incident', 'Mark emergency as resolved?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Resolve',
+        onPress: async () => {
+          try {
+            await emergencyService.resolveAlert(activeAlert.id);
+            setActiveAlert(null);
+          } catch (err) {
+            showSafeError(err, 'Failed to resolve alert.');
+          }
+        },
+      },
+    ]);
   };
 
   const handleCall = (phone: string) => {
@@ -72,7 +117,6 @@ export default function EmergencyScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* ── Active Alert Banner (if any) ── */}
       {activeAlert && (
         <View style={styles.activeAlertCard}>
           <View style={styles.activeAlertHeader}>
@@ -80,23 +124,14 @@ export default function EmergencyScreen() {
             <Text style={styles.activeAlertTitle}>ACTIVE SOS: {activeAlert.category}</Text>
           </View>
           <Text style={styles.activeAlertSubtitle}>
-            Status: <Text style={styles.dispatchedText}>{activeAlert.status}</Text> &bull; Marshal arriving in ~3 mins
+            Status: <Text style={styles.dispatchedText}>{activeAlert.status}</Text>
           </Text>
-          <TouchableOpacity
-            style={styles.cancelAlertBtn}
-            onPress={() => {
-              Alert.alert('Resolve Incident', 'Mark emergency as resolved?', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Resolve', onPress: () => setActiveAlert(null) },
-              ]);
-            }}
-          >
+          <TouchableOpacity style={styles.cancelAlertBtn} onPress={handleResolve}>
             <Text style={styles.cancelAlertText}>Mark Resolved</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* ── Top Warning ── */}
       <View style={styles.warningBanner}>
         <Ionicons name="information-circle" size={20} color="#DC2626" />
         <Text style={styles.warningText}>
@@ -104,7 +139,6 @@ export default function EmergencyScreen() {
         </Text>
       </View>
 
-      {/* ── Quick Triggers Grid ── */}
       <Text style={styles.sectionTitle}>Quick SOS Distress Triggers</Text>
       <View style={styles.grid}>
         {EMERGENCY_CATEGORIES.map((cat) => (
@@ -122,28 +156,34 @@ export default function EmergencyScreen() {
         ))}
       </View>
 
-      {/* ── Emergency Contacts ── */}
       <Text style={[styles.sectionTitle, { marginTop: SPACING.xl }]}>24x7 Society Helplines</Text>
       <View style={styles.contactsCard}>
-        {EMERGENCY_CONTACTS.map((c, i) => (
-          <View key={i} style={[styles.contactRow, i > 0 && styles.contactBorder]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.contactRole}>{c.role}</Text>
-              <Text style={styles.contactAvailable}>{c.available}</Text>
+        {contactsLoading ? (
+          <ActivityIndicator style={{ padding: SPACING.lg }} color={COLORS.primary} />
+        ) : contacts.length === 0 ? (
+          <Text style={{ padding: SPACING.md, color: COLORS.textMuted, fontSize: 13 }}>
+            Emergency contacts unavailable. Please contact society management.
+          </Text>
+        ) : (
+          contacts.map((c, i) => (
+            <View key={c.id || i} style={[styles.contactRow, i > 0 && styles.contactBorder]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.contactRole}>{c.role}</Text>
+                <Text style={styles.contactAvailable}>{c.available}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.callButton}
+                onPress={() => handleCall(c.phone)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="call" size={16} color="#FFFFFF" />
+                <Text style={styles.callButtonText}>Call</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.callButton}
-              onPress={() => handleCall(c.phone)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="call" size={16} color="#FFFFFF" />
-              <Text style={styles.callButtonText}>Call</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+          ))
+        )}
       </View>
 
-      {/* ── SOS Confirmation Modal ── */}
       <Modal visible={!!selectedCategory} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -189,7 +229,7 @@ export default function EmergencyScreen() {
                 {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.confirmBtnText}>Broadcast SOS 🚨</Text>
+                  <Text style={styles.confirmBtnText}>Broadcast SOS</Text>
                 )}
               </TouchableOpacity>
             </View>

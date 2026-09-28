@@ -3,6 +3,7 @@ import { Client, IMessage } from '@stomp/stompjs';
 import { chatService } from '@/services/chatService';
 import { tokenStore } from '@/services/apiClient';
 import { CONFIG } from '@/constants/config';
+import { secureLog } from '@/security';
 import type { ChatMessageDto } from '@/types/api';
 
 interface TypingEvent {
@@ -56,7 +57,7 @@ export function useChatWindow(
         // Mark read
         chatService.markRead(conversationId).catch(() => {});
       } catch (err) {
-        console.error('[ChatWindow] Failed to load messages:', err);
+        secureLog.error('[ChatWindow] Failed to load messages', err);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -136,7 +137,7 @@ export function useChatWindow(
 
         onDisconnect: () => setConnected(false),
         onStompError: (frame) => {
-          console.warn('[STOMP]', frame.headers['message']);
+          secureLog.warn('[STOMP] error', { message: frame.headers['message'] });
           setConnected(false);
         },
       });
@@ -188,7 +189,7 @@ export function useChatWindow(
         );
       }
     } catch (err) {
-      console.error('[ChatWindow] Send failed:', err);
+      secureLog.error('[ChatWindow] Send failed', err);
       // Remove optimistic on error
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
     } finally {
@@ -208,7 +209,7 @@ export function useChatWindow(
       setPage(nextPage);
       setHasMore(nextPage + 1 < res.totalPages);
     } catch (err) {
-      console.error('[ChatWindow] loadMore failed:', err);
+      secureLog.error('[ChatWindow] loadMore failed', err);
     } finally {
       setIsLoadingMore(false);
     }

@@ -3,6 +3,7 @@ import { Client, IMessage } from '@stomp/stompjs';
 import { auctionService } from '@/services/auctionService';
 import { tokenStore } from '@/services/apiClient';
 import { CONFIG } from '@/constants/config';
+import { secureLog } from '@/security';
 import type { AuctionDto, BidDto, AuctionEvent } from '@/types/api';
 
 export type BidResult = 'success' | 'outbid' | 'below_minimum' | 'error';
@@ -73,7 +74,7 @@ export function useAuctionLive(
           setWinner({ id: a.winnerId, name: a.winnerName!, amount: a.finalPrice! });
         }
       } catch (err) {
-        console.error('[Auction] Load failed:', err);
+        secureLog.error('[Auction] Load failed', err);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -107,7 +108,7 @@ export function useAuctionLive(
 
         onDisconnect: () => setConnected(false),
         onStompError: (f) => {
-          console.warn('[Auction STOMP]', f.headers['message']);
+          secureLog.warn('[Auction STOMP]', { message: f.headers['message'] });
           setConnected(false);
         },
       });

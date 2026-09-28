@@ -3,6 +3,7 @@ import { Client, IMessage } from '@stomp/stompjs';
 import { sportsService } from '@/services/sportsService';
 import { tokenStore } from '@/services/apiClient';
 import { CONFIG } from '@/constants/config';
+import { secureLog } from '@/security';
 import type { MatchDto, MatchEventDto, LiveScoreEvent } from '@/types/api';
 
 interface UseLiveScoreReturn {
@@ -32,7 +33,7 @@ export function useLiveScore(matchId: number): UseLiveScoreReturn {
       setEvents(ev);
       setMatchEnded(m.status === 'COMPLETED' || m.status === 'CANCELLED');
     } catch (err) {
-      console.error('[LiveScore] Load failed:', err);
+      secureLog.error('[LiveScore] Load failed', err);
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +66,7 @@ export function useLiveScore(matchId: number): UseLiveScoreReturn {
         },
         onDisconnect: () => setConnected(false),
         onStompError:  (f) => {
-          console.warn('[Sports STOMP]', f.headers['message']);
+          secureLog.warn('[Sports STOMP]', { message: f.headers['message'] });
           setConnected(false);
         },
       });

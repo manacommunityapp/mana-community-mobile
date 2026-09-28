@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { profileService, UpdateProfileRequest } from '@/services/profileService';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS } from '@/constants/config';
+import { validateProfilePhoto, showFileValidationError, getSafeErrorMessage } from '@/security';
 
 // ── Upload progress bar ────────────────────────────────────────
 function ProgressBar({ pct }: { pct: number }) {
@@ -112,7 +113,13 @@ export default function EditProfileScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      const validation = validateProfilePhoto(asset.uri, asset.fileSize);
+      if (!validation.valid) {
+        showFileValidationError(validation);
+        return;
+      }
+      setPhotoUri(asset.uri);
     }
   }, []);
 
@@ -128,7 +135,13 @@ export default function EditProfileScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      const validation = validateProfilePhoto(asset.uri, asset.fileSize);
+      if (!validation.valid) {
+        showFileValidationError(validation);
+        return;
+      }
+      setPhotoUri(asset.uri);
     }
   }, []);
 
@@ -198,8 +211,7 @@ export default function EditProfileScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Failed to save. Please try again.';
-      Alert.alert('Error', msg);
+      Alert.alert('Error', getSafeErrorMessage(err));
     } finally {
       setIsSaving(false);
       setIsUploading(false);

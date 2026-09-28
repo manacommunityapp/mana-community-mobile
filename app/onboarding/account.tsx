@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { COLORS } from '@/constants/config';
+import { validators } from '@/security';
 
 function StepHeader({ step, total, title, sub }: {
   step: number; total: number; title: string; sub: string;
@@ -55,7 +56,8 @@ export default function AccountStep() {
     if (!name.trim())               e.name     = 'Full name is required';
     if (!email.trim() || !email.includes('@')) e.email = 'Valid email required';
     if (phone.length < 10)          e.phone    = 'Enter a valid 10-digit number';
-    if (password.length < 8)        e.password = 'Minimum 8 characters';
+    const pwdResult = validators.password.safeParse(password);
+    if (!pwdResult.success)         e.password = pwdResult.error.issues[0].message;
     setErrors(e);
     return Object.keys(e).length === 0;
   }

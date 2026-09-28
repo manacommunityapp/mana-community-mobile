@@ -494,7 +494,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                   </View>
                   <TouchableOpacity
                     style={s.hotlineCallBtn}
-                    onPress={() => Linking.openURL('tel:+919876543210')}
+                    onPress={() => Alert.alert('Emergency Hotline', 'Please contact your society helpdesk for the on-duty technician number.')}
                     activeOpacity={0.8}
                   >
                     <Ionicons name="call" size={12} color="#1E1B4B" />

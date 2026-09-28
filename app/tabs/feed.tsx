@@ -8,37 +8,39 @@ import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tansta
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { feedService } from '@/services/feedService';
 import { notificationService } from '@/services/notificationService';
 import { eventService } from '@/services/eventService';
-import { chatService } from '@/services/chatService';
+import { pollService } from '@/services/pollService';
+import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
 import { PostDto, EventDto } from '@/types/api';
-import { COLORS, SHADOWS, RADIUS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor } from '@/constants/config';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 
 const SCREEN_W = Dimensions.get('window').width;
-const EVENT_CARD_W = SCREEN_W * 0.65;
+const EVENT_CARD_W = SCREEN_W * 0.68;
 const STAT_TILE_W = Math.max(74, Math.floor((SCREEN_W - 24 - (3 * 6)) / 4));
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
 const FEED_FILTERS: { key: FeedFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'ALL',          label: 'All Updates', icon: 'sparkles-outline' },
-  { key: 'ANNOUNCEMENT', label: 'Notices',     icon: 'megaphone-outline' },
-  { key: 'POLL',         label: 'Polls',       icon: 'stats-chart-outline' },
-  { key: 'GENERAL',      label: 'Community',   icon: 'chatbubbles-outline' },
+  { key: 'ALL',          label: 'All',          icon: 'sparkles-outline' },
+  { key: 'ANNOUNCEMENT', label: 'Notices',      icon: 'megaphone-outline' },
+  { key: 'POLL',         label: 'Polls',        icon: 'stats-chart-outline' },
+  { key: 'GENERAL',      label: 'Community',    icon: 'chatbubbles-outline' },
 ];
 
-const POST_TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
-  poll:         { label: 'POLL',      color: '#7C3AED', bg: '#EDE9FE' },
-  announcement: { label: 'NOTICE',    color: '#4F46E5', bg: '#EEF2FF' },
-  post:         { label: 'COMMUNITY', color: '#2563EB', bg: '#DBEAFE' },
+const POST_TYPE_META: Record<string, { label: string; color: string; bg: string; accent: string }> = {
+  poll:         { label: 'POLL',      color: '#7C3AED', bg: '#EDE9FE', accent: '#7C3AED' },
+  announcement: { label: 'NOTICE',    color: '#4F46E5', bg: '#EEF2FF', accent: '#4F46E5' },
+  post:         { label: 'COMMUNITY', color: '#2563EB', bg: '#DBEAFE', accent: '#2563EB' },
 };
 
-// ── Upcoming Event Card (horizontal carousel) ──────────────────────
+// ── Upcoming Event Card ───────────────────────────────────────
 function UpcomingEventCard({ event, onPress }: { event: EventDto; onPress: () => void }) {
   const fmtDate = (d?: string) => {
     if (!d) return '';
@@ -54,33 +56,46 @@ function UpcomingEventCard({ event, onPress }: { event: EventDto; onPress: () =>
   };
 
   const count = event.registrationCount ?? event.attendees ?? 0;
+  const gradientColors = [
+    ['#4338CA', '#6366F1'],
+    ['#0891B2', '#06b6d4'],
+    ['#059669', '#10B981'],
+    ['#DB2777', '#EC4899'],
+  ];
+  const gIdx = Math.abs(parseInt(String(event.id ?? 0), 10) || 0) % gradientColors.length;
 
   return (
-    <TouchableOpacity style={es.card} onPress={onPress} activeOpacity={0.8}>
-      {/* Placeholder image area */}
-      <View style={es.imagePlaceholder}>
-        <Ionicons name="image-outline" size={36} color={COLORS.primaryMid} />
-      </View>
-
-      {/* Date badge overlay */}
-      <Text style={es.dateBadge}>
-        {fmtDate(event.startDate)} {event.startTime ? `• ${fmtTime(event.startTime)}` : ''}
-      </Text>
-
-      <Text style={es.title} numberOfLines={1}>{event.title}</Text>
-
-      {/* Attendee row */}
-      <View style={es.attendeeRow}>
-        <View style={es.avatarStack}>
-          {[0, 1, 2].map(i => (
-            <View key={i} style={[es.miniAvatar, { left: i * 14, backgroundColor: ['#4F46E5','#059669','#0891B2'][i] }]}>
-              <Text style={es.miniAvatarText}>{['A','B','C'][i]}</Text>
-            </View>
-          ))}
+    <TouchableOpacity style={es.card} onPress={onPress} activeOpacity={0.85}>
+      <LinearGradient
+        colors={gradientColors[gIdx] as [string, string]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={es.imageArea}
+      >
+        <View style={es.eventIconCircle}>
+          <Ionicons name="calendar" size={28} color="rgba(255,255,255,0.9)" />
         </View>
-        {count > 3 && (
-          <Text style={es.moreText}>+{count - 3}</Text>
-        )}
+        <View style={es.dateBadgeWrap}>
+          <Text style={es.dateBadge}>
+            {fmtDate(event.startDate)}{event.startTime ? `  •  ${fmtTime(event.startTime)}` : ''}
+          </Text>
+        </View>
+      </LinearGradient>
+
+      <View style={es.body}>
+        <Text style={es.title} numberOfLines={1}>{event.title}</Text>
+        <View style={es.attendeeRow}>
+          <View style={es.avatarStack}>
+            {[0, 1, 2].map(i => (
+              <View key={i} style={[es.miniAvatar, { left: i * 16, backgroundColor: ['#4F46E5','#059669','#0891B2'][i] }]}>
+                <Text style={es.miniAvatarText}>{['A','B','C'][i]}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={es.attendeeCount}>
+            {count > 3 ? `+${count - 3} going` : count > 0 ? `${count} going` : 'Be first'}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -90,50 +105,68 @@ const es = StyleSheet.create({
   card: {
     width: EVENT_CARD_W,
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.border,
-    ...SHADOWS.sm,
+    ...SHADOWS.md,
   },
-  imagePlaceholder: {
-    height: 120,
-    backgroundColor: COLORS.surfaceAlt,
+  imageArea: {
+    height: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  eventIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateBadge: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.primary,
+  dateBadgeWrap: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 12,
-    paddingTop: 10,
-    letterSpacing: 0.3,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  dateBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.4,
+    fontFamily: FONTS.bold,
+  },
+  body: {
+    padding: 12,
+    gap: 8,
   },
   title: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
-    paddingHorizontal: 12,
-    paddingTop: 4,
-    paddingBottom: 8,
+    fontFamily: FONTS.bold,
+    letterSpacing: -0.2,
   },
   attendeeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    gap: 8,
   },
   avatarStack: {
     flexDirection: 'row',
-    width: 56,
-    height: 24,
+    width: 58,
+    height: 22,
     position: 'relative',
   },
   miniAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
@@ -142,14 +175,15 @@ const es = StyleSheet.create({
   },
   miniAvatarText: {
     color: '#fff',
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
   },
-  moreText: {
+  attendeeCount: {
     fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.primary,
-    marginLeft: 10,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    fontFamily: FONTS.medium,
+    marginLeft: 6,
   },
 });
 
@@ -173,80 +207,98 @@ function PostCard({ post }: { post: PostDto }) {
 
   const avatarColor = getAvatarColor(post.authorName || 'Neighbor');
   const typeMeta = POST_TYPE_META[post.type] || POST_TYPE_META.post;
-  const flatLabel = post.authorFlat ? ` (${post.authorFlat})` : '';
-  const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: false });
+  const flatLabel = post.authorFlat ? ` · ${post.authorFlat}` : '';
+  const timeAgo = (() => {
+    if (!post.createdAt) return 'recently';
+    try { return formatDistanceToNow(new Date(post.createdAt), { addSuffix: false }); }
+    catch { return 'recently'; }
+  })();
 
   return (
     <View style={styles.card}>
-      {/* Author Row */}
-      <View style={styles.authorRow}>
-        <View style={[styles.avatar, { backgroundColor: avatarColor.bg }]}>
-          <Text style={[styles.avatarText, { color: avatarColor.text }]}>
-            {(post.authorName || 'N')[0].toUpperCase()}
-          </Text>
+      {/* Left accent bar */}
+      <View style={[styles.cardAccent, { backgroundColor: typeMeta.accent }]} />
+
+      <View style={styles.cardInner}>
+        {/* Author Row */}
+        <View style={styles.authorRow}>
+          <View style={[styles.avatar, { backgroundColor: avatarColor.bg }]}>
+            <Text style={[styles.avatarText, { color: avatarColor.text }]}>
+              {(post.authorName || 'N')[0].toUpperCase()}
+            </Text>
+          </View>
+
+          <View style={styles.authorInfo}>
+            <View style={styles.authorNameRow}>
+              <Text style={styles.authorName} numberOfLines={1}>
+                {post.authorName || 'Community Member'}
+              </Text>
+              {post.authorFlat && (
+                <View style={styles.flatChip}>
+                  <Text style={styles.flatChipText}>{post.authorFlat}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.authorMeta}>{timeAgo} ago</Text>
+          </View>
+
+          <View style={[styles.typeBadge, { backgroundColor: typeMeta.bg }]}>
+            <Text style={[styles.typeBadgeText, { color: typeMeta.color }]}>
+              {typeMeta.label}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.authorInfo}>
-          <Text style={styles.authorName} numberOfLines={1}>
-            {post.authorName || 'Community Member'}{flatLabel}
-          </Text>
-          <Text style={styles.authorMeta}>
-            {timeAgo} ago • {typeMeta.label}
-          </Text>
+        {/* Content */}
+        <Text style={styles.content}>{post.content}</Text>
+
+        {/* Embedded Poll */}
+        {post.type === 'poll' && post.poll && (
+          <View style={styles.pollContainer}>
+            <PollCard
+              post={post}
+              currentUserId={user?.id}
+              compact
+              onVoted={() => qc.invalidateQueries({ queryKey: ['feed'] })}
+            />
+          </View>
+        )}
+
+        {/* Media image */}
+        {post.mediaUrls && post.mediaUrls.length > 0 && (
+          <View style={styles.mediaWrap}>
+            <Image source={{ uri: post.mediaUrls[0] }} style={styles.mediaImage} />
+          </View>
+        )}
+
+        {/* Action Bar */}
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionBtn, post.liked && styles.actionBtnLiked]}
+            onPress={() => likeMutation.mutate()}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={post.liked ? 'heart' : 'heart-outline'}
+              size={17}
+              color={post.liked ? COLORS.error : COLORS.textMuted}
+            />
+            <Text style={[styles.actionText, post.liked && styles.likedText]}>
+              {post.likeCount || 0}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
+            <Ionicons name="chatbubble-outline" size={16} color={COLORS.textMuted} />
+            <Text style={styles.actionText}>{post.commentCount || 0}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.actionsRight}>
+            <TouchableOpacity style={styles.actionBtnIcon} onPress={handleShare} activeOpacity={0.7}>
+              <Ionicons name="share-social-outline" size={17} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
         </View>
-
-        <TouchableOpacity hitSlop={8}>
-          <Ionicons name="ellipsis-horizontal" size={18} color={COLORS.textMuted} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <Text style={styles.content}>{post.content}</Text>
-
-      {/* Embedded Poll */}
-      {post.type === 'poll' && post.poll && (
-        <View style={styles.pollContainer}>
-          <PollCard
-            post={post}
-            currentUserId={user?.id}
-            compact
-            onVoted={() => qc.invalidateQueries({ queryKey: ['feed'] })}
-          />
-        </View>
-      )}
-
-      {/* Media image placeholder */}
-      {post.mediaUrls && post.mediaUrls.length > 0 && (
-        <View style={styles.mediaPlaceholder}>
-          <Image source={{ uri: post.mediaUrls[0] }} style={styles.mediaImage} />
-        </View>
-      )}
-
-      {/* Action Bar */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.actionBtn, post.liked && styles.actionBtnLiked]}
-          onPress={() => likeMutation.mutate()}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={post.liked ? 'heart' : 'heart-outline'}
-            size={18}
-            color={post.liked ? COLORS.error : COLORS.textMuted}
-          />
-          <Text style={[styles.actionText, post.liked && styles.likedText]}>
-            {post.likeCount || 0}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-          <Ionicons name="chatbubble-outline" size={17} color={COLORS.textMuted} />
-          <Text style={styles.actionText}>{post.commentCount || 0}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionBtn} onPress={handleShare} activeOpacity={0.7}>
-          <Ionicons name="share-social-outline" size={17} color={COLORS.textMuted} />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -282,12 +334,17 @@ export default function FeedScreen() {
     queryFn: () => eventService.getUpcomingEvents(),
   });
 
-  const { data: conversations = [] } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: chatService.getConversations,
-    refetchInterval: 15_000,
+  const { data: activePollsPage } = useQuery({
+    queryKey: ['polls', 'active-count'],
+    queryFn: () => pollService.getPolls('ACTIVE', 0),
+    staleTime: 60_000,
   });
-  const unreadMsgs = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+
+  const { data: openTickets = [] } = useQuery({
+    queryKey: ['helpdesk', 'open-count'],
+    queryFn: () => smartHelpdeskService.getTickets('OPEN'),
+    staleTime: 60_000,
+  });
 
   const allPosts = useMemo(() => data?.pages.flatMap((p) => p.content) ?? [], [data]);
 
@@ -325,38 +382,21 @@ export default function FeedScreen() {
   const userInitial = (user?.name || 'R')[0].toUpperCase();
   const avatarColor = getAvatarColor(user?.name || 'Resident');
 
-  // Announcements for the banner
   const announcements = allPosts.filter(p => p.type === 'announcement');
   const latestAnnouncement = announcements.length > 0 ? announcements[0] : null;
 
   // ── Finance Banner ─────────────────────────────────────────────────
-  const FinanceBanner = useMemo(() => (
-    <View style={styles.financeBanner}>
-      <View style={styles.financeIcon}>
-        <Ionicons name="card-outline" size={18} color="#fff" />
-      </View>
-      <View style={styles.financeText}>
-        <Text style={styles.financeLabel}>Outstanding Balance</Text>
-        <Text style={styles.financeAmount}>₹4,500 <Text style={styles.financeDue}>due 15th Oct</Text></Text>
-      </View>
-      <TouchableOpacity
-        style={styles.payBtn}
-        onPress={() => router.push('/finance')}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.payBtnText}>Pay Now</Text>
-      </TouchableOpacity>
-    </View>
-  ), [router]);
+  // Hidden until finance API is wired up — avoids showing stale hardcoded amounts
+  const FinanceBanner = null;
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
-    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length, color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
-    { id: 'polls',   label: 'Active Polls',   value: 3,                    color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
-    { id: 'notifs',  label: 'Notifications',  value: unreadCount,          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
-    { id: 'sports',  label: 'Live Matches',   value: 1,                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
-    { id: 'tickets', label: 'Open Tickets',   value: 0,                    color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
-  ], [upcomingEvents.length, unreadCount]);
+    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length,                color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'polls',   label: 'Active Polls',   value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
+    { id: 'notifs',  label: 'Notifications',  value: unreadCount,                          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'sports',  label: 'Live Matches',   value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
+    { id: 'tickets', label: 'Open Tickets',   value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
+  ], [upcomingEvents.length, activePollsPage?.totalElements, unreadCount, openTickets.length]);
 
   const StatsRow = useMemo(() => (
     <ScrollView
@@ -372,10 +412,8 @@ export default function FeedScreen() {
           onPress={() => router.push(tile.route as any)}
           activeOpacity={0.7}
         >
-          <View style={styles.statTileTop}>
-            <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
-            <Ionicons name={tile.icon} size={14} color={tile.color} style={{ opacity: 0.7 }} />
-          </View>
+          <Ionicons name={tile.icon} size={15} color={tile.color} style={{ opacity: 0.8 }} />
+          <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
           <Text style={[styles.statLabel, { color: tile.labelColor }]}>{tile.label}</Text>
         </TouchableOpacity>
       ))}
@@ -384,20 +422,21 @@ export default function FeedScreen() {
 
   const ListHeader = useMemo(() => (
     <View style={styles.headerStack}>
-      {/* Finance Banner */}
       {FinanceBanner}
-
-      {/* Quick Stats Row */}
       {StatsRow}
-
-      {/* Quick Action Services */}
       <QuickActions />
 
       {/* Community Announcement Card */}
       {latestAnnouncement && (
         <View style={styles.announcementCard}>
+          <LinearGradient
+            colors={['#EEF2FF', '#E0E7FF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.announcementGradient}
+          />
           <View style={styles.announcementIconWrap}>
-            <Ionicons name="volume-high" size={22} color={COLORS.primary} />
+            <Ionicons name="volume-high" size={20} color={COLORS.primary} />
           </View>
           <View style={styles.announcementContent}>
             <Text style={styles.announcementLabel}>COMMUNITY UPDATE</Text>
@@ -408,16 +447,24 @@ export default function FeedScreen() {
               {latestAnnouncement.content}
             </Text>
           </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
         </View>
       )}
 
-      {/* Upcoming Events Section */}
+      {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <View style={styles.eventsSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <TouchableOpacity onPress={() => router.push('/tabs/events')}>
+            <View>
+              <Text style={styles.sectionTitle}>Upcoming Events</Text>
+              <Text style={styles.sectionSub}>{upcomingEvents.length} events this week</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.seeAllBtn}
+              onPress={() => router.push('/tabs/events')}
+            >
               <Text style={styles.seeAll}>See All</Text>
+              <Ionicons name="arrow-forward" size={13} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -447,49 +494,35 @@ export default function FeedScreen() {
             onPress={() => router.push('/polls/create')}
             activeOpacity={0.8}
           >
-            <Text style={styles.composerPlaceholder} numberOfLines={1}>
-              Share with neighbors...
-            </Text>
+            <Text style={styles.composerPlaceholder}>Share with neighbors...</Text>
           </TouchableOpacity>
-          <View style={styles.composerIconRow}>
+        </View>
+        <View style={styles.composerActions}>
+          {[
+            { bg: '#EDE9FE', color: '#7C3AED', icon: 'stats-chart' as const,           label: 'Poll',    route: '/polls/create' },
+            { bg: '#DBEAFE', color: '#2563EB', icon: 'chatbubble-ellipses' as const,   label: 'Post',    route: '/polls/create' },
+            { bg: '#CCFBF1', color: '#0D9488', icon: 'calendar' as const,              label: 'Event',   route: '/events/create' },
+            { bg: '#FCE7F3', color: '#DB2777', icon: 'camera' as const,                label: 'Photo',   route: '/polls/create' },
+          ].map((chip) => (
             <TouchableOpacity
-              style={[styles.iconChip, { backgroundColor: '#EDE9FE' }]}
-              onPress={() => router.push('/polls/create')}
+              key={chip.label}
+              style={[styles.composerChip, { backgroundColor: chip.bg }]}
+              onPress={() => router.push(chip.route as any)}
               activeOpacity={0.7}
-              hitSlop={4}
             >
-              <Ionicons name="bar-chart-outline" size={15} color="#7C3AED" />
+              <Ionicons name={chip.icon} size={14} color={chip.color} />
+              <Text style={[styles.composerChipText, { color: chip.color }]}>{chip.label}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.iconChip, { backgroundColor: '#DBEAFE' }]}
-              onPress={() => router.push('/polls/create')}
-              activeOpacity={0.7}
-              hitSlop={4}
-            >
-              <Ionicons name="chatbubble-ellipses-outline" size={15} color="#2563EB" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.iconChip, { backgroundColor: '#CCFBF1' }]}
-              onPress={() => router.push('/events/create')}
-              activeOpacity={0.7}
-              hitSlop={4}
-            >
-              <Ionicons name="calendar-outline" size={15} color="#0D9488" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.iconChip, { backgroundColor: '#FEF3C7' }]}
-              activeOpacity={0.7}
-              hitSlop={4}
-            >
-              <Ionicons name="camera-outline" size={15} color="#D97706" />
-            </TouchableOpacity>
-          </View>
+          ))}
         </View>
       </View>
 
       {/* Feed Filter Chips */}
       <View style={styles.filterSection}>
-        <Text style={styles.feedHeading}>Community Feed</Text>
+        <View style={styles.filterTitleRow}>
+          <Text style={styles.feedHeading}>Community Feed</Text>
+          <Text style={styles.postCount}>{filteredPosts.length} posts</Text>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {FEED_FILTERS.map((f) => {
             const active = filter === f.key;
@@ -502,7 +535,7 @@ export default function FeedScreen() {
               >
                 <Ionicons
                   name={f.icon}
-                  size={14}
+                  size={13}
                   color={active ? '#fff' : COLORS.textMuted}
                 />
                 <Text style={[styles.filterText, active && styles.filterTextActive]}>
@@ -514,20 +547,23 @@ export default function FeedScreen() {
         </ScrollView>
       </View>
     </View>
-  ), [filter, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow]);
+  ), [filter, filteredPosts.length, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* ── Welcome Top Bar (Profile on top side header) ────────── */}
+      {/* ── Top Bar ────────────────────────────────── */}
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.welcomeRow}
           onPress={() => router.push('/tabs/profile')}
           activeOpacity={0.7}
         >
-          <View style={[styles.profileAvatar, { backgroundColor: avatarColor.bg }]}>
+          <LinearGradient
+            colors={[avatarColor.bg, avatarColor.bg + 'CC']}
+            style={styles.profileAvatar}
+          >
             <Text style={styles.profileAvatarText}>{userInitial}</Text>
-          </View>
+          </LinearGradient>
           <View style={styles.welcomeText}>
             <Text style={styles.welcomeLabel}>{greeting} 👋</Text>
             <Text style={styles.welcomeName}>{userName}</Text>
@@ -537,6 +573,7 @@ export default function FeedScreen() {
         <View style={styles.topBarRight}>
           {!!communityName && !isSearchOpen && (
             <View style={styles.communityBadge}>
+              <Ionicons name="home-outline" size={11} color={COLORS.primary} />
               <Text style={styles.communityBadgeText}>{communityName}</Text>
             </View>
           )}
@@ -551,7 +588,7 @@ export default function FeedScreen() {
           >
             <Ionicons
               name={isSearchOpen ? 'close-outline' : 'search-outline'}
-              size={22}
+              size={21}
               color={isSearchOpen ? COLORS.primary : COLORS.text}
             />
           </TouchableOpacity>
@@ -562,9 +599,9 @@ export default function FeedScreen() {
             activeOpacity={0.7}
             hitSlop={8}
           >
-            <Ionicons name="alert-circle" size={22} color="#DC2626" />
+            <Ionicons name="alert-circle" size={21} color="#DC2626" />
             <View style={styles.emergencyBadge}>
-              <Text style={styles.emergencyBadgeText}>24*7</Text>
+              <Text style={styles.emergencyBadgeText}>SOS</Text>
             </View>
           </TouchableOpacity>
 
@@ -574,7 +611,7 @@ export default function FeedScreen() {
             activeOpacity={0.7}
             hitSlop={8}
           >
-            <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
+            <Ionicons name="notifications-outline" size={21} color={COLORS.text} />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -586,42 +623,35 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* ── Expandable Search Bar (Revealed when search button is clicked) ────── */}
+      {/* ── Search Bar ─────────────────────────────── */}
       {isSearchOpen && (
         <View style={styles.searchBarWrap}>
           <View style={styles.searchBarCurved}>
-            <Ionicons name="search-outline" size={17} color={COLORS.primary} style={styles.searchIcon} />
+            <Ionicons name="search-outline" size={16} color={COLORS.primary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search updates, notices, events, neighbors..."
+              placeholder="Search updates, notices, neighbors..."
               placeholderTextColor={COLORS.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoFocus
               returnKeyType="search"
             />
-            {searchQuery.length > 0 ? (
+            {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                onPress={() => {
-                  setIsSearchOpen(false);
-                  setSearchQuery('');
-                }}
-                hitSlop={8}
-              >
-                <Ionicons name="close-outline" size={18} color={COLORS.textMuted} />
+                <Ionicons name="close-circle" size={17} color={COLORS.textMuted} />
               </TouchableOpacity>
             )}
           </View>
         </View>
       )}
 
-      {/* ── Feed List ─────────────────────────────────────────── */}
+      {/* ── Feed List ─────────────────────────────── */}
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 60 }} color={COLORS.primary} size="large" />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={COLORS.primary} size="large" />
+          <Text style={styles.loadingText}>Loading community feed...</Text>
+        </View>
       ) : (
         <FlatList
           data={filteredPosts}
@@ -642,18 +672,28 @@ export default function FeedScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="chatbubbles-outline" size={36} color={COLORS.primary} />
-              </View>
-              <Text style={styles.emptyTitle}>No posts in this category</Text>
+              <LinearGradient
+                colors={[COLORS.primaryLight, '#dde6ff']}
+                style={styles.emptyIconWrap}
+              >
+                <Ionicons name="chatbubbles-outline" size={34} color={COLORS.primary} />
+              </LinearGradient>
+              <Text style={styles.emptyTitle}>No posts yet</Text>
               <Text style={styles.emptyText}>Be the first to share an update with your neighbors!</Text>
               <TouchableOpacity
                 style={styles.emptyBtn}
                 onPress={() => router.push('/polls/create')}
                 activeOpacity={0.8}
               >
-                <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                <Text style={styles.emptyBtnText}>Create Post</Text>
+                <LinearGradient
+                  colors={GRADIENTS.primary as unknown as [string, string]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.emptyBtnGradient}
+                >
+                  <Ionicons name="add-circle-outline" size={17} color="#fff" />
+                  <Text style={styles.emptyBtnText}>Create Post</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           }
@@ -666,54 +706,79 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
+  // ── Loading ──────────────────────────────────────────────────────
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.medium,
+  },
+
   // ── Finance Banner ────────────────────────────────────────────────
   financeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#FEF3C7',
+    paddingVertical: 11,
+    overflow: 'hidden',
     borderBottomWidth: 1,
     borderBottomColor: '#FCD34D',
   },
-  financeIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+  financeIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: '#D97706',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    ...SHADOWS.sm,
   },
   financeText: { flex: 1 },
   financeLabel: {
     fontSize: 9,
     fontWeight: '800',
     color: '#92400E',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.7,
+    fontFamily: FONTS.bold,
+  },
+  financeAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   financeAmount: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     color: '#D97706',
+    fontFamily: FONTS.displayEB,
+    letterSpacing: -0.5,
   },
   financeDue: {
-    fontSize: 11,
-    fontWeight: '400',
-    color: '#78716C',
+    fontSize: 12,
+    color: '#92400E',
+    fontFamily: FONTS.medium,
   },
   payBtn: {
     backgroundColor: '#D97706',
-    borderRadius: 9,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    ...SHADOWS.sm,
   },
   payBtnText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#fff',
+    fontFamily: FONTS.bold,
   },
 
   // ── Quick Stats Row ───────────────────────────────────────────────
@@ -724,10 +789,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statTile: {
-    borderRadius: RADIUS.md,
+    borderRadius: 12,
     paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingVertical: 10,
     width: STAT_TILE_W,
+    gap: 2,
     ...SHADOWS.sm,
   },
   statTileTop: {
@@ -737,14 +803,17 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   statNum: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
+    fontFamily: FONTS.displayEB,
   },
   statLabel: {
     fontSize: 9.5,
     fontWeight: '600',
     lineHeight: 12,
+    fontFamily: FONTS.semiBold,
+    letterSpacing: 0.1,
   },
 
   // ── Welcome Top Bar ───────────────────────────────────────────────
@@ -753,15 +822,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    gap: 8,
   },
   welcomeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 11,
     flex: 1,
   },
   profileAvatar: {
@@ -773,43 +843,49 @@ const styles = StyleSheet.create({
   },
   profileAvatarText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
+    fontFamily: FONTS.displayBold,
   },
   welcomeText: {},
   welcomeLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textMuted,
-    fontWeight: '400',
+    fontFamily: FONTS.regular,
   },
   welcomeName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: COLORS.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
+    fontFamily: FONTS.displayEB,
   },
   topBarRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   communityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 1,
     borderColor: COLORS.primaryMid,
   },
   communityBadgeText: {
     color: COLORS.primary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
+    fontFamily: FONTS.bold,
   },
   headerIconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 37,
+    height: 37,
+    borderRadius: 18,
     backgroundColor: COLORS.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
@@ -821,9 +897,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primaryMid,
   },
   emergencyBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 37,
+    height: 37,
+    borderRadius: 18,
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
@@ -836,31 +912,36 @@ const styles = StyleSheet.create({
     top: -5,
     right: -6,
     backgroundColor: '#DC2626',
-    borderRadius: RADIUS.full,
+    borderRadius: 20,
     paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderWidth: 1,
+    paddingVertical: 1.5,
+    borderWidth: 1.5,
     borderColor: COLORS.surface,
   },
   emergencyBadgeText: {
     color: '#FFFFFF',
-    fontSize: 7.5,
+    fontSize: 7,
     fontWeight: '800',
+    letterSpacing: 0.3,
+    fontFamily: FONTS.bold,
   },
   notifBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 20,
+    width: 37,
+    height: 37,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   badge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: -1,
+    right: -1,
     backgroundColor: COLORS.error,
-    borderRadius: RADIUS.full,
+    borderRadius: 20,
     minWidth: 17,
     height: 17,
     alignItems: 'center',
@@ -875,11 +956,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // ── Curved Search Bar ───────────────────────────────────────────────
+  // ── Search Bar ────────────────────────────────────────────────────
   searchBarWrap: {
     paddingHorizontal: 14,
-    paddingTop: 6,
-    paddingBottom: 10,
+    paddingVertical: 8,
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
@@ -888,96 +968,113 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceAlt,
-    borderRadius: RADIUS.full,
+    borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 8 : 2,
+    paddingVertical: Platform.OS === 'ios' ? 9 : 3,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  searchIcon: {
-    marginRight: 6,
-  },
+  searchIcon: { marginRight: 6 },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     color: COLORS.text,
-    paddingVertical: 6,
-  },
-  searchFilterBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 6,
+    paddingVertical: 5,
+    fontFamily: FONTS.regular,
   },
 
-  // ── Header Stack ───────────────────────────────────────────────
+  // ── Header Stack ───────────────────────────────────────────────────
   headerStack: { gap: 0, paddingBottom: 4 },
 
-  // ── Announcement Card ─────────────────────────────────────────
+  // ── Announcement Card ──────────────────────────────────────────────
   announcementCard: {
     flexDirection: 'row',
-    gap: 14,
-    marginHorizontal: 16,
-    marginTop: 12,
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: 16,
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 14,
+    marginTop: 14,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.primaryMid,
+    overflow: 'hidden',
     ...SHADOWS.sm,
   },
+  announcementGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
   announcementIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.primaryLight,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(79,70,229,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   announcementContent: { flex: 1 },
   announcementLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: COLORS.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
+    fontFamily: FONTS.bold,
     marginBottom: 2,
   },
   announcementTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
+    fontFamily: FONTS.displayBold,
     marginBottom: 2,
   },
   announcementDesc: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textMuted,
-    lineHeight: 18,
+    lineHeight: 17,
+    fontFamily: FONTS.regular,
   },
 
-  // ── Upcoming Events Section ───────────────────────────────────
+  // ── Upcoming Events ────────────────────────────────────────────────
   eventsSection: {
-    marginTop: 16,
+    marginTop: 18,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.3,
+    fontFamily: FONTS.displayBold,
+  },
+  sectionSub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+    marginTop: 1,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primaryMid,
   },
   seeAll: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: COLORS.primary,
+    fontFamily: FONTS.bold,
   },
   eventsScroll: {
     paddingHorizontal: 16,
@@ -985,27 +1082,27 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
 
-  // ── Composer Card ─────────────────────────────────────────────
+  // ── Composer Card ──────────────────────────────────────────────────
   composerCard: {
     backgroundColor: COLORS.surface,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    marginHorizontal: 14,
+    marginTop: 18,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
+    gap: 12,
     ...SHADOWS.sm,
   },
   composerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   composerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1013,58 +1110,72 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 14,
+    fontFamily: FONTS.displayBold,
   },
   composerInput: {
     flex: 1,
     backgroundColor: COLORS.surfaceAlt,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
     justifyContent: 'center',
   },
-  composerPlaceholder: { fontSize: 12, color: COLORS.textMuted },
-  composerIconRow: {
+  composerPlaceholder: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+  },
+  composerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  composerChip: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
-  iconChip: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+  composerChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: FONTS.bold,
   },
-  chipIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipText: { fontSize: 12, fontWeight: '700' },
 
-  // ── Filter Section ────────────────────────────────────────────
+  // ── Filter Section ─────────────────────────────────────────────────
   filterSection: {
-    paddingTop: 18,
+    paddingTop: 20,
     gap: 10,
   },
+  filterTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
   feedHeading: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: COLORS.text,
-    letterSpacing: -0.2,
-    paddingHorizontal: 16,
+    letterSpacing: -0.3,
+    fontFamily: FONTS.displayBold,
+  },
+  postCount: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.medium,
   },
   filterRow: { paddingHorizontal: 16, gap: 8 },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.full,
+    borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 1.5,
@@ -1073,111 +1184,198 @@ const styles = StyleSheet.create({
   filterChipActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
-    ...SHADOWS.sm,
+    ...SHADOWS.primary,
   },
-  filterText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
-  filterTextActive: { color: '#fff', fontWeight: '700' },
+  filterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    fontFamily: FONTS.semiBold,
+  },
+  filterTextActive: {
+    color: '#fff',
+    fontWeight: '700',
+    fontFamily: FONTS.bold,
+  },
 
-  // ── Post Card ─────────────────────────────────────────────────
-  list: { paddingBottom: 24 },
+  // ── Post Card ──────────────────────────────────────────────────────
+  list: { paddingBottom: 28 },
   card: {
     backgroundColor: COLORS.surface,
     marginHorizontal: 12,
     marginTop: 10,
-    borderRadius: RADIUS.lg,
-    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
     ...SHADOWS.sm,
-    gap: 12,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  cardAccent: {
+    width: 3.5,
+    flexShrink: 0,
+  },
+  cardInner: {
+    flex: 1,
+    padding: 14,
+    gap: 11,
   },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontWeight: '700', fontSize: 16 },
-  authorInfo: { flex: 1 },
-  authorName: {
+  avatarText: {
+    fontWeight: '700',
     fontSize: 15,
+    fontFamily: FONTS.displayBold,
+  },
+  authorInfo: { flex: 1 },
+  authorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  authorName: {
+    fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
+    fontFamily: FONTS.bold,
+  },
+  flatChip: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  flatChipText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.primary,
+    fontFamily: FONTS.bold,
   },
   authorMeta: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 1,
+    fontFamily: FONTS.regular,
+  },
+  typeBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  typeBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    fontFamily: FONTS.bold,
   },
   content: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.text,
-    lineHeight: 22,
+    lineHeight: 21,
+    fontFamily: FONTS.regular,
   },
-  pollContainer: { marginTop: 4 },
-  mediaPlaceholder: {
-    borderRadius: RADIUS.md,
+  pollContainer: { marginTop: 2 },
+  mediaWrap: {
+    borderRadius: 12,
     overflow: 'hidden',
+    marginTop: 2,
   },
   mediaImage: {
     width: '100%',
-    height: 180,
-    borderRadius: RADIUS.md,
+    height: 185,
+    borderRadius: 12,
     backgroundColor: COLORS.surfaceAlt,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+  },
+  actionsRight: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingVertical: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  actionBtnIcon: {
+    paddingVertical: 5,
     paddingHorizontal: 6,
-    borderRadius: RADIUS.sm,
+    borderRadius: 8,
   },
   actionBtnLiked: { backgroundColor: '#FEE2E2' },
-  actionText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
+  actionText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    fontFamily: FONTS.semiBold,
+  },
   likedText: { color: COLORS.error },
 
-  // ── Empty State ───────────────────────────────────────────────
+  // ── Empty State ────────────────────────────────────────────────────
   empty: {
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: 48,
     gap: 10,
     paddingHorizontal: 32,
   },
   emptyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.primaryLight,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
-  emptyText: { color: COLORS.textMuted, fontSize: 14, textAlign: 'center' },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    fontFamily: FONTS.displayBold,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    fontFamily: FONTS.regular,
+  },
   emptyBtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 6,
+    ...SHADOWS.primary,
+  },
+  emptyBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    marginTop: 6,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
   },
-  emptyBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  emptyBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: FONTS.bold,
+  },
 });

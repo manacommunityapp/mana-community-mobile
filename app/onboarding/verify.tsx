@@ -14,6 +14,7 @@ import { StepHeader } from './account';
 import { COLORS } from '@/constants/config';
 import api from '@/services/apiClient';
 import type { GovtIdType } from '@/types/api';
+import { validateDocumentFile, showFileValidationError, getSafeErrorMessage } from '@/security';
 
 const ID_TYPES: { key: GovtIdType; label: string; emoji: string; hint: string }[] = [
   { key: 'AADHAAR',          label: 'Aadhaar',         emoji: '🪪', hint: '12-digit number' },
@@ -56,7 +57,13 @@ export default function VerifyStep() {
       aspect: [4, 3],
     });
     if (result.canceled) return;
-    const uri = result.assets[0].uri;
+    const asset = result.assets[0];
+    const validation = validateDocumentFile(asset.uri, asset.fileSize);
+    if (!validation.valid) {
+      showFileValidationError(validation);
+      return;
+    }
+    const uri = asset.uri;
     side === 'front' ? setFrontUri(uri) : setBackUri(uri);
     setErrors((e) => ({ ...e, [side === 'front' ? 'front' : 'back']: '' }));
   }
@@ -84,7 +91,7 @@ export default function VerifyStep() {
       reset();
       router.replace('/onboarding/pending');
     } catch (err: any) {
-      Alert.alert('Upload failed', err?.response?.data?.message ?? 'Please try again.');
+      Alert.alert('Upload failed', getSafeErrorMessage(err));
     } finally {
       setUploading(false);
     }

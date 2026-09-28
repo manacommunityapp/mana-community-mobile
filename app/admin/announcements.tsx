@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
 import { COLORS } from '@/constants/config';
+import { useAdminGuard } from '@/security';
 import { format } from 'date-fns';
 import type { AnnouncementDto } from '@/types/api';
 
@@ -215,7 +216,16 @@ const ac = StyleSheet.create({
 export default function AnnouncementsScreen() {
   const router  = useRouter();
   const qc      = useQueryClient();
+  const { isAdmin, isLoading: guardLoading } = useAdminGuard();
   const [showCreate, setShowCreate] = useState(false);
+
+  if (guardLoading || !isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['admin-announcements'],
