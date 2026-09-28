@@ -126,28 +126,30 @@ export function CommunityStats() {
 
 const s = StyleSheet.create({
   container: { flexGrow: 0 },
-  scroll: { paddingHorizontal: 16, paddingVertical: 10, gap: 10 },
+  scroll: { paddingHorizontal: 14, paddingVertical: 5, gap: 6 },
   tile: {
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minWidth: 110,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minWidth: 84,
     ...SHADOWS.sm,
   },
   tileTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   tileValue: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
+    lineHeight: 18,
   },
-  tileIcon: { opacity: 0.7 },
+  tileIcon: { opacity: 0.75 },
   tileLabel: {
-    fontSize: 12,
+    fontSize: 9.5,
     fontWeight: '600',
+    lineHeight: 12,
   },
 });

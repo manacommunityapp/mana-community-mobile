@@ -412,9 +412,13 @@ export default function FeedScreen() {
           onPress={() => router.push(tile.route as any)}
           activeOpacity={0.7}
         >
-          <Ionicons name={tile.icon} size={15} color={tile.color} style={{ opacity: 0.8 }} />
-          <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
-          <Text style={[styles.statLabel, { color: tile.labelColor }]}>{tile.label}</Text>
+          <View style={styles.statTileTop}>
+            <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
+            <Ionicons name={tile.icon} size={13} color={tile.color} style={{ opacity: 0.75 }} />
+          </View>
+          <Text style={[styles.statLabel, { color: tile.labelColor }]} numberOfLines={1}>
+            {tile.label}
+          </Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
@@ -803,13 +807,13 @@ const styles = StyleSheet.create({
   statsContainer: { flexGrow: 0 },
   statsScroll: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 5,
     gap: 6,
   },
   statTile: {
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 8,
-    paddingVertical: 10,
+    paddingVertical: 6,
     width: STAT_TILE_W,
     gap: 2,
     ...SHADOWS.sm,
@@ -818,18 +822,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
   },
   statNum: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
     fontFamily: FONTS.displayEB,
+    lineHeight: 18,
   },
   statLabel: {
-    fontSize: 9.5,
+    fontSize: 8.5,
     fontWeight: '600',
-    lineHeight: 12,
+    lineHeight: 11,
     fontFamily: FONTS.semiBold,
     letterSpacing: 0.1,
   },

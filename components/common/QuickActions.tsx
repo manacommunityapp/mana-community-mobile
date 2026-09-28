@@ -243,17 +243,17 @@ const s = StyleSheet.create({
   scroll: {
     paddingHorizontal: 12,
     paddingVertical: 2,
-    gap: 3,
+    gap: 2,
   },
   item: {
     alignItems: 'center',
-    width: 60,
-    gap: 4,
+    width: 54,
+    gap: 3,
   },
   iconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -277,11 +277,11 @@ const s = StyleSheet.create({
     letterSpacing: 0.2,
   },
   label: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '600',
     color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 13,
+    lineHeight: 12,
     fontFamily: FONTS.semiBold,
   },
 
