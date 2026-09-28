@@ -78,6 +78,32 @@ export const TEXT = {
   xxxl: { fontSize: 28, lineHeight: 36 },
 } as const;
 
+// ── Pre-composed Typography Presets ───────────────────────────
+// Each entry bundles fontFamily + fontSize + lineHeight so screens
+// can use  `style={T.headingLg}` instead of assembling three props.
+import type { TextStyle } from 'react-native';
+export const T: Record<string, TextStyle> = {
+  displayXl:  { fontFamily: FONTS.displayEB,    fontSize: 28, lineHeight: 36 },
+  displayLg:  { fontFamily: FONTS.displayBold,   fontSize: 24, lineHeight: 32 },
+  displayMd:  { fontFamily: FONTS.displayBold,   fontSize: 20, lineHeight: 28 },
+  displaySm:  { fontFamily: FONTS.displaySemi,   fontSize: 18, lineHeight: 26 },
+  headingLg:  { fontFamily: FONTS.bold,          fontSize: 18, lineHeight: 26 },
+  headingMd:  { fontFamily: FONTS.bold,          fontSize: 16, lineHeight: 24 },
+  headingSm:  { fontFamily: FONTS.semiBold,      fontSize: 14, lineHeight: 20 },
+  bodyLg:     { fontFamily: FONTS.regular,       fontSize: 16, lineHeight: 24 },
+  body:       { fontFamily: FONTS.regular,       fontSize: 15, lineHeight: 22 },
+  bodySm:     { fontFamily: FONTS.regular,       fontSize: 13, lineHeight: 18 },
+  label:      { fontFamily: FONTS.semiBold,      fontSize: 13, lineHeight: 18 },
+  labelSm:    { fontFamily: FONTS.medium,        fontSize: 12, lineHeight: 16 },
+  caption:    { fontFamily: FONTS.regular,       fontSize: 11, lineHeight: 16 },
+  btnLg:      { fontFamily: FONTS.bold,          fontSize: 16, lineHeight: 22 },
+  btn:        { fontFamily: FONTS.bold,          fontSize: 14, lineHeight: 20 },
+  btnSm:      { fontFamily: FONTS.semiBold,      fontSize: 13, lineHeight: 18 },
+  numLg:      { fontFamily: FONTS.displayEB,     fontSize: 24, lineHeight: 32 },
+  numMd:      { fontFamily: FONTS.displayBold,   fontSize: 18, lineHeight: 26 },
+  numSm:      { fontFamily: FONTS.displaySemi,   fontSize: 14, lineHeight: 20 },
+} as const;
+
 // ── Spacing ───────────────────────────────────────────────────
 export const SPACING = {
   xs: 4,

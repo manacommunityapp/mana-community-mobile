@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
+import { setupGlobalFonts } from '@/utils/globalFonts';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -97,7 +98,10 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
+    if (fontsLoaded) {
+      setupGlobalFonts();
+      SplashScreen.hideAsync();
+    }
   }, [fontsLoaded]);
 
   return (
