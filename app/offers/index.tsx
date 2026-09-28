@@ -107,7 +107,7 @@ export default function OffersScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroBadgeRow}>
             <View style={styles.heroPill}>
-              <Ionicons name="flame" size={12} color="#F59E0B" />
+              <Ionicons name="flame" size={12} color="#D97706" />
               <Text style={styles.heroPillText}>Mana Community Advantage</Text>
             </View>
             <View style={styles.savingsBox}>
@@ -375,7 +375,7 @@ export default function OffersScreen() {
                         <Text style={styles.bizCardCat}>{biz.categoryName} · {biz.tagline}</Text>
                       </View>
                       <View style={styles.ratingBadge}>
-                        <Ionicons name="star" size={12} color="#F59E0B" />
+                        <Ionicons name="star" size={12} color="#D97706" />
                         <Text style={styles.ratingText}>{biz.averageRating}</Text>
                       </View>
                     </View>

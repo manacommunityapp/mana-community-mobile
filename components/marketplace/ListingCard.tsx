@@ -18,7 +18,7 @@ const CONDITION_COLOR: Record<string, string> = {
   NEW:      '#10B981',
   LIKE_NEW: '#3B82F6',
   GOOD:     '#6366F1',
-  FAIR:     '#F59E0B',
+  FAIR:     '#D97706',
   POOR:     '#6B7280',
 };
 

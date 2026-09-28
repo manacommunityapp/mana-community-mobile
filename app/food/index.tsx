@@ -79,7 +79,7 @@ export default function FoodScreen() {
         <View style={s.foodFooter}>
           <Text style={s.foodPrice}>{'₹'}{item.price}</Text>
           <View style={s.ratingBadge}>
-            <Ionicons name="star" size={11} color="#F59E0B" />
+            <Ionicons name="star" size={11} color="#D97706" />
             <Text style={s.ratingText}>{item.rating}</Text>
           </View>
           {!item.available && (

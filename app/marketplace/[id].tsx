@@ -20,7 +20,7 @@ const CONDITION_LABEL: Record<string, string> = {
   NEW: 'New', LIKE_NEW: 'Like New', GOOD: 'Good', FAIR: 'Fair', POOR: 'Poor',
 };
 const CONDITION_COLOR: Record<string, string> = {
-  NEW: '#10B981', LIKE_NEW: '#3B82F6', GOOD: '#6366F1', FAIR: '#F59E0B', POOR: '#6B7280',
+  NEW: '#10B981', LIKE_NEW: '#3B82F6', GOOD: '#6366F1', FAIR: '#D97706', POOR: '#6B7280',
 };
 const CATEGORY_EMOJI: Record<string, string> = {
   FURNITURE: '🛋️', ELECTRONICS: '📱', CLOTHING: '👕', BOOKS: '📚',

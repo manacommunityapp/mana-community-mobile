@@ -23,7 +23,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
     <View style={{ flexDirection: 'row', gap: 4 }}>
       {[1, 2, 3, 4, 5].map((n) => (
         <TouchableOpacity key={n} onPress={() => onChange(n)}>
-          <Text style={{ fontSize: 26, color: n <= value ? '#F59E0B' : '#E5E7EB' }}>★</Text>
+          <Text style={{ fontSize: 26, color: n <= value ? '#D97706' : '#E5E7EB' }}>★</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -269,12 +269,12 @@ const s = StyleSheet.create({
   momSectionTitle:    { fontSize: 13, fontWeight: '700', color: '#92400E' },
   momRow:             { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   momChip:            { alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#FCD34D' },
-  momChipActive:      { backgroundColor: '#F59E0B', borderColor: '#D97706' },
+  momChipActive:      { backgroundColor: '#D97706', borderColor: '#B45309' },
   momChipAvatar:      { fontSize: 20 },
   momChipName:        { fontSize: 11, color: '#92400E', fontWeight: '600' },
   momChipNameActive:  { color: '#fff' },
   playerCard:         { backgroundColor: COLORS.surface, borderRadius: 14, padding: 14, gap: 12, borderWidth: 1, borderColor: COLORS.border },
-  playerCardMom:      { borderColor: '#F59E0B', backgroundColor: '#FFFBEB' },
+  playerCardMom:      { borderColor: '#D97706', backgroundColor: '#FFFBEB' },
   playerHeader:       { flexDirection: 'row', alignItems: 'center', gap: 10 },
   playerAvatar:       { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
   playerAvatarText:   { color: '#fff', fontWeight: '700', fontSize: 16 },
@@ -300,7 +300,7 @@ const s = StyleSheet.create({
   resultName:         { fontSize: 14, fontWeight: '600', color: COLORS.text },
   resultFlat:         { fontSize: 11, color: COLORS.textMuted },
   resultStats:        { alignItems: 'flex-end', gap: 2 },
-  resultRating:       { fontSize: 14, color: '#F59E0B' },
+  resultRating:       { fontSize: 14, color: '#D97706' },
   resultAvg:          { fontSize: 11, color: COLORS.textMuted },
   resultReaction:     { fontSize: 11, color: COLORS.primary, fontWeight: '600' },
   // Can't rate

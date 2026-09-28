@@ -33,7 +33,7 @@ export const COLORS = {
   successLight: '#D1FAE5',  // emerald-100
   error:        '#EF4444',  // red-500
   errorLight:   '#FEE2E2',  // red-100
-  warning:      '#F59E0B',  // amber-500 (status only)
+  warning:      '#D97706',  // amber-600 (status only)
   warningLight: '#FEF9C3',  // amber-50
   info:         '#06b6d4',  // web --mana-info
   infoLight:    '#CFFAFE',  // cyan-100
@@ -45,7 +45,7 @@ export const GRADIENTS = {
   primary:    ['#4F46E5', '#6366F1'] as const,
   primaryDeep:['#3730A3', '#4F46E5'] as const,
   hero:       ['#4338CA', '#4F46E5', '#6366F1'] as const,
-  warm:       ['#F59E0B', '#D97706'] as const,
+  warm:       ['#D97706', '#B45309'] as const,
   success:    ['#059669', '#10B981'] as const,
   surface:    ['#FFFFFF', '#f0f4ff'] as const,
   card:       ['#f8f9ff', '#FFFFFF'] as const,

@@ -197,7 +197,7 @@ export default function ProfileScreen() {
                   icon="headset-outline"
                   label="Smart Helpdesk"
                   onPress={() => router.push('/helpdesk')}
-                  iconColor="#F59E0B"
+                  iconColor="#D97706"
                   iconBg="#FEF3C7"
                 />
               )}

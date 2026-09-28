@@ -21,7 +21,7 @@ const TABS: { key: FilterTab; label: string }[] = [
 ];
 
 function reasonColor(reason: string): string {
-  if (reason.includes('spam') || reason.includes('SPAM'))          return '#F59E0B';
+  if (reason.includes('spam') || reason.includes('SPAM'))          return '#D97706';
   if (reason.includes('abuse') || reason.includes('ABUSE'))        return '#EF4444';
   if (reason.includes('hate') || reason.includes('HATE'))          return '#DC2626';
   if (reason.includes('inappropriate'))                             return '#F97316';

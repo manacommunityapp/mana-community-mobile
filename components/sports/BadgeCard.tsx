@@ -6,7 +6,7 @@ const RARITY_STYLE: Record<string, { border: string; bg: string; label: string; 
   common:    { border: '#D1D5DB', bg: '#F9FAFB', label: '#6B7280', glow: 'transparent' },
   rare:      { border: '#3B82F6', bg: '#EFF6FF', label: '#1D4ED8', glow: '#BFDBFE'    },
   epic:      { border: '#8B5CF6', bg: '#F5F3FF', label: '#6D28D9', glow: '#DDD6FE'    },
-  legendary: { border: '#F59E0B', bg: '#FFFBEB', label: '#B45309', glow: '#FDE68A'    },
+  legendary: { border: '#D97706', bg: '#FFFBEB', label: '#B45309', glow: '#FDE68A'    },
 };
 
 interface BadgeCardProps {

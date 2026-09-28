@@ -19,7 +19,7 @@ function StarRating({ value, max = 5 }: { value: number; max?: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: 2 }}>
       {Array.from({ length: max }).map((_, i) => (
-        <Text key={i} style={{ fontSize: 14, color: i < Math.round(value) ? '#F59E0B' : '#E5E7EB' }}>★</Text>
+        <Text key={i} style={{ fontSize: 14, color: i < Math.round(value) ? '#D97706' : '#E5E7EB' }}>★</Text>
       ))}
       <Text style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 4 }}>
         {value.toFixed(1)}

@@ -51,6 +51,7 @@ function AuthGuard() {
     const inAuth        = group === 'auth';
     const inOnboarding  = group === 'onboarding';
     const inTabs        = group === 'tabs';
+    const inGuard       = group === 'guard';
 
     if (!isAuthenticated) {
       // Not logged in → welcome / onboarding entry
@@ -64,9 +65,14 @@ function AuthGuard() {
       return;
     }
 
-    // Fully verified — send to main app
+    // Fully verified — send to role-appropriate home
     if (inOnboarding || inAuth) {
-      router.replace('/tabs/feed');
+      const isGuard = user?.role === 'SECURITY' || user?.role === 'GUARD';
+      if (isGuard) {
+        router.replace('/guard/tabs/dashboard');
+      } else {
+        router.replace('/tabs/feed');
+      }
     }
   }, [isAuthenticated, isLoading, isPending, segments]);
 
@@ -133,6 +139,7 @@ export default function RootLayout() {
             <Stack.Screen name="academy" />
             <Stack.Screen name="cpos" />
             <Stack.Screen name="cpn" />
+            <Stack.Screen name="guard" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

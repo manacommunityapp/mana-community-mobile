@@ -326,7 +326,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
         {/* Rating, Price & Status Bar */}
         <View style={s.metricsRow}>
           <View style={s.ratingPill}>
-            <Ionicons name="star" size={12} color="#F59E0B" />
+            <Ionicons name="star" size={12} color="#D97706" />
             <Text style={s.ratingNum}>{item.rating}</Text>
             <Text style={s.reviewCount}>({item.reviewCount})</Text>
           </View>
@@ -1054,7 +1054,7 @@ const s = StyleSheet.create({
     borderRadius: 3,
   },
   dotGreen: { backgroundColor: '#10B981' },
-  dotAmber: { backgroundColor: '#F59E0B' },
+  dotAmber: { backgroundColor: '#D97706' },
   statusText: { fontSize: 10, fontWeight: '700' },
   textGreen: { color: '#059669' },
   textAmber: { color: COLORS.textMuted },

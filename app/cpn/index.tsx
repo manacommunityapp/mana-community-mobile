@@ -301,7 +301,7 @@ export default function CPNScreen() {
                         <Text style={styles.mentorDomain}>🎯 {m.domain}</Text>
                       </View>
                       <View style={styles.ratingBadge}>
-                        <Ionicons name="star" size={12} color="#F59E0B" />
+                        <Ionicons name="star" size={12} color="#D97706" />
                         <Text style={styles.ratingText}>{m.rating}</Text>
                       </View>
                     </View>

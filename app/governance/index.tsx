@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   typeBadge: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#D97706',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: RADIUS.sm,
@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontSize: 10,
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#FFFFFF',
   },
   quorumTag: {
     flexDirection: 'row',

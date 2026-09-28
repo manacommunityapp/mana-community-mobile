@@ -63,9 +63,18 @@ export const MANAGE_BILLING        = "Manage Billing";
 // ──── ADMIN ────
 export const VIEW_ADMIN = "View Admin";
 
+// ──── GUARD / SECURITY ────
+export const VIEW_GUARD_DASHBOARD = "View Guard Dashboard";
+export const MANAGE_VISITORS      = "Manage Visitors";
+export const MANAGE_INCIDENTS     = "Manage Incidents";
+export const MANAGE_PATROL        = "Manage Patrol";
+export const RAISE_ALERT          = "Raise Alert";
+
 // ──── ROLES ────
 export const ROLE_SUPER_ADMIN     = "SUPER_ADMIN";
 export const ROLE_ADMIN           = "ADMIN";
 export const ROLE_COMMUNITY_ADMIN = "COMMUNITY_ADMIN";
 export const ROLE_MEMBER          = "MEMBER";
 export const ROLE_USER            = "USER";
+export const ROLE_GUARD           = "GUARD";
+export const ROLE_SECURITY        = "SECURITY";

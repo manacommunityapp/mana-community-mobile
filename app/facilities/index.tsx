@@ -95,7 +95,7 @@ export default function FacilitiesScreen() {
             <Text style={s.slotText}>{item.availableSlots} slots</Text>
           </View>
           <View style={s.ratingBadge}>
-            <Ionicons name="star" size={11} color="#F59E0B" />
+            <Ionicons name="star" size={11} color="#D97706" />
             <Text style={s.ratingText}>{item.rating}</Text>
           </View>
         </View>

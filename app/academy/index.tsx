@@ -91,7 +91,7 @@ export default function AcademyScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroBadgeRow}>
             <View style={styles.heroPill}>
-              <Ionicons name="sparkles" size={12} color="#F59E0B" />
+              <Ionicons name="sparkles" size={12} color="#D97706" />
               <Text style={styles.heroPillText}>Learn • Teach • Grow</Text>
             </View>
             <Text style={styles.heroStatsText}>32+ Community Workshops</Text>
@@ -315,7 +315,7 @@ export default function AcademyScreen() {
                         <Text style={styles.facultyFlat}>🏠 {inst.tower} - {inst.flatNumber}</Text>
                       </View>
                       <View style={styles.ratingBox}>
-                        <Ionicons name="star" size={12} color="#F59E0B" />
+                        <Ionicons name="star" size={12} color="#D97706" />
                         <Text style={styles.ratingVal}>{inst.averageRating}</Text>
                       </View>
                     </View>
@@ -336,7 +336,7 @@ export default function AcademyScreen() {
 
                 {/* Become Instructor CTA */}
                 <View style={styles.becomeInstructorCta}>
-                  <Ionicons name="sparkles" size={24} color="#F59E0B" />
+                  <Ionicons name="sparkles" size={24} color="#D97706" />
                   <Text style={styles.ctaTitle}>Want to Teach a Class?</Text>
                   <Text style={styles.ctaDesc}>
                     Share your domain expertise, yoga, coding, or music skills with your community.
@@ -668,13 +668,13 @@ const styles = StyleSheet.create({
   ctaTitle: { fontSize: 16, fontWeight: '900', color: '#fff' },
   ctaDesc: { fontSize: 12, color: '#C7D2FE', textAlign: 'center', lineHeight: 16 },
   ctaBtn: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#D97706',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: RADIUS.md,
     marginTop: 6,
   },
-  ctaBtnText: { color: '#0F172A', fontSize: 12, fontWeight: '900' },
+  ctaBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
 
   // ── Empty State ───────────────────────────────────────────────────
   emptyWrap: { alignItems: 'center', paddingTop: 40, gap: 8 },
