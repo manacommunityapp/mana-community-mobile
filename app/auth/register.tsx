@@ -39,7 +39,10 @@ export default function RegisterScreen() {
     try {
       await register({ ...form, email: form.email.toLowerCase().trim() });
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Registration failed. Please try again.';
+      const status = err?.response?.status;
+      const msg = status === 409
+        ? 'An account with this email already exists.'
+        : 'Registration failed. Please try again.';
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);

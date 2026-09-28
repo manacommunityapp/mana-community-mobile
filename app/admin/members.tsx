@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
 import { COLORS } from '@/constants/config';
+import { useAdminGuard } from '@/security';
 import { format } from 'date-fns';
 import type { AdminMemberDto } from '@/types/api';
 
@@ -134,8 +135,17 @@ const mc = StyleSheet.create({
 export default function MembersScreen() {
   const router  = useRouter();
   const qc      = useQueryClient();
+  const { isAdmin, isLoading: guardLoading } = useAdminGuard();
   const [tab,    setTab]    = useState<Tab>('PENDING');
   const [search, setSearch] = useState('');
+
+  if (guardLoading || !isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   const {
     data, isLoading, fetchNextPage, hasNextPage,

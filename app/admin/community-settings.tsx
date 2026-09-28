@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
 import { COLORS } from '@/constants/config';
+import { useAdminGuard } from '@/security';
 import type { CommunitySettingsDto } from '@/types/api';
 
 function SectionHeader({ title }: { title: string }) {
@@ -79,6 +80,15 @@ const ft = StyleSheet.create({
 export default function CommunitySettingsScreen() {
   const router = useRouter();
   const qc     = useQueryClient();
+  const { isAdmin, isLoading: guardLoading } = useAdminGuard();
+
+  if (guardLoading || !isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-community-settings'],

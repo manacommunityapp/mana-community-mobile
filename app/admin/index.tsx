@@ -9,6 +9,7 @@ import { adminService } from '@/services/adminService';
 import { StatCard } from '@/components/admin/StatCard';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS } from '@/constants/config';
+import { useAdminGuard } from '@/security';
 
 interface QuickAction {
   emoji:  string;
@@ -22,6 +23,15 @@ interface QuickAction {
 export default function AdminDashboard() {
   const router = useRouter();
   const { user } = useAuth();
+  const { isAdmin, isLoading: guardLoading } = useAdminGuard();
+
+  if (guardLoading || !isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   const { data: stats, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['admin-stats'],

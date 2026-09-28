@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Client, IMessage } from '@stomp/stompjs';
 import { CONFIG } from '@/constants/config';
 import { tokenStore } from '@/services/apiClient';
+import { secureLog } from '@/security';
 
 interface UseWebSocketOptions {
   topics: string[];
@@ -41,7 +42,7 @@ export function useWebSocket({ topics, onMessage, enabled = true }: UseWebSocket
           });
         },
         onStompError: (frame) => {
-          console.warn('[WS] STOMP error:', frame.headers['message']);
+          secureLog.warn('[WS] STOMP error', { message: frame.headers['message'] });
         },
       });
 

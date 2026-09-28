@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { profileService } from '@/services/profileService';
 import { tokenStore } from '@/services/apiClient';
 import Constants from 'expo-constants';
+import { secureLog } from '@/security';
 
 let Notifications: typeof import('expo-notifications') | null = null;
 
@@ -43,7 +44,7 @@ try {
     });
   }
 } catch {
-  console.warn('[Push] expo-notifications not available (Expo Go SDK 53+). Push disabled.');
+  secureLog.warn('[Push] expo-notifications not available');
 }
 
 function resolveRoute(data: Record<string, unknown>): string | null {
@@ -85,7 +86,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
 
     (async () => {
       if (!Device.isDevice) {
-        console.log('[Push] Skipping — not a physical device');
+        secureLog.debug('[Push] Skipping — not a physical device');
         return;
       }
 
@@ -98,7 +99,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('[Push] Permission denied');
+        secureLog.debug('[Push] Permission denied');
         return;
       }
 
@@ -118,15 +119,15 @@ export function usePushNotifications(isAuthenticated: boolean) {
         await profileService.registerPushToken(token, platform);
         await tokenStore.setPushToken(token);
         tokenRegistered.current = true;
-        if (__DEV__) console.log('[Push] Token registered:', token.slice(0, 24) + '…');
+        secureLog.debug('[Push] Token registered');
       } catch (err) {
-        console.warn('[Push] Token registration failed:', err);
+        secureLog.warn('[Push] Token registration failed', err);
       }
     })();
 
     foregroundSub.current = Notifications.addNotificationReceivedListener(
       () => {
-        if (__DEV__) console.log('[Push] Foreground notification received');
+        secureLog.debug('[Push] Foreground notification received');
       },
     );
 

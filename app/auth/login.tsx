@@ -56,7 +56,10 @@ export default function LoginScreen() {
     try {
       await login({ identifier: email.trim().toLowerCase(), password });
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Login failed. Please try again.';
+      const status = err?.response?.status;
+      const msg = status === 401
+        ? 'Invalid email or password.'
+        : 'Login failed. Please try again.';
       Alert.alert('Login Failed', msg);
     } finally {
       setLoading(false);
