@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { profileService, UpdateProfileRequest } from '@/services/profileService';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { validateProfilePhoto, showFileValidationError, getSafeErrorMessage } from '@/security';
 
 // ── Upload progress bar ────────────────────────────────────────
@@ -260,7 +260,7 @@ export default function EditProfileScreen() {
                 ) : (
                   <View style={scr.avatarPlaceholder}>
                     <Text style={scr.avatarInitial}>
-                      {form.name?.[0]?.toUpperCase() ?? '?'}
+                      {getInitials(form.name)}
                     </Text>
                   </View>
                 )}

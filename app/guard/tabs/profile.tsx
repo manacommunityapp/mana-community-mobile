@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, GRADIENTS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
@@ -59,7 +59,7 @@ export default function GuardProfileScreen() {
             style={s.heroAvatar}
           >
             <Text style={[s.heroAvatarText, { color: '#FFFFFF' }]}>
-              {(user?.name || 'G')[0].toUpperCase()}
+              {getInitials(user?.name || 'Guard')}
             </Text>
           </LinearGradient>
           <Text style={s.heroName}>{user?.name || 'Guard'}</Text>

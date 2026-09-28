@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, GRADIENTS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 import { guardService, type GuardDashboardStats, type GuardVisitor, type GuardIncident } from '@/services/guardService';
 
@@ -116,7 +116,7 @@ export default function GuardDashboard() {
               style={s.avatar}
             >
               <Text style={[s.avatarText, { color: '#FFFFFF' }]}>
-                {(user?.name || 'G')[0].toUpperCase()}
+                {getInitials(user?.name || 'Guard')}
               </Text>
             </LinearGradient>
             <View>

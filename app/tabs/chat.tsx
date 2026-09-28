@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { chatService } from '@/services/chatService';
 import { ConversationDto } from '@/types/api';
 import { Header } from '@/components/common/Header';
-import { COLORS, SHADOWS, RADIUS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, getAvatarColor, getInitials } from '@/constants/config';
 import { formatDistanceToNow } from 'date-fns';
 
 // ── ConversationItem ───────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ function ConversationItem({ item }: { item: ConversationDto }) {
       <View style={styles.avatarWrap}>
         <View style={[styles.avatar, { backgroundColor: avatarColor.bg }]}>
           <Text style={[styles.avatarText, { color: avatarColor.text }]}>
-            {name[0].toUpperCase()}
+            {getInitials(name)}
           </Text>
         </View>
         {other?.online && <View style={styles.onlineDot} />}

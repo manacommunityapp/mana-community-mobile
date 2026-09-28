@@ -6,8 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, getAvatarColor, getInitials } from '@/constants/config';
 import { ADMIN_COLORS } from '@/constants/adminTheme';
 import { adminRoleService, type AnalyticsData } from '@/services/adminRoleService';
 
@@ -66,7 +65,7 @@ export default function AdminProfileScreen() {
           <View style={s.heroDot2} />
           <View style={[s.heroAvatar, { backgroundColor: avatarColor.bg }]}>
             <Text style={[s.heroAvatarText, { color: avatarColor.text }]}>
-              {(user?.name || 'A')[0].toUpperCase()}
+              {getInitials(user?.name || 'Admin')}
             </Text>
           </View>
           <Text style={s.heroName}>{user?.name || 'Admin'}</Text>

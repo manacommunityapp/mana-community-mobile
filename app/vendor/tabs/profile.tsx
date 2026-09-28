@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, getAvatarColor, getInitials } from '@/constants/config';
 import { VENDOR_COLORS } from '@/constants/vendorTheme';
 import { vendorService, type VendorReview } from '@/services/vendorService';
 
@@ -81,7 +81,7 @@ export default function VendorProfileScreen() {
           <View style={s.heroDot2} />
           <View style={[s.heroAvatar, { backgroundColor: avatarColor.bg }]}>
             <Text style={[s.heroAvatarText, { color: avatarColor.text }]}>
-              {(user?.name || 'V')[0].toUpperCase()}
+              {getInitials(user?.name || 'Vendor')}
             </Text>
           </View>
           <Text style={s.heroName}>{user?.name || 'Vendor'}</Text>

@@ -155,3 +155,22 @@ export function getAvatarColor(seed: string): { bg: string; text: string } {
   }
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
+
+/**
+ * Extracts the first letter of the first name and the first letter of the last name in uppercase.
+ * Example: "suresh chavatla" -> "SC"
+ * Example: "Suresh" -> "S"
+ * Example: "Suresh Kumar Chavatla" -> "SC"
+ */
+export function getInitials(name?: string | null): string {
+  if (!name || typeof name !== 'string') return 'U';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  const first = parts[0].charAt(0).toUpperCase();
+  const last = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${first}${last}`;
+}
+

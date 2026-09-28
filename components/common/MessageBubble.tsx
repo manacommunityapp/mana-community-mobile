@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ChatMessageDto } from '@/types/api';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 
 // ── Date separator between message groups ─────────────────────
 export function DateSeparator({ date }: { date: Date }) {
@@ -45,7 +45,7 @@ const tick = StyleSheet.create({
 function MiniAvatar({ name }: { name: string }) {
   return (
     <View style={av.wrap}>
-      <Text style={av.text}>{name?.[0]?.toUpperCase() ?? '?'}</Text>
+      <Text style={av.text}>{getInitials(name)}</Text>
     </View>
   );
 }

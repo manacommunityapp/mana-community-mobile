@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getInitials } from '@/constants/config';
 import { profileService } from '@/services/profileService';
 import { eventService } from '@/services/eventService';
 import { marketplaceService } from '@/services/marketplaceService';
@@ -222,7 +222,7 @@ export default function ProfileScreen() {
               style={styles.heroAvatar}
             >
               <Text style={[styles.heroAvatarText, { color: '#FFFFFF' }]}>
-                {(user.name || 'U')[0].toUpperCase()}
+                {getInitials(user.name || user.fullName)}
               </Text>
             </LinearGradient>
           )}
