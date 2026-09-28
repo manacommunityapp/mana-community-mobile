@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { marketplaceService } from '@/services/marketplaceService';
 import { COLORS } from '@/constants/config';
 import type { MarketplaceCategory, ListingCondition } from '@/types/api';
+import { validateImageFile, showFileValidationError } from '@/security';
 
 const MAX_IMAGES = 5;
 
@@ -151,7 +152,17 @@ export default function CreateListingScreen() {
     });
     if (result.canceled) return;
 
-    const newImages: LocalImage[] = result.assets.map((a) => ({
+    const validAssets = result.assets.filter((a) => {
+      const validation = validateImageFile(a.uri, a.fileSize);
+      if (!validation.valid) {
+        showFileValidationError(validation);
+        return false;
+      }
+      return true;
+    });
+    if (validAssets.length === 0) return;
+
+    const newImages: LocalImage[] = validAssets.map((a) => ({
       uri: a.uri, uploaded: false,
     }));
     setImages((prev) => [...prev, ...newImages].slice(0, MAX_IMAGES));

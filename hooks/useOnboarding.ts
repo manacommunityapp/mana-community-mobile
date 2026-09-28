@@ -23,10 +23,11 @@ interface OnboardingState {
   familySize: number;
 
   // Actions
-  setAccount:   (v: { name: string; email: string; phone: string; password: string }) => void;
-  setCommunity: (inviteCode: string, community: CommunityPreviewDto) => void;
-  setDetails:   (v: { flatNo: string; block: string; familySize: number }) => void;
-  reset:        () => void;
+  setAccount:    (v: { name: string; email: string; phone: string; password: string }) => void;
+  setCommunity:  (inviteCode: string, community: CommunityPreviewDto) => void;
+  setDetails:    (v: { flatNo: string; block: string; familySize: number }) => void;
+  clearPassword: () => void;
+  reset:         () => void;
 }
 
 const DEFAULT: Omit<OnboardingState, keyof Pick<OnboardingState,
@@ -39,8 +40,9 @@ const DEFAULT: Omit<OnboardingState, keyof Pick<OnboardingState,
 export const useOnboarding = create<OnboardingState>((set) => ({
   ...DEFAULT,
 
-  setAccount:   (v) => set(v),
-  setCommunity: (inviteCode, community) => set({ inviteCode, community }),
-  setDetails:   (v) => set(v),
-  reset:        () => set(DEFAULT),
+  setAccount:    (v) => set(v),
+  setCommunity:  (inviteCode, community) => set({ inviteCode, community }),
+  setDetails:    (v) => set(v),
+  clearPassword: () => set({ password: '' }),
+  reset:         () => set(DEFAULT),
 }));

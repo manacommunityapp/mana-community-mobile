@@ -9,6 +9,7 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 import { useAuth } from '@/hooks/useAuth';
 import { StepHeader } from './account';
 import { COLORS } from '@/constants/config';
+import { getSafeErrorMessage } from '@/security';
 
 const FAMILY_SIZES = [1, 2, 3, 4, 5, 6];
 
@@ -45,11 +46,10 @@ export default function DetailsStep() {
         flatNumber:    flatNo.trim(),
         tower:         block.trim() || undefined,
       });
-      // Registration succeeded → user is now PENDING → go to KYC
+      useOnboarding.getState().clearPassword();
       router.push('/onboarding/verify');
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Registration failed. Please try again.';
-      Alert.alert('Error', msg);
+      Alert.alert('Error', getSafeErrorMessage(err));
     } finally {
       setLoading(false);
     }

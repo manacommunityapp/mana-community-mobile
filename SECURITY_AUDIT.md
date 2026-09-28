@@ -24,11 +24,14 @@
 
 | # | Finding | File(s) | Fix Applied |
 |---|---------|---------|-------------|
-| H1 | Raw backend error messages exposed to users in login/register (could leak DB schema, stack traces) | `app/auth/login.tsx`, `app/auth/register.tsx` | Replaced `err.response.data.message` with safe status-code-based messages |
+| H1 | Raw backend error messages exposed to users in login/register and 5 other screens (could leak DB schema, stack traces) | `app/auth/login.tsx`, `app/auth/register.tsx`, `app/profile/edit.tsx`, `app/onboarding/details.tsx`, `app/onboarding/verify.tsx`, `app/sports/photos/[id].tsx` | Replaced `err.response.data.message` with `getSafeErrorMessage()` or safe status-code-based messages |
 | H2 | Admin screens have no client-side role verification — any authenticated user can access admin UI | `app/admin/*.tsx` (5 screens) | Added `useAdminGuard()` hook to all admin screens with role check and redirect |
 | H3 | Unguarded console.log/warn/error in production leaks sensitive data (push tokens, STOMP frames, error details) | `hooks/useWebSocket.ts`, `usePushNotifications.ts`, `useLiveScore.ts`, `useChatWindow.ts`, `useAuctionLive.ts`, `useDeviceSecurity.ts` | Replaced all 16 console calls with `secureLog` (no-ops in production) |
 | H4 | Hardcoded fake phone number in services screen (`tel:+919876543210`) | `app/services/index.tsx` | Replaced with alert directing to society helpdesk |
 | H5 | Emergency contacts hardcoded with fake phone numbers | `app/emergency/index.tsx` | Contacts now loaded from `emergencyService.getContacts()` API |
+| H6b | Password persists in Zustand global state across onboarding screens after registration | `hooks/useOnboarding.ts`, `app/onboarding/details.tsx` | Added `clearPassword()` action; password cleared from store immediately after successful registration |
+| H7b | No file upload validation — arbitrary file types/sizes accepted | `app/profile/edit.tsx`, `app/onboarding/verify.tsx`, `app/marketplace/create.tsx`, `app/sports/photos/[id].tsx` | Wired `validateProfilePhoto()`, `validateDocumentFile()`, `validateImageFile()` with MIME and size checks before upload |
+| H8b | Weak password validation (only length >= 8) in onboarding | `app/onboarding/account.tsx` | Replaced with Zod validator requiring uppercase, lowercase, and digit |
 
 ### HIGH — Requires Backend Changes
 
@@ -100,6 +103,12 @@
 - `app/emergency/index.tsx` — wired to real API, removed hardcoded contacts
 - `app/auth/login.tsx` — safe error messages
 - `app/auth/register.tsx` — safe error messages
+- `app/profile/edit.tsx` — safe error messages, file validation on photo uploads
+- `app/onboarding/details.tsx` — safe error messages, password cleared from store after registration
+- `app/onboarding/verify.tsx` — safe error messages, file validation on KYC document uploads
+- `app/onboarding/account.tsx` — strong password validation (uppercase, lowercase, digit required)
+- `app/marketplace/create.tsx` — file validation on listing photo uploads
+- `app/sports/photos/[id].tsx` — safe error messages, file validation on match photo uploads
 - `app/services/index.tsx` — removed hardcoded phone number
 - `app/admin/index.tsx` — admin guard
 - `app/admin/members.tsx` — admin guard
@@ -107,13 +116,14 @@
 - `app/admin/announcements.tsx` — admin guard
 - `app/admin/community-settings.tsx` — admin guard
 
-**Hooks (secure logging):**
-- `hooks/useWebSocket.ts`
-- `hooks/usePushNotifications.ts`
-- `hooks/useLiveScore.ts`
-- `hooks/useChatWindow.ts`
-- `hooks/useAuctionLive.ts`
-- `hooks/useDeviceSecurity.ts`
+**Hooks (security fixes):**
+- `hooks/useWebSocket.ts` — secure logging
+- `hooks/usePushNotifications.ts` — secure logging
+- `hooks/useLiveScore.ts` — secure logging
+- `hooks/useChatWindow.ts` — secure logging
+- `hooks/useAuctionLive.ts` — secure logging
+- `hooks/useDeviceSecurity.ts` — secure logging
+- `hooks/useOnboarding.ts` — added `clearPassword()` to wipe password from Zustand after registration
 
 ## OWASP MASVS Alignment
 
