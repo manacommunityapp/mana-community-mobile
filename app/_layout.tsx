@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
-import { LogBox, Text as RNText, TextInput as RNTextInput } from 'react-native';
+import { Text as RNText, TextInput as RNTextInput } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
-
-LogBox.ignoreAllLogs();
+import * as ScreenCapture from 'expo-screen-capture';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,14 +22,15 @@ const queryClient = new QueryClient({
 });
 
 function AuthGuard() {
-  const { isAuthenticated, isLoading, user, loadUser } = useAuth();
+  const { isAuthenticated, isLoading, user, loadUser, logout } = useAuth();
   const router   = useRouter();
   const segments = useSegments();
 
   const isPending  = user?.status === 'PENDING' || user?.status === 'SUSPENDED';
 
-  // Initialise push notifications once verified and authenticated
   usePushNotifications(isAuthenticated && !isPending);
+  useIdleTimeout(isAuthenticated && !isPending, logout);
+  useDeviceSecurity();
 
   useEffect(() => { loadUser(); }, []);
 
@@ -63,6 +65,11 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    ScreenCapture.preventScreenCaptureAsync();
+    return () => { ScreenCapture.allowScreenCaptureAsync(); };
+  }, []);
+
   const [fontsLoaded] = Font.useFonts({
     'Outfit-Regular':    require('../assets/fonts/Outfit-Regular.ttf'),
     'Outfit-SemiBold':   require('../assets/fonts/Outfit-SemiBold.ttf'),
@@ -111,6 +118,12 @@ export default function RootLayout() {
             <Stack.Screen name="group-buying" />
             <Stack.Screen name="helpdesk" />
             <Stack.Screen name="trips" />
+            <Stack.Screen name="notices" />
+            <Stack.Screen name="governance" />
+            <Stack.Screen name="offers" />
+            <Stack.Screen name="academy" />
+            <Stack.Screen name="cpos" />
+            <Stack.Screen name="cpn" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

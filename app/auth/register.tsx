@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
@@ -10,6 +10,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, FONTS, SHADOWS, RADIUS, GRADIENTS } from '@/constants/config';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function RegisterScreen() {
   const { register } = useAuth();
   const router = useRouter();
@@ -18,10 +20,19 @@ export default function RegisterScreen() {
     communityCode: '', flatNumber: '', tower: '',
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
     if (!form.name || !form.email || !form.password || !form.mobile) {
       Alert.alert('Validation', 'Name, email, mobile and password are required.');
+      return;
+    }
+    if (!EMAIL_RE.test(form.email.trim())) {
+      Alert.alert('Validation', 'Please enter a valid email address.');
+      return;
+    }
+    if (form.password.length < 8) {
+      Alert.alert('Validation', 'Password must be at least 8 characters.');
       return;
     }
     setLoading(true);
@@ -40,15 +51,23 @@ export default function RegisterScreen() {
     onChangeText: (v: string) => setForm((p) => ({ ...p, [key]: v })),
   });
 
-  const FIELDS = [
-    { label: 'Full Name',       key: 'name',          placeholder: 'Rahul Sharma',      icon: 'person-outline' as const,    required: true },
-    { label: 'Email',           key: 'email',         placeholder: 'you@example.com',   icon: 'mail-outline' as const,      required: true, keyboardType: 'email-address' },
-    { label: 'Mobile',          key: 'mobile',        placeholder: '+91 98765 43210',   icon: 'call-outline' as const,      required: true, keyboardType: 'phone-pad' },
-    { label: 'Password',        key: 'password',      placeholder: '••••••••',          icon: 'lock-closed-outline' as const, required: true, secureTextEntry: true },
-    { label: 'Community Code',  key: 'communityCode', placeholder: 'ABC123',            icon: 'business-outline' as const,  required: false },
-    { label: 'Flat / Unit No.', key: 'flatNumber',    placeholder: 'A-204',             icon: 'home-outline' as const,      required: false },
-    { label: 'Tower / Block',   key: 'tower',         placeholder: 'Tower A',           icon: 'layers-outline' as const,    required: false },
-  ] as const;
+  const FIELDS: {
+    label: string;
+    key: keyof typeof form;
+    placeholder: string;
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+    required: boolean;
+    keyboardType?: 'email-address' | 'phone-pad';
+    isPassword?: boolean;
+  }[] = [
+    { label: 'Full Name',       key: 'name',          placeholder: 'Rahul Sharma',    icon: 'person-outline',      required: true },
+    { label: 'Email',           key: 'email',         placeholder: 'you@example.com', icon: 'mail-outline',        required: true, keyboardType: 'email-address' },
+    { label: 'Mobile',          key: 'mobile',        placeholder: '+91 98765 43210', icon: 'call-outline',        required: true, keyboardType: 'phone-pad' },
+    { label: 'Password',        key: 'password',      placeholder: '••••••••',        icon: 'lock-closed-outline', required: true, isPassword: true },
+    { label: 'Community Code',  key: 'communityCode', placeholder: 'ABC123',          icon: 'business-outline',   required: false },
+    { label: 'Flat / Unit No.', key: 'flatNumber',    placeholder: 'A-204',           icon: 'home-outline',        required: false },
+    { label: 'Tower / Block',   key: 'tower',         placeholder: 'Tower A',         icon: 'layers-outline',      required: false },
+  ];
 
   return (
     <KeyboardAvoidingView
@@ -73,7 +92,7 @@ export default function RegisterScreen() {
 
         {/* Form */}
         <View style={styles.form}>
-          {FIELDS.map(({ label, key, placeholder, icon, required, ...rest }) => (
+          {FIELDS.map(({ label, key, placeholder, icon, required, keyboardType, isPassword }) => (
             <View key={key} style={styles.field}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>{label}</Text>
@@ -88,9 +107,23 @@ export default function RegisterScreen() {
                   placeholder={placeholder}
                   placeholderTextColor={COLORS.textMuted}
                   autoCapitalize="none"
+                  keyboardType={keyboardType}
+                  secureTextEntry={isPassword && !showPassword}
                   {...field(key)}
-                  {...(rest as any)}
                 />
+                {isPassword && (
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((v) => !v)}
+                    hitSlop={8}
+                    style={styles.eyeBtn}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={19}
+                      color={COLORS.textMuted}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           ))}
@@ -217,6 +250,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
     fontFamily: FONTS.regular,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
   },
   button: {
     borderRadius: 14,

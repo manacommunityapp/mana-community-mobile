@@ -16,10 +16,12 @@ const VALUE_PROPS = [
 ];
 
 export default function WelcomeScreen() {
-  const router    = useRouter();
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
-  const cardAnim  = useRef(new Animated.Value(0)).current;
+  const router      = useRouter();
+  const fadeAnim    = useRef(new Animated.Value(0)).current;
+  const slideAnim   = useRef(new Animated.Value(40)).current;
+  const cardAnim    = useRef(new Animated.Value(0)).current;
+  const negOne      = useRef(new Animated.Value(-1)).current;
+  const negTwenty   = useRef(new Animated.Value(-20)).current;
 
   useEffect(() => {
     Animated.sequence([
@@ -77,7 +79,7 @@ export default function WelcomeScreen() {
         {/* Value props card */}
         <Animated.View style={[s.card, {
           opacity: cardAnim,
-          transform: [{ translateY: Animated.multiply(Animated.add(cardAnim, new Animated.Value(-1)), new Animated.Value(-20)) }],
+          transform: [{ translateY: Animated.multiply(Animated.add(cardAnim, negOne), negTwenty) }],
         }]}>
           <Text style={s.cardHeading}>Everything your community needs</Text>
           {VALUE_PROPS.map((vp, i) => (

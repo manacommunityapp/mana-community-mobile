@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
@@ -8,20 +8,48 @@ import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
+import { getBiometricCapability, authenticateWithBiometric, BiometricCapability } from '@/hooks/useBiometricAuth';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS } from '@/constants/config';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, loadUser } = useAuth();
   const [email, setEmail]             = useState('');
   const [password, setPassword]       = useState('');
   const [loading, setLoading]         = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused]   = useState(false);
+  const [biometric, setBiometric]       = useState<BiometricCapability | null>(null);
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  useEffect(() => {
+    getBiometricCapability().then(setBiometric).catch(() => {});
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setLoading(true);
+    try {
+      const success = await authenticateWithBiometric();
+      if (success) {
+        await loadUser();
+      } else {
+        Alert.alert('Biometric failed', 'Please sign in with your email and password.');
+      }
+    } catch {
+      Alert.alert('Biometric error', 'Could not complete biometric authentication.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Validation', 'Please enter your email and password.');
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      Alert.alert('Validation', 'Please enter a valid email address.');
       return;
     }
     setLoading(true);
@@ -143,6 +171,30 @@ export default function LoginScreen() {
                 )}
               </LinearGradient>
             </TouchableOpacity>
+
+            {/* Biometric Sign-in */}
+            {biometric?.available && biometric.hasStoredSession && (
+              <>
+                <View style={styles.orRow}>
+                  <View style={styles.orLine} />
+                  <Text style={styles.orText}>or</Text>
+                  <View style={styles.orLine} />
+                </View>
+                <TouchableOpacity
+                  style={[styles.biometricBtn, loading && styles.buttonDisabled]}
+                  onPress={handleBiometricLogin}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name={biometric.label.includes('Face') ? 'scan-outline' : 'finger-print-outline'}
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.biometricText}>{biometric.label}</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
           {/* Footer */}
@@ -329,6 +381,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: FONTS.bold,
+  },
+
+  // ── Biometric ──────────────────────────────────────────────────────
+  orRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  orText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+  },
+  biometricBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryMid,
+    borderRadius: 14,
+    paddingVertical: 14,
+    backgroundColor: COLORS.primaryLight,
+  },
+  biometricText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.primary,
+    fontFamily: FONTS.semiBold,
   },
 
   // ── Footer ─────────────────────────────────────────────────────────

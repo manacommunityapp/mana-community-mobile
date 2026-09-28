@@ -12,6 +12,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { feedService } from '@/services/feedService';
 import { notificationService } from '@/services/notificationService';
 import { eventService } from '@/services/eventService';
+import { pollService } from '@/services/pollService';
+import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
 import { PostDto, EventDto } from '@/types/api';
@@ -21,6 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.68;
+const STAT_TILE_W = Math.max(74, Math.floor((SCREEN_W - 24 - (3 * 6)) / 4));
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
@@ -59,7 +62,7 @@ function UpcomingEventCard({ event, onPress }: { event: EventDto; onPress: () =>
     ['#059669', '#10B981'],
     ['#DB2777', '#EC4899'],
   ];
-  const gIdx = (event.id || 0) % gradientColors.length;
+  const gIdx = Math.abs(parseInt(String(event.id ?? 0), 10) || 0) % gradientColors.length;
 
   return (
     <TouchableOpacity style={es.card} onPress={onPress} activeOpacity={0.85}>
@@ -205,7 +208,11 @@ function PostCard({ post }: { post: PostDto }) {
   const avatarColor = getAvatarColor(post.authorName || 'Neighbor');
   const typeMeta = POST_TYPE_META[post.type] || POST_TYPE_META.post;
   const flatLabel = post.authorFlat ? ` · ${post.authorFlat}` : '';
-  const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: false });
+  const timeAgo = (() => {
+    if (!post.createdAt) return 'recently';
+    try { return formatDistanceToNow(new Date(post.createdAt), { addSuffix: false }); }
+    catch { return 'recently'; }
+  })();
 
   return (
     <View style={styles.card}>
@@ -327,6 +334,18 @@ export default function FeedScreen() {
     queryFn: () => eventService.getUpcomingEvents(),
   });
 
+  const { data: activePollsPage } = useQuery({
+    queryKey: ['polls', 'active-count'],
+    queryFn: () => pollService.getPolls('ACTIVE', 0),
+    staleTime: 60_000,
+  });
+
+  const { data: openTickets = [] } = useQuery({
+    queryKey: ['helpdesk', 'open-count'],
+    queryFn: () => smartHelpdeskService.getTickets('OPEN'),
+    staleTime: 60_000,
+  });
+
   const allPosts = useMemo(() => data?.pages.flatMap((p) => p.content) ?? [], [data]);
 
   const filteredPosts = useMemo(() => {
@@ -367,51 +386,39 @@ export default function FeedScreen() {
   const latestAnnouncement = announcements.length > 0 ? announcements[0] : null;
 
   // ── Finance Banner ─────────────────────────────────────────────────
-  const FinanceBanner = useMemo(() => (
-    <TouchableOpacity
-      style={styles.financeBanner}
-      onPress={() => router.push('/finance')}
-      activeOpacity={0.9}
-    >
-      <LinearGradient
-        colors={['#FEF3C7', '#FDE68A']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.financeIconCircle}>
-        <Ionicons name="card" size={18} color="#fff" />
-      </View>
-      <View style={styles.financeText}>
-        <Text style={styles.financeLabel}>OUTSTANDING BALANCE</Text>
-        <View style={styles.financeAmountRow}>
-          <Text style={styles.financeAmount}>₹4,500</Text>
-          <Text style={styles.financeDue}> · due 15th Oct</Text>
-        </View>
-      </View>
-      <View style={styles.payBtn}>
-        <Text style={styles.payBtnText}>Pay</Text>
-        <Ionicons name="arrow-forward" size={13} color="#fff" />
-      </View>
-    </TouchableOpacity>
-  ), [router]);
+  // Hidden until finance API is wired up — avoids showing stale hardcoded amounts
+  const FinanceBanner = null;
 
-  // ── Quick Stats Row ────────────────────────────────────────────────
+  // ── Quick Stats Row (dynamic) ───────────────────────────────────────
+  const statTiles = useMemo(() => [
+    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length,                color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'polls',   label: 'Active Polls',   value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
+    { id: 'notifs',  label: 'Notifications',  value: unreadCount,                          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'sports',  label: 'Live Matches',   value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
+    { id: 'tickets', label: 'Open Tickets',   value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
+  ], [upcomingEvents.length, activePollsPage?.totalElements, unreadCount, openTickets.length]);
+
   const StatsRow = useMemo(() => (
-    <View style={styles.statsRow}>
-      {[
-        { num: '2', label: 'Events Today',  bg: '#FEF3C7', fg: '#D97706', icon: 'calendar-outline' as const },
-        { num: '8', label: 'Messages',      bg: '#DBEAFE', fg: '#2563EB', icon: 'chatbubbles-outline' as const },
-        { num: '3', label: 'Active Polls',  bg: '#EDE9FE', fg: '#7C3AED', icon: 'stats-chart-outline' as const },
-      ].map((stat) => (
-        <View key={stat.label} style={[styles.statTile, { backgroundColor: stat.bg }]}>
-          <Ionicons name={stat.icon} size={16} color={stat.fg} />
-          <Text style={[styles.statNum, { color: stat.fg }]}>{stat.num}</Text>
-          <Text style={[styles.statLabel, { color: stat.fg }]}>{stat.label}</Text>
-        </View>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.statsScroll}
+      style={styles.statsContainer}
+    >
+      {statTiles.map(tile => (
+        <TouchableOpacity
+          key={tile.id}
+          style={[styles.statTile, { backgroundColor: tile.bg }]}
+          onPress={() => router.push(tile.route as any)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={tile.icon} size={15} color={tile.color} style={{ opacity: 0.8 }} />
+          <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
+          <Text style={[styles.statLabel, { color: tile.labelColor }]}>{tile.label}</Text>
+        </TouchableOpacity>
       ))}
-    </View>
-  ), []);
+    </ScrollView>
+  ), [statTiles, router]);
 
   const ListHeader = useMemo(() => (
     <View style={styles.headerStack}>
@@ -775,32 +782,36 @@ const styles = StyleSheet.create({
   },
 
   // ── Quick Stats Row ───────────────────────────────────────────────
-  statsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  statsContainer: { flexGrow: 0 },
+  statsScroll: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
   },
   statTile: {
-    flex: 1,
     borderRadius: 12,
-    padding: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    width: STAT_TILE_W,
     gap: 2,
-    alignItems: 'flex-start',
+    ...SHADOWS.sm,
+  },
+  statTileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
   },
   statNum: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
-    lineHeight: 26,
+    letterSpacing: -0.4,
     fontFamily: FONTS.displayEB,
-    letterSpacing: -0.5,
   },
   statLabel: {
     fontSize: 9.5,
     fontWeight: '600',
+    lineHeight: 12,
     fontFamily: FONTS.semiBold,
     letterSpacing: 0.1,
   },
