@@ -54,6 +54,7 @@ function AuthGuard() {
     const inTabs        = group === 'tabs';
     const inGuard       = group === 'guard';
     const inVendor      = group === 'vendor';
+    const inAdminRole   = group === 'admin-role';
 
     if (!isAuthenticated) {
       // Not logged in → welcome / onboarding entry
@@ -74,6 +75,8 @@ function AuthGuard() {
         router.replace('/guard/tabs/dashboard');
       } else if (role === 'VENDOR') {
         router.replace('/vendor/tabs/dashboard');
+      } else if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'COMMUNITY_ADMIN') {
+        router.replace('/admin-role/tabs/dashboard');
       } else {
         router.replace('/tabs/feed');
       }
@@ -148,6 +151,7 @@ export default function RootLayout() {
             <Stack.Screen name="cpn" />
             <Stack.Screen name="guard" />
             <Stack.Screen name="vendor" />
+            <Stack.Screen name="admin-role" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

@@ -62,6 +62,12 @@ export const MANAGE_BILLING        = "Manage Billing";
 
 // ──── ADMIN ────
 export const VIEW_ADMIN = "View Admin";
+export const VIEW_ADMIN_DASHBOARD  = "View Admin Dashboard";
+export const MANAGE_APPROVALS      = "Manage Approvals";
+export const MANAGE_FINANCE        = "Manage Finance";
+export const MANAGE_SECURITY       = "Manage Security";
+export const MANAGE_GOVERNANCE     = "Manage Governance";
+export const VIEW_ANALYTICS        = "View Analytics";
 
 // ──── GUARD / SECURITY ────
 export const VIEW_GUARD_DASHBOARD = "View Guard Dashboard";
