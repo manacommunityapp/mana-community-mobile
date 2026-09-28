@@ -12,6 +12,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { feedService } from '@/services/feedService';
 import { notificationService } from '@/services/notificationService';
 import { eventService } from '@/services/eventService';
+import { pollService } from '@/services/pollService';
+import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
 import { PostDto, EventDto } from '@/types/api';
@@ -332,6 +334,17 @@ export default function FeedScreen() {
     queryFn: () => eventService.getUpcomingEvents(),
   });
 
+  const { data: activePollsPage } = useQuery({
+    queryKey: ['polls', 'active-count'],
+    queryFn: () => pollService.getPolls('ACTIVE', 0),
+    staleTime: 60_000,
+  });
+
+  const { data: openTickets = [] } = useQuery({
+    queryKey: ['helpdesk', 'open-count'],
+    queryFn: () => smartHelpdeskService.getTickets('OPEN'),
+    staleTime: 60_000,
+  });
 
   const allPosts = useMemo(() => data?.pages.flatMap((p) => p.content) ?? [], [data]);
 
@@ -378,12 +391,12 @@ export default function FeedScreen() {
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
-    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length, color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
-    { id: 'polls',   label: 'Active Polls',   value: 3,                    color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
-    { id: 'notifs',  label: 'Notifications',  value: unreadCount,          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
-    { id: 'sports',  label: 'Live Matches',   value: 1,                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
-    { id: 'tickets', label: 'Open Tickets',   value: 0,                    color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
-  ], [upcomingEvents.length, unreadCount]);
+    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length,                color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'polls',   label: 'Active Polls',   value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
+    { id: 'notifs',  label: 'Notifications',  value: unreadCount,                          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'sports',  label: 'Live Matches',   value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
+    { id: 'tickets', label: 'Open Tickets',   value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
+  ], [upcomingEvents.length, activePollsPage?.totalElements, unreadCount, openTickets.length]);
 
   const StatsRow = useMemo(() => (
     <ScrollView
