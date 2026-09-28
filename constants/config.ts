@@ -49,6 +49,7 @@ export const GRADIENTS = {
   success:    ['#059669', '#10B981'] as const,
   surface:    ['#FFFFFF', '#f0f4ff'] as const,
   card:       ['#f8f9ff', '#FFFFFF'] as const,
+  avatar:     ['#6366F1', '#7C3AED'] as const,
 } as const;
 
 // ── Typography ─────────────────────────────────────────────────

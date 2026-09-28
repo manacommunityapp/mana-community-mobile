@@ -1,13 +1,22 @@
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator,
+  ScrollView, Alert, ActivityIndicator, RefreshControl, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS } from '@/constants/config';
+import { profileService } from '@/services/profileService';
+import { eventService } from '@/services/eventService';
+import { marketplaceService } from '@/services/marketplaceService';
+import { sportsService } from '@/services/sportsService';
+import { maintenanceDuesService } from '@/services/maintenanceDuesService';
+import { smartHelpdeskService } from '@/services/smartHelpdeskService';
+import { notificationService } from '@/services/notificationService';
 import {
   VIEW_EMERGENCY,
   VIEW_GROUP_BUYING,
@@ -55,8 +64,77 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 export default function ProfileScreen() {
-  const { user, logout, isLoading } = useAuth();
+  const { user: authUser, logout, isLoading: isAuthLoading, loadUser } = useAuth();
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // ── Database Queries ──────────────────────────────────────────────
+  // 1. Fresh Profile from /api/users/me
+  const { data: dbProfile, refetch: refetchProfile } = useQuery({
+    queryKey: ['profile', 'me'],
+    queryFn: () => profileService.getProfile(),
+    staleTime: 30_000,
+  });
+
+  // 2. My Events from /api/events/mine
+  const { data: myEvents = [], refetch: refetchEvents } = useQuery({
+    queryKey: ['events', 'mine'],
+    queryFn: () => eventService.getMyEvents(),
+    staleTime: 30_000,
+  });
+
+  // 3. My Marketplace Listings from /api/marketplace/listings/mine
+  const { data: myListingsPage, refetch: refetchListings } = useQuery({
+    queryKey: ['marketplace', 'mine'],
+    queryFn: () => marketplaceService.getMyListings(),
+    staleTime: 30_000,
+  });
+
+  // 4. My Sports Teams from /api/sports/teams/my
+  const { data: myTeams = [], refetch: refetchTeams } = useQuery({
+    queryKey: ['sports', 'my-teams'],
+    queryFn: () => sportsService.getMyTeams(),
+    staleTime: 30_000,
+  });
+
+  // 5. Maintenance Pending Bills from /api/finance/maintenance/bills/pending
+  const { data: pendingBills = [], refetch: refetchBills } = useQuery({
+    queryKey: ['finance', 'pending-bills'],
+    queryFn: () => maintenanceDuesService.getPendingBills(),
+    staleTime: 60_000,
+  });
+
+  // 6. My Open Tickets from /api/helpdesk/tickets
+  const { data: openTickets = [], refetch: refetchTickets } = useQuery({
+    queryKey: ['helpdesk', 'my-open'],
+    queryFn: () => smartHelpdeskService.getTickets('OPEN'),
+    staleTime: 60_000,
+  });
+
+  // 7. Unread Notifications Count
+  const { data: unreadNotifsCount = 0, refetch: refetchNotifs } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => notificationService.getUnreadCount(),
+    staleTime: 30_000,
+  });
+
+  // Merge live DB profile with Zustand auth user
+  const user = dbProfile || authUser;
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.allSettled([
+      refetchProfile(),
+      refetchEvents(),
+      refetchListings(),
+      refetchTeams(),
+      refetchBills(),
+      refetchTickets(),
+      refetchNotifs(),
+      loadUser(),
+    ]);
+    setRefreshing(false);
+  }, [refetchProfile, refetchEvents, refetchListings, refetchTeams, refetchBills, refetchTickets, refetchNotifs, loadUser]);
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -68,7 +146,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  if (isLoading || !user) {
+  if (isAuthLoading || !user) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator color={COLORS.primary} size="large" />
@@ -79,7 +157,6 @@ export default function ProfileScreen() {
   const isSuperAdmin = user.role === 'SUPER_ADMIN';
   const hasPerm = (perm: string) => isSuperAdmin || (user?.permissions || []).includes(perm);
   const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'].includes(user.role);
-  const avatarColor = getAvatarColor(user.name);
 
   // Check if any community service items are visible
   const showEmergency = hasPerm(VIEW_EMERGENCY);
@@ -95,10 +172,32 @@ export default function ProfileScreen() {
   const showPolls = hasPerm(VIEW_POLLS);
   const showMarketplace = hasPerm(VIEW_MARKETPLACE);
 
+  const flatNumber = user.flatNumber || user.flatNo;
+  const tower = user.tower || user.block;
+  const communityName = user.communityName;
+  const profilePhoto = user.profilePicUrl || user.profilePhoto;
+
+  const totalEventsCount = myEvents.length;
+  const totalListingsCount = myListingsPage?.totalElements ?? myListingsPage?.content?.length ?? 0;
+  const totalTeamsCount = myTeams.length;
+
+  // Total pending dues sum
+  const pendingDuesTotal = pendingBills.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+      >
         {/* ── Hero Banner ─────────────────────────────────────── */}
         <LinearGradient
           colors={['#4338CA', '#4F46E5', '#6366F1']}
@@ -110,34 +209,59 @@ export default function ProfileScreen() {
           <View style={styles.heroBgDot1} />
           <View style={styles.heroBgDot2} />
 
-          {/* Avatar */}
-          <LinearGradient
-            colors={GRADIENTS.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroAvatar}
-          >
-            <Text style={[styles.heroAvatarText, { color: '#FFFFFF' }]}>
-              {user.name[0].toUpperCase()}
-            </Text>
-          </LinearGradient>
+          {/* Avatar / Profile Photo */}
+          {profilePhoto ? (
+            <View style={styles.heroAvatarImageWrap}>
+              <Image source={{ uri: profilePhoto }} style={styles.heroAvatarImage} />
+            </View>
+          ) : (
+            <LinearGradient
+              colors={GRADIENTS.avatar}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroAvatar}
+            >
+              <Text style={[styles.heroAvatarText, { color: '#FFFFFF' }]}>
+                {(user.name || 'U')[0].toUpperCase()}
+              </Text>
+            </LinearGradient>
+          )}
 
           {/* Name & info */}
-          <Text style={styles.heroName}>{user.name}</Text>
+          <Text style={styles.heroName}>{user.name || user.fullName}</Text>
           <Text style={styles.heroEmail}>{user.email}</Text>
 
-          {/* Flat / Tower tags */}
+          {user.profession ? (
+            <Text style={styles.heroProfession}>💼 {user.profession}</Text>
+          ) : null}
+
+          {user.bio ? (
+            <Text style={styles.heroBio} numberOfLines={2}>{user.bio}</Text>
+          ) : null}
+
+          {/* Flat / Tower / Community tags */}
           <View style={styles.heroTagRow}>
-            {user.flatNumber && (
+            {communityName && (
               <View style={styles.heroTag}>
-                <Ionicons name="home-outline" size={12} color="rgba(255,255,255,0.9)" />
-                <Text style={styles.heroTagText}>{user.flatNumber}</Text>
+                <Ionicons name="business" size={12} color="rgba(255,255,255,0.9)" />
+                <Text style={styles.heroTagText}>{communityName}</Text>
               </View>
             )}
-            {user.tower && (
+            {flatNumber && (
+              <View style={styles.heroTag}>
+                <Ionicons name="home-outline" size={12} color="rgba(255,255,255,0.9)" />
+                <Text style={styles.heroTagText}>{flatNumber}</Text>
+              </View>
+            )}
+            {tower && (
               <View style={styles.heroTag}>
                 <Ionicons name="business-outline" size={12} color="rgba(255,255,255,0.9)" />
-                <Text style={styles.heroTagText}>{user.tower}</Text>
+                <Text style={styles.heroTagText}>{tower}</Text>
+              </View>
+            )}
+            {user.residentType && (
+              <View style={styles.heroTag}>
+                <Text style={styles.heroTagText}>{user.residentType}</Text>
               </View>
             )}
             {/* Status badge */}
@@ -158,20 +282,32 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </LinearGradient>
 
-        {/* ── Profile Stats Row ─────────────────────────────────────── */}
+        {/* ── Live Database Stats Row ─────────────────────────────────────── */}
         <View style={styles.profileStatsRow}>
-          <View style={[styles.profileStatTile, { backgroundColor: '#FEF3C7' }]}>
-            <Text style={[styles.profileStatNum, { color: '#D97706' }]}>12</Text>
+          <TouchableOpacity
+            style={[styles.profileStatTile, { backgroundColor: '#FEF3C7' }]}
+            onPress={() => router.push('/tabs/events')}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.profileStatNum, { color: '#D97706' }]}>{totalEventsCount}</Text>
             <Text style={[styles.profileStatLabel, { color: '#D97706' }]}>Events</Text>
-          </View>
-          <View style={[styles.profileStatTile, { backgroundColor: COLORS.primaryLight }]}>
-            <Text style={[styles.profileStatNum, { color: COLORS.primary }]}>8</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.profileStatTile, { backgroundColor: COLORS.primaryLight }]}
+            onPress={() => router.push('/tabs/marketplace')}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.profileStatNum, { color: COLORS.primary }]}>{totalListingsCount}</Text>
             <Text style={[styles.profileStatLabel, { color: COLORS.primary }]}>Listings</Text>
-          </View>
-          <View style={[styles.profileStatTile, { backgroundColor: '#DCFCE7' }]}>
-            <Text style={[styles.profileStatNum, { color: '#059669' }]}>3</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.profileStatTile, { backgroundColor: '#DCFCE7' }]}
+            onPress={() => router.push('/sports/my-teams')}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.profileStatNum, { color: '#059669' }]}>{totalTeamsCount}</Text>
             <Text style={[styles.profileStatLabel, { color: '#059669' }]}>Teams</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* ── Community Services ────────────────────────────────── */}
@@ -195,6 +331,7 @@ export default function ProfileScreen() {
                   onPress={() => router.push('/finance')}
                   iconColor="#10B981"
                   iconBg="#D1FAE5"
+                  badge={pendingDuesTotal > 0 ? `₹${pendingDuesTotal}` : undefined}
                 />
               )}
               {showHelpdesk && (
@@ -204,6 +341,7 @@ export default function ProfileScreen() {
                   onPress={() => router.push('/helpdesk')}
                   iconColor="#D97706"
                   iconBg="#FEF3C7"
+                  badge={openTickets.length > 0 ? `${openTickets.length} Open` : undefined}
                 />
               )}
               {showGroupBuying && (
@@ -241,7 +379,14 @@ export default function ProfileScreen() {
         <SectionHeader title="Explore" />
         <View style={styles.menuSection}>
           {showSports && (
-            <MenuItem icon="trophy-outline"      label="Sports Leagues"    onPress={() => router.push('/sports')}      iconColor="#059669" iconBg="#DCFCE7" />
+            <MenuItem
+              icon="trophy-outline"
+              label="Sports Leagues"
+              onPress={() => router.push('/sports')}
+              iconColor="#059669"
+              iconBg="#DCFCE7"
+              badge={totalTeamsCount > 0 ? `${totalTeamsCount} Teams` : undefined}
+            />
           )}
           <MenuItem icon="car-sport-outline"   label="Commute Pool"      onPress={() => router.push('/commute')}     iconColor="#2563EB" iconBg="#DBEAFE" />
           {showPolls && (
@@ -249,7 +394,14 @@ export default function ProfileScreen() {
           )}
           <MenuItem icon="pricetag-outline"    label="Auctions"          onPress={() => router.push('/auction')}     iconColor="#D97706" iconBg="#FEF3C7" />
           {showMarketplace && (
-            <MenuItem icon="storefront-outline"  label="Marketplace"       onPress={() => router.push('/tabs/marketplace')} iconColor="#059669" iconBg="#D1FAE5" />
+            <MenuItem
+              icon="storefront-outline"
+              label="Marketplace"
+              onPress={() => router.push('/tabs/marketplace')}
+              iconColor="#059669"
+              iconBg="#D1FAE5"
+              badge={totalListingsCount > 0 ? `${totalListingsCount} Active` : undefined}
+            />
           )}
           <MenuItem icon="restaurant-outline"  label="Community Kitchen" onPress={() => router.push('/food')}        iconColor="#E11D48" iconBg="#FFE4E6" />
           <MenuItem icon="shield-checkmark-outline" label="Gate & Visitors" onPress={() => router.push('/visitors')}  iconColor="#0891B2" iconBg="#CFFAFE" />
@@ -267,7 +419,12 @@ export default function ProfileScreen() {
         {/* ── Account ─────────────────────────────────────────── */}
         <SectionHeader title="Account" />
         <View style={styles.menuSection}>
-          <MenuItem icon="notifications-outline"  label="Notifications"   onPress={() => router.push('/notifications')} />
+          <MenuItem
+            icon="notifications-outline"
+            label="Notifications"
+            onPress={() => router.push('/notifications')}
+            badge={unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined}
+          />
           <MenuItem icon="lock-closed-outline"    label="Change Password"  onPress={() => router.push('/settings/password')} />
           <MenuItem icon="people-outline"         label="My Community"    onPress={() => router.push('/community')} />
           <MenuItem icon="time-outline"           label="My Activity"     onPress={() => router.push('/activity')} />
@@ -349,6 +506,21 @@ const styles = StyleSheet.create({
     bottom: -40,
     left: -40,
   },
+  heroAvatarImageWrap: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.35)',
+    marginBottom: 14,
+    overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  heroAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 42,
+  },
   heroAvatar: {
     width: 84,
     height: 84,
@@ -364,6 +536,23 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 34,
     fontFamily: FONTS.displayEB,
+  },
+  heroProfession: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
+    textAlign: 'center',
+    fontFamily: FONTS.semiBold,
+  },
+  heroBio: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 4,
+    paddingHorizontal: 16,
+    textAlign: 'center',
+    fontFamily: FONTS.regular,
+    lineHeight: 16,
   },
   heroName: {
     fontSize: 22,
