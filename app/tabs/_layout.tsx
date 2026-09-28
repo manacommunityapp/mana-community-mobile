@@ -119,7 +119,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* Hidden tabs — accessible via top header & stack navigation */}
       <Tabs.Screen name="sports" options={{ href: null }} />
     </Tabs>
   );

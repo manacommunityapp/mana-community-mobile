@@ -1,6 +1,15 @@
 import { useEffect } from 'react';
-import { Text as RNText, TextInput as RNTextInput } from 'react-native';
+import { LogBox } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
+
+// Suppress dev warning and error overlays in the mobile app UI
+LogBox.ignoreAllLogs(true);
+LogBox.ignoreLogs([
+  'Unknown child element passed to Stack',
+  'Unknown child element passed to Tabs',
+  'VirtualizedLists should never be nested',
+  'Non-serializable values were found in the navigation state',
+]);
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';

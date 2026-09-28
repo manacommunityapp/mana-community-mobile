@@ -9,13 +9,13 @@ export default function OnboardingLayout() {
         gestureEnabled: false,          // no swipe-back during onboarding
       }}
     >
-      <Stack.Screen name="index"   />  {/* Welcome          */}
-      <Stack.Screen name="account" />  {/* Step 1 — Account */}
-      <Stack.Screen name="community" />{/* Step 2 — Community invite */}
-      <Stack.Screen name="details" />  {/* Step 3 — Flat / block */}
-      <Stack.Screen name="verify"  />  {/* Step 4 — KYC     */}
+      <Stack.Screen name="index" />
+      <Stack.Screen name="account" />
+      <Stack.Screen name="community" />
+      <Stack.Screen name="details" />
+      <Stack.Screen name="verify" />
       <Stack.Screen name="pending" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="tour"    />  {/* Feature tour      */}
+      <Stack.Screen name="tour" />
     </Stack>
   );
 }
