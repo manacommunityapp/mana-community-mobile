@@ -59,8 +59,8 @@ export function QuickActions() {
   const router = useRouter();
   const [showAllModal, setShowAllModal] = useState(false);
 
-  // The 9 primary highlighted services matching design-preview.html
-  const highlightedServices = ALL_COMMUNITY_SERVICES.slice(0, 9);
+  // Show top 4 in a row on the main dashboard, all others in See All modal
+  const highlightedServices = ALL_COMMUNITY_SERVICES.slice(0, 4);
 
   const categories: Array<QuickActionItem['category']> = [
     'Safety & Help',
@@ -85,8 +85,8 @@ export function QuickActions() {
         </TouchableOpacity>
       </View>
 
-      {/* 3x3 Community Services Grid (matches .qg from design-preview.html) */}
-      <View style={s.gridContainer}>
+      {/* Row of 4 Primary Services */}
+      <View style={s.rowContainer}>
         {highlightedServices.map((action) => (
           <TouchableOpacity
             key={action.id}
@@ -210,37 +210,36 @@ const s = StyleSheet.create({
     fontFamily: FONTS.semiBold,
   },
 
-  // ── 3x3 Grid (matches .qg from design-preview) ──
-  gridContainer: {
+  // ── Row of 4 items ──
+  rowContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     paddingHorizontal: 14,
-    gap: 6,
+    gap: 8,
     justifyContent: 'space-between',
   },
   card: {
-    width: '32%',
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.15)',
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 4,
     position: 'relative',
     ...SHADOWS.sm,
   },
   iconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emojiIcon: {
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
   },
   label: {
