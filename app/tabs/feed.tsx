@@ -834,9 +834,9 @@ const styles = StyleSheet.create({
   statTile: {
     borderRadius: 10,
     paddingHorizontal: 9,
-    paddingVertical: 7,
+    paddingVertical: 6,
     width: STAT_TILE_W,
-    gap: 2,
+    gap: 4,
     ...SHADOWS.sm,
   },
   statTileTop: {
@@ -845,16 +845,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statNum: {
-    fontSize: 17.5,
+    fontSize: 18,
     fontWeight: '800',
     letterSpacing: -0.3,
     fontFamily: FONTS.displayEB,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   statLabel: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     fontWeight: '600',
-    lineHeight: 13,
+    lineHeight: 15,
     fontFamily: FONTS.semiBold,
     letterSpacing: 0.1,
   },
