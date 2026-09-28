@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 
 type ServiceCategory =
   | 'ALL'
@@ -729,11 +729,13 @@ const s = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.3,
+    fontFamily: FONTS.displayBold,
   },
   headerSub: {
     fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 1,
+    fontFamily: FONTS.regular,
   },
   headerIconBtn: {
     width: 38,
@@ -766,6 +768,7 @@ const s = StyleSheet.create({
     color: '#fff',
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: FONTS.bold,
   },
 
   // ── Hero Banner ───────────────────────────────────────────────────
@@ -793,6 +796,7 @@ const s = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
     letterSpacing: 0.5,
+    fontFamily: FONTS.bold,
   },
   heroTitle: {
     fontSize: 18,
@@ -800,11 +804,13 @@ const s = StyleSheet.create({
     color: '#fff',
     letterSpacing: -0.3,
     marginTop: 2,
+    fontFamily: FONTS.displayEB,
   },
   heroSub: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.85)',
     lineHeight: 16,
+    fontFamily: FONTS.regular,
   },
   hotlineRow: {
     flexDirection: 'row',
@@ -910,11 +916,13 @@ const s = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.2,
+    fontFamily: FONTS.displayBold,
   },
   sectionCount: {
     fontSize: 12,
     fontWeight: '600',
     color: COLORS.textMuted,
+    fontFamily: FONTS.semiBold,
   },
 
   // ── Provider Card ─────────────────────────────────────────────────
@@ -963,6 +971,7 @@ const s = StyleSheet.create({
     color: COLORS.text,
     flex: 1,
     letterSpacing: -0.2,
+    fontFamily: FONTS.displayBold,
   },
   verifiedPill: {
     flexDirection: 'row',
@@ -977,6 +986,7 @@ const s = StyleSheet.create({
     fontSize: 8.5,
     fontWeight: '800',
     color: '#059669',
+    fontFamily: FONTS.bold,
   },
   specialityText: {
     fontSize: 12,
