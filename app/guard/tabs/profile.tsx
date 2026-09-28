@@ -3,10 +3,11 @@ import {
   ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, GRADIENTS, getAvatarColor } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
@@ -51,11 +52,16 @@ export default function GuardProfileScreen() {
         <View style={s.hero}>
           <View style={s.heroDot1} />
           <View style={s.heroDot2} />
-          <View style={[s.heroAvatar, { backgroundColor: COLORS.primary }]}>
+          <LinearGradient
+            colors={GRADIENTS.avatar}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.heroAvatar}
+          >
             <Text style={[s.heroAvatarText, { color: '#FFFFFF' }]}>
               {(user?.name || 'G')[0].toUpperCase()}
             </Text>
-          </View>
+          </LinearGradient>
           <Text style={s.heroName}>{user?.name || 'Guard'}</Text>
           <Text style={s.heroEmail}>{user?.email}</Text>
           <View style={s.heroTagRow}>

@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, FONTS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor } from '@/constants/config';
 import {
   VIEW_EMERGENCY,
   VIEW_GROUP_BUYING,
@@ -111,11 +111,16 @@ export default function ProfileScreen() {
           <View style={styles.heroBgDot2} />
 
           {/* Avatar */}
-          <View style={[styles.heroAvatar, { backgroundColor: '#FFFFFF' }]}>
-            <Text style={[styles.heroAvatarText, { color: COLORS.primary }]}>
+          <LinearGradient
+            colors={GRADIENTS.avatar}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroAvatar}
+          >
+            <Text style={[styles.heroAvatarText, { color: '#FFFFFF' }]}>
               {user.name[0].toUpperCase()}
             </Text>
-          </View>
+          </LinearGradient>
 
           {/* Name & info */}
           <Text style={styles.heroName}>{user.name}</Text>

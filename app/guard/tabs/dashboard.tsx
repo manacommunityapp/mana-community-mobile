@@ -4,10 +4,11 @@ import {
   ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, SHADOWS, RADIUS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, GRADIENTS, getAvatarColor } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 import { guardService, type GuardDashboardStats, type GuardVisitor, type GuardIncident } from '@/services/guardService';
 
@@ -108,11 +109,16 @@ export default function GuardDashboard() {
         {/* Welcome bar */}
         <View style={s.welcome}>
           <View style={s.welcomeLeft}>
-            <View style={[s.avatar, { backgroundColor: COLORS.primary }]}>
+            <LinearGradient
+              colors={GRADIENTS.avatar}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.avatar}
+            >
               <Text style={[s.avatarText, { color: '#FFFFFF' }]}>
                 {(user?.name || 'G')[0].toUpperCase()}
               </Text>
-            </View>
+            </LinearGradient>
             <View>
               <Text style={s.dutyLabel}>On Duty</Text>
               <Text style={s.userName}>{user?.name || 'Guard'}</Text>

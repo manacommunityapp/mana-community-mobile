@@ -45,6 +45,7 @@ export const GRADIENTS = {
   primary:    ['#4F46E5', '#6366F1'] as const,
   primaryDeep:['#3730A3', '#4F46E5'] as const,
   hero:       ['#4338CA', '#4F46E5', '#6366F1'] as const,
+  avatar:     ['#6366F1', '#7C3AED'] as const, // from-indigo-500 to-violet-600
   warm:       ['#D97706', '#B45309'] as const,
   success:    ['#059669', '#10B981'] as const,
   surface:    ['#FFFFFF', '#f0f4ff'] as const,

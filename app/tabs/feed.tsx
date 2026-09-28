@@ -490,9 +490,14 @@ export default function FeedScreen() {
       {/* Composer Card */}
       <View style={styles.composerCard}>
         <View style={styles.composerRow}>
-          <View style={[styles.composerAvatar, { backgroundColor: COLORS.primary }]}>
+          <LinearGradient
+            colors={GRADIENTS.avatar}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.composerAvatar}
+          >
             <Text style={styles.composerAvatarText}>{userInitial}</Text>
-          </View>
+          </LinearGradient>
           <TouchableOpacity
             style={styles.composerInput}
             onPress={() => router.push('/polls/create')}
@@ -581,7 +586,9 @@ export default function FeedScreen() {
           activeOpacity={0.7}
         >
           <LinearGradient
-            colors={[COLORS.primary, COLORS.primaryDark]}
+            colors={GRADIENTS.avatar}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={styles.profileAvatar}
           >
             <Text style={styles.profileAvatarText}>{userInitial}</Text>
