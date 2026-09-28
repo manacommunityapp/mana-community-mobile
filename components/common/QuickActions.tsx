@@ -23,7 +23,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'visitors', icon: 'shield-checkmark-outline', label: 'Visitors Gate', route: '/visitors', bg: '#CFFAFE', color: '#0891B2', category: 'Safety & Help' },
 
   // Living & Essentials
-  { id: 'dues', icon: 'card-outline', label: 'Dues', route: '/finance', bg: '#EEF2FF', color: '#4F46E5', category: 'Living & Bills', badge: 'Bills' },
+  { id: 'dues', icon: 'card-outline', label: 'Dues', route: '/finance', bg: '#EEF2FF', color: '#4F46E5', category: 'Living & Bills' },
   { id: 'services', icon: 'construct-outline', label: 'Home Services', route: '/services', bg: '#FCE7F3', color: '#DB2777', category: 'Living & Bills' },
   { id: 'notices', icon: 'megaphone-outline', label: 'Notices', route: '/admin/announcements', bg: '#EDE9FE', color: '#7C3AED', category: 'Living & Bills' },
   { id: 'parking', icon: 'car-outline', label: 'Parking Slots', route: '/parking', bg: '#E0E7FF', color: '#4338CA', category: 'Living & Bills' },
@@ -69,6 +69,7 @@ export function QuickActions() {
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'offers')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'group_buying')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'sports')!,
+    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'commute')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'governance')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'academy')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'cpos')!,
@@ -78,7 +79,6 @@ export function QuickActions() {
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'facilities')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'food')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'trips')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'commute')!,
     ALL_COMMUNITY_SERVICES.find((s) => s.id === 'pets')!,
   ].filter(Boolean);
 
