@@ -195,7 +195,7 @@ export default function EventDetailScreen() {
           {/* Organizer */}
           <View style={s.infoCard}>
             <View style={s.infoIconWrap}>
-              <Ionicons name="person-outline" size={20} color={COLORS.warning} />
+              <Ionicons name="person-outline" size={20} color={COLORS.primary} />
             </View>
             <View style={s.infoContent}>
               <Text style={s.infoLabel}>Organizer</Text>

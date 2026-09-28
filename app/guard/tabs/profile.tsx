@@ -51,8 +51,8 @@ export default function GuardProfileScreen() {
         <View style={s.hero}>
           <View style={s.heroDot1} />
           <View style={s.heroDot2} />
-          <View style={[s.heroAvatar, { backgroundColor: avatarColor.bg }]}>
-            <Text style={[s.heroAvatarText, { color: avatarColor.text }]}>
+          <View style={[s.heroAvatar, { backgroundColor: COLORS.primary }]}>
+            <Text style={[s.heroAvatarText, { color: '#FFFFFF' }]}>
               {(user?.name || 'G')[0].toUpperCase()}
             </Text>
           </View>

@@ -490,7 +490,7 @@ export default function FeedScreen() {
       {/* Composer Card */}
       <View style={styles.composerCard}>
         <View style={styles.composerRow}>
-          <View style={[styles.composerAvatar, { backgroundColor: avatarColor.bg }]}>
+          <View style={[styles.composerAvatar, { backgroundColor: COLORS.primary }]}>
             <Text style={styles.composerAvatarText}>{userInitial}</Text>
           </View>
           <TouchableOpacity
@@ -581,7 +581,7 @@ export default function FeedScreen() {
           activeOpacity={0.7}
         >
           <LinearGradient
-            colors={[avatarColor.bg, avatarColor.bg + 'CC']}
+            colors={[COLORS.primary, COLORS.primaryDark]}
             style={styles.profileAvatar}
           >
             <Text style={styles.profileAvatarText}>{userInitial}</Text>

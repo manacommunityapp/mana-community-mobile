@@ -108,8 +108,8 @@ export default function GuardDashboard() {
         {/* Welcome bar */}
         <View style={s.welcome}>
           <View style={s.welcomeLeft}>
-            <View style={[s.avatar, { backgroundColor: avatarColor.bg }]}>
-              <Text style={[s.avatarText, { color: avatarColor.text }]}>
+            <View style={[s.avatar, { backgroundColor: COLORS.primary }]}>
+              <Text style={[s.avatarText, { color: '#FFFFFF' }]}>
                 {(user?.name || 'G')[0].toUpperCase()}
               </Text>
             </View>

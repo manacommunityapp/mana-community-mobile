@@ -111,8 +111,8 @@ export default function ProfileScreen() {
           <View style={styles.heroBgDot2} />
 
           {/* Avatar */}
-          <View style={[styles.heroAvatar, { backgroundColor: avatarColor.bg }]}>
-            <Text style={[styles.heroAvatarText, { color: avatarColor.text }]}>
+          <View style={[styles.heroAvatar, { backgroundColor: '#FFFFFF' }]}>
+            <Text style={[styles.heroAvatarText, { color: COLORS.primary }]}>
               {user.name[0].toUpperCase()}
             </Text>
           </View>
