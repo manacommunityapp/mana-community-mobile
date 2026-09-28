@@ -112,7 +112,7 @@ export default function ProfileScreen() {
 
           {/* Avatar */}
           <LinearGradient
-            colors={GRADIENTS.avatar}
+            colors={GRADIENTS.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroAvatar}

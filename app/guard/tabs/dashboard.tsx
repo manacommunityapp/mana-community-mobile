@@ -110,7 +110,7 @@ export default function GuardDashboard() {
         <View style={s.welcome}>
           <View style={s.welcomeLeft}>
             <LinearGradient
-              colors={GRADIENTS.avatar}
+              colors={GRADIENTS.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={s.avatar}

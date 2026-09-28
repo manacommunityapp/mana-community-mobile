@@ -491,7 +491,7 @@ export default function FeedScreen() {
       <View style={styles.composerCard}>
         <View style={styles.composerRow}>
           <LinearGradient
-            colors={GRADIENTS.avatar}
+            colors={GRADIENTS.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.composerAvatar}
@@ -586,7 +586,7 @@ export default function FeedScreen() {
           activeOpacity={0.7}
         >
           <LinearGradient
-            colors={GRADIENTS.avatar}
+            colors={GRADIENTS.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.profileAvatar}

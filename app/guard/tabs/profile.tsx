@@ -53,7 +53,7 @@ export default function GuardProfileScreen() {
           <View style={s.heroDot1} />
           <View style={s.heroDot2} />
           <LinearGradient
-            colors={GRADIENTS.avatar}
+            colors={GRADIENTS.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={s.heroAvatar}
