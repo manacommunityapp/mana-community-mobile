@@ -89,7 +89,7 @@ const g = StyleSheet.create({
   dot:             { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
   dotActive:       { width: 18, backgroundColor: '#fff' },
   counter:         { position: 'absolute', top: 12, right: 14, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3 },
-  counterText:     { color: '#fff', fontSize: 12, fontWeight: '600' },
+  counterText:     { color: '#fff', fontSize: 12, fontFamily: 'DMSans-SemiBold', fontWeight: '600' },
 });
 
 // ── Main screen ────────────────────────────────────────────────
@@ -356,7 +356,7 @@ const scr = StyleSheet.create({
   body:              { padding: 16, gap: 12 },
   tagRow:            { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   soldBadge:         { backgroundColor: '#374151', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  soldText:          { color: '#fff', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  soldText:          { color: '#fff', fontSize: 12, fontFamily: 'DMSans-Bold', fontWeight: '800', letterSpacing: 1 },
   catBadge:          { backgroundColor: '#EEF2FF', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   catText:           { fontSize: 12, fontWeight: '600', color: COLORS.primary },
   condBadge:         { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },

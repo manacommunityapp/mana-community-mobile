@@ -16,7 +16,7 @@ function SectionHeader({ title }: { title: string }) {
   return <Text style={sh.text}>{title}</Text>;
 }
 const sh = StyleSheet.create({
-  text: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  text: { fontSize: 12, fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
 });
 
 function FieldInput({
@@ -42,7 +42,7 @@ function FieldInput({
 }
 const fi = StyleSheet.create({
   wrap:     { gap: 5 },
-  label:    { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  label:    { fontSize: 13, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   input:    { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.text, backgroundColor: COLORS.surface },
   disabled: { backgroundColor: '#F9FAFB', color: COLORS.textMuted },
 });
@@ -72,7 +72,7 @@ const ft = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   emoji: { fontSize: 22, width: 28 },
   info:  { flex: 1 },
-  label: { fontSize: 15, fontWeight: '600', color: COLORS.text },
+  label: { fontSize: 15, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   sub:   { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
 });
 
@@ -266,7 +266,7 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: COLORS.background },
   header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:            { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:           { fontSize: 18, fontWeight: '700', color: COLORS.text, flex: 1 },
+  title:           { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   save:            { fontSize: 16, fontWeight: '700', color: COLORS.primary },
   scroll:          { padding: 16, gap: 16 },
   section:         { gap: 12, backgroundColor: COLORS.surface, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: COLORS.border },

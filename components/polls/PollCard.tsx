@@ -189,7 +189,7 @@ const s = StyleSheet.create({
   wrapFull:          { gap: 14 },
   statusRow:         { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   activePill:        { backgroundColor: '#EEF2FF', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  activeText:        { fontSize: 11, fontWeight: '700', color: COLORS.primary },
+  activeText:        { fontSize: 11, fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.primary },
   closedPill:        { backgroundColor: '#F3F4F6', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   closedText:        { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
   deadline:          { fontSize: 11, color: COLORS.textMuted },

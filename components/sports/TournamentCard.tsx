@@ -124,7 +124,7 @@ export function TournamentCard({ tournament: t, compact = false }: TournamentCar
             <View style={c.teamsInfo}>
               <Ionicons name="people-outline" size={13} color={COLORS.textMuted} />
               <Text style={c.teamsText}>
-                <Text style={{ fontWeight: '800', color: COLORS.text }}>{t.registeredTeamsCount}</Text>
+                <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.text }}>{t.registeredTeamsCount}</Text>
                 /{t.maxTeams} teams ({Math.round(fillPct)}%)
               </Text>
               {t.status === 'REGISTRATION_OPEN' && spotsLeft > 0 && (
@@ -179,7 +179,7 @@ const c = StyleSheet.create({
   },
   sportEmoji:   { fontSize: 22 },
   headerText:   { flex: 1, gap: 2 },
-  name:         { fontSize: 15, fontWeight: '800', color: COLORS.text, lineHeight: 20 },
+  name:         { fontSize: 15, fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.text, lineHeight: 20 },
   organizer:    { fontSize: 11.5, color: COLORS.textMuted, fontWeight: '500' },
   statusBadge: {
     flexDirection: 'row',

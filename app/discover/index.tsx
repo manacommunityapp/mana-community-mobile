@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     alignItems: 'center',
   },
-  introTitle: { fontSize: 14, fontWeight: '800', color: '#6D28D9' },
+  introTitle: { fontSize: 14, fontFamily: 'DMSans-Bold', fontWeight: '800', color: '#6D28D9' },
   introText: { fontSize: 12, color: '#5B21B6', marginTop: 2, lineHeight: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
   recCard: {

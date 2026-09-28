@@ -38,7 +38,7 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
 }
 const sp = StyleSheet.create({
   pill:  { alignItems: 'center', flex: 1 },
-  value: { fontSize: 20, fontWeight: '900', color: COLORS.text },
+  value: { fontSize: 20, fontFamily: 'DMSans-Bold', fontWeight: '900', color: COLORS.text },
   label: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500', textAlign: 'center' },
 });
 
@@ -108,7 +108,7 @@ const sc = StyleSheet.create({
   header:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
   emoji:      { fontSize: 24 },
   info:       { flex: 1 },
-  sport:      { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  sport:      { fontSize: 14, fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.text },
   winRate:    { fontSize: 12, color: COLORS.textMuted },
   quickStats: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   qVal:       { fontSize: 13, fontWeight: '700', color: COLORS.text },
@@ -235,7 +235,7 @@ const s = StyleSheet.create({
   container:      { flex: 1, backgroundColor: COLORS.background },
   header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:           { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:          { fontSize: 18, fontWeight: '700', color: COLORS.text, flex: 1 },
+  title:          { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   scroll:         { padding: 16, gap: 16 },
   identityCard:   { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.border },
   bigAvatar:      { width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },

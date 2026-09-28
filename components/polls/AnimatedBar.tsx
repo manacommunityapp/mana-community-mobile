@@ -84,7 +84,7 @@ export function AnimatedBar({
 const s = StyleSheet.create({
   row:          { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 12 },
   checkWrap:    { width: 20, paddingTop: 1 },
-  check:        { fontSize: 14, fontWeight: '800', color: COLORS.primary },
+  check:        { fontSize: 14, fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.primary },
   checkEmpty:   { width: 14, height: 14, borderRadius: 7, borderWidth: 1.5, borderColor: COLORS.border, marginTop: 2 },
   barCol:       { flex: 1, gap: 4 },
   labelRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 },

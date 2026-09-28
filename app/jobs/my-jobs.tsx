@@ -49,7 +49,7 @@ function ApplicationCard({ app }: { app: JobApplicationDto }) {
 const ac = StyleSheet.create({
   card:      { backgroundColor: COLORS.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginHorizontal: 12, marginVertical: 5 },
   row:       { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  jobTitle:  { fontSize: 14, fontWeight: '700', color: COLORS.primary, marginBottom: 4 },
+  jobTitle:  { fontSize: 14, fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.primary, marginBottom: 4 },
   message:   { fontSize: 13, color: COLORS.text, lineHeight: 18 },
   time:      { fontSize: 11, color: COLORS.textMuted, marginTop: 4 },
   badge:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, alignSelf: 'flex-start', flexShrink: 0 },
@@ -182,7 +182,7 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: COLORS.background },
   header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:            { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:           { fontSize: 18, fontWeight: '700', color: COLORS.text, flex: 1 },
+  title:           { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   postBtn:         { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 },
   postBtnText:     { color: '#fff', fontWeight: '700', fontSize: 14 },
   tabs:            { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },

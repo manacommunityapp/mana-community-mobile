@@ -73,7 +73,7 @@ function SportScore({ match }: { match: MatchDto }) {
 
 const ss = StyleSheet.create({
   wrap:         { alignItems: 'center', gap: 0 },
-  mainScore:    { fontSize: 20, fontWeight: '900', color: COLORS.text },
+  mainScore:    { fontSize: 20, fontFamily: 'DMSans-Bold', fontWeight: '900', color: COLORS.text },
   sub:          { fontSize: 11, color: COLORS.textMuted },
   vs:           { fontSize: 11, color: COLORS.textMuted, marginVertical: 1 },
   pending:      { fontSize: 12, color: COLORS.textMuted, fontStyle: 'italic' },
@@ -242,7 +242,7 @@ const c = StyleSheet.create({
     flexWrap: 'wrap',
   },
   sportEmoji:     { fontSize: 14 },
-  tournamentName: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600', flex: 1 },
+  tournamentName: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-SemiBold', fontWeight: '600', flex: 1 },
   roundChip: {
     backgroundColor: COLORS.surfaceAlt,
     borderRadius: 6,
@@ -312,7 +312,7 @@ const c = StyleSheet.create({
   teamEmoji: { fontSize: 20 },
   teamName: {
     fontSize: 13.5,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     color: COLORS.text,
   },
   teamWon: { color: COLORS.success },

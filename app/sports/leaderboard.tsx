@@ -164,7 +164,7 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: COLORS.background },
   header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:            { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:           { fontSize: 18, fontWeight: '700', color: COLORS.text, flex: 1 },
+  title:           { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   periodRow:       { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   periodChip:      { flex: 1, paddingVertical: 10, alignItems: 'center' },
   periodChipActive:{ borderBottomWidth: 2.5, borderBottomColor: COLORS.primary },

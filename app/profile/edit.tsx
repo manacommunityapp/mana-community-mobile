@@ -70,7 +70,7 @@ function Field({
 }
 const fld = StyleSheet.create({
   wrap:      { gap: 5 },
-  label:     { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  label:     { fontSize: 13, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   input:     { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.text, backgroundColor: COLORS.surface },
   multiline: { minHeight: 90, paddingTop: 12 },
   disabled:  { backgroundColor: '#F9FAFB', color: COLORS.textMuted },
@@ -306,7 +306,7 @@ const scr = StyleSheet.create({
   flex:             { flex: 1 },
   header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   headerBtn:        { minWidth: 60 },
-  headerTitle:      { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  headerTitle:      { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
   headerCancel:     { fontSize: 16, color: COLORS.textMuted },
   headerSave:       { fontSize: 16, fontWeight: '700', color: COLORS.primary, textAlign: 'right' },
   scroll:           { padding: 20, gap: 20 },

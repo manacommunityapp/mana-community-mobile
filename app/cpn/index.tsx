@@ -266,7 +266,7 @@ export default function CPNScreen() {
                     <View style={styles.referrerBanner}>
                       <Ionicons name="person-circle-outline" size={18} color="#059669" />
                       <Text style={styles.referrerText}>
-                        Direct Referral by <Text style={{ fontWeight: '800' }}>{job.postedByResident}</Text>
+                        Direct Referral by <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '800' }}>{job.postedByResident}</Text>
                       </Text>
                     </View>
 
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: RADIUS.full,
   },
-  heroPillText: { fontSize: 10, fontWeight: '800', color: '#FDE68A' },
+  heroPillText: { fontSize: 10, fontFamily: 'DMSans-Bold', fontWeight: '800', color: '#FDE68A' },
   heroSubText: { fontSize: 11, color: '#C7D2FE' },
   heroTitle: { fontSize: 17, fontWeight: '900', color: '#fff', marginBottom: 12 },
   heroMetricsGrid: {

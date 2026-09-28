@@ -184,7 +184,7 @@ const s = StyleSheet.create({
   header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   backText:        { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
   headerMid:       { flex: 1 },
-  headerTitle:     { fontSize: 18, fontWeight: '800', color: COLORS.text },
+  headerTitle:     { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '800', color: COLORS.text },
   headerSub:       { fontSize: 12, color: COLORS.textMuted },
   roleBadge:       { backgroundColor: '#EEF2FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   roleText:        { fontSize: 12, fontWeight: '700', color: COLORS.primary },

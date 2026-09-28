@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primaryDark,
   },
-  filterText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  filterText: { fontSize: 12, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.textMuted },
   filterTextActive: { color: '#fff' },
   // ── List ─────────────────────────────────────────────────────
   list: { padding: 12, gap: 10 },
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   },
   urgencyText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: '#fff',
     letterSpacing: 0.5,
     textTransform: 'uppercase',

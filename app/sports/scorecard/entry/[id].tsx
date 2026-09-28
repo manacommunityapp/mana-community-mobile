@@ -93,7 +93,7 @@ const ei = StyleSheet.create({
   nameRow:          { flexDirection: 'row', gap: 8, marginBottom: 6 },
   statsRow:         { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   input:            { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, color: COLORS.text, backgroundColor: COLORS.surface },
-  statLabel:        { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, marginBottom: 2 },
+  statLabel:        { fontSize: 10, fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.textMuted, marginBottom: 2 },
   statInput:        { borderWidth: 1, borderColor: COLORS.border, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 6, fontSize: 14, color: COLORS.text, textAlign: 'center' },
   notOutBtn:        { borderWidth: 1, borderColor: COLORS.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 8, backgroundColor: '#F3F4F6' },
   notOutBtnActive:  { backgroundColor: '#D1FAE5', borderColor: COLORS.success },
@@ -244,7 +244,7 @@ export default function ScorecardEntryScreen() {
 
 const sec = StyleSheet.create({
   wrap:       { backgroundColor: COLORS.surface, borderRadius: 14, padding: 14, gap: 10, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
-  inningsLabel:{ fontSize: 14, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inningsLabel:{ fontSize: 14, fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
   teamInput:  { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: COLORS.text },
   scoreRow:   { flexDirection: 'row', gap: 10 },
   scoreField: { flex: 1 },
@@ -259,7 +259,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   cancel:    { fontSize: 16, color: COLORS.textMuted },
-  title:     { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  title:     { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
   save:      { fontSize: 16, fontWeight: '700', color: COLORS.primary },
   scroll:    { padding: 12 },
   section:   { backgroundColor: COLORS.surface, borderRadius: 14, padding: 14, gap: 8, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },

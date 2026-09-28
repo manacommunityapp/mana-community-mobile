@@ -149,7 +149,7 @@ const es = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
-    fontFamily: FONTS.bold,
+    fontFamily: FONTS.displayBold,
     letterSpacing: -0.2,
   },
   attendeeRow: {
@@ -176,7 +176,7 @@ const es = StyleSheet.create({
   miniAvatarText: {
     color: '#fff',
     fontSize: 8,
-    fontWeight: '800',
+    fontFamily: FONTS.bold, fontWeight: '800',
   },
   attendeeCount: {
     fontSize: 12,
@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#fff',
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FONTS.bold, fontWeight: '800',
   },
 
   // ── Search Bar ────────────────────────────────────────────────────

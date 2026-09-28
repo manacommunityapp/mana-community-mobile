@@ -87,7 +87,7 @@ export default function MyRidesScreen() {
 const s = StyleSheet.create({
   container:     { flex: 1, backgroundColor: COLORS.background },
   header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  backBtn:       { fontSize: 15, color: COLORS.primary, fontWeight: '600' },
+  backBtn:       { fontSize: 15, color: COLORS.primary, fontFamily: 'DMSans-SemiBold', fontWeight: '600' },
   headerTitle:   { fontSize: 18, fontWeight: '700', color: COLORS.text },
   tabRow:        { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   tab:           { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },

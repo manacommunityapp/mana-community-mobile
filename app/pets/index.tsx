@@ -192,7 +192,7 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  headerTitle: { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
   headerSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   tabRow: {
     flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 10,

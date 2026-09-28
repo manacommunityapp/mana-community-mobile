@@ -161,7 +161,7 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  headerTitle: { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
   headerSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   filterScroll: { backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   filterRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },

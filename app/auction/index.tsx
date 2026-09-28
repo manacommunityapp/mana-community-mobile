@@ -108,7 +108,7 @@ const ac = StyleSheet.create({
   imagePh:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
   liveBadge:  { position: 'absolute', top: 8, left: 6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EF4444', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 },
   liveDot:    { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
-  liveText:   { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  liveText:   { color: '#fff', fontSize: 10, fontFamily: 'DMSans-Bold', fontWeight: '800', letterSpacing: 0.5 },
   endedBadge: { position: 'absolute', top: 8, left: 6, backgroundColor: '#374151', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 },
   endedText:  { color: '#fff', fontSize: 10, fontWeight: '800' },
   info:       { flex: 1, padding: 12, gap: 5 },
@@ -278,7 +278,7 @@ const s = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Outfit-Bold', fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.3,
   },
@@ -286,7 +286,7 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     marginTop: 1,
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium', fontWeight: '500',
   },
   liveHeaderPill: {
     flexDirection: 'row',
@@ -307,7 +307,7 @@ const s = StyleSheet.create({
   },
   liveHeaderText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.error,
   },
 
@@ -346,11 +346,11 @@ const s = StyleSheet.create({
   tabText: {
     fontSize: 12,
     color: COLORS.textMuted,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
   },
   tabTextActive: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
   },
 
   // ── List & Empty ───────────────────────────────────────────────
@@ -365,7 +365,7 @@ const s = StyleSheet.create({
   loaderText: {
     fontSize: 13,
     color: COLORS.textMuted,
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium', fontWeight: '500',
   },
   empty: {
     alignItems: 'center',
@@ -386,7 +386,7 @@ const s = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
   },
   emptyText: {

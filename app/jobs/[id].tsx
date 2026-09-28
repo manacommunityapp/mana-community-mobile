@@ -90,7 +90,7 @@ function ApplicantRow({
 const ar = StyleSheet.create({
   row:         { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   avatar:      { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  avatarText:  { color: '#fff', fontWeight: '700', fontSize: 14 },
+  avatarText:  { color: '#fff', fontFamily: 'DMSans-Bold', fontWeight: '700', fontSize: 14 },
   info:        { flex: 1, gap: 2 },
   name:        { fontSize: 14, fontWeight: '600', color: COLORS.text },
   flat:        { fontSize: 12, color: COLORS.textMuted },
@@ -371,7 +371,7 @@ const scr = StyleSheet.create({
   container:          { flex: 1, backgroundColor: COLORS.background },
   header:             { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:               { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  headerTitle:        { fontSize: 17, fontWeight: '700', color: COLORS.text, flex: 1 },
+  headerTitle:        { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   filledBtn:          { backgroundColor: '#D1FAE5', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   filledBtnText:      { fontSize: 13, fontWeight: '700', color: '#065F46' },
   scroll:             { padding: 16, gap: 16 },
@@ -410,7 +410,7 @@ const scr = StyleSheet.create({
 const modal = StyleSheet.create({
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   cancel:          { fontSize: 16, color: COLORS.textMuted },
-  title:           { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  title:           { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
   send:            { fontSize: 16, fontWeight: '700', color: COLORS.primary },
   sendDisabled:    { color: COLORS.textMuted },
   scroll:          { padding: 16, gap: 12 },

@@ -7,7 +7,7 @@ export default function OffersLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: '#FFFFFF',
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerTitleStyle: { fontFamily: 'DMSans-Bold', fontWeight: 'bold' },
       }}
     >
       <Stack.Screen name="index" options={{ title: '🏷️ Community Deals & Offers' }} />

@@ -270,7 +270,7 @@ const s = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Outfit-Bold', fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.3,
   },
@@ -278,7 +278,7 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     marginTop: 1,
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium', fontWeight: '500',
   },
   liveHeaderPill: {
     flexDirection: 'row',
@@ -299,7 +299,7 @@ const s = StyleSheet.create({
   },
   liveHeaderText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.error,
   },
 
@@ -337,11 +337,11 @@ const s = StyleSheet.create({
   sportLabel: {
     fontSize: 12,
     color: COLORS.textMuted,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
   },
   sportLabelActive: {
     color: '#fff',
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
   },
 
   // ── Interactive Date Selector ────────────────────────────────────
@@ -388,7 +388,7 @@ const s = StyleSheet.create({
   },
   todayBadgeText: {
     fontSize: 8,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.primary,
     letterSpacing: 0.3,
   },
@@ -397,7 +397,7 @@ const s = StyleSheet.create({
   },
   dateDayName: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
     color: COLORS.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.2,
@@ -407,7 +407,7 @@ const s = StyleSheet.create({
   },
   dateDayNumber: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
   },
   dateDayNumberActive: {
@@ -415,7 +415,7 @@ const s = StyleSheet.create({
   },
   dateMonth: {
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
     color: COLORS.textMuted,
   },
   dateMonthActive: {
@@ -456,12 +456,12 @@ const s = StyleSheet.create({
   },
   segmentText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
     color: COLORS.textMuted,
   },
   segmentTextActive: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
   },
 
   // ── Match List ───────────────────────────────────────────────────
@@ -483,7 +483,7 @@ const s = StyleSheet.create({
   loaderText: {
     fontSize: 13,
     color: COLORS.textMuted,
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium', fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -502,7 +502,7 @@ const s = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
   },
   emptySubtitle: {
@@ -531,7 +531,7 @@ const s = StyleSheet.create({
   emptyActionBtnText: {
     color: '#fff',
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
   },
   emptySecondaryBtn: {
     borderWidth: 1,
@@ -544,7 +544,7 @@ const s = StyleSheet.create({
   emptySecondaryBtnText: {
     color: COLORS.text,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
   },
 });
 

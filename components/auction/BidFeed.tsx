@@ -48,7 +48,7 @@ const r = StyleSheet.create({
   rowMine:      { backgroundColor: '#EEF2FF' },
   avatar:       { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.textMuted, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   avatarMine:   { backgroundColor: COLORS.primary },
-  avatarText:   { color: '#fff', fontWeight: '700', fontSize: 15 },
+  avatarText:   { color: '#fff', fontFamily: 'DMSans-Bold', fontWeight: '700', fontSize: 15 },
   body:         { flex: 1, gap: 2 },
   top:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   name:         { fontSize: 13, fontWeight: '600', color: COLORS.text, flex: 1 },
@@ -111,7 +111,7 @@ export function BidFeed({ bids, currentUserId, maxVisible = 50 }: BidFeedProps) 
 const f = StyleSheet.create({
   container: { flex: 1 },
   header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  headerTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  headerTitle: { fontSize: 14, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
   headerCount: { fontSize: 13, color: COLORS.textMuted },
   sep:       { height: 1, backgroundColor: COLORS.border, marginHorizontal: 16 },
   empty:     { alignItems: 'center', paddingVertical: 32, gap: 8 },

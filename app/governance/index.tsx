@@ -343,7 +343,7 @@ export default function GovernanceScreen() {
                     {/* Participation Metric */}
                     <View style={styles.ballotMetricRow}>
                       <Text style={styles.ballotMetricText}>
-                        👥 <Text style={{ fontWeight: '700', color: COLORS.text }}>{b.totalVotesCast}</Text> of {b.totalEligibleVoters} Voted ({b.turnoutPercentage}%)
+                        👥 <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.text }}>{b.totalVotesCast}</Text> of {b.totalEligibleVoters} Voted ({b.turnoutPercentage}%)
                       </Text>
                       <Text style={styles.ballotMetricText}>
                         ⏳ Ends on {b.endDate}
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 6,
   },
-  statVal: { fontSize: 15, fontWeight: '800', color: COLORS.text },
+  statVal: { fontSize: 15, fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.text },
   statLbl: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
 
   // ── Tab Bar ───────────────────────────────────────────────────────
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
   },
   tabBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     color: COLORS.textSecondary,
   },
   tabBtnTextActive: {
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   },
   typeBadgeText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: 'DMSans-Bold', fontWeight: '900',
     color: '#FFFFFF',
   },
   quorumTag: {
@@ -740,12 +740,12 @@ const styles = StyleSheet.create({
   },
   quorumTagText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     color: '#34D399',
   },
   meetingTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 6,
   },
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
     color: '#E0E7FF',
   },
   quorumSection: {
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   },
   rsvpBtnText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.primary,
   },
 
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
   },
   agendaHeading: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
     marginBottom: 12,
   },
@@ -846,12 +846,12 @@ const styles = StyleSheet.create({
   },
   agendaOrderText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.primary,
   },
   agendaTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     color: COLORS.text,
   },
   agendaPresenter: {
@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
   },
   votingOpenText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: '#92400E',
   },
 
@@ -919,12 +919,12 @@ const styles = StyleSheet.create({
   },
   liveText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: 'DMSans-Bold', fontWeight: '900',
     color: '#065F46',
   },
   ballotTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
     marginBottom: 6,
   },
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -1001,7 +1001,7 @@ const styles = StyleSheet.create({
   },
   optionPct: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.textMuted,
   },
   castVoteBtn: {
@@ -1020,7 +1020,7 @@ const styles = StyleSheet.create({
   castVoteBtnText: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
   },
 
   // ── Proposals Styles ──────────────────────────────────────────────
@@ -1032,7 +1032,7 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
   },
   sectionSub: {
@@ -1051,7 +1051,7 @@ const styles = StyleSheet.create({
   addProposalBtnText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
   },
   proposalCard: {
     backgroundColor: COLORS.surface,
@@ -1075,7 +1075,7 @@ const styles = StyleSheet.create({
   },
   categoryPillText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.primary,
   },
   statusPill: {
@@ -1086,12 +1086,12 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: '#B45309',
   },
   proposalTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
     marginBottom: 6,
   },
@@ -1135,7 +1135,7 @@ const styles = StyleSheet.create({
   },
   supportBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     color: COLORS.textSecondary,
   },
 
@@ -1162,7 +1162,7 @@ const styles = StyleSheet.create({
   },
   resNumText: {
     fontSize: 11,
-    fontWeight: '900',
+    fontFamily: 'DMSans-Bold', fontWeight: '900',
     color: '#065F46',
   },
   resDate: { fontSize: 11, color: COLORS.textMuted },

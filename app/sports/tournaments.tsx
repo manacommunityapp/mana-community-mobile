@@ -224,7 +224,7 @@ const s = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Outfit-Bold', fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.3,
   },
@@ -232,7 +232,7 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     marginTop: 1,
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium', fontWeight: '500',
   },
   headerCreateBtn: {
     flexDirection: 'row',
@@ -247,7 +247,7 @@ const s = StyleSheet.create({
   },
   headerCreateBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     color: COLORS.primary,
   },
 
@@ -285,11 +285,11 @@ const s = StyleSheet.create({
   sportLabel: {
     fontSize: 12,
     color: COLORS.textMuted,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
   },
   sportLabelActive: {
     color: '#fff',
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
   },
 
   // ── Status Segment Filter ────────────────────────────────────────
@@ -326,12 +326,12 @@ const s = StyleSheet.create({
   },
   segmentText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
     color: COLORS.textMuted,
   },
   segmentTextActive: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
   },
 
   // ── List Content ─────────────────────────────────────────────────
@@ -353,7 +353,7 @@ const s = StyleSheet.create({
   loaderText: {
     fontSize: 13,
     color: COLORS.textMuted,
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium', fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -372,7 +372,7 @@ const s = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
   },
   emptySubtitle: {
@@ -395,7 +395,7 @@ const s = StyleSheet.create({
   emptyActionBtnText: {
     color: '#fff',
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
   },
 });
 

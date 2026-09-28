@@ -29,7 +29,7 @@ const sh = StyleSheet.create({
   wrap:      { gap: 6, paddingBottom: 4 },
   barTrack:  { height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
   barFill:   { height: '100%', backgroundColor: COLORS.primary, borderRadius: 2 },
-  stepLabel: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  stepLabel: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-SemiBold', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   title:     { fontSize: 24, fontWeight: '800', color: COLORS.text, lineHeight: 30 },
   sub:       { fontSize: 14, color: COLORS.textMuted },
 });
@@ -165,7 +165,7 @@ export default function AccountStep() {
           </TouchableOpacity>
 
           <TouchableOpacity style={s.signInLink} onPress={() => router.push('/auth/login')}>
-            <Text style={s.signInText}>Already have an account? <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Sign in</Text></Text>
+            <Text style={s.signInText}>Already have an account? <Text style={{ color: COLORS.primary, fontFamily: 'DMSans-Bold', fontWeight: '700' }}>Sign in</Text></Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -177,7 +177,7 @@ const s = StyleSheet.create({
   container:  { flex: 1, backgroundColor: COLORS.background },
   scroll:     { padding: 24, gap: 16 },
   field:      { gap: 6 },
-  label:      { fontSize: 14, fontWeight: '600', color: COLORS.text },
+  label:      { fontSize: 14, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   input:      { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, color: COLORS.text, backgroundColor: COLORS.surface },
   inputError: { borderColor: COLORS.error },
   error:      { fontSize: 12, color: COLORS.error, fontWeight: '500' },

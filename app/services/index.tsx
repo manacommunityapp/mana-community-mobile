@@ -831,7 +831,7 @@ const s = StyleSheet.create({
   },
   hotlineText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
     color: '#fff',
   },
   hotlineCallBtn: {
@@ -845,7 +845,7 @@ const s = StyleSheet.create({
   },
   hotlineCallText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: FONTS.bold, fontWeight: '800',
     color: '#1E1B4B',
   },
 
@@ -895,7 +895,7 @@ const s = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
     color: COLORS.textSecondary,
   },
   categoryChipTextActive: {
@@ -1012,13 +1012,13 @@ const s = StyleSheet.create({
   },
   ratingNum: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: FONTS.bold, fontWeight: '800',
     color: '#92400E',
   },
   reviewCount: {
     fontSize: 10,
     color: '#B45309',
-    fontWeight: '600',
+    fontFamily: FONTS.semiBold, fontWeight: '600',
   },
   pricePill: {
     backgroundColor: COLORS.surfaceAlt,
@@ -1030,7 +1030,7 @@ const s = StyleSheet.create({
   },
   priceText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
     color: COLORS.primary,
   },
   statusPill: {
@@ -1077,7 +1077,7 @@ const s = StyleSheet.create({
   tagText: {
     fontSize: 11,
     color: COLORS.textMuted,
-    fontWeight: '500',
+    fontFamily: FONTS.medium, fontWeight: '500',
   },
 
   // ── Card Action Buttons ───────────────────────────────────────────
@@ -1101,7 +1101,7 @@ const s = StyleSheet.create({
   callBtnText: {
     color: '#fff',
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
   },
   chatBtn: {
     flexDirection: 'row',
@@ -1118,7 +1118,7 @@ const s = StyleSheet.create({
   chatBtnText: {
     color: COLORS.primary,
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
   },
   bookBtn: {
     backgroundColor: COLORS.surfaceAlt,
@@ -1133,7 +1133,7 @@ const s = StyleSheet.create({
   bookBtnText: {
     color: COLORS.text,
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
   },
 
   // ── Booking Cards (My Requests) ───────────────────────────────────
@@ -1171,16 +1171,16 @@ const s = StyleSheet.create({
   bookingBadgeText: {
     color: '#059669',
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: FONTS.bold, fontWeight: '800',
   },
   bookingIdText: {
     fontSize: 11,
     color: COLORS.textMuted,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
   },
   bookingProvider: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: FONTS.bold, fontWeight: '800',
     color: COLORS.text,
   },
   bookingIssue: {
@@ -1200,7 +1200,7 @@ const s = StyleSheet.create({
   },
   bookingMetaText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.semiBold, fontWeight: '600',
     color: COLORS.text,
   },
   bookingActionRow: {
@@ -1221,7 +1221,7 @@ const s = StyleSheet.create({
   bookingCallText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
   },
 
   // ── Empty State ───────────────────────────────────────────────────
@@ -1234,7 +1234,7 @@ const s = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
     color: COLORS.text,
     marginTop: 6,
   },
@@ -1270,7 +1270,7 @@ const s = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: FONTS.displayBold, fontWeight: '800',
     color: COLORS.text,
   },
   modalSub: {
@@ -1292,7 +1292,7 @@ const s = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 10.5,
-    fontWeight: '800',
+    fontFamily: FONTS.bold, fontWeight: '800',
     color: COLORS.textMuted,
     letterSpacing: 0.5,
     marginBottom: 8,
@@ -1316,7 +1316,7 @@ const s = StyleSheet.create({
   },
   modalPillText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
     color: COLORS.textSecondary,
   },
   modalPillTextActive: {
@@ -1342,12 +1342,12 @@ const s = StyleSheet.create({
   },
   slotText: {
     fontSize: 12.5,
-    fontWeight: '600',
+    fontFamily: FONTS.semiBold, fontWeight: '600',
     color: COLORS.textSecondary,
   },
   slotTextActive: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontFamily: FONTS.bold, fontWeight: '700',
   },
   issueInput: {
     backgroundColor: COLORS.surfaceAlt,
@@ -1390,6 +1390,6 @@ const s = StyleSheet.create({
   modalConfirmText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: FONTS.bold, fontWeight: '800',
   },
 });

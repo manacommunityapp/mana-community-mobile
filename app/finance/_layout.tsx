@@ -6,7 +6,7 @@ export default function FinanceLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: '#047857' },
         headerTintColor: '#FFFFFF',
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerTitleStyle: { fontFamily: 'DMSans-Bold', fontWeight: 'bold' },
       }}
     >
       <Stack.Screen name="index" options={{ title: '💳 Society Maintenance & Dues' }} />

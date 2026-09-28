@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: RADIUS.full,
   },
-  heroPillText: { fontSize: 10, fontWeight: '800', color: '#FDE68A' },
+  heroPillText: { fontSize: 10, fontFamily: 'DMSans-Bold', fontWeight: '800', color: '#FDE68A' },
   heroStatsText: { fontSize: 11, fontWeight: '700', color: '#A5B4FC' },
   heroTitle: { fontSize: 17, fontWeight: '900', color: '#fff', marginBottom: 4 },
   heroDesc: { fontSize: 12, color: '#C7D2FE', lineHeight: 17 },

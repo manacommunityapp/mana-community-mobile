@@ -7,7 +7,7 @@ export default function EmergencyLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: '#DC2626' },
         headerTintColor: '#FFFFFF',
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerTitleStyle: { fontFamily: 'DMSans-Bold', fontWeight: 'bold' },
       }}
     >
       <Stack.Screen name="index" options={{ title: '🚨 Emergency SOS Hub' }} />

@@ -211,7 +211,7 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: COLORS.background },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   cancel:          { fontSize: 16, color: COLORS.textMuted },
-  title:           { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  title:           { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
   post:            { fontSize: 16, fontWeight: '700', color: COLORS.primary },
   postDisabled:    { color: COLORS.textMuted },
   scroll:          { padding: 16, gap: 14 },

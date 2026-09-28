@@ -122,7 +122,7 @@ export default function TourScreen() {
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: COLORS.background },
   skip:         { alignSelf: 'flex-end', padding: 16 },
-  skipText:     { fontSize: 15, color: COLORS.textMuted, fontWeight: '500' },
+  skipText:     { fontSize: 15, color: COLORS.textMuted, fontFamily: 'DMSans-Medium', fontWeight: '500' },
   slide:        { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 20 },
   iconCircle:   { width: 120, height: 120, borderRadius: 60, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   slideEmoji:   { fontSize: 56 },

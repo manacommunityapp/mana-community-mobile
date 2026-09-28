@@ -6,7 +6,7 @@ export default function TripsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: '#2563EB' },
         headerTintColor: '#FFFFFF',
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerTitleStyle: { fontFamily: 'DMSans-Bold', fontWeight: 'bold' },
       }}
     >
       <Stack.Screen name="index" options={{ title: '🚌 Community Trips & Treks' }} />

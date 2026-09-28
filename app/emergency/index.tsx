@@ -193,7 +193,7 @@ export default function EmergencyScreen() {
             </View>
 
             <Text style={styles.modalDescription}>
-              Triggering <Text style={{ fontWeight: 'bold' }}>{selectedCategory?.label}</Text> for:
+              Triggering <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: 'bold' }}>{selectedCategory?.label}</Text> for:
             </Text>
 
             <View style={styles.locationBox}>
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     gap: SPACING.sm,
   },
-  warningText: { fontSize: 12, color: '#991B1B', flex: 1, fontWeight: '500', lineHeight: 17 },
+  warningText: { fontSize: 12, color: '#991B1B', flex: 1, fontFamily: 'DMSans-Medium', fontWeight: '500', lineHeight: 17 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
   triggerCard: {

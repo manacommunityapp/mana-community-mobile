@@ -124,7 +124,7 @@ const c = StyleSheet.create({
   categoryBadge: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   categoryEmoji: { fontSize: 22 },
   headerText:    { flex: 1, gap: 3 },
-  title:         { fontSize: 15, fontWeight: '700', color: COLORS.text, lineHeight: 20 },
+  title:         { fontSize: 15, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, lineHeight: 20 },
   poster:        { fontSize: 12, color: COLORS.textMuted },
   statusBadge:   { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start', flexShrink: 0 },
   statusText:    { fontSize: 11, fontWeight: '700' },
