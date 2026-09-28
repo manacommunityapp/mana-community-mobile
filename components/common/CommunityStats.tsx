@@ -141,15 +141,15 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
   tileValue: {
-    fontSize: 16,
+    fontSize: 17.5,
     fontFamily: 'DMSans-Bold', fontWeight: '800',
     letterSpacing: -0.3,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   tileIcon: { opacity: 0.75 },
   tileLabel: {
-    fontSize: 9.5,
+    fontSize: 11,
     fontFamily: 'DMSans-SemiBold', fontWeight: '600',
-    lineHeight: 12,
+    lineHeight: 14,
   },
 });

@@ -70,6 +70,13 @@ export const MANAGE_INCIDENTS     = "Manage Incidents";
 export const MANAGE_PATROL        = "Manage Patrol";
 export const RAISE_ALERT          = "Raise Alert";
 
+// ──── VENDOR ────
+export const VIEW_VENDOR_DASHBOARD = "View Vendor Dashboard";
+export const MANAGE_BOOKINGS       = "Manage Bookings";
+export const MANAGE_WORK_ORDERS    = "Manage Work Orders";
+export const MANAGE_INVOICES       = "Manage Invoices";
+export const MANAGE_AVAILABILITY   = "Manage Availability";
+
 // ──── ROLES ────
 export const ROLE_SUPER_ADMIN     = "SUPER_ADMIN";
 export const ROLE_ADMIN           = "ADMIN";
@@ -78,3 +85,4 @@ export const ROLE_MEMBER          = "MEMBER";
 export const ROLE_USER            = "USER";
 export const ROLE_GUARD           = "GUARD";
 export const ROLE_SECURITY        = "SECURITY";
+export const ROLE_VENDOR          = "VENDOR";

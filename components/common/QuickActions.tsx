@@ -217,7 +217,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
   },
   heading: {
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.2,
@@ -235,7 +235,7 @@ const s = StyleSheet.create({
     borderColor: COLORS.primaryMid,
   },
   seeAll: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: COLORS.primary,
     fontFamily: FONTS.bold,
@@ -243,17 +243,17 @@ const s = StyleSheet.create({
   scroll: {
     paddingHorizontal: 12,
     paddingVertical: 2,
-    gap: 2,
+    gap: 3,
   },
   item: {
     alignItems: 'center',
-    width: 54,
+    width: 58,
     gap: 3,
   },
   iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -271,17 +271,17 @@ const s = StyleSheet.create({
   },
   miniBadgeText: {
     color: '#FFFFFF',
-    fontSize: 6.5,
+    fontSize: 7.5,
     fontWeight: '800',
     fontFamily: FONTS.bold,
     letterSpacing: 0.2,
   },
   label: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '600',
     color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 12,
+    lineHeight: 13,
     fontFamily: FONTS.semiBold,
   },
 
@@ -353,14 +353,14 @@ const s = StyleSheet.create({
   },
   categoryTitle: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: 0.1,
     fontFamily: FONTS.bold,
   },
   categoryCount: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: COLORS.textMuted,
     fontFamily: FONTS.medium,
     backgroundColor: COLORS.surfaceAlt,
@@ -394,11 +394,11 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   gridLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: COLORS.text,
     textAlign: 'center',
-    lineHeight: 15,
+    lineHeight: 16,
     fontFamily: FONTS.bold,
   },
   gridBadge: {

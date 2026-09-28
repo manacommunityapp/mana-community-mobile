@@ -23,7 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.68;
-const STAT_TILE_W = Math.max(74, Math.floor((SCREEN_W - 24 - (3 * 6)) / 4));
+const STAT_TILE_W = Math.max(82, Math.floor((SCREEN_W - 24 - (3 * 6)) / 4));
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
@@ -819,8 +819,8 @@ const styles = StyleSheet.create({
   },
   statTile: {
     borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
     width: STAT_TILE_W,
     gap: 2,
     ...SHADOWS.sm,
@@ -831,16 +831,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statNum: {
-    fontSize: 16,
+    fontSize: 17.5,
     fontWeight: '800',
     letterSpacing: -0.3,
     fontFamily: FONTS.displayEB,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   statLabel: {
-    fontSize: 8.5,
+    fontSize: 10.5,
     fontWeight: '600',
-    lineHeight: 11,
+    lineHeight: 13,
     fontFamily: FONTS.semiBold,
     letterSpacing: 0.1,
   },
