@@ -391,10 +391,10 @@ export default function FeedScreen() {
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
-    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length,                color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length,                color: '#4F46E5', labelColor: '#3730A3', bg: '#EEF2FF', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
     { id: 'polls',   label: 'Active Polls',   value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
-    { id: 'tickets', label: 'Open Tickets',   value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
-    { id: 'sports',  label: 'Live Matches',   value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
+    { id: 'tickets', label: 'Open Tickets',   value: openTickets.length,                   color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'headset-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
+    { id: 'sports',  label: 'Live Matches',   value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#DCFCE7', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
     { id: 'notifs',  label: 'Notifications',  value: unreadCount,                          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
   ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
 
@@ -490,14 +490,21 @@ export default function FeedScreen() {
       {/* Composer Card */}
       <View style={styles.composerCard}>
         <View style={styles.composerRow}>
-          <LinearGradient
-            colors={GRADIENTS.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.composerAvatar}
-          >
-            <Text style={styles.composerAvatarText}>{userInitial}</Text>
-          </LinearGradient>
+          {user?.profilePicUrl || user?.profilePhoto ? (
+            <Image
+              source={{ uri: user.profilePicUrl || user.profilePhoto }}
+              style={styles.composerAvatarImage}
+            />
+          ) : (
+            <LinearGradient
+              colors={GRADIENTS.avatar}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.composerAvatar}
+            >
+              <Text style={styles.composerAvatarText}>{userInitial}</Text>
+            </LinearGradient>
+          )}
           <TouchableOpacity
             style={styles.composerInput}
             onPress={() => router.push('/polls/create')}
@@ -574,7 +581,7 @@ export default function FeedScreen() {
         </ScrollView>
       </View>
     </View>
-  ), [filter, filteredPosts.length, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow]);
+  ), [filter, filteredPosts.length, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow, user?.profilePicUrl, user?.profilePhoto]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -585,14 +592,21 @@ export default function FeedScreen() {
           onPress={() => router.push('/tabs/profile')}
           activeOpacity={0.7}
         >
-          <LinearGradient
-            colors={GRADIENTS.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.profileAvatar}
-          >
-            <Text style={styles.profileAvatarText}>{userInitial}</Text>
-          </LinearGradient>
+          {user?.profilePicUrl || user?.profilePhoto ? (
+            <Image
+              source={{ uri: user.profilePicUrl || user.profilePhoto }}
+              style={styles.profileAvatarImage}
+            />
+          ) : (
+            <LinearGradient
+              colors={GRADIENTS.avatar}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.profileAvatar}
+            >
+              <Text style={styles.profileAvatarText}>{userInitial}</Text>
+            </LinearGradient>
+          )}
           <View style={styles.welcomeText}>
             <Text style={styles.welcomeLabel}>{greeting} 👋</Text>
             <Text style={styles.welcomeName}>{userName}</Text>
@@ -870,6 +884,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  profileAvatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(99,102,241,0.3)',
+  },
   profileAvatarText: {
     color: '#fff',
     fontSize: 17,
@@ -1133,6 +1154,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  composerAvatarImage: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(99,102,241,0.25)',
   },
   composerAvatarText: {
     color: '#fff',
