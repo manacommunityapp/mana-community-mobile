@@ -218,7 +218,7 @@ const s = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Outfit-Bold', fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.3,
   },
@@ -226,7 +226,7 @@ const s = StyleSheet.create({
     fontSize: 11.5,
     color: COLORS.textMuted,
     marginTop: 1,
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium', fontWeight: '500',
   },
   offerHeaderBtn: {
     flexDirection: 'row',
@@ -240,7 +240,7 @@ const s = StyleSheet.create({
   },
   offerHeaderBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     color: '#fff',
   },
 
@@ -276,13 +276,13 @@ const s = StyleSheet.create({
   },
   statNum: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
   },
   statLabel: {
     fontSize: 10.5,
     color: COLORS.textMuted,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
   },
 
   // ── Quick Actions ───────────────────────────────────────────────
@@ -312,7 +312,7 @@ const s = StyleSheet.create({
   },
   quickLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     textAlign: 'center',
   },
 
@@ -332,7 +332,7 @@ const s = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'Outfit-Bold', fontWeight: '800',
     color: COLORS.text,
   },
   seeAllBtn: {
@@ -343,7 +343,7 @@ const s = StyleSheet.create({
   seeAll: {
     fontSize: 13,
     color: COLORS.primary,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
   },
   cards: {
     gap: 10,
@@ -370,7 +370,7 @@ const s = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.text,
   },
   emptySubtitle: {
@@ -391,7 +391,7 @@ const s = StyleSheet.create({
   },
   offerBtnText: {
     color: '#FFF',
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     fontSize: 13,
   },
   moreBtn: {
@@ -407,7 +407,7 @@ const s = StyleSheet.create({
   },
   moreBtnText: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
     fontSize: 13,
   },
 });

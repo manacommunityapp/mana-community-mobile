@@ -113,7 +113,7 @@ export default function MaintenanceDuesScreen() {
         </View>
 
         <View style={styles.dueRow}>
-          <Text style={styles.dueLabel}>Due Date: <Text style={{ fontWeight: '700', color: COLORS.text }}>{bill.dueDate}</Text></Text>
+          <Text style={styles.dueLabel}>Due Date: <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.text }}>{bill.dueDate}</Text></Text>
           <Text style={styles.outstandingLabel}>
             Outstanding: <Text style={styles.outstandingValue}>₹{bill.dueAmount.toLocaleString()}</Text>
           </Text>

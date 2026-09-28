@@ -158,7 +158,7 @@ export default function SportsHubScreen() {
 const s = StyleSheet.create({
   container:      { flex: 1, backgroundColor: COLORS.background },
   header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  headerTitle:    { fontSize: 22, fontWeight: '800', color: COLORS.text },
+  headerTitle:    { fontSize: 22, fontFamily: 'Outfit-Bold', fontWeight: '800', color: COLORS.text },
   livePill:       { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FEE2E2', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
   liveDot:        { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.error },
   liveCount:      { fontSize: 12, fontWeight: '700', color: COLORS.error },

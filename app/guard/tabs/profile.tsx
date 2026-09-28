@@ -130,7 +130,7 @@ const s = StyleSheet.create({
     borderWidth: 4, borderColor: 'rgba(255,255,255,0.35)',
     marginBottom: 14, ...SHADOWS.md,
   },
-  heroAvatarText: { fontWeight: '800', fontSize: 34 },
+  heroAvatarText: { fontFamily: 'DMSans-Bold', fontWeight: '800', fontSize: 34 },
   heroName: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.3, textAlign: 'center' },
   heroEmail: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 3, textAlign: 'center' },
   heroTagRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' },
@@ -148,7 +148,7 @@ const s = StyleSheet.create({
   statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#34D399' },
   heroStatusText: { fontSize: 11, fontWeight: '700', color: '#fff' },
   sectionHeader: {
-    fontSize: 12, fontWeight: '700', color: COLORS.textMuted,
+    fontSize: 12, fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.textMuted,
     textTransform: 'uppercase', letterSpacing: 1,
     marginTop: 22, marginBottom: 8, marginLeft: 20,
   },

@@ -260,7 +260,7 @@ const s = StyleSheet.create({
   container:          { flex: 1, backgroundColor: COLORS.background },
   header:             { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:               { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:              { fontSize: 18, fontWeight: '700', color: COLORS.text, flex: 1 },
+  title:              { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   submitBtn:          { fontSize: 16, fontWeight: '700', color: COLORS.primary },
   submitBtnDisabled:  { color: COLORS.textMuted },
   scroll:             { padding: 16, gap: 14 },

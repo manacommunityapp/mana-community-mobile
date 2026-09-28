@@ -180,7 +180,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, letterSpacing: -0.3 },
   headerSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   headerBtn: {
     width: 36, height: 36, borderRadius: 18,

@@ -63,7 +63,7 @@ const hdr = StyleSheet.create({
   backBtn:   { padding: 4 },
   backText:  { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
   avatar:    { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  avatarText:{ color: '#fff', fontWeight: '700', fontSize: 16 },
+  avatarText:{ color: '#fff', fontFamily: 'DMSans-Bold', fontWeight: '700', fontSize: 16 },
   info:      { flex: 1, gap: 2 },
   name:      { fontSize: 16, fontWeight: '700', color: COLORS.text },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -222,6 +222,6 @@ const scr = StyleSheet.create({
   listContent: { paddingVertical: 12, paddingBottom: 4 },
   empty:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, gap: 6 },
   emptyEmoji:  { fontSize: 48 },
-  emptyText:   { fontSize: 17, fontWeight: '600', color: COLORS.text },
+  emptyText:   { fontSize: 17, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   emptyHint:   { fontSize: 14, color: COLORS.textMuted },
 });

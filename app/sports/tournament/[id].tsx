@@ -42,7 +42,7 @@ function StandingsTable({ tournamentId }: { tournamentId: number }) {
         <Text style={st.col}>W</Text>
         <Text style={st.col}>D</Text>
         <Text style={st.col}>L</Text>
-        <Text style={[st.col, { fontWeight: '700', color: COLORS.primary }]}>Pts</Text>
+        <Text style={[st.col, { fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.primary }]}>Pts</Text>
       </View>
       {standings.map((row) => (
         <View key={row.teamId} style={[st.row, row.position <= 2 && st.rowHighlight]}>
@@ -57,7 +57,7 @@ function StandingsTable({ tournamentId }: { tournamentId: number }) {
           <Text style={st.col}>{row.won}</Text>
           <Text style={st.col}>{row.drawn}</Text>
           <Text style={st.col}>{row.lost}</Text>
-          <Text style={[st.col, { fontWeight: '800', color: COLORS.primary }]}>{row.points}</Text>
+          <Text style={[st.col, { fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.primary }]}>{row.points}</Text>
         </View>
       ))}
     </View>
@@ -69,7 +69,7 @@ const st = StyleSheet.create({
   header:     { flexDirection: 'row', backgroundColor: '#F3F4F6', paddingVertical: 10, paddingHorizontal: 12, gap: 4 },
   row:        { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 12, gap: 4, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface },
   rowHighlight: { backgroundColor: '#F5F3FF' },
-  col:        { width: 28, fontSize: 12, color: COLORS.text, textAlign: 'center', fontWeight: '500' },
+  col:        { width: 28, fontSize: 12, color: COLORS.text, textAlign: 'center', fontFamily: 'DMSans-Medium', fontWeight: '500' },
   pos:        { width: 28, textAlign: 'center' },
   teamName:   { fontSize: 13, fontWeight: '600', color: COLORS.text, flex: 1 },
   empty:      { alignItems: 'center', padding: 32 },
@@ -271,7 +271,7 @@ const scr = StyleSheet.create({
   container:      { flex: 1, backgroundColor: COLORS.background },
   header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:           { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  headerTitle:    { fontSize: 17, fontWeight: '700', color: COLORS.text, flex: 1 },
+  headerTitle:    { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   registeredBadge:{ backgroundColor: '#D1FAE5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   registeredText: { fontSize: 11, fontWeight: '700', color: '#065F46' },
   hero:           { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, backgroundColor: '#EEF2FF', borderBottomWidth: 1, borderBottomColor: '#C7D2FE' },

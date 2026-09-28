@@ -142,14 +142,14 @@ const s = StyleSheet.create({
   },
   tileValue: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     letterSpacing: -0.3,
     lineHeight: 18,
   },
   tileIcon: { opacity: 0.75 },
   tileLabel: {
     fontSize: 9.5,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
     lineHeight: 12,
   },
 });

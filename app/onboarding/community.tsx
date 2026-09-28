@@ -158,7 +158,7 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: COLORS.background },
   scroll:          { padding: 24, gap: 16 },
   backBtn:         { alignSelf: 'flex-start', marginBottom: 4 },
-  backText:        { fontSize: 17, color: COLORS.primary, fontWeight: '500' },
+  backText:        { fontSize: 17, color: COLORS.primary, fontFamily: 'DMSans-Medium', fontWeight: '500' },
   field:           { gap: 6 },
   label:           { fontSize: 14, fontWeight: '600', color: COLORS.text },
   codeRow:         { flexDirection: 'row', gap: 10 },

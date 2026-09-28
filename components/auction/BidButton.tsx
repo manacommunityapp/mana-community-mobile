@@ -167,7 +167,7 @@ export function BidButton({
 const s = StyleSheet.create({
   container:          { gap: 10, padding: 16, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border },
   winningBanner:      { backgroundColor: '#D1FAE5', borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
-  winningBannerText:  { color: '#065F46', fontWeight: '700', fontSize: 14 },
+  winningBannerText:  { color: '#065F46', fontFamily: 'DMSans-Bold', fontWeight: '700', fontSize: 14 },
   minHint:            { fontSize: 12, color: COLORS.textMuted, textAlign: 'center' },
   minHintAmount:      { fontWeight: '700', color: COLORS.text },
   quickRow:           { flexDirection: 'row', gap: 8 },

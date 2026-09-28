@@ -236,7 +236,7 @@ const s = StyleSheet.create({
   headerTop:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 10 },
   headerLeft:   { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  headerTitle:  { fontSize: 22, fontWeight: '800', color: COLORS.text },
+  headerTitle:  { fontSize: 22, fontFamily: 'Outfit-Bold', fontWeight: '800', color: COLORS.text },
   headerSub:    { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   headerActions:{ flexDirection: 'row', gap: 8, alignItems: 'center' },
   myBtn:        { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },

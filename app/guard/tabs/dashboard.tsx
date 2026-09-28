@@ -250,7 +250,7 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { fontSize: 18, fontWeight: '700' },
+  avatarText: { fontSize: 18, fontFamily: 'DMSans-Bold', fontWeight: '700' },
   dutyLabel: { fontSize: 12, color: GUARD_COLORS.accent, fontWeight: '600' },
   userName: { fontSize: 18, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 },
   welcomeRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },

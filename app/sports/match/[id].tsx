@@ -108,7 +108,7 @@ const sb = StyleSheet.create({
   // Cricket
   cricketWrap:  { gap: 10 },
   inning:       { gap: 2 },
-  inningTeam:   { fontSize: 14, fontWeight: '600', color: COLORS.textMuted },
+  inningTeam:   { fontSize: 14, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.textMuted },
   runs:         { fontSize: 36, fontWeight: '900', color: COLORS.text },
   overs:        { fontSize: 14, color: COLORS.textMuted, fontWeight: '400' },
   pending:      { fontSize: 16, color: COLORS.textMuted, fontStyle: 'italic' },
@@ -154,7 +154,7 @@ const er = StyleSheet.create({
   icon:   { fontSize: 18, width: 24, textAlign: 'center', marginTop: 1 },
   body:   { flex: 1, gap: 1 },
   desc:   { fontSize: 14, color: COLORS.text, lineHeight: 19 },
-  player: { fontSize: 12, color: COLORS.primary, fontWeight: '600' },
+  player: { fontSize: 12, color: COLORS.primary, fontFamily: 'DMSans-SemiBold', fontWeight: '600' },
   time:   { fontSize: 12, color: COLORS.textMuted, fontWeight: '600', minWidth: 38, textAlign: 'right' },
 });
 
@@ -348,7 +348,7 @@ const scr = StyleSheet.create({
   topBar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:           { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
   topMid:         { flex: 1, gap: 1 },
-  sport:          { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  sport:          { fontSize: 13, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   round:          { fontSize: 11, color: COLORS.textMuted },
   liveBadge:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   liveDot:        { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.error },
@@ -384,7 +384,7 @@ const scr = StyleSheet.create({
   scorerTriggerText: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
     color: COLORS.primary,
   },
   resultBanner:   { backgroundColor: '#EEF2FF', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },

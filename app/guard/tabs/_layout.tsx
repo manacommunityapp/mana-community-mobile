@@ -127,14 +127,14 @@ const styles = StyleSheet.create({
   },
   iconLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold', fontWeight: '600',
     color: COLORS.textMuted,
     marginTop: 2,
     letterSpacing: 0.1,
   },
   iconLabelActive: {
     color: GUARD_COLORS.accent,
-    fontWeight: '700',
+    fontFamily: 'DMSans-Bold', fontWeight: '700',
   },
   badge: {
     position: 'absolute',
@@ -153,6 +153,6 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#fff',
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold', fontWeight: '800',
   },
 });

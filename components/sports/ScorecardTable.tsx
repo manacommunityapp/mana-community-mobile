@@ -118,7 +118,7 @@ export function InningsCard({ innings, title }: { innings: InningsDto; title?: s
 const ic = StyleSheet.create({
   card:      { backgroundColor: COLORS.surface, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
   header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, backgroundColor: '#1E1B4B' },
-  teamName:  { fontSize: 15, fontWeight: '700', color: '#fff', flex: 1 },
+  teamName:  { fontSize: 15, fontFamily: 'DMSans-Bold', fontWeight: '700', color: '#fff', flex: 1 },
   score:     { fontSize: 22, fontWeight: '900', color: '#fff' },
   overs:     { fontSize: 13, fontWeight: '400', color: 'rgba(255,255,255,0.7)' },
   subTitle:  { fontSize: 12, color: COLORS.textMuted, paddingHorizontal: 14, paddingTop: 6 },
@@ -131,7 +131,7 @@ const bt = StyleSheet.create({
   headerRow:     { backgroundColor: '#F9FAFB', borderTopWidth: 0 },
   rowHighlight:  { backgroundColor: '#FFF7ED' },
   playerCol:     { width: 130, paddingRight: 6 },
-  playerName:    { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  playerName:    { fontSize: 13, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   playerNameTop: { color: '#D97706' },
   dismissal:     { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
   bowlerName:    { width: 130, fontSize: 13, fontWeight: '600', color: COLORS.text, paddingRight: 6 },

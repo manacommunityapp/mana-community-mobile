@@ -23,7 +23,7 @@ export function DateSeparator({ date }: { date: Date }) {
 const sep = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', marginVertical: 12, paddingHorizontal: 16 },
   line:  { flex: 1, height: 1, backgroundColor: COLORS.border },
-  label: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500', marginHorizontal: 10 },
+  label: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Medium', fontWeight: '500', marginHorizontal: 10 },
 });
 
 // ── Read receipt ticks ─────────────────────────────────────────
@@ -52,7 +52,7 @@ function MiniAvatar({ name }: { name: string }) {
 
 const av = StyleSheet.create({
   wrap: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.secondary, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', marginRight: 6 },
-  text: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  text: { color: '#fff', fontSize: 12, fontFamily: 'DMSans-Bold', fontWeight: '700' },
 });
 
 // ── System message ─────────────────────────────────────────────
@@ -129,7 +129,7 @@ const bub = StyleSheet.create({
   bubble:       { maxWidth: '75%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 9, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
   mine:         { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
   theirs:       { backgroundColor: COLORS.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: COLORS.border },
-  senderName:   { fontSize: 12, fontWeight: '700', color: COLORS.primary, marginBottom: 3 },
+  senderName:   { fontSize: 12, fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.primary, marginBottom: 3 },
   content:      { fontSize: 15, lineHeight: 21 },
   contentMine:  { color: '#fff' },
   contentTheirs:{ color: COLORS.text },

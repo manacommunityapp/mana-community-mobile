@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   // ── Avatar
   avatarWrap:   { position: 'relative', width: 50, height: 50, flexShrink: 0 },
   avatar:       { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
-  avatarText:   { fontWeight: '700', fontSize: 19 },
+  avatarText:   { fontFamily: 'DMSans-Bold', fontWeight: '700', fontSize: 19 },
   onlineDot:    { position: 'absolute', bottom: 1, right: 1, width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.success, borderWidth: 2.5, borderColor: COLORS.surface },
   groupBadge:   { position: 'absolute', bottom: 0, right: 0, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.surface },
   // ── Item body

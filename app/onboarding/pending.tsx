@@ -115,7 +115,7 @@ export default function PendingScreen() {
         <Text style={s.title}>Application submitted!</Text>
         <Text style={s.sub}>
           Welcome to {user?.community?.name ?? 'your community'},{' '}
-          <Text style={{ fontWeight: '700' }}>{user?.name?.split(' ')[0]}</Text>!
+          <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '700' }}>{user?.name?.split(' ')[0]}</Text>!
           {'\n\n'}Your admin will review and approve your account. This usually takes a few hours.
         </Text>
 
@@ -150,7 +150,7 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: COLORS.background },
   center:          { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 16 },
   clockEmoji:      { fontSize: 72 },
-  title:           { fontSize: 24, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+  title:           { fontSize: 24, fontFamily: 'Outfit-Bold', fontWeight: '800', color: COLORS.text, textAlign: 'center' },
   sub:             { fontSize: 15, color: COLORS.textMuted, textAlign: 'center', lineHeight: 23 },
   steps:           { width: '100%', backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, gap: 0, borderWidth: 1, borderColor: COLORS.border, marginTop: 8 },
   step:            { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },

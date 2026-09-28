@@ -176,7 +176,7 @@ export default function TripsScreen() {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Seats Available:</Text>
-                  <Text style={[styles.infoValue, { color: seatsLeft <= 5 ? '#DC2626' : '#059669', fontWeight: '800' }]}>
+                  <Text style={[styles.infoValue, { color: seatsLeft <= 5 ? '#DC2626' : '#059669', fontFamily: 'DMSans-Bold', fontWeight: '800' }]}>
                     {seatsLeft} / {trip.totalSeats}
                   </Text>
                 </View>

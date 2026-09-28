@@ -94,7 +94,7 @@ const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: COLORS.background },
   header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#1E1B4B', gap: 10 },
   back:         { fontSize: 30, color: '#fff', lineHeight: 34, fontWeight: '300' },
-  title:        { fontSize: 16, fontWeight: '700', color: '#fff', flex: 1 },
+  title:        { fontSize: 16, fontFamily: 'Outfit-Bold', fontWeight: '700', color: '#fff', flex: 1 },
   share:        { fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
   scroll:       { padding: 12, gap: 0 },
   resultBanner: { backgroundColor: '#1E1B4B', borderRadius: 14, padding: 16, alignItems: 'center', gap: 6, marginBottom: 10 },

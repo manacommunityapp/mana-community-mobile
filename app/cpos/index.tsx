@@ -203,7 +203,7 @@ export default function CPOSScreen() {
                     <View style={styles.parkingRow}>
                       <Ionicons name="car-outline" size={15} color={COLORS.primary} />
                       <Text style={styles.parkingText}>
-                        Assigned Parking Slots: <Text style={{ fontWeight: '800' }}>{p.parkingSlotsAssigned.join(', ')}</Text>
+                        Assigned Parking Slots: <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '800' }}>{p.parkingSlotsAssigned.join(', ')}</Text>
                       </Text>
                     </View>
                   </View>
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: RADIUS.full,
   },
-  heroPillText: { fontSize: 10, fontWeight: '800', color: '#93C5FD' },
+  heroPillText: { fontSize: 10, fontFamily: 'DMSans-Bold', fontWeight: '800', color: '#93C5FD' },
   heroSubText: { fontSize: 11, color: '#94A3B8' },
   heroTitle: { fontSize: 17, fontWeight: '900', color: '#fff', marginBottom: 12 },
   heroStatsRow: {

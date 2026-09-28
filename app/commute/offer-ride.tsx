@@ -268,7 +268,7 @@ export default function OfferRideScreen() {
 const s = StyleSheet.create({
   container:     { flex: 1, backgroundColor: COLORS.background },
   header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  cancelBtn:     { fontSize: 15, color: COLORS.error, fontWeight: '600' },
+  cancelBtn:     { fontSize: 15, color: COLORS.error, fontFamily: 'DMSans-SemiBold', fontWeight: '600' },
   headerTitle:   { fontSize: 18, fontWeight: '700', color: COLORS.text },
   form:          { padding: 16, gap: 12 },
   typeRow:       { flexDirection: 'row', gap: 10 },

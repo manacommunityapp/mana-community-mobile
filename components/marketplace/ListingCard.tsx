@@ -112,7 +112,7 @@ const s = StyleSheet.create({
   imagePlaceholder:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
   imagePlaceholderEmoji:{ fontSize: 40 },
   soldOverlay:          { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  soldText:             { color: '#fff', fontWeight: '900', fontSize: 18, letterSpacing: 2 },
+  soldText:             { color: '#fff', fontFamily: 'DMSans-Bold', fontWeight: '900', fontSize: 18, letterSpacing: 2 },
   freeBadge:            { position: 'absolute', top: 8, left: 8, backgroundColor: COLORS.success, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   freeBadgeText:        { color: '#fff', fontWeight: '800', fontSize: 11 },
   heartBtn:             { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 14, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },

@@ -92,7 +92,7 @@ const s = StyleSheet.create({
   card:         { backgroundColor: COLORS.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 10 },
   row:          { flexDirection: 'row', alignItems: 'center', gap: 8 },
   typeBadge:    { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  typeText:     { fontSize: 12, fontWeight: '700' },
+  typeText:     { fontSize: 12, fontFamily: 'DMSans-Bold', fontWeight: '700' },
   statusDot:    { width: 7, height: 7, borderRadius: 4, marginLeft: 'auto' },
   statusText:   { fontSize: 11, fontWeight: '600' },
   routeWrap:    { flexDirection: 'row', gap: 10 },

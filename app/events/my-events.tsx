@@ -143,7 +143,7 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '600', color: COLORS.text },
+  headerTitle: { fontSize: 17, fontFamily: 'Outfit-SemiBold', fontWeight: '600', color: COLORS.text },
   tabs: {
     flexDirection: 'row', backgroundColor: COLORS.surface,
     borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingHorizontal: 16,

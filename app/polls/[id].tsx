@@ -225,7 +225,7 @@ const s = StyleSheet.create({
   container:          { flex: 1, backgroundColor: COLORS.background },
   header:             { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:               { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  headerTitle:        { fontSize: 18, fontWeight: '700', color: COLORS.text, flex: 1 },
+  headerTitle:        { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   closeBtn:           { fontSize: 15, color: COLORS.textMuted, fontWeight: '600' },
   scroll:             { padding: 16, gap: 14 },
   authorCard:         { flexDirection: 'row', alignItems: 'center', gap: 10 },

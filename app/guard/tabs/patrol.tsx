@@ -169,7 +169,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14,
     backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, letterSpacing: -0.3 },
 
   timerCard: {
     backgroundColor: COLORS.surface, margin: 12,
@@ -177,7 +177,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
   },
   timerValue: {
-    fontSize: 42, fontWeight: '800', color: GUARD_COLORS.accent, letterSpacing: -2,
+    fontSize: 42, fontFamily: 'DMSans-Bold', fontWeight: '800', color: GUARD_COLORS.accent, letterSpacing: -2,
   },
   timerLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginTop: 4 },
   statusRow: {
@@ -218,7 +218,7 @@ const s = StyleSheet.create({
   scanBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   sectionTitle: {
-    fontSize: 14, fontWeight: '700', color: COLORS.textMuted,
+    fontSize: 14, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.textMuted,
     textTransform: 'uppercase', letterSpacing: 0.8,
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
   },

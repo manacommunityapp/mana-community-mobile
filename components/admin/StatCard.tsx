@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   emoji: { fontSize: 24, marginBottom: 2 },
-  value: { fontSize: 28, fontWeight: '800', color: COLORS.text },
+  value: { fontSize: 28, fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.text },
   label: { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
   sub:   { fontSize: 11, color: COLORS.textMuted },
 });

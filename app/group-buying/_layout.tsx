@@ -6,7 +6,7 @@ export default function GroupBuyingLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: '#059669' },
         headerTintColor: '#FFFFFF',
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerTitleStyle: { fontFamily: 'DMSans-Bold', fontWeight: 'bold' },
       }}
     >
       <Stack.Screen name="index" options={{ title: '🛒 Group Buying & Deals' }} />

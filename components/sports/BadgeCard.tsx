@@ -89,7 +89,7 @@ const c = StyleSheet.create({
   badge:       { borderRadius: 12, borderWidth: 1.5, padding: 8, alignItems: 'center', gap: 4, position: 'relative', overflow: 'hidden' },
   glowDot:     { position: 'absolute', top: 0, left: 0, right: 0, height: 3, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
   emoji:       { textAlign: 'center' },
-  name:        { fontSize: 10, fontWeight: '700', textAlign: 'center', lineHeight: 13 },
+  name:        { fontSize: 10, fontFamily: 'DMSans-Bold', fontWeight: '700', textAlign: 'center', lineHeight: 13 },
   nameSm:      { fontSize: 9 },
   rarity:      { fontSize: 7, fontWeight: '900', letterSpacing: 0.3, marginTop: -2 },
   lockedOverlay:{ position: 'absolute', top: 4, right: 4 },

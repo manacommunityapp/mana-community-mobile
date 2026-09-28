@@ -203,7 +203,7 @@ const s = StyleSheet.create({
   container:         { flex: 1, backgroundColor: '#000' },
   header:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
   back:              { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:             { fontSize: 18, fontWeight: '700', color: COLORS.text, flex: 1 },
+  title:             { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
   uploadBtn:         { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   uploadBtnText:     { color: '#fff', fontWeight: '700', fontSize: 13 },
   thumbLike:         { position: 'absolute', bottom: 4, left: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, paddingHorizontal: 5, paddingVertical: 2 },

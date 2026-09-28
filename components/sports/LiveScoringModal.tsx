@@ -511,7 +511,7 @@ const s = StyleSheet.create({
     paddingVertical: 2,
     alignSelf: 'flex-start',
   },
-  badgeText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
+  badgeText: { fontSize: 9, fontFamily: 'DMSans-Bold', fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
   title: { fontSize: 17, fontWeight: '800', color: COLORS.text },
   closeBtn: {
     width: 32,

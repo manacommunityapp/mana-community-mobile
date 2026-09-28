@@ -31,7 +31,7 @@ interface OnboardingState {
 }
 
 const DEFAULT: Omit<OnboardingState, keyof Pick<OnboardingState,
-  'setAccount' | 'setCommunity' | 'setDetails' | 'reset'>> = {
+  'setAccount' | 'setCommunity' | 'setDetails' | 'clearPassword' | 'reset'>> = {
   name: '', email: '', phone: '', password: '',
   inviteCode: '', community: null,
   flatNo: '', block: '', familySize: 1,

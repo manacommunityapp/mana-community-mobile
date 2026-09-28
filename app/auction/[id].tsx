@@ -51,7 +51,7 @@ function AnimatedPrice({
 const ap = StyleSheet.create({
   wrap:  { alignItems: 'center', position: 'relative' },
   flash: { ...StyleSheet.absoluteFill, backgroundColor: '#FEF9C3', borderRadius: 12 },
-  label: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 4, letterSpacing: 0.5 },
+  label: { fontSize: 13, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.textMuted, marginBottom: 4, letterSpacing: 0.5 },
   price: { fontSize: 42, fontWeight: '900', color: COLORS.primary, fontVariant: ['tabular-nums'] as any },
 });
 
@@ -143,7 +143,7 @@ const wm = StyleSheet.create({
   overlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },
   card:     { backgroundColor: COLORS.surface, borderRadius: 24, padding: 32, alignItems: 'center', marginHorizontal: 32, gap: 12 },
   trophy:   { fontSize: 64 },
-  headline: { fontSize: 26, fontWeight: '900', color: COLORS.text },
+  headline: { fontSize: 26, fontFamily: 'DMSans-Bold', fontWeight: '900', color: COLORS.text },
   sub:      { fontSize: 16, color: COLORS.textMuted, textAlign: 'center', lineHeight: 24 },
   btn:      { backgroundColor: COLORS.primary, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14, marginTop: 8 },
   btnText:  { color: '#fff', fontWeight: '800', fontSize: 16 },
@@ -306,7 +306,7 @@ export default function AuctionRoomScreen() {
             </View>
             <View style={scr.detailRow}>
               <Text style={scr.detailLabel}>Min. Next Bid</Text>
-              <Text style={[scr.detailValue, { color: COLORS.primary, fontWeight: '700' }]}>
+              <Text style={[scr.detailValue, { color: COLORS.primary, fontFamily: 'DMSans-Bold', fontWeight: '700' }]}>
                 ₹{minNextBid.toLocaleString('en-IN')}
               </Text>
             </View>
@@ -352,7 +352,7 @@ const scr = StyleSheet.create({
   topCenter:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statusDot:     { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.textMuted },
   statusDotLive: { backgroundColor: COLORS.error },
-  statusLabel:   { fontSize: 13, fontWeight: '800', color: COLORS.text, letterSpacing: 0.5 },
+  statusLabel:   { fontSize: 13, fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.text, letterSpacing: 0.5 },
   wsStatus:      { fontSize: 11, color: COLORS.textMuted },
   bidCount:      { fontSize: 14, fontWeight: '700', color: COLORS.textMuted },
   outbidBanner:  { backgroundColor: '#FEE2E2', paddingVertical: 8, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#FCA5A5' },

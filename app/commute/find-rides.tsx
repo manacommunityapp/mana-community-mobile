@@ -112,7 +112,7 @@ export default function FindRidesScreen() {
 const s = StyleSheet.create({
   container:      { flex: 1, backgroundColor: COLORS.background },
   header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  backBtn:        { fontSize: 15, color: COLORS.primary, fontWeight: '600' },
+  backBtn:        { fontSize: 15, color: COLORS.primary, fontFamily: 'DMSans-SemiBold', fontWeight: '600' },
   headerTitle:    { fontSize: 18, fontWeight: '700', color: COLORS.text },
   searchWrap:     { paddingHorizontal: 16, paddingTop: 12 },
   searchInput:    { backgroundColor: COLORS.surface, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: COLORS.text },

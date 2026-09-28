@@ -131,7 +131,7 @@ const st = StyleSheet.create({
   wrap:     { alignItems: 'center' },
   box:      { borderRadius: 14, borderWidth: 1.5, paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center', gap: 4 },
   digits:   { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  num:      { fontWeight: '900', fontVariant: ['tabular-nums'] as any },
+  num:      { fontFamily: 'DMSans-Bold', fontWeight: '900', fontVariant: ['tabular-nums'] as any },
   colon:    { fontSize: 28, fontWeight: '800', lineHeight: 38, opacity: 0.8 },
   label:    { fontWeight: '600', letterSpacing: 1.5, textTransform: 'uppercase' },
   ended:    { alignItems: 'center', padding: 10 },
@@ -139,5 +139,5 @@ const st = StyleSheet.create({
 });
 
 const cc = StyleSheet.create({
-  text: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] as any },
+  text: { fontSize: 13, fontFamily: 'DMSans-Bold', fontWeight: '700', fontVariant: ['tabular-nums'] as any },
 });
