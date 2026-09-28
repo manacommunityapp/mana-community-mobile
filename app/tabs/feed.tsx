@@ -23,7 +23,6 @@ import { useAuth } from '@/hooks/useAuth';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.68;
-const STAT_TILE_W = Math.max(82, Math.floor((SCREEN_W - 24 - (3 * 6)) / 4));
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
@@ -391,20 +390,15 @@ export default function FeedScreen() {
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
-    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length,                color: '#4F46E5', labelColor: '#3730A3', bg: '#EEF2FF', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
-    { id: 'polls',   label: 'Active Polls',   value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
-    { id: 'tickets', label: 'Open Tickets',   value: openTickets.length,                   color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'headset-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
-    { id: 'sports',  label: 'Live Matches',   value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#DCFCE7', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
-    { id: 'notifs',  label: 'Notifications',  value: unreadCount,                          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'events',  label: 'Events',   value: upcomingEvents.length,                color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'polls',   label: 'Polls',    value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
+    { id: 'tickets', label: 'Tickets',  value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'headset-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
+    { id: 'sports',  label: 'Live',     value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#DCFCE7', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
+    { id: 'notifs',  label: 'Notifs',   value: unreadCount,                          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
   ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
 
   const StatsRow = useMemo(() => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.statsScroll}
-      style={styles.statsContainer}
-    >
+    <View style={styles.statsContainer}>
       {statTiles.map(tile => (
         <TouchableOpacity
           key={tile.id}
@@ -414,14 +408,14 @@ export default function FeedScreen() {
         >
           <View style={styles.statTileTop}>
             <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
-            <Ionicons name={tile.icon} size={13} color={tile.color} style={{ opacity: 0.75 }} />
+            <Ionicons name={tile.icon} size={12} color={tile.color} style={{ opacity: 0.7 }} />
           </View>
           <Text style={[styles.statLabel, { color: tile.labelColor }]} numberOfLines={1}>
             {tile.label}
           </Text>
         </TouchableOpacity>
       ))}
-    </ScrollView>
+    </View>
   ), [statTiles, router]);
 
   const ListHeader = useMemo(() => (
@@ -825,17 +819,21 @@ const styles = StyleSheet.create({
   },
 
   // ── Quick Stats Row ───────────────────────────────────────────────
-  statsContainer: { flexGrow: 0 },
-  statsScroll: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 2,
     gap: 6,
   },
   statTile: {
+    flex: 1,
+    minWidth: 0,
     borderRadius: 10,
-    paddingHorizontal: 9,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    width: STAT_TILE_W,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
     gap: 4,
     ...SHADOWS.sm,
   },
@@ -847,12 +845,12 @@ const styles = StyleSheet.create({
   statNum: {
     fontSize: 18,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
     fontFamily: FONTS.displayEB,
     lineHeight: 22,
   },
   statLabel: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '600',
     lineHeight: 15,
     fontFamily: FONTS.semiBold,
