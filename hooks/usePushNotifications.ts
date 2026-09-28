@@ -118,15 +118,15 @@ export function usePushNotifications(isAuthenticated: boolean) {
         await profileService.registerPushToken(token, platform);
         await tokenStore.setPushToken(token);
         tokenRegistered.current = true;
-        console.log('[Push] Token registered:', token.slice(0, 24) + '…');
+        if (__DEV__) console.log('[Push] Token registered:', token.slice(0, 24) + '…');
       } catch (err) {
         console.warn('[Push] Token registration failed:', err);
       }
     })();
 
     foregroundSub.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
-        console.log('[Push] Foreground notification:', notification.request.content.title);
+      () => {
+        if (__DEV__) console.log('[Push] Foreground notification received');
       },
     );
 
