@@ -320,7 +320,7 @@ export default function ProfileScreen() {
                   icon="alert-circle-outline"
                   label="Emergency SOS"
                   onPress={() => router.push('/emergency')}
-                  iconColor="#EF4444"
+                  iconColor="#DC2626"
                   iconBg="#FEE2E2"
                 />
               )}
@@ -329,8 +329,8 @@ export default function ProfileScreen() {
                   icon="card-outline"
                   label="Maintenance & Dues"
                   onPress={() => router.push('/finance')}
-                  iconColor="#10B981"
-                  iconBg="#D1FAE5"
+                  iconColor="#4F46E5"
+                  iconBg="#EEF2FF"
                   badge={pendingDuesTotal > 0 ? `₹${pendingDuesTotal}` : undefined}
                 />
               )}
@@ -388,7 +388,7 @@ export default function ProfileScreen() {
               badge={totalTeamsCount > 0 ? `${totalTeamsCount} Teams` : undefined}
             />
           )}
-          <MenuItem icon="car-sport-outline"   label="Commute Pool"      onPress={() => router.push('/commute')}     iconColor="#2563EB" iconBg="#DBEAFE" />
+          <MenuItem icon="car-sport-outline"   label="Commute Pool"      onPress={() => router.push('/commute')}     iconColor="#0284C7" iconBg="#CFFAFE" />
           {showPolls && (
             <MenuItem icon="bar-chart-outline"   label="Polls & Voting"    onPress={() => router.push('/polls')}       iconColor="#7C3AED" iconBg="#EDE9FE" />
           )}

@@ -19,8 +19,8 @@ export interface QuickActionItem {
 export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   // Safety & Emergency
   { id: 'emergency', icon: 'alert-circle-outline', label: 'Emergency SOS', route: '/emergency', bg: '#FEE2E2', color: '#DC2626', category: 'Safety & Help', badge: '24x7' },
-  { id: 'helpdesk', icon: 'headset-outline', label: 'Helpdesk', route: '/helpdesk', bg: '#E0E7FF', color: '#4F46E5', category: 'Safety & Help' },
-  { id: 'visitors', icon: 'shield-checkmark-outline', label: 'Visitors Gate', route: '/visitors', bg: '#DBEAFE', color: '#2563EB', category: 'Safety & Help' },
+  { id: 'helpdesk', icon: 'headset-outline', label: 'Helpdesk', route: '/helpdesk', bg: '#FEF3C7', color: '#D97706', category: 'Safety & Help' },
+  { id: 'visitors', icon: 'shield-checkmark-outline', label: 'Visitors Gate', route: '/visitors', bg: '#CFFAFE', color: '#0891B2', category: 'Safety & Help' },
 
   // Living & Essentials
   { id: 'dues', icon: 'card-outline', label: 'Dues', route: '/finance', bg: '#EEF2FF', color: '#4F46E5', category: 'Living & Bills', badge: 'Bills' },
@@ -39,7 +39,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'polls', icon: 'bar-chart-outline', label: 'Polls & Votes', route: '/polls', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports' },
   { id: 'jobs', icon: 'briefcase-outline', label: 'CPN Jobs', route: '/cpn', bg: '#EFF6FF', color: '#2563EB', category: 'Social & Sports', badge: 'NEW' },
   { id: 'commute', icon: 'car-sport-outline', label: 'Commute', route: '/commute', bg: '#CFFAFE', color: '#0284C7', category: 'Social & Sports' },
-  { id: 'pets', icon: 'paw-outline', label: 'Pet Care', route: '/pets', bg: '#FCE7F3', color: '#DB2777', category: 'Social & Sports' },
+  { id: 'pets', icon: 'paw-outline', label: 'Pet Care', route: '/pets', bg: '#F3E8FF', color: '#9333EA', category: 'Social & Sports' },
 
   // Commerce & Food
   { id: 'offers', icon: 'pricetag-outline', label: 'Offers', route: '/offers', bg: '#FEF3C7', color: '#D97706', category: 'Commerce & Food', badge: 'NEW' },

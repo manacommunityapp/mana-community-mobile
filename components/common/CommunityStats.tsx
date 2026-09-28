@@ -40,9 +40,9 @@ export function CommunityStats() {
       label: 'Events Today',
       icon: 'calendar-outline',
       value: 2,
-      color: '#D97706',
-      labelColor: '#92400E',
-      bg: '#FEF3C7',
+      color: '#4F46E5',
+      labelColor: '#3730A3',
+      bg: '#EEF2FF',
       route: '/tabs/events',
     },
     {
@@ -68,11 +68,11 @@ export function CommunityStats() {
     {
       id: 'tickets',
       label: 'Open Tickets',
-      icon: 'construct-outline',
+      icon: 'headset-outline',
       value: 0,
-      color: '#0891B2',
-      labelColor: '#155E75',
-      bg: '#CFFAFE',
+      color: '#D97706',
+      labelColor: '#92400E',
+      bg: '#FEF3C7',
       route: '/helpdesk',
     },
     {
@@ -82,7 +82,7 @@ export function CommunityStats() {
       value: 1,
       color: '#059669',
       labelColor: '#065F46',
-      bg: '#D1FAE5',
+      bg: '#DCFCE7',
       route: '/sports',
     },
     {
