@@ -6,6 +6,13 @@ import { CONFIG } from '@/constants/config';
 import { secureLog } from '@/security';
 import type { ChatMessageDto } from '@/types/api';
 
+export type LocalMessage = ChatMessageDto & { _optimisticId?: string };
+
+let _seqCounter = 0;
+function optimisticId(): string {
+  return `opt_${Date.now()}_${++_seqCounter}`;
+}
+
 interface TypingEvent {
   userId: number;
   name: string;
@@ -13,12 +20,12 @@ interface TypingEvent {
 }
 
 interface UseChatWindowReturn {
-  messages: ChatMessageDto[];
+  messages: LocalMessage[];
   isLoading: boolean;
   isSending: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
-  typingNames: string[];       // names of people currently typing
+  typingNames: string[];
   sendMessage: (text: string) => Promise<void>;
   loadMore: () => Promise<void>;
   publishTyping: (isTyping: boolean) => void;
@@ -29,7 +36,7 @@ export function useChatWindow(
   conversationId: number,
   currentUserId: number,
 ): UseChatWindowReturn {
-  const [messages, setMessages]       = useState<ChatMessageDto[]>([]);
+  const [messages, setMessages]       = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading]     = useState(true);
   const [isSending, setIsSending]     = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -89,16 +96,11 @@ export function useChatWindow(
               try {
                 const msg: ChatMessageDto = JSON.parse(frame.body);
                 setMessages((prev) => {
-                  if (prev.find((m) => m.id === msg.id)) return prev;
+                  if (prev.find((m) => m.id === msg.id && !m._optimisticId)) return prev;
 
-                  // Reconcile optimistic self message
                   if (msg.senderId === currentUserId) {
                     const optIdx = prev.findIndex(
-                      (m) =>
-                        m.senderId === currentUserId &&
-                        m.content === msg.content &&
-                        typeof m.id === 'number' &&
-                        m.id > 1000000000000
+                      (m) => m._optimisticId && m.content === msg.content,
                     );
                     if (optIdx !== -1) {
                       const updated = [...prev];
@@ -158,9 +160,10 @@ export function useChatWindow(
     const trimmed = text.trim();
     if (!trimmed || isSending) return;
 
-    // Optimistic message shown immediately
-    const optimistic: ChatMessageDto = {
-      id: Date.now(),           // temp id, replaced when server echoes back
+    const optId = optimisticId();
+    const optimistic: LocalMessage = {
+      id: -1,
+      _optimisticId: optId,
       conversationId,
       senderId: currentUserId,
       senderName: 'You',
@@ -173,25 +176,20 @@ export function useChatWindow(
     setIsSending(true);
 
     try {
-      // Try STOMP publish first (real-time path)
       if (stompRef.current?.connected) {
         stompRef.current.publish({
           destination: `/app/chat/conversations/${conversationId}/send`,
           body: JSON.stringify({ content: trimmed }),
         });
-        // Server will broadcast back via /topic/conversation.{id};
-        // we'll de-dup by id when it arrives
       } else {
-        // Fallback to REST if WS is not connected
         const saved = await chatService.sendMessage(conversationId, trimmed);
         setMessages((prev) =>
-          prev.map((m) => (m.id === optimistic.id ? saved : m))
+          prev.map((m) => (m._optimisticId === optId ? saved : m))
         );
       }
     } catch (err) {
       secureLog.error('[ChatWindow] Send failed', err);
-      // Remove optimistic on error
-      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setMessages((prev) => prev.filter((m) => m._optimisticId !== optId));
     } finally {
       setIsSending(false);
     }

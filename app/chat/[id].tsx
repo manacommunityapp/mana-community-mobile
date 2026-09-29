@@ -7,14 +7,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { useChatWindow } from '@/hooks/useChatWindow';
+import { useChatWindow, type LocalMessage } from '@/hooks/useChatWindow';
 import { useAuth } from '@/hooks/useAuth';
 import { chatService } from '@/services/chatService';
 import { MessageBubble } from '@/components/common/MessageBubble';
 import { ChatInput } from '@/components/common/ChatInput';
 import { TypingIndicator } from '@/components/common/TypingIndicator';
 import { COLORS } from '@/constants/config';
-import type { ChatMessageDto } from '@/types/api';
 
 // ── Connection status badge ────────────────────────────────────
 function StatusDot({ connected }: { connected: boolean }) {
@@ -76,7 +75,7 @@ export default function ChatWindowScreen() {
   const conversationId = Number(id);
   const router  = useRouter();
   const { user } = useAuth();
-  const listRef = useRef<FlatList<ChatMessageDto>>(null);
+  const listRef = useRef<FlatList<LocalMessage>>(null);
 
   const {
     messages, isLoading, isSending, isLoadingMore,
@@ -112,7 +111,7 @@ export default function ChatWindowScreen() {
 
   // ── Render each message ────────────────────────────────────────
   const renderItem = useCallback(
-    ({ item, index }: ListRenderItemInfo<ChatMessageDto>) => {
+    ({ item, index }: ListRenderItemInfo<LocalMessage>) => {
       const isMine     = item.senderId === user?.id;
       const prevMsg    = index > 0 ? messages[index - 1] : undefined;
       const nextMsg    = messages[index + 1];
@@ -186,7 +185,7 @@ export default function ChatWindowScreen() {
         <FlatList
           ref={listRef}
           data={messages}
-          keyExtractor={(m) => String(m.id)}
+          keyExtractor={(m) => m._optimisticId ?? String(m.id)}
           renderItem={renderItem}
           contentContainerStyle={scr.listContent}
           onScroll={handleScroll}
