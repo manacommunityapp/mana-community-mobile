@@ -383,7 +383,7 @@ export default function NoticesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 4,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F9FAFB',
   },
   searchBar: {
     flexDirection: 'row',
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   // ── Category Chips Filter ──
   categorySection: {
     paddingVertical: 10,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F9FAFB',
   },
   categoryScroll: {
     paddingHorizontal: 16,
@@ -683,10 +683,12 @@ const styles = StyleSheet.create({
   modalMetaCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceAlt,
+    backgroundColor: '#F9FAFB',
     borderRadius: RADIUS.md,
     paddingVertical: 10,
     paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   modalMetaItem: {
     flex: 1,
