@@ -11,7 +11,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { sportsService } from '@/services/sportsService';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS } from '@/constants/config';
-import { validateImageFile, showFileValidationError, getSafeErrorMessage } from '@/security';
+import {
+  validateImageFile,
+  showFileValidationError,
+  getSafeErrorMessage,
+  verifyServerUploadRejection,
+} from '@/security';
 import { formatDistanceToNow } from 'date-fns';
 import type { MatchPhotoDto } from '@/types/api';
 
@@ -70,7 +75,7 @@ export default function MatchPhotoGalleryScreen() {
       setCaptionFor(null);
       setCaption('');
     } catch (err: any) {
-      Alert.alert('Upload failed', getSafeErrorMessage(err));
+      Alert.alert('Upload Failed', verifyServerUploadRejection(err));
     } finally {
       setUploading(false);
     }
@@ -100,8 +105,8 @@ export default function MatchPhotoGalleryScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => setFullscreen(item)} activeOpacity={0.85}>
-              <Image source={{ uri: item.imageUrl }} style={{ width: THUMB, height: THUMB }} resizeMode="cover" />
-              {item.likeCount > 0 && (
+              <Image source={{ uri: item.imageUrl || item.url }} style={{ width: THUMB, height: THUMB }} resizeMode="cover" />
+              {(item.likeCount ?? 0) > 0 && (
                 <View style={s.thumbLike}>
                   <Text style={s.thumbLikeText}>❤️ {item.likeCount}</Text>
                 </View>
@@ -163,26 +168,26 @@ export default function MatchPhotoGalleryScreen() {
 
           {fullscreen && (
             <>
-              <Image source={{ uri: fullscreen.imageUrl }} style={s.fullImg} resizeMode="contain" />
+              <Image source={{ uri: fullscreen.imageUrl || fullscreen.url }} style={s.fullImg} resizeMode="contain" />
 
               <View style={s.fullMeta}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.fullUploader}>{fullscreen.uploaderName}</Text>
+                  <Text style={s.fullUploader}>{fullscreen.uploaderName || fullscreen.uploadedBy || 'Community Member'}</Text>
                   {fullscreen.caption && <Text style={s.fullCaption}>{fullscreen.caption}</Text>}
                   <Text style={s.fullTime}>
-                    {formatDistanceToNow(new Date(fullscreen.createdAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(fullscreen.createdAt || fullscreen.uploadedAt || Date.now()), { addSuffix: true })}
                   </Text>
                 </View>
 
                 <View style={s.fullActions}>
-                  <TouchableOpacity onPress={() => likeMutation.mutate(fullscreen.id)} style={s.likeBtn}>
-                    <Text style={s.likeText}>{fullscreen.isLiked ? '❤️' : '🤍'} {fullscreen.likeCount}</Text>
+                  <TouchableOpacity onPress={() => likeMutation.mutate(Number(fullscreen.id))} style={s.likeBtn}>
+                    <Text style={s.likeText}>{fullscreen.isLiked ? '❤️' : '🤍'} {fullscreen.likeCount ?? 0}</Text>
                   </TouchableOpacity>
-                  {fullscreen.uploadedById === user?.id && (
+                  {(fullscreen.uploadedById ?? fullscreen.uploadedBy) === user?.id && (
                     <TouchableOpacity
                       onPress={() => Alert.alert('Delete Photo', 'Remove this photo?', [
                         { text: 'Cancel', style: 'cancel' },
-                        { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(fullscreen.id) },
+                        { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(Number(fullscreen.id)) },
                       ])}
                       style={s.deleteBtn}
                     >

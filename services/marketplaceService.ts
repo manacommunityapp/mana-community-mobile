@@ -1,4 +1,5 @@
 import api from './apiClient';
+import { inferMimeType, verifyServerUploadResponse } from '@/security';
 import type {
   MarketplaceListingDto, CreateListingRequest,
   MarketplaceFilters, PageResponse,
@@ -138,14 +139,15 @@ export const marketplaceService = {
    */
   async uploadImage(
     localUri: string,
-    mimeType = 'image/jpeg',
+    declaredMimeType?: string,
     onProgress?: (pct: number) => void,
   ): Promise<string> {
     const fileName = localUri.split('/').pop() ?? 'image.jpg';
+    const mimeType = inferMimeType(localUri, declaredMimeType);
     const form = new FormData();
     form.append('file', { uri: localUri, name: fileName, type: mimeType } as any);
 
-    const res = await api.post<{ url: string }>(
+    const res = await api.post<Record<string, unknown>>(
       '/media/upload',
       form,
       {
@@ -155,7 +157,8 @@ export const marketplaceService = {
         },
       },
     );
-    return res.data.url;
+    // Verifies server-side acceptance and extracts confirmed URL
+    return verifyServerUploadResponse(res.data);
   },
 
   // ── Report ───────────────────────────────────────────────────

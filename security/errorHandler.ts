@@ -10,6 +10,7 @@ const SAFE_ERROR_CODES: Record<number, string> = {
   404: 'The requested resource was not found.',
   409: 'This action conflicts with the current state. Please refresh and try again.',
   413: 'The file is too large.',
+  415: 'The file format is not supported.',
   422: 'Please check your input and try again.',
   429: 'Too many requests. Please wait a moment and try again.',
   500: GENERIC_ERROR,
@@ -20,13 +21,32 @@ const SAFE_ERROR_CODES: Record<number, string> = {
 export function getSafeErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
     const status = error.response?.status;
+    const serverMessage = error.response?.data?.message;
+
+    // 1. Prioritize safe, descriptive server rejection / validation messages
+    if (
+      typeof serverMessage === 'string' &&
+      serverMessage.trim().length > 0 &&
+      serverMessage.length < 250 &&
+      !containsSensitiveInfo(serverMessage)
+    ) {
+      return serverMessage.trim();
+    }
+
+    // 2. Check for Spring Boot field errors list
+    const fieldErrors = error.response?.data?.fieldErrors;
+    if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+      const firstMsg = fieldErrors[0]?.message;
+      if (typeof firstMsg === 'string' && !containsSensitiveInfo(firstMsg)) {
+        return firstMsg.trim();
+      }
+    }
+
+    // 3. Fall back to standard safe HTTP status descriptions
     if (status && SAFE_ERROR_CODES[status]) {
       return SAFE_ERROR_CODES[status]!;
     }
-    const serverMessage = error.response?.data?.message;
-    if (typeof serverMessage === 'string' && serverMessage.length < 200 && !containsSensitiveInfo(serverMessage)) {
-      return serverMessage;
-    }
+
     if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
       return 'Network error. Please check your connection and try again.';
     }
@@ -63,8 +83,16 @@ function containsSensitiveInfo(message: string): boolean {
   );
 }
 
-export function showSafeError(title: string, error: unknown): void {
-  Alert.alert(title, getSafeErrorMessage(error));
+export function showSafeError(titleOrError: unknown, errorOrTitle?: unknown): void {
+  if (typeof titleOrError === 'string' && errorOrTitle !== undefined && typeof errorOrTitle !== 'string') {
+    Alert.alert(titleOrError, getSafeErrorMessage(errorOrTitle));
+  } else if (typeof errorOrTitle === 'string') {
+    Alert.alert(errorOrTitle, getSafeErrorMessage(titleOrError));
+  } else if (typeof titleOrError === 'string') {
+    Alert.alert('Error', titleOrError);
+  } else {
+    Alert.alert('Error', getSafeErrorMessage(titleOrError));
+  }
 }
 
 export function logSecurityEvent(event: string, details?: Record<string, unknown>): void {

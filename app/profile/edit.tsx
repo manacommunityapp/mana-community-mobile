@@ -10,7 +10,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { profileService, UpdateProfileRequest } from '@/services/profileService';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, getInitials } from '@/constants/config';
-import { validateProfilePhoto, showFileValidationError, getSafeErrorMessage } from '@/security';
+import {
+  validateProfilePhoto,
+  showFileValidationError,
+  getSafeErrorMessage,
+  inferMimeType,
+  verifyServerUploadRejection,
+  isServerFileRejection,
+} from '@/security';
 
 // ── Upload progress bar ────────────────────────────────────────
 function ProgressBar({ pct }: { pct: number }) {
@@ -83,7 +90,7 @@ export default function EditProfileScreen() {
   const { user, updateUser } = useAuth();
 
   const [form, setForm] = useState({
-    name:       user?.name       ?? '',
+    name:       user?.fullName   ?? user?.name ?? '',
     mobile:     user?.mobile     ?? '',
     bio:        user?.bio        ?? '',
     profession: user?.profession ?? '',
@@ -179,8 +186,7 @@ export default function EditProfileScreen() {
       // 1. Upload new photo if selected
       if (photoUri) {
         setIsUploading(true);
-        const ext      = photoUri.split('.').pop()?.toLowerCase() ?? 'jpg';
-        const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+        const mimeType = inferMimeType(photoUri);
 
         const { photoUrl } = await profileService.uploadPhoto(
           photoUri,
@@ -211,7 +217,11 @@ export default function EditProfileScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err: any) {
-      Alert.alert('Error', getSafeErrorMessage(err));
+      if (isServerFileRejection(err)) {
+        Alert.alert('Photo Upload Rejected', verifyServerUploadRejection(err));
+      } else {
+        Alert.alert('Error', getSafeErrorMessage(err));
+      }
     } finally {
       setIsSaving(false);
       setIsUploading(false);
@@ -219,7 +229,9 @@ export default function EditProfileScreen() {
   }, [form, photoUri, user, updateUser, router]);
 
   // ── Current photo to display ───────────────────────────────────
-  const displayPhoto = photoUri ?? user?.profilePhoto ?? null;
+  const [displayPhotoError, setDisplayPhotoError] = useState(false);
+  const rawPhoto = photoUri ?? user?.profilePicUrl ?? user?.profilePhoto ?? null;
+  const hasDisplayPhoto = !displayPhotoError && !!rawPhoto && typeof rawPhoto === 'string' && rawPhoto.trim().length > 0 && !rawPhoto.includes('null') && !rawPhoto.includes('undefined');
 
   return (
     <SafeAreaView style={scr.container} edges={['top']}>
@@ -255,12 +267,16 @@ export default function EditProfileScreen() {
           <View style={scr.avatarSection}>
             <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.8}>
               <View style={scr.avatarWrap}>
-                {displayPhoto ? (
-                  <Image source={{ uri: displayPhoto }} style={scr.avatarImage} />
+                {hasDisplayPhoto ? (
+                  <Image
+                    source={{ uri: rawPhoto }}
+                    style={scr.avatarImage}
+                    onError={() => setDisplayPhotoError(true)}
+                  />
                 ) : (
                   <View style={scr.avatarPlaceholder}>
                     <Text style={scr.avatarInitial}>
-                      {getInitials(form.name)}
+                      {getInitials(form.name || user?.fullName || user?.name)}
                     </Text>
                   </View>
                 )}
