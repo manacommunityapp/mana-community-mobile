@@ -97,14 +97,8 @@ export const sportsService = {
 
   // ── Live Scoring & Umpire Actions ─────────────────────────────
   async recordCricketBall(matchId: number, data: import('@/types/api').BallEventRequest): Promise<any> {
-    try {
-      const res = await api.post(`/tournament/match/${matchId}/ball`, data);
-      return res.data;
-    } catch {
-      // Fallback for standalone / mock mode
-      const res = await api.post(`/sports/matches/${matchId}/events`, data);
-      return res.data;
-    }
+    const res = await api.post(`/tournament/match/${matchId}/ball`, data);
+    return res.data;
   },
 
   async undoCricketBall(matchId: number, inningsNumber = 1): Promise<any> {
@@ -115,13 +109,8 @@ export const sportsService = {
   },
 
   async recordGenericScore(data: import('@/types/api').GenericScoreRequest): Promise<any> {
-    try {
-      const res = await api.post('/tournament/match/generic/score', data);
-      return res.data;
-    } catch {
-      const res = await api.post(`/sports/matches/${data.matchId}/events`, data);
-      return res.data;
-    }
+    const res = await api.post('/tournament/match/generic/score', data);
+    return res.data;
   },
 
   async undoGenericScore(matchId: number): Promise<any> {
