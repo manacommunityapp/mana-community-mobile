@@ -3,13 +3,20 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, ScrollView, BackHandler, Linking,
   TextInput, Modal, Alert, ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
+import {
+  homeServicesService,
+  HomeHelpWorkerDto,
+  HomeServiceBookingDto,
+} from '@/services/homeServicesService';
 
 type ServiceCategory =
   | 'ALL'
@@ -42,196 +49,93 @@ const CATEGORIES: CategoryConfig[] = [
   { value: 'PEST_CONTROL', label: 'Pest Control', icon: 'bug-outline',           color: '#DC2626', bg: '#FEE2E2' },
 ];
 
-interface ServiceProvider {
-  id: number;
-  name: string;
-  category: ServiceCategory;
-  phone: string;
-  rating: number;
-  reviewCount: number;
-  priceRange: string;
-  verified: boolean;
-  available: boolean;
-  statusText: string;
-  speciality: string;
-  experience: string;
-  flatsServed: number;
-  workingInTowers: string;
-  badge?: string;
-}
-
-const SAMPLE_PROVIDERS: ServiceProvider[] = [
-  {
-    id: 1,
-    name: 'Raju Sharma (Master Plumber)',
-    category: 'PLUMBING',
-    phone: '+919876543210',
-    rating: 4.8,
-    reviewCount: 54,
-    priceRange: '₹200 - ₹500',
-    verified: true,
-    available: true,
-    statusText: 'Available Today',
-    speciality: 'Pipe leaks, taps, bathroom fittings, flush tanks',
-    experience: '9 yrs exp',
-    flatsServed: 140,
-    workingInTowers: 'Tower A, B, C',
-    badge: 'TOP RATED',
-  },
-  {
-    id: 2,
-    name: 'Spark Electrical Works (Vinod)',
-    category: 'ELECTRICAL',
-    phone: '+919876543211',
-    rating: 4.7,
-    reviewCount: 62,
-    priceRange: '₹250 - ₹800',
-    verified: true,
-    available: true,
-    statusText: 'Available (30 min response)',
-    speciality: 'MCB tripping, fan, chandelier, geyser & smart switches',
-    experience: '12 yrs exp',
-    flatsServed: 210,
-    workingInTowers: 'All Towers',
-    badge: 'FAST RESPONSE',
-  },
-  {
-    id: 3,
-    name: 'Urban CleanPro Team',
-    category: 'CLEANING',
-    phone: '+919876543212',
-    rating: 4.9,
-    reviewCount: 88,
-    priceRange: '₹600 - ₹2,200',
-    verified: true,
-    available: true,
-    statusText: 'Slots Open Tomorrow',
-    speciality: 'Deep kitchen, bathroom scrub, sofa & balcony cleaning',
-    experience: '6 yrs in society',
-    flatsServed: 95,
-    workingInTowers: 'Tower B, D, E',
-    badge: 'POPULAR',
-  },
-  {
-    id: 4,
-    name: 'QuickFix AC & Appliances',
-    category: 'APPLIANCE',
-    phone: '+919876543215',
-    rating: 4.6,
-    reviewCount: 39,
-    priceRange: '₹350 - ₹1,200',
-    verified: true,
-    available: true,
-    statusText: 'Available Today',
-    speciality: 'AC gas refill, filter cleaning, fridge, washing machine',
-    experience: '8 yrs exp',
-    flatsServed: 120,
-    workingInTowers: 'Tower A, C, F',
-  },
-  {
-    id: 5,
-    name: 'Kumar Wooden Craft',
-    category: 'CARPENTRY',
-    phone: '+919876543213',
-    rating: 4.4,
-    reviewCount: 28,
-    priceRange: '₹300 - ₹1,500',
-    verified: true,
-    available: false,
-    statusText: 'Busy till 4 PM',
-    speciality: 'Door locks, hinge fixing, modular kitchen & wardrobe work',
-    experience: '15 yrs exp',
-    flatsServed: 70,
-    workingInTowers: 'Tower C, D',
-  },
-  {
-    id: 6,
-    name: 'Sunil Wall Paints & Textures',
-    category: 'PAINTING',
-    phone: '+919876543214',
-    rating: 4.5,
-    reviewCount: 31,
-    priceRange: '₹18 - ₹28/sqft',
-    verified: true,
-    available: true,
-    statusText: 'Book in Advance',
-    speciality: 'Interior touch-up, waterproof coating, balcony paint',
-    experience: '10 yrs exp',
-    flatsServed: 45,
-    workingInTowers: 'All Towers',
-  },
-  {
-    id: 7,
-    name: 'Laxmi Domestic Services',
-    category: 'MAID',
-    phone: '+919876543216',
-    rating: 4.8,
-    reviewCount: 47,
-    priceRange: '₹3,000 - ₹7,000/mo',
-    verified: true,
-    available: true,
-    statusText: 'Morning / Evening Slots',
-    speciality: 'Home cooking (North & South Indian), housekeeping, utensil wash',
-    experience: '5 yrs verified resident helper',
-    flatsServed: 18,
-    workingInTowers: 'Tower A, B',
-    badge: 'RECOMMENDED',
-  },
-  {
-    id: 8,
-    name: 'Shield Pest Solutions',
-    category: 'PEST_CONTROL',
-    phone: '+919876543217',
-    rating: 4.7,
-    reviewCount: 26,
-    priceRange: '₹750 - ₹1,800',
-    verified: true,
-    available: true,
-    statusText: 'Available This Weekend',
-    speciality: 'Cockroach herbal gel, termite, mosquito & rodent control',
-    experience: '7 yrs exp',
-    flatsServed: 60,
-    workingInTowers: 'All Towers',
-  },
-];
-
-interface BookingItem {
-  id: string;
-  providerName: string;
-  category: ServiceCategory;
-  date: string;
-  timeSlot: string;
-  status: 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED';
-  phone: string;
-  issue: string;
-}
-
-const INITIAL_BOOKINGS: BookingItem[] = [
-  {
-    id: 'BK-101',
-    providerName: 'Spark Electrical Works (Vinod)',
-    category: 'ELECTRICAL',
-    date: 'Today, 28 Sep',
-    timeSlot: '3:00 PM - 4:00 PM',
-    status: 'CONFIRMED',
-    phone: '+919876543211',
-    issue: 'Balcony light switch fixing & MCB check',
-  },
-];
-
 export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'PROVIDERS' | 'BOOKINGS'>('PROVIDERS');
-  const [bookings, setBookings] = useState<BookingItem[]>(INITIAL_BOOKINGS);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Booking modal state
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<HomeHelpWorkerDto | null>(null);
   const [bookIssue, setBookIssue] = useState('');
   const [bookDate, setBookDate] = useState('Today');
   const [bookTimeSlot, setBookTimeSlot] = useState('Morning (9 AM - 12 PM)');
+
+  // ── Queries ─────────────────────────────────────────────────────────────
+  const {
+    data: providers = [],
+    isLoading: loadingProviders,
+    refetch: refetchProviders,
+  } = useQuery<HomeHelpWorkerDto[]>({
+    queryKey: ['home-services-workers', selectedCategory],
+    queryFn: () => homeServicesService.getWorkers(selectedCategory),
+  });
+
+  const {
+    data: bookings = [],
+    isLoading: loadingBookings,
+    refetch: refetchBookings,
+  } = useQuery<HomeServiceBookingDto[]>({
+    queryKey: ['home-services-bookings'],
+    queryFn: () => homeServicesService.getMyBookings(),
+  });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchProviders(), refetchBookings()]);
+    setRefreshing(false);
+  }, [refetchProviders, refetchBookings]);
+
+  // ── Mutations ───────────────────────────────────────────────────────────
+  const bookMutation = useMutation({
+    mutationFn: (data: Parameters<typeof homeServicesService.bookWorker>[0]) =>
+      homeServicesService.bookWorker(data),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['home-services-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['home-services-workers'] });
+      setBookingModalVisible(false);
+      Alert.alert(
+        'Booking Confirmed! 🎉',
+        `Your service request #${res.bookingId} has been submitted for ${selectedProvider?.name}. They will reach out shortly.`,
+        [
+          { text: 'View Bookings', onPress: () => setActiveTab('BOOKINGS') },
+          { text: 'OK' },
+        ]
+      );
+    },
+    onError: (err: any) => {
+      Alert.alert('Booking Failed', err?.message || 'Could not schedule booking. Please try again.');
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (bookingId: string) => homeServicesService.cancelBooking(bookingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['home-services-bookings'] });
+      Alert.alert('Booking Cancelled', 'Your service request has been cancelled.');
+    },
+    onError: (err: any) => {
+      Alert.alert('Error', err?.message || 'Failed to cancel booking.');
+    },
+  });
+
+  const handleCancelBooking = (bookingId: string) => {
+    Alert.alert(
+      'Cancel Booking',
+      'Are you sure you want to cancel this service visit request?',
+      [
+        { text: 'Keep Booking', style: 'cancel' },
+        {
+          text: 'Cancel Request',
+          style: 'destructive',
+          onPress: () => cancelMutation.mutate(bookingId),
+        },
+      ]
+    );
+  };
 
   const goHome = useCallback(() => {
     if (isTab) return;
@@ -251,23 +155,24 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   );
 
   const filteredProviders = useMemo(() => {
-    let list = SAMPLE_PROVIDERS;
+    let list = providers;
     if (selectedCategory !== 'ALL') {
-      list = list.filter((p) => p.category === selectedCategory);
+      list = list.filter((p) => p.category?.toUpperCase() === selectedCategory);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.speciality.toLowerCase().includes(q) ||
-          p.workingInTowers.toLowerCase().includes(q)
+          p.name?.toLowerCase().includes(q) ||
+          p.speciality?.toLowerCase().includes(q) ||
+          p.workingInTowers?.toLowerCase().includes(q) ||
+          p.category?.toLowerCase().includes(q)
       );
     }
     return list;
-  }, [selectedCategory, searchQuery]);
+  }, [providers, selectedCategory, searchQuery]);
 
-  const handleOpenBooking = (provider: ServiceProvider) => {
+  const handleOpenBooking = (provider: HomeHelpWorkerDto) => {
     setSelectedProvider(provider);
     setBookIssue('');
     setBookingModalVisible(true);
@@ -275,26 +180,18 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
   const handleConfirmBooking = () => {
     if (!selectedProvider) return;
-    const newBooking: BookingItem = {
-      id: `BK-${Math.floor(1000 + Math.random() * 9000)}`,
+    bookMutation.mutate({
+      workerId: selectedProvider.id,
       providerName: selectedProvider.name,
-      category: selectedProvider.category,
-      date: bookDate,
-      timeSlot: bookTimeSlot,
-      status: 'CONFIRMED',
       phone: selectedProvider.phone,
-      issue: bookIssue.trim() || `${selectedProvider.category} service visit`,
-    };
-    setBookings((prev) => [newBooking, ...prev]);
-    setBookingModalVisible(false);
-    Alert.alert(
-      'Booking Confirmed! 🎉',
-      `Your service request has been assigned to ${selectedProvider.name}. They will reach out shortly.`,
-      [{ text: 'View Bookings', onPress: () => setActiveTab('BOOKINGS') }, { text: 'OK' }]
-    );
+      category: selectedProvider.category,
+      slotDate: bookDate,
+      timeSlot: bookTimeSlot,
+      requirementsNotes: bookIssue.trim() || `${selectedProvider.category} service visit`,
+    });
   };
 
-  const renderProviderCard = ({ item }: { item: ServiceProvider }) => {
+  const renderProviderCard = ({ item }: { item: HomeHelpWorkerDto }) => {
     const catConfig = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[0];
     return (
       <View style={[s.card, !item.available && s.cardDimmed]}>
@@ -391,42 +288,96 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
     );
   };
 
-  const renderBookingCard = ({ item }: { item: BookingItem }) => (
-    <View style={s.bookingCard}>
-      <View style={s.bookingTop}>
-        <View style={s.bookingBadgeConfirmed}>
-          <Ionicons name="checkmark-circle" size={13} color="#059669" />
-          <Text style={s.bookingBadgeText}>{item.status}</Text>
-        </View>
-        <Text style={s.bookingIdText}>{item.id}</Text>
-      </View>
+  const renderBookingCard = ({ item }: { item: HomeServiceBookingDto }) => {
+    const isCancelled = item.status === 'CANCELLED';
+    const isCompleted = item.status === 'COMPLETED';
+    const isConfirmed = item.status === 'CONFIRMED';
 
-      <Text style={s.bookingProvider}>{item.providerName}</Text>
-      <Text style={s.bookingIssue}>{item.issue}</Text>
-
-      <View style={s.bookingMetaRow}>
-        <View style={s.bookingMetaItem}>
-          <Ionicons name="calendar-outline" size={13} color={COLORS.primary} />
-          <Text style={s.bookingMetaText}>{item.date}</Text>
+    return (
+      <View style={[s.bookingCard, isCancelled && s.bookingCardCancelled]}>
+        <View style={s.bookingTop}>
+          <View
+            style={[
+              s.bookingBadgeConfirmed,
+              isCancelled && s.bookingBadgeCancelled,
+              item.status === 'IN_PROGRESS' && s.bookingBadgeInProgress,
+              isCompleted && s.bookingBadgeCompleted,
+            ]}
+          >
+            <Ionicons
+              name={
+                isCancelled
+                  ? 'close-circle'
+                  : isCompleted
+                  ? 'checkmark-done-circle'
+                  : 'checkmark-circle'
+              }
+              size={13}
+              color={
+                isCancelled
+                  ? COLORS.error
+                  : isCompleted
+                  ? '#2563EB'
+                  : item.status === 'IN_PROGRESS'
+                  ? COLORS.primary
+                  : '#059669'
+              }
+            />
+            <Text
+              style={[
+                s.bookingBadgeText,
+                isCancelled && { color: COLORS.error },
+                isCompleted && { color: '#2563EB' },
+                item.status === 'IN_PROGRESS' && { color: COLORS.primary },
+              ]}
+            >
+              {item.status}
+            </Text>
+          </View>
+          <Text style={s.bookingIdText}>{item.id}</Text>
         </View>
-        <View style={s.bookingMetaItem}>
-          <Ionicons name="time-outline" size={13} color={COLORS.primary} />
-          <Text style={s.bookingMetaText}>{item.timeSlot}</Text>
+
+        <Text style={s.bookingProvider}>{item.providerName}</Text>
+        <Text style={s.bookingIssue}>{item.issue}</Text>
+
+        <View style={s.bookingMetaRow}>
+          <View style={s.bookingMetaItem}>
+            <Ionicons name="calendar-outline" size={13} color={COLORS.primary} />
+            <Text style={s.bookingMetaText}>{item.date}</Text>
+          </View>
+          <View style={s.bookingMetaItem}>
+            <Ionicons name="time-outline" size={13} color={COLORS.primary} />
+            <Text style={s.bookingMetaText}>{item.timeSlot}</Text>
+          </View>
+        </View>
+
+        <View style={s.bookingActionRow}>
+          {!isCancelled && (
+            <TouchableOpacity
+              style={s.bookingCallBtn}
+              onPress={() => Linking.openURL(`tel:${item.phone}`)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="call" size={14} color="#fff" />
+              <Text style={s.bookingCallText}>Call Technician</Text>
+            </TouchableOpacity>
+          )}
+
+          {isConfirmed && (
+            <TouchableOpacity
+              style={s.bookingCancelBtn}
+              onPress={() => handleCancelBooking(item.id)}
+              disabled={cancelMutation.isPending}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close-circle-outline" size={14} color={COLORS.error} />
+              <Text style={s.bookingCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
-
-      <View style={s.bookingActionRow}>
-        <TouchableOpacity
-          style={s.bookingCallBtn}
-          onPress={() => Linking.openURL(`tel:${item.phone}`)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="call" size={14} color="#fff" />
-          <Text style={s.bookingCallText}>Call Technician</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -466,6 +417,14 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           renderItem={renderProviderCard}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
+          }
           ListHeaderComponent={
             <>
               {/* ── Hero Gradient Banner ─────────────────────────────── */}
@@ -522,7 +481,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 </View>
               </View>
 
-              {/* ── Category Chips Carousel ──────────────────────────── */}
+              {/* ── Category Chips Carousel ──────────────────── */}
               <View style={s.categoriesSection}>
                 <ScrollView
                   horizontal
@@ -567,13 +526,20 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             </>
           }
           ListEmptyComponent={
-            <View style={s.emptyState}>
-              <Ionicons name="construct-outline" size={48} color={COLORS.textMuted} />
-              <Text style={s.emptyTitle}>No technicians found</Text>
-              <Text style={s.emptySub}>
-                Try adjusting your search query or selecting a different service category.
-              </Text>
-            </View>
+            loadingProviders ? (
+              <View style={s.emptyState}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={s.emptyTitle}>Loading technicians...</Text>
+              </View>
+            ) : (
+              <View style={s.emptyState}>
+                <Ionicons name="construct-outline" size={48} color={COLORS.textMuted} />
+                <Text style={s.emptyTitle}>No technicians found</Text>
+                <Text style={s.emptySub}>
+                  Try adjusting your search query or selecting a different service category.
+                </Text>
+              </View>
+            )
           }
         />
       ) : (
@@ -583,20 +549,35 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           keyExtractor={(item) => item.id}
           renderItem={renderBookingCard}
           contentContainerStyle={s.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
+          }
           ListHeaderComponent={
             <View style={s.bookingsHeader}>
               <Text style={s.sectionTitle}>My Service Requests</Text>
-              <Text style={s.sectionCount}>{bookings.length} active</Text>
+              <Text style={s.sectionCount}>{bookings.length} requests</Text>
             </View>
           }
           ListEmptyComponent={
-            <View style={s.emptyState}>
-              <Ionicons name="receipt-outline" size={48} color={COLORS.textMuted} />
-              <Text style={s.emptyTitle}>No service bookings yet</Text>
-              <Text style={s.emptySub}>
-                Book a technician from the services directory and your scheduled visits will appear here.
-              </Text>
-            </View>
+            loadingBookings ? (
+              <View style={s.emptyState}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={s.emptyTitle}>Loading bookings...</Text>
+              </View>
+            ) : (
+              <View style={s.emptyState}>
+                <Ionicons name="receipt-outline" size={48} color={COLORS.textMuted} />
+                <Text style={s.emptyTitle}>No service bookings yet</Text>
+                <Text style={s.emptySub}>
+                  Book a technician from the services directory and your scheduled visits will appear here.
+                </Text>
+              </View>
+            )
           }
         />
       )}
@@ -683,11 +664,16 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
             <View style={s.modalFooter}>
               <TouchableOpacity
-                style={s.modalConfirmBtn}
+                style={[s.modalConfirmBtn, bookMutation.isPending && { opacity: 0.6 }]}
                 onPress={handleConfirmBooking}
+                disabled={bookMutation.isPending}
                 activeOpacity={0.85}
               >
-                <Text style={s.modalConfirmText}>Confirm Booking Request</Text>
+                {bookMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={s.modalConfirmText}>Confirm Booking Request</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1208,8 +1194,23 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.surfaceAlt,
     paddingTop: 8,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  bookingCardCancelled: {
+    opacity: 0.6,
+  },
+  bookingBadgeCancelled: {
+    backgroundColor: '#FEE2E2',
+  },
+  bookingBadgeInProgress: {
+    backgroundColor: '#EEF2FF',
+  },
+  bookingBadgeCompleted: {
+    backgroundColor: '#DBEAFE',
   },
   bookingCallBtn: {
+    flex: 1,
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.md,
     paddingVertical: 8,
@@ -1220,6 +1221,21 @@ const s = StyleSheet.create({
   },
   bookingCallText: {
     color: '#fff',
+    fontSize: 12,
+    fontFamily: FONTS.bold, fontWeight: '700',
+  },
+  bookingCancelBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#FEE2E2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  bookingCancelText: {
+    color: COLORS.error,
     fontSize: 12,
     fontFamily: FONTS.bold, fontWeight: '700',
   },
