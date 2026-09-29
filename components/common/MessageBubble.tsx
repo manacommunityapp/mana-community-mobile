@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
-import { ChatMessageDto } from '@/types/api';
+import { ChatMessageDto, ChatAttachmentDto } from '@/types/api';
 import { COLORS } from '@/constants/config';
 
 // ── Date separator between message groups ─────────────────────
@@ -69,6 +69,55 @@ const sys = StyleSheet.create({
   text: { fontSize: 12, color: COLORS.textMuted, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10 },
 });
 
+// ── Attachment rendering ──────────────────────────────────────
+function AttachmentList({ attachments, isMine }: { attachments: ChatAttachmentDto[]; isMine: boolean }) {
+  return (
+    <View style={att.container}>
+      {attachments.map((a) => {
+        const isImage = a.contentType.startsWith('image/');
+        if (isImage) {
+          return (
+            <Image
+              key={a.id}
+              source={{ uri: a.fileUrl }}
+              style={att.image}
+              resizeMode="cover"
+            />
+          );
+        }
+        const sizeLabel = a.sizeBytes < 1024 * 1024
+          ? `${Math.round(a.sizeBytes / 1024)} KB`
+          : `${(a.sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+        return (
+          <TouchableOpacity
+            key={a.id}
+            style={att.file}
+            onPress={() => Linking.openURL(a.fileUrl).catch(() => {})}
+          >
+            <Text style={att.fileIcon}>📄</Text>
+            <View style={att.fileMeta}>
+              <Text style={[att.fileName, isMine && att.fileNameMine]} numberOfLines={1}>{a.fileName}</Text>
+              <Text style={[att.fileSize, isMine && att.fileSizeMine]}>{sizeLabel}</Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+const att = StyleSheet.create({
+  container:    { gap: 6, marginBottom: 4 },
+  image:        { width: '100%', aspectRatio: 4 / 3, borderRadius: 12, backgroundColor: '#E5E7EB' },
+  file:         { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, paddingHorizontal: 8, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 10 },
+  fileIcon:     { fontSize: 24 },
+  fileMeta:     { flex: 1 },
+  fileName:     { fontSize: 13, fontFamily: 'DMSans-Medium', fontWeight: '500', color: COLORS.text },
+  fileNameMine: { color: '#fff' },
+  fileSize:     { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  fileSizeMine: { color: 'rgba(255,255,255,0.7)' },
+});
+
 // ── Main MessageBubble ─────────────────────────────────────────
 interface Props {
   message: ChatMessageDto;
@@ -106,9 +155,17 @@ export const MessageBubble = memo(function MessageBubble({
             <Text style={bub.senderName}>{message.senderName}</Text>
           )}
 
-          <Text style={[bub.content, isMine ? bub.contentMine : bub.contentTheirs]}>
-            {message.content}
-          </Text>
+          {/* Attachments */}
+          {message.attachments && message.attachments.length > 0 && (
+            <AttachmentList attachments={message.attachments} isMine={isMine} />
+          )}
+
+          {/* Text content — hide placeholder "[attachment]" when files are present */}
+          {!(message.attachments?.length && message.content === '[attachment]') && (
+            <Text style={[bub.content, isMine ? bub.contentMine : bub.contentTheirs]}>
+              {message.content}
+            </Text>
+          )}
 
           <View style={bub.meta}>
             <Text style={[bub.time, isMine ? bub.timeMine : bub.timeTheirs]}>

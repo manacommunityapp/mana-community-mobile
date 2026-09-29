@@ -242,6 +242,14 @@ export interface ChatParticipantDto {
   online: boolean;
 }
 
+export interface ChatAttachmentDto {
+  id: number;
+  fileUrl: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+}
+
 export interface ChatMessageDto {
   id: number;
   conversationId: number;
@@ -252,6 +260,7 @@ export interface ChatMessageDto {
   type: 'text' | 'image' | 'file' | 'system';
   createdAt: string;
   readAt?: string;
+  attachments?: ChatAttachmentDto[];
 }
 
 // ── Notifications ──────────────────────────────────────────────

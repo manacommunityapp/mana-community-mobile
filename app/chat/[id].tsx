@@ -79,8 +79,8 @@ export default function ChatWindowScreen() {
 
   const {
     messages, isLoading, isSending, isLoadingMore,
-    hasMore, typingNames, sendMessage, loadMore,
-    publishTyping, connected,
+    hasMore, typingNames, sendMessage, sendWithAttachments,
+    loadMore, publishTyping, connected,
   } = useChatWindow(conversationId, user?.id ?? 0);
 
   // Load conversation metadata for header
@@ -206,6 +206,7 @@ export default function ChatWindowScreen() {
         {/* Input bar */}
         <ChatInput
           onSend={sendMessage}
+          onSendAttachments={sendWithAttachments}
           onTyping={publishTyping}
           isSending={isSending}
           disabled={!user}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Client, IMessage } from '@stomp/stompjs';
-import { chatService } from '@/services/chatService';
+import { chatService, type PickedFile } from '@/services/chatService';
 import { tokenStore } from '@/services/apiClient';
 import { CONFIG } from '@/constants/config';
 import { secureLog } from '@/security';
@@ -27,6 +27,7 @@ interface UseChatWindowReturn {
   hasMore: boolean;
   typingNames: string[];
   sendMessage: (text: string) => Promise<void>;
+  sendWithAttachments: (files: PickedFile[], text?: string) => Promise<void>;
   loadMore: () => Promise<void>;
   publishTyping: (isTyping: boolean) => void;
   connected: boolean;
@@ -195,6 +196,39 @@ export function useChatWindow(
     }
   }, [conversationId, currentUserId, isSending]);
 
+  // ── Send message with file attachments (REST only) ─────────────
+  const sendWithAttachments = useCallback(async (files: PickedFile[], text?: string) => {
+    if (isSending || files.length === 0) return;
+
+    const optId = optimisticId();
+    const preview = text?.trim() || `📎 ${files[0].name}`;
+    const optimistic: LocalMessage = {
+      id: -1,
+      _optimisticId: optId,
+      conversationId,
+      senderId: currentUserId,
+      senderName: 'You',
+      content: preview,
+      type: 'file',
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimistic]);
+    setIsSending(true);
+
+    try {
+      const saved = await chatService.sendWithAttachments(conversationId, files, text);
+      setMessages((prev) =>
+        prev.map((m) => (m._optimisticId === optId ? saved : m))
+      );
+    } catch (err) {
+      secureLog.error('[ChatWindow] Attachment send failed', err);
+      setMessages((prev) => prev.filter((m) => m._optimisticId !== optId));
+    } finally {
+      setIsSending(false);
+    }
+  }, [conversationId, currentUserId, isSending]);
+
   // ── Load older messages ────────────────────────────────────────
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
@@ -245,6 +279,7 @@ export function useChatWindow(
     hasMore,
     typingNames,
     sendMessage,
+    sendWithAttachments,
     loadMore,
     publishTyping,
     connected,
