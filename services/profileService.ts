@@ -1,4 +1,5 @@
 import api from './apiClient';
+import { inferMimeType, verifyServerUploadResponse } from '@/security';
 import type { UserProfileResponse } from '@/types/api';
 
 export interface UpdateProfileRequest {
@@ -14,13 +15,25 @@ export const profileService = {
   // GET /api/users/me
   async getProfile(): Promise<UserProfileResponse> {
     const res = await api.get<UserProfileResponse>('/users/me');
-    return res.data;
+    const data = res.data;
+    const resolvedName = data.fullName || data.name || (data as any).username || (data as any).displayName || (data.email ? data.email.split('@')[0] : '');
+    return {
+      ...data,
+      fullName: resolvedName,
+      name: resolvedName,
+    };
   },
 
   // PUT /api/users/me
   async updateProfile(data: UpdateProfileRequest): Promise<UserProfileResponse> {
     const res = await api.put<UserProfileResponse>('/users/me', data);
-    return res.data;
+    const updated = res.data;
+    const resolvedName = updated.fullName || updated.name || (updated as any).username || (updated as any).displayName || (updated.email ? updated.email.split('@')[0] : '');
+    return {
+      ...updated,
+      fullName: resolvedName,
+      name: resolvedName,
+    };
   },
 
   /**
@@ -32,10 +45,11 @@ export const profileService = {
    */
   async uploadPhoto(
     localUri: string,
-    mimeType: string = 'image/jpeg',
+    declaredMimeType?: string,
     onProgress?: (pct: number) => void,
   ): Promise<{ photoUrl: string }> {
     const fileName = localUri.split('/').pop() ?? 'photo.jpg';
+    const mimeType = inferMimeType(localUri, declaredMimeType);
 
     const form = new FormData();
     // React Native FormData accepts this object shape for files
@@ -45,7 +59,7 @@ export const profileService = {
       type: mimeType,
     } as any);
 
-    const res = await api.put<{ photoUrl: string }>(
+    const res = await api.put<Record<string, unknown>>(
       '/users/me/profile-photo',
       form,
       {
@@ -57,7 +71,8 @@ export const profileService = {
         },
       },
     );
-    return res.data;
+    const photoUrl = verifyServerUploadResponse(res.data);
+    return { photoUrl };
   },
 
   // POST /api/users/push-token

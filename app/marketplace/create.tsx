@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { marketplaceService } from '@/services/marketplaceService';
 import { COLORS } from '@/constants/config';
 import type { MarketplaceCategory, ListingCondition } from '@/types/api';
-import { validateImageFile, showFileValidationError } from '@/security';
+import { validateImageFile, showFileValidationError, inferMimeType, verifyServerUploadRejection } from '@/security';
 
 const MAX_IMAGES = 5;
 
@@ -170,14 +170,15 @@ export default function CreateListingScreen() {
     // Upload each image
     setUploading(true);
     for (const img of newImages) {
-      const ext  = img.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+      const mime = inferMimeType(img.uri);
       try {
         const url = await marketplaceService.uploadImage(img.uri, mime);
         setImages((prev) =>
           prev.map((p) => p.uri === img.uri ? { ...p, uploaded: true, url } : p)
         );
-      } catch {
+      } catch (err: any) {
+        const rejectionReason = verifyServerUploadRejection(err);
+        Alert.alert('Upload Rejected', rejectionReason);
         setImages((prev) =>
           prev.map((p) => p.uri === img.uri ? { ...p, uploaded: true, error: true } : p)
         );

@@ -1,4 +1,5 @@
 import api from './apiClient';
+import { inferMimeType } from '@/security';
 import type {
   TournamentDto, TeamDto, MatchDto, MatchEventDto,
   StandingDto, RegisterTeamRequest, PageResponse, SportType,
@@ -232,14 +233,23 @@ export const sportsService = {
     return res.data;
   },
 
-  async uploadMatchPhoto(matchId: number, localUri: string, caption?: string): Promise<MatchPhotoDto> {
+  async uploadMatchPhoto(
+    matchId: number,
+    localUri: string,
+    caption?: string,
+    declaredMimeType?: string,
+  ): Promise<MatchPhotoDto> {
     const filename = localUri.split('/').pop() ?? 'photo.jpg';
+    const mimeType = inferMimeType(localUri, declaredMimeType);
     const form = new FormData();
-    form.append('file', { uri: localUri, name: filename, type: 'image/jpeg' } as any);
+    form.append('file', { uri: localUri, name: filename, type: mimeType } as any);
     if (caption) form.append('caption', caption);
     const res = await api.post<MatchPhotoDto>(`/sports/matches/${matchId}/photos`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    if (!res.data || !res.data.id) {
+      throw new Error('Server did not return a valid match photo record.');
+    }
     return res.data;
   },
 

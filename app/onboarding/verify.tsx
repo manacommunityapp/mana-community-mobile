@@ -14,7 +14,13 @@ import { StepHeader } from './account';
 import { COLORS } from '@/constants/config';
 import api from '@/services/apiClient';
 import type { GovtIdType } from '@/types/api';
-import { validateDocumentFile, showFileValidationError, getSafeErrorMessage } from '@/security';
+import {
+  validateDocumentFile,
+  showFileValidationError,
+  inferMimeType,
+  verifyServerUploadResponse,
+  verifyServerUploadRejection,
+} from '@/security';
 
 const ID_TYPES: { key: GovtIdType; label: string; emoji: string; hint: string }[] = [
   { key: 'AADHAAR',          label: 'Aadhaar',         emoji: '🪪', hint: '12-digit number' },
@@ -26,12 +32,13 @@ const ID_TYPES: { key: GovtIdType; label: string; emoji: string; hint: string }[
 
 async function uploadImage(uri: string): Promise<string> {
   const filename = uri.split('/').pop() ?? 'doc.jpg';
+  const mimeType = inferMimeType(uri);
   const form     = new FormData();
-  form.append('file', { uri, name: filename, type: 'image/jpeg' } as any);
-  const res = await api.post<{ url: string }>('/media/upload', form, {
+  form.append('file', { uri, name: filename, type: mimeType } as any);
+  const res = await api.post<Record<string, unknown>>('/media/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  return res.data.url;
+  return verifyServerUploadResponse(res.data);
 }
 
 export default function VerifyStep() {
@@ -91,7 +98,7 @@ export default function VerifyStep() {
       reset();
       router.replace('/onboarding/pending');
     } catch (err: any) {
-      Alert.alert('Upload failed', getSafeErrorMessage(err));
+      Alert.alert('Upload Failed', verifyServerUploadRejection(err));
     } finally {
       setUploading(false);
     }
