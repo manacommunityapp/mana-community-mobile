@@ -17,13 +17,12 @@ import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
 import { PostDto, EventDto } from '@/types/api';
-import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.68;
-const STAT_TILE_W = Math.max(74, Math.floor((SCREEN_W - 24 - (3 * 6)) / 4));
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
@@ -224,7 +223,7 @@ function PostCard({ post }: { post: PostDto }) {
         <View style={styles.authorRow}>
           <View style={[styles.avatar, { backgroundColor: avatarColor.bg }]}>
             <Text style={[styles.avatarText, { color: avatarColor.text }]}>
-              {(post.authorName || 'N')[0].toUpperCase()}
+              {getInitials(post.authorName)}
             </Text>
           </View>
 
@@ -379,7 +378,7 @@ export default function FeedScreen() {
 
   const userName = user?.name?.split(' ')[0] || 'Neighbor';
   const communityName = user?.communityName || '';
-  const userInitial = (user?.name || 'R')[0].toUpperCase();
+  const userInitial = getInitials(user?.name);
   const avatarColor = getAvatarColor(user?.name || 'Resident');
 
   const announcements = allPosts.filter(p => p.type === 'announcement');
@@ -391,20 +390,15 @@ export default function FeedScreen() {
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
-    { id: 'events',  label: 'Events Today',  value: upcomingEvents.length,                color: '#D97706', labelColor: '#92400E', bg: '#FEF3C7', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
-    { id: 'polls',   label: 'Active Polls',   value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
-    { id: 'tickets', label: 'Open Tickets',   value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'construct-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
-    { id: 'sports',  label: 'Live Matches',   value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#D1FAE5', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
-    { id: 'notifs',  label: 'Notifications',  value: unreadCount,                          color: '#EF4444', labelColor: '#991B1B', bg: '#FEE2E2', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'events',  label: 'Events',   value: upcomingEvents.length,                color: '#4F46E5', labelColor: '#3730A3', bg: '#EEF2FF', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
+    { id: 'polls',   label: 'Polls',    value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
+    { id: 'tickets', label: 'Tickets',  value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'headset-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
+    { id: 'sports',  label: 'Live',     value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#DCFCE7', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
+    { id: 'notifs',  label: 'Notifs',   value: unreadCount,                          color: '#2563EB', labelColor: '#1E40AF', bg: '#DBEAFE', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
   ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
 
   const StatsRow = useMemo(() => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.statsScroll}
-      style={styles.statsContainer}
-    >
+    <View style={styles.statsContainer}>
       {statTiles.map(tile => (
         <TouchableOpacity
           key={tile.id}
@@ -414,14 +408,14 @@ export default function FeedScreen() {
         >
           <View style={styles.statTileTop}>
             <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
-            <Ionicons name={tile.icon} size={13} color={tile.color} style={{ opacity: 0.75 }} />
+            <Ionicons name={tile.icon} size={12} color={tile.color} style={{ opacity: 0.7 }} />
           </View>
           <Text style={[styles.statLabel, { color: tile.labelColor }]} numberOfLines={1}>
             {tile.label}
           </Text>
         </TouchableOpacity>
       ))}
-    </ScrollView>
+    </View>
   ), [statTiles, router]);
 
   const ListHeader = useMemo(() => (
@@ -490,14 +484,21 @@ export default function FeedScreen() {
       {/* Composer Card */}
       <View style={styles.composerCard}>
         <View style={styles.composerRow}>
-          <LinearGradient
-            colors={GRADIENTS.avatar}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.composerAvatar}
-          >
-            <Text style={styles.composerAvatarText}>{userInitial}</Text>
-          </LinearGradient>
+          {user?.profilePicUrl || user?.profilePhoto ? (
+            <Image
+              source={{ uri: user.profilePicUrl || user.profilePhoto }}
+              style={styles.composerAvatarImage}
+            />
+          ) : (
+            <LinearGradient
+              colors={GRADIENTS.avatar}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.composerAvatar}
+            >
+              <Text style={styles.composerAvatarText}>{userInitial}</Text>
+            </LinearGradient>
+          )}
           <TouchableOpacity
             style={styles.composerInput}
             onPress={() => router.push('/polls/create')}
@@ -574,7 +575,7 @@ export default function FeedScreen() {
         </ScrollView>
       </View>
     </View>
-  ), [filter, filteredPosts.length, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow]);
+  ), [filter, filteredPosts.length, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow, user?.profilePicUrl, user?.profilePhoto]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -585,14 +586,21 @@ export default function FeedScreen() {
           onPress={() => router.push('/tabs/profile')}
           activeOpacity={0.7}
         >
-          <LinearGradient
-            colors={GRADIENTS.avatar}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.profileAvatar}
-          >
-            <Text style={styles.profileAvatarText}>{userInitial}</Text>
-          </LinearGradient>
+          {user?.profilePicUrl || user?.profilePhoto ? (
+            <Image
+              source={{ uri: user.profilePicUrl || user.profilePhoto }}
+              style={styles.profileAvatarImage}
+            />
+          ) : (
+            <LinearGradient
+              colors={GRADIENTS.avatar}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.profileAvatar}
+            >
+              <Text style={styles.profileAvatarText}>{userInitial}</Text>
+            </LinearGradient>
+          )}
           <View style={styles.welcomeText}>
             <Text style={styles.welcomeLabel}>{greeting} 👋</Text>
             <Text style={styles.welcomeName}>{userName}</Text>
@@ -811,18 +819,22 @@ const styles = StyleSheet.create({
   },
 
   // ── Quick Stats Row ───────────────────────────────────────────────
-  statsContainer: { flexGrow: 0 },
-  statsScroll: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 2,
     gap: 6,
   },
   statTile: {
+    flex: 1,
+    minWidth: 0,
     borderRadius: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    width: STAT_TILE_W,
-    gap: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+    gap: 4,
     ...SHADOWS.sm,
   },
   statTileTop: {
@@ -831,16 +843,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statNum: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
     fontFamily: FONTS.displayEB,
-    lineHeight: 18,
+    lineHeight: 22,
   },
   statLabel: {
-    fontSize: 8.5,
+    fontSize: 11,
     fontWeight: '600',
-    lineHeight: 11,
+    lineHeight: 15,
     fontFamily: FONTS.semiBold,
     letterSpacing: 0.1,
   },
@@ -869,6 +881,13 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  profileAvatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(99,102,241,0.3)',
   },
   profileAvatarText: {
     color: '#fff',
@@ -1133,6 +1152,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  composerAvatarImage: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(99,102,241,0.25)',
   },
   composerAvatarText: {
     color: '#fff',

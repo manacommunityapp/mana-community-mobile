@@ -33,7 +33,7 @@ export const COLORS = {
   successLight: '#D1FAE5',  // emerald-100
   error:        '#EF4444',  // red-500
   errorLight:   '#FEE2E2',  // red-100
-  warning:      '#D97706',  // amber-600 (status only)
+  warning:      '#F59E0B',  // amber-500 (status only)
   warningLight: '#FEF9C3',  // amber-50
   info:         '#06b6d4',  // web --mana-info
   infoLight:    '#CFFAFE',  // cyan-100
@@ -45,11 +45,11 @@ export const GRADIENTS = {
   primary:    ['#4F46E5', '#6366F1'] as const,
   primaryDeep:['#3730A3', '#4F46E5'] as const,
   hero:       ['#4338CA', '#4F46E5', '#6366F1'] as const,
-  avatar:     ['#6366F1', '#7C3AED'] as const, // from-indigo-500 to-violet-600
-  warm:       ['#D97706', '#B45309'] as const,
+  warm:       ['#F59E0B', '#D97706'] as const,
   success:    ['#059669', '#10B981'] as const,
   surface:    ['#FFFFFF', '#f0f4ff'] as const,
   card:       ['#f8f9ff', '#FFFFFF'] as const,
+  avatar:     ['#6366F1', '#7C3AED'] as const,
 } as const;
 
 // ── Typography ─────────────────────────────────────────────────
@@ -76,32 +76,6 @@ export const TEXT = {
   xl:   { fontSize: 20, lineHeight: 28 },
   xxl:  { fontSize: 24, lineHeight: 32 },
   xxxl: { fontSize: 28, lineHeight: 36 },
-} as const;
-
-// ── Pre-composed Typography Presets ───────────────────────────
-// Each entry bundles fontFamily + fontSize + lineHeight so screens
-// can use  `style={T.headingLg}` instead of assembling three props.
-import type { TextStyle } from 'react-native';
-export const T: Record<string, TextStyle> = {
-  displayXl:  { fontFamily: FONTS.displayEB,    fontSize: 28, lineHeight: 36 },
-  displayLg:  { fontFamily: FONTS.displayBold,   fontSize: 24, lineHeight: 32 },
-  displayMd:  { fontFamily: FONTS.displayBold,   fontSize: 20, lineHeight: 28 },
-  displaySm:  { fontFamily: FONTS.displaySemi,   fontSize: 18, lineHeight: 26 },
-  headingLg:  { fontFamily: FONTS.bold,          fontSize: 18, lineHeight: 26 },
-  headingMd:  { fontFamily: FONTS.bold,          fontSize: 16, lineHeight: 24 },
-  headingSm:  { fontFamily: FONTS.semiBold,      fontSize: 14, lineHeight: 20 },
-  bodyLg:     { fontFamily: FONTS.regular,       fontSize: 16, lineHeight: 24 },
-  body:       { fontFamily: FONTS.regular,       fontSize: 15, lineHeight: 22 },
-  bodySm:     { fontFamily: FONTS.regular,       fontSize: 13, lineHeight: 18 },
-  label:      { fontFamily: FONTS.semiBold,      fontSize: 13, lineHeight: 18 },
-  labelSm:    { fontFamily: FONTS.medium,        fontSize: 12, lineHeight: 16 },
-  caption:    { fontFamily: FONTS.regular,       fontSize: 11, lineHeight: 16 },
-  btnLg:      { fontFamily: FONTS.bold,          fontSize: 16, lineHeight: 22 },
-  btn:        { fontFamily: FONTS.bold,          fontSize: 14, lineHeight: 20 },
-  btnSm:      { fontFamily: FONTS.semiBold,      fontSize: 13, lineHeight: 18 },
-  numLg:      { fontFamily: FONTS.displayEB,     fontSize: 24, lineHeight: 32 },
-  numMd:      { fontFamily: FONTS.displayBold,   fontSize: 18, lineHeight: 26 },
-  numSm:      { fontFamily: FONTS.displaySemi,   fontSize: 14, lineHeight: 20 },
 } as const;
 
 // ── Spacing ───────────────────────────────────────────────────
@@ -181,3 +155,22 @@ export function getAvatarColor(seed: string): { bg: string; text: string } {
   }
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
+
+/**
+ * Extracts the first letter of the first name and the first letter of the last name in uppercase.
+ * Example: "suresh chavatla" -> "SC"
+ * Example: "Suresh" -> "S"
+ * Example: "Suresh Kumar Chavatla" -> "SC"
+ */
+export function getInitials(name?: string | null): string {
+  if (!name || typeof name !== 'string') return 'U';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  const first = parts[0].charAt(0).toUpperCase();
+  const last = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${first}${last}`;
+}
+

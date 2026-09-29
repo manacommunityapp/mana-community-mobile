@@ -8,6 +8,7 @@ import { COLORS, RADIUS, SHADOWS, FONTS } from '@/constants/config';
 export interface QuickActionItem {
   id: string;
   icon: keyof typeof Ionicons.glyphMap;
+  emoji: string;
   label: string;
   route: string;
   bg: string;
@@ -17,39 +18,33 @@ export interface QuickActionItem {
 }
 
 export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
-  // Safety & Emergency
-  { id: 'emergency', icon: 'alert-circle-outline', label: 'Emergency SOS', route: '/emergency', bg: '#FEE2E2', color: '#DC2626', category: 'Safety & Help', badge: '24x7' },
-  { id: 'helpdesk', icon: 'headset-outline', label: 'Helpdesk', route: '/helpdesk', bg: '#E0E7FF', color: '#4F46E5', category: 'Safety & Help' },
-  { id: 'visitors', icon: 'shield-checkmark-outline', label: 'Visitors Gate', route: '/visitors', bg: '#DBEAFE', color: '#2563EB', category: 'Safety & Help' },
+  // 9 Highlighted Grid Items (exact match to design-preview.html .qg)
+  { id: 'dues',         emoji: '💳', icon: 'card-outline',              label: 'Dues',          route: '/finance',              bg: '#EEF2FF', color: '#4F46E5', category: 'Living & Bills' },
+  { id: 'offers',       emoji: '🛍️', icon: 'pricetag-outline',          label: 'Offers',        route: '/offers',               bg: '#FEF3C7', color: '#D97706', category: 'Commerce & Food', badge: 'NEW' },
+  { id: 'group_buying', emoji: '👜', icon: 'bag-handle-outline',         label: 'Group Buy',     route: '/group-buying',         bg: '#ECFDF5', color: '#059669', category: 'Commerce & Food' },
+  { id: 'sports',       emoji: '🏆', icon: 'trophy-outline',            label: 'Sports',        route: '/sports',               bg: '#DCFCE7', color: '#059669', category: 'Social & Sports' },
+  { id: 'commute',      emoji: '🚗', icon: 'car-sport-outline',         label: 'Commute',       route: '/commute',              bg: '#CFFAFE', color: '#0284C7', category: 'Social & Sports' },
+  { id: 'governance',   emoji: '🏛️', icon: 'business-outline',          label: 'Governance',    route: '/governance',           bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports', badge: 'NEW' },
+  { id: 'academy',      emoji: '🎓', icon: 'school-outline',            label: 'Academy',       route: '/academy',              bg: '#F3E8FF', color: '#7C3AED', category: 'Social & Sports', badge: 'NEW' },
+  { id: 'cpos',         emoji: '🏠', icon: 'home-outline',              label: 'Property',      route: '/cpos',                 bg: '#DCFCE7', color: '#059669', category: 'Living & Bills',  badge: 'NEW' },
+  { id: 'jobs',         emoji: '💼', icon: 'briefcase-outline',         label: 'CPN Jobs',      route: '/cpn',                  bg: '#EFF6FF', color: '#2563EB', category: 'Social & Sports', badge: 'NEW' },
 
-  // Living & Essentials
-  { id: 'dues', icon: 'card-outline', label: 'Dues', route: '/finance', bg: '#EEF2FF', color: '#4F46E5', category: 'Living & Bills', badge: 'Bills' },
-  { id: 'services', icon: 'construct-outline', label: 'Home Services', route: '/services', bg: '#FCE7F3', color: '#DB2777', category: 'Living & Bills' },
-  { id: 'notices', icon: 'megaphone-outline', label: 'Notices', route: '/admin/announcements', bg: '#EDE9FE', color: '#7C3AED', category: 'Living & Bills' },
-  { id: 'parking', icon: 'car-outline', label: 'Parking Slots', route: '/parking', bg: '#E0E7FF', color: '#4338CA', category: 'Living & Bills' },
-  { id: 'cpos', icon: 'home-outline', label: 'Property', route: '/cpos', bg: '#DCFCE7', color: '#059669', category: 'Living & Bills', badge: 'NEW' },
-
-  // Social & Community
-  { id: 'events', icon: 'calendar-outline', label: 'Events & Passes', route: '/tabs/events', bg: '#EEF2FF', color: '#4F46E5', category: 'Social & Sports' },
-  { id: 'sports', icon: 'trophy-outline', label: 'Sports', route: '/sports', bg: '#DCFCE7', color: '#059669', category: 'Social & Sports' },
-  { id: 'trips', icon: 'compass-outline', label: 'Community Trips', route: '/trips', bg: '#CCFBF1', color: '#0D9488', category: 'Social & Sports' },
-  { id: 'discover', icon: 'sparkles-outline', label: 'Discover', route: '/discover', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports' },
-  { id: 'governance', icon: 'business-outline', label: 'Governance', route: '/governance', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports', badge: 'NEW' },
-  { id: 'academy', icon: 'school-outline', label: 'Academy', route: '/academy', bg: '#F3E8FF', color: '#7C3AED', category: 'Social & Sports', badge: 'NEW' },
-  { id: 'polls', icon: 'bar-chart-outline', label: 'Polls & Votes', route: '/polls', bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports' },
-  { id: 'jobs', icon: 'briefcase-outline', label: 'CPN Jobs', route: '/cpn', bg: '#EFF6FF', color: '#2563EB', category: 'Social & Sports', badge: 'NEW' },
-  { id: 'commute', icon: 'car-sport-outline', label: 'Commute', route: '/commute', bg: '#CFFAFE', color: '#0284C7', category: 'Social & Sports' },
-  { id: 'pets', icon: 'paw-outline', label: 'Pet Care', route: '/pets', bg: '#FCE7F3', color: '#DB2777', category: 'Social & Sports' },
-
-  // Commerce & Food
-  { id: 'offers', icon: 'pricetag-outline', label: 'Offers', route: '/offers', bg: '#FEF3C7', color: '#D97706', category: 'Commerce & Food', badge: 'NEW' },
-  { id: 'market', icon: 'storefront-outline', label: 'Marketplace', route: '/tabs/marketplace', bg: '#D1FAE5', color: '#059669', category: 'Commerce & Food' },
-  { id: 'group_buying', icon: 'bag-handle-outline', label: 'Group Buy', route: '/group-buying', bg: '#ECFDF5', color: '#059669', category: 'Commerce & Food' },
-  { id: 'food', icon: 'restaurant-outline', label: 'Food & Kitchen', route: '/food', bg: '#FFE4E6', color: '#E11D48', category: 'Commerce & Food' },
-  { id: 'auction', icon: 'pricetag-outline', label: 'Sports Auction', route: '/auction', bg: '#ECFDF5', color: '#10B981', category: 'Commerce & Food' },
-
-  // Facilities
-  { id: 'facilities', icon: 'fitness-outline', label: 'Amenities Booking', route: '/facilities', bg: '#CCFBF1', color: '#0D9488', category: 'Facilities' },
+  // Additional Services (for full modal hub)
+  { id: 'emergency',    emoji: '🚨', icon: 'alert-circle-outline',      label: 'Emergency SOS', route: '/emergency',            bg: '#FEE2E2', color: '#DC2626', category: 'Safety & Help',   badge: '24x7' },
+  { id: 'helpdesk',     emoji: '🎧', icon: 'headset-outline',           label: 'Helpdesk',      route: '/helpdesk',             bg: '#FEF3C7', color: '#D97706', category: 'Safety & Help' },
+  { id: 'visitors',     emoji: '🛡️', icon: 'shield-checkmark-outline', label: 'Visitors Gate', route: '/visitors',             bg: '#CFFAFE', color: '#0891B2', category: 'Safety & Help' },
+  { id: 'services',     emoji: '🛠️', icon: 'construct-outline',        label: 'Home Services', route: '/services',             bg: '#FCE7F3', color: '#DB2777', category: 'Living & Bills' },
+  { id: 'notices',      emoji: '📢', icon: 'megaphone-outline',        label: 'Notices',       route: '/admin/announcements',  bg: '#EDE9FE', color: '#7C3AED', category: 'Living & Bills' },
+  { id: 'parking',      emoji: '🅿️', icon: 'car-outline',              label: 'Parking Slots', route: '/parking',              bg: '#E0E7FF', color: '#4338CA', category: 'Living & Bills' },
+  { id: 'events',       emoji: '📅', icon: 'calendar-outline',         label: 'Events & Passes',route: '/tabs/events',          bg: '#EEF2FF', color: '#4F46E5', category: 'Social & Sports' },
+  { id: 'trips',        emoji: '🧭', icon: 'compass-outline',          label: 'Community Trips',route: '/trips',               bg: '#CCFBF1', color: '#0D9488', category: 'Social & Sports' },
+  { id: 'discover',     emoji: '✨', icon: 'sparkles-outline',         label: 'Discover',      route: '/discover',             bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports' },
+  { id: 'polls',        emoji: '📊', icon: 'bar-chart-outline',        label: 'Polls & Votes', route: '/polls',                bg: '#EDE9FE', color: '#7C3AED', category: 'Social & Sports' },
+  { id: 'pets',         emoji: '🐾', icon: 'paw-outline',              label: 'Pet Care',      route: '/pets',                 bg: '#F3E8FF', color: '#9333EA', category: 'Social & Sports' },
+  { id: 'market',       emoji: '🏪', icon: 'storefront-outline',       label: 'Marketplace',   route: '/tabs/marketplace',     bg: '#D1FAE5', color: '#059669', category: 'Commerce & Food' },
+  { id: 'food',         emoji: '🍽️', icon: 'restaurant-outline',       label: 'Food & Kitchen',route: '/food',                 bg: '#FFE4E6', color: '#E11D48', category: 'Commerce & Food' },
+  { id: 'auction',      emoji: '🏷️', icon: 'pricetag-outline',         label: 'Sports Auction',route: '/auction',              bg: '#ECFDF5', color: '#10B981', category: 'Commerce & Food' },
+  { id: 'facilities',   emoji: '🏋️', icon: 'fitness-outline',          label: 'Amenities',     route: '/facilities',           bg: '#CCFBF1', color: '#0D9488', category: 'Facilities' },
 ];
 
 const CATEGORY_ICONS: Record<QuickActionItem['category'], keyof typeof Ionicons.glyphMap> = {
@@ -64,23 +59,8 @@ export function QuickActions() {
   const router = useRouter();
   const [showAllModal, setShowAllModal] = useState(false);
 
-  const highlightedServices = [
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'dues')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'offers')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'group_buying')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'sports')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'governance')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'academy')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'cpos')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'jobs')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'helpdesk')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'visitors')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'facilities')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'food')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'trips')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'commute')!,
-    ALL_COMMUNITY_SERVICES.find((s) => s.id === 'pets')!,
-  ].filter(Boolean);
+  // Show top 4 in a row on the main dashboard, all others in See All modal
+  const highlightedServices = ALL_COMMUNITY_SERVICES.slice(0, 4);
 
   const categories: Array<QuickActionItem['category']> = [
     'Safety & Help',
@@ -92,6 +72,7 @@ export function QuickActions() {
 
   return (
     <View style={s.wrapper}>
+      {/* Section Header */}
       <View style={s.headerRow}>
         <Text style={s.heading}>Community Services</Text>
         <TouchableOpacity
@@ -100,37 +81,33 @@ export function QuickActions() {
           activeOpacity={0.7}
           hitSlop={8}
         >
-          <Text style={s.seeAll}>All {ALL_COMMUNITY_SERVICES.length}</Text>
-          <Ionicons name="grid-outline" size={12} color={COLORS.primary} />
+          <Text style={s.seeAll}>See All ({ALL_COMMUNITY_SERVICES.length}) →</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.scroll}
-      >
+      {/* Row of 4 Primary Services */}
+      <View style={s.rowContainer}>
         {highlightedServices.map((action) => (
           <TouchableOpacity
             key={action.id}
-            style={s.item}
+            style={s.card}
             onPress={() => router.push(action.route as any)}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
-            <View style={[s.iconCircle, { backgroundColor: action.bg }]}>
-              <Ionicons name={action.icon} size={20} color={action.color} />
-              {action.badge && (
-                <View style={[s.miniBadge, { backgroundColor: action.color }]}>
-                  <Text style={s.miniBadgeText}>{action.badge}</Text>
-                </View>
-              )}
+            {action.badge && (
+              <View style={s.badgePill}>
+                <Text style={s.badgePillText}>{action.badge}</Text>
+              </View>
+            )}
+            <View style={[s.iconBox, { backgroundColor: action.bg }]}>
+              <Text style={s.emojiIcon}>{action.emoji}</Text>
             </View>
-            <Text style={s.label} numberOfLines={2}>
+            <Text style={s.label} numberOfLines={1}>
               {action.label}
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
       {/* Full Services Hub Modal */}
       <Modal visible={showAllModal} animationType="slide" presentationStyle="pageSheet">
@@ -168,30 +145,28 @@ export function QuickActions() {
                     <Text style={s.categoryTitle}>{cat}</Text>
                     <Text style={s.categoryCount}>{items.length}</Text>
                   </View>
-                  <View style={s.grid}>
+                  <View style={s.modalGrid}>
                     {items.map((action) => (
                       <TouchableOpacity
                         key={action.id}
-                        style={s.gridCard}
+                        style={s.modalGridCard}
                         onPress={() => {
                           setShowAllModal(false);
                           router.push(action.route as any);
                         }}
                         activeOpacity={0.75}
                       >
-                        <View style={[s.gridIconCircle, { backgroundColor: action.bg }]}>
-                          <Ionicons name={action.icon} size={22} color={action.color} />
-                        </View>
-                        <Text style={s.gridLabel} numberOfLines={2}>
-                          {action.label}
-                        </Text>
                         {action.badge && (
-                          <View style={[s.gridBadge, { backgroundColor: action.bg }]}>
-                            <Text style={[s.gridBadgeText, { color: action.color }]}>
-                              {action.badge}
-                            </Text>
+                          <View style={s.modalBadgePill}>
+                            <Text style={s.modalBadgePillText}>{action.badge}</Text>
                           </View>
                         )}
+                        <View style={[s.modalIconBox, { backgroundColor: action.bg }]}>
+                          <Text style={s.modalEmojiIcon}>{action.emoji}</Text>
+                        </View>
+                        <Text style={s.modalGridLabel} numberOfLines={1}>
+                          {action.label}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -207,85 +182,92 @@ export function QuickActions() {
 
 const s = StyleSheet.create({
   wrapper: {
-    paddingTop: 8,
-    gap: 6,
+    paddingTop: 10,
+    gap: 8,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
+    marginBottom: 2,
   },
   heading: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 17.5,
+    fontWeight: '700',
     color: COLORS.text,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
     fontFamily: FONTS.displayBold,
   },
   seeAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 9,
     paddingVertical: 4,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.primaryMid,
+    paddingHorizontal: 4,
   },
   seeAll: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.primary,
-    fontFamily: FONTS.bold,
-  },
-  scroll: {
-    paddingHorizontal: 12,
-    paddingVertical: 2,
-    gap: 2,
-  },
-  item: {
-    alignItems: 'center',
-    width: 54,
-    gap: 3,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    ...SHADOWS.sm,
-  },
-  miniBadge: {
-    position: 'absolute',
-    top: -3,
-    right: -4,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 3.5,
-    paddingVertical: 1,
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
-  miniBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 6.5,
-    fontWeight: '800',
-    fontFamily: FONTS.bold,
-    letterSpacing: 0.2,
-  },
-  label: {
-    fontSize: 9,
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 12,
+    color: COLORS.primary,
     fontFamily: FONTS.semiBold,
   },
 
-  // Modal styles
+  // ── Row of 4 items ──
+  rowContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  card: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    position: 'relative',
+    ...SHADOWS.sm,
+  },
+  iconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emojiIcon: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 13,
+    color: COLORS.text,
+    textAlign: 'center',
+    fontFamily: FONTS.semiBold,
+  },
+  badgePill: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#EF4444',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    zIndex: 2,
+  },
+  badgePillText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: FONTS.bold,
+  },
+
+  // ── Modal styles ──
   modalContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -353,14 +335,14 @@ const s = StyleSheet.create({
   },
   categoryTitle: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: 0.1,
     fontFamily: FONTS.bold,
   },
   categoryCount: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: COLORS.textMuted,
     fontFamily: FONTS.medium,
     backgroundColor: COLORS.surfaceAlt,
@@ -368,48 +350,59 @@ const s = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
   },
-  grid: {
+  modalGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
   },
-  gridCard: {
+  modalGridCard: {
     width: '31%',
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 14,
+    padding: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
-    minHeight: 96,
+    minHeight: 88,
     justifyContent: 'center',
+    position: 'relative',
     ...SHADOWS.sm,
   },
-  gridIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+  modalIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  gridLabel: {
-    fontSize: 11,
+  modalEmojiIcon: {
+    fontSize: 20,
+    textAlign: 'center',
+  },
+  modalGridLabel: {
+    fontSize: 12,
     fontWeight: '700',
     color: COLORS.text,
     textAlign: 'center',
     lineHeight: 15,
     fontFamily: FONTS.bold,
   },
-  gridBadge: {
-    marginTop: 5,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+  modalBadgePill: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#EF4444',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    zIndex: 2,
   },
-  gridBadgeText: {
-    fontSize: 9,
+  modalBadgePillText: {
+    fontSize: 8,
     fontWeight: '800',
+    color: '#FFFFFF',
     fontFamily: FONTS.bold,
   },
 });
+

@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ListRenderItemInfo } from 'react-native';
 import { formatDistanceToNow } from 'date-fns';
 import type { BidDto } from '@/types/api';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 
 interface BidFeedProps {
   bids:          BidDto[];
@@ -15,7 +15,7 @@ function BidRow({ bid, isMine }: { bid: BidDto; isMine: boolean }) {
     <View style={[r.row, isMine && r.rowMine]}>
       {/* Avatar */}
       <View style={[r.avatar, isMine && r.avatarMine]}>
-        <Text style={r.avatarText}>{bid.bidderName[0]?.toUpperCase()}</Text>
+        <Text style={r.avatarText}>{getInitials(bid.bidderName)}</Text>
       </View>
 
       <View style={r.body}>

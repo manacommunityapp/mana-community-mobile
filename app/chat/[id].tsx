@@ -13,7 +13,7 @@ import { chatService } from '@/services/chatService';
 import { MessageBubble } from '@/components/common/MessageBubble';
 import { ChatInput } from '@/components/common/ChatInput';
 import { TypingIndicator } from '@/components/common/TypingIndicator';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 
 // ── Connection status badge ────────────────────────────────────
 function StatusDot({ connected }: { connected: boolean }) {
@@ -43,7 +43,7 @@ function ChatHeader({ name, subtitle, connected, onBack }: HeaderProps) {
       </TouchableOpacity>
 
       <View style={hdr.avatar}>
-        <Text style={hdr.avatarText}>{name?.[0]?.toUpperCase() ?? '?'}</Text>
+        <Text style={hdr.avatarText}>{getInitials(name)}</Text>
       </View>
 
       <View style={hdr.info}>

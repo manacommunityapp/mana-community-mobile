@@ -13,15 +13,42 @@ import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS } from '@/constants/config';
 
 export default function LoginScreen() {
   const { login, loadUser } = useAuth();
-  const [email, setEmail]             = useState('');
-  const [password, setPassword]       = useState('');
-  const [loading, setLoading]         = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passFocused, setPassFocused]   = useState(false);
-  const [biometric, setBiometric]       = useState<BiometricCapability | null>(null);
+  const [identifier, setIdentifier]       = useState('');
+  const [password, setPassword]           = useState('');
+  const [loading, setLoading]             = useState(false);
+  const [showPassword, setShowPassword]   = useState(false);
+  const [inputFocused, setInputFocused]   = useState(false);
+  const [passFocused, setPassFocused]     = useState(false);
+  const [biometric, setBiometric]         = useState<BiometricCapability | null>(null);
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_CLEAN_RE = /\D/g;
+
+  const parseIdentifier = (input: string): { value: string; type: 'email' | 'phone' | 'invalid' } => {
+    const trimmed = input.trim();
+    if (!trimmed) return { value: '', type: 'invalid' };
+
+    if (EMAIL_RE.test(trimmed)) {
+      return { value: trimmed.toLowerCase(), type: 'email' };
+    }
+
+    // Clean phone number (strip spaces, dashes, parentheses, +91 prefix)
+    let digits = trimmed.replace(PHONE_CLEAN_RE, '');
+    if (digits.length === 12 && digits.startsWith('91')) {
+      digits = digits.slice(2);
+    } else if (digits.length === 11 && digits.startsWith('0')) {
+      digits = digits.slice(1);
+    }
+
+    if (digits.length === 10) {
+      return { value: digits, type: 'phone' };
+    }
+
+    return { value: trimmed, type: 'invalid' };
+  };
+
+  const isPhoneInput = /^[0-9+\s()-]+$/.test(identifier.trim()) && identifier.trim().length > 0;
+  const inputIconName = isPhoneInput ? 'call-outline' : (identifier.includes('@') ? 'mail-outline' : 'person-outline');
 
   useEffect(() => {
     getBiometricCapability().then(setBiometric).catch(() => {});
@@ -34,7 +61,7 @@ export default function LoginScreen() {
       if (success) {
         await loadUser();
       } else {
-        Alert.alert('Biometric failed', 'Please sign in with your email and password.');
+        Alert.alert('Biometric failed', 'Please sign in with your email/phone and password.');
       }
     } catch {
       Alert.alert('Biometric error', 'Could not complete biometric authentication.');
@@ -44,21 +71,22 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Validation', 'Please enter your email and password.');
+    if (!identifier.trim() || !password.trim()) {
+      Alert.alert('Validation', 'Please enter your email or phone number and password.');
       return;
     }
-    if (!EMAIL_RE.test(email.trim())) {
-      Alert.alert('Validation', 'Please enter a valid email address.');
+    const parsed = parseIdentifier(identifier);
+    if (parsed.type === 'invalid') {
+      Alert.alert('Validation', 'Please enter a valid email address or 10-digit mobile number.');
       return;
     }
     setLoading(true);
     try {
-      await login({ identifier: email.trim().toLowerCase(), password });
+      await login({ identifier: parsed.value, password });
     } catch (err: any) {
       const status = err?.response?.status;
       const msg = status === 401
-        ? 'Invalid email or password.'
+        ? (parsed.type === 'phone' ? 'Invalid mobile number or password.' : 'Invalid email or password.')
         : 'Login failed. Please try again.';
       Alert.alert('Login Failed', msg);
     } finally {
@@ -97,24 +125,25 @@ export default function LoginScreen() {
           <Text style={styles.cardSub}>Sign in to your account</Text>
 
           <View style={styles.form}>
-            {/* Email */}
+            {/* Email or Phone */}
             <View style={styles.field}>
-              <Text style={styles.label}>Email address</Text>
-              <View style={[styles.inputWrap, emailFocused && styles.inputWrapFocused]}>
-                <View style={[styles.inputIconWrap, emailFocused && styles.inputIconWrapFocused]}>
-                  <Ionicons name="mail-outline" size={17} color={emailFocused ? COLORS.primary : COLORS.textMuted} />
+              <Text style={styles.label}>Email or Mobile Number</Text>
+              <View style={[styles.inputWrap, inputFocused && styles.inputWrapFocused]}>
+                <View style={[styles.inputIconWrap, inputFocused && styles.inputIconWrapFocused]}>
+                  <Ionicons name={inputIconName as any} size={17} color={inputFocused ? COLORS.primary : COLORS.textMuted} />
                 </View>
                 <TextInput
                   style={styles.input}
-                  placeholder="you@example.com"
+                  placeholder="you@example.com or 9876543210"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  autoComplete="email"
-                  value={email}
-                  onChangeText={setEmail}
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
+                  autoCorrect={false}
+                  autoComplete="username"
+                  value={identifier}
+                  onChangeText={setIdentifier}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
                 />
               </View>
             </View>
