@@ -98,12 +98,18 @@ export function useAuctionLive(
         onConnect: () => {
           setConnected(true);
 
-          client.subscribe(`/topic/auction.${auctionId}`, (frame: IMessage) => {
+          const handleIncoming = (frame: IMessage) => {
             try {
               const event: AuctionEvent = JSON.parse(frame.body);
               handleAuctionEvent(event);
             } catch { /* malformed */ }
-          });
+          };
+
+          // Primary topic (dot notation as per STOMP inventory)
+          client.subscribe(`/topic/auction.${auctionId}`, handleIncoming);
+
+          // Alias topic (slash notation for backwards compatibility with backend)
+          client.subscribe(`/topic/auction/${auctionId}`, handleIncoming);
         },
 
         onDisconnect: () => setConnected(false),
@@ -212,15 +218,14 @@ export function useAuctionLive(
     setIsPlacingBid(true);
     setWasOutbid(false);
     try {
-      // Prefer STOMP publish
+      // 1. Instant broker propagation via STOMP publish if connected
       if (stompRef.current?.connected) {
         stompRef.current.publish({
           destination: `/app/auction/${auctionId}/bid`,
           body: JSON.stringify({ amount }),
         });
-        return 'success';
       }
-      // REST fallback
+      // 2. Persist bid via REST API to ensure database durability
       await auctionService.placeBid(auctionId, amount);
       return 'success';
     } catch (err: any) {

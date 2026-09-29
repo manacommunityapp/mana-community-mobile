@@ -57,12 +57,20 @@ export function useLiveScore(matchId: number): UseLiveScoreReturn {
         reconnectDelay: 4000,
         onConnect: () => {
           setConnected(true);
-          client.subscribe(`/topic/sports.match.${matchId}`, (frame: IMessage) => {
+
+          const handleIncoming = (frame: IMessage) => {
             try {
-              const ev: LiveScoreEvent = JSON.parse(frame.body);
+              const ev = JSON.parse(frame.body);
               handleLiveEvent(ev);
             } catch { /* ignore malformed */ }
-          });
+          };
+
+          // Primary topic (dot notation per STOMP inventory)
+          client.subscribe(`/topic/sports.match.${matchId}`, handleIncoming);
+
+          // Alias topics (slash notation for backwards compatibility with backend)
+          client.subscribe(`/topic/match/${matchId}`, handleIncoming);
+          client.subscribe(`/topic/match/${matchId}/state`, handleIncoming);
         },
         onDisconnect: () => setConnected(false),
         onStompError:  (f) => {
@@ -80,52 +88,78 @@ export function useLiveScore(matchId: number): UseLiveScoreReturn {
     };
   }, [matchId]);
 
-  const handleLiveEvent = useCallback((ev: LiveScoreEvent) => {
-    switch (ev.type) {
-      case 'SCORE_UPDATE':
-      case 'MATCH_STARTED':
-        setMatch((prev) => prev ? {
-          ...prev,
-          homeScore:      ev.homeScore      ?? prev.homeScore,
-          awayScore:      ev.awayScore      ?? prev.awayScore,
-          status:         ev.status         ?? prev.status,
-          currentPeriod:  ev.currentPeriod  ?? prev.currentPeriod,
-          elapsedMinutes: ev.elapsedMinutes ?? prev.elapsedMinutes,
-          homeSetsWon:    ev.homeSetsWon    ?? prev.homeSetsWon,
-          awaySetsWon:    ev.awaySetsWon    ?? prev.awaySetsWon,
-          homeOvers:      ev.homeOvers      ?? prev.homeOvers,
-          homeWickets:    ev.homeWickets    ?? prev.homeWickets,
-          awayOvers:      ev.awayOvers      ?? prev.awayOvers,
-          awayWickets:    ev.awayWickets    ?? prev.awayWickets,
-        } : prev);
-        if (ev.event) setEvents((prev) => [...prev, ev.event!]);
-        break;
+  const handleLiveEvent = useCallback((ev: any) => {
+    if (!ev) return;
 
-      case 'MATCH_EVENT':
-        if (ev.event) setEvents((prev) => [...prev, ev.event!]);
-        if (ev.homeScore !== undefined || ev.awayScore !== undefined) {
+    if (ev.type) {
+      switch (ev.type) {
+        case 'SCORE_UPDATE':
+        case 'MATCH_STARTED':
           setMatch((prev) => prev ? {
             ...prev,
+            homeScore:      ev.homeScore      ?? prev.homeScore,
+            awayScore:      ev.awayScore      ?? prev.awayScore,
+            status:         ev.status         ?? prev.status,
+            currentPeriod:  ev.currentPeriod  ?? prev.currentPeriod,
+            elapsedMinutes: ev.elapsedMinutes ?? prev.elapsedMinutes,
+            homeSetsWon:    ev.homeSetsWon    ?? prev.homeSetsWon,
+            awaySetsWon:    ev.awaySetsWon    ?? prev.awaySetsWon,
+            homeOvers:      ev.homeOvers      ?? prev.homeOvers,
+            homeWickets:    ev.homeWickets    ?? prev.homeWickets,
+            awayOvers:      ev.awayOvers      ?? prev.awayOvers,
+            awayWickets:    ev.awayWickets    ?? prev.awayWickets,
+          } : prev);
+          if (ev.event) setEvents((prev) => [...prev, ev.event!]);
+          break;
+
+        case 'MATCH_EVENT':
+          if (ev.event) setEvents((prev) => [...prev, ev.event!]);
+          if (ev.homeScore !== undefined || ev.awayScore !== undefined) {
+            setMatch((prev) => prev ? {
+              ...prev,
+              homeScore:   ev.homeScore   ?? prev.homeScore,
+              awayScore:   ev.awayScore   ?? prev.awayScore,
+              homeOvers:   ev.homeOvers   ?? prev.homeOvers,
+              homeWickets: ev.homeWickets ?? prev.homeWickets,
+              awayOvers:   ev.awayOvers   ?? prev.awayOvers,
+              awayWickets: ev.awayWickets ?? prev.awayWickets,
+            } : prev);
+          }
+          break;
+
+        case 'MATCH_ENDED':
+          setMatch((prev) => prev ? {
+            ...prev,
+            status:    'COMPLETED',
             homeScore: ev.homeScore ?? prev.homeScore,
             awayScore: ev.awayScore ?? prev.awayScore,
-            homeOvers: ev.homeOvers ?? prev.homeOvers,
-            homeWickets: ev.homeWickets ?? prev.homeWickets,
-            awayOvers: ev.awayOvers ?? prev.awayOvers,
-            awayWickets: ev.awayWickets ?? prev.awayWickets,
           } : prev);
-        }
-        break;
+          setMatchEnded(true);
+          if (ev.event) setEvents((prev) => [...prev, ev.event!]);
+          break;
+      }
+      return;
+    }
 
-      case 'MATCH_ENDED':
-        setMatch((prev) => prev ? {
-          ...prev,
-          status:    'COMPLETED',
-          homeScore: ev.homeScore ?? prev.homeScore,
-          awayScore: ev.awayScore ?? prev.awayScore,
-        } : prev);
+    // Direct match state update payload (e.g. from /topic/match/{id}/state)
+    if (ev.homeScore !== undefined || ev.awayScore !== undefined || ev.status !== undefined) {
+      setMatch((prev) => prev ? {
+        ...prev,
+        homeScore:      ev.homeScore      ?? prev.homeScore,
+        awayScore:      ev.awayScore      ?? prev.awayScore,
+        status:         ev.status         ?? prev.status,
+        currentPeriod:  ev.currentPeriod  ?? prev.currentPeriod,
+        elapsedMinutes: ev.elapsedMinutes ?? prev.elapsedMinutes,
+        homeSetsWon:    ev.homeSetsWon    ?? prev.homeSetsWon,
+        awaySetsWon:    ev.awaySetsWon    ?? prev.awaySetsWon,
+        homeOvers:      ev.homeOvers      ?? prev.homeOvers,
+        homeWickets:    ev.homeWickets    ?? prev.homeWickets,
+        awayOvers:      ev.awayOvers      ?? prev.awayOvers,
+        awayWickets:    ev.awayWickets    ?? prev.awayWickets,
+      } : prev);
+      if (ev.status === 'COMPLETED' || ev.status === 'CANCELLED') {
         setMatchEnded(true);
-        if (ev.event) setEvents((prev) => [...prev, ev.event!]);
-        break;
+      }
     }
   }, []);
 

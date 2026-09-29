@@ -82,57 +82,59 @@ export function useChatWindow(
         onConnect: () => {
           setConnected(true);
 
-          // Subscribe: incoming chat messages
-          client.subscribe(
-            `/topic/conversation.${conversationId}`,
-            (frame: IMessage) => {
-              try {
-                const msg: ChatMessageDto = JSON.parse(frame.body);
-                setMessages((prev) => {
-                  if (prev.find((m) => m.id === msg.id)) return prev;
+          // Shared handler for incoming chat messages
+          const handleIncomingMessage = (frame: IMessage) => {
+            try {
+              const msg: ChatMessageDto = JSON.parse(frame.body);
+              setMessages((prev) => {
+                if (prev.find((m) => m.id === msg.id)) return prev;
 
-                  // Reconcile optimistic self message
-                  if (msg.senderId === currentUserId) {
-                    const optIdx = prev.findIndex(
-                      (m) =>
-                        m.senderId === currentUserId &&
-                        m.content === msg.content &&
-                        typeof m.id === 'number' &&
-                        m.id > 1000000000000
-                    );
-                    if (optIdx !== -1) {
-                      const updated = [...prev];
-                      updated[optIdx] = msg;
-                      return updated;
-                    }
+                // Reconcile optimistic self message
+                if (msg.senderId === currentUserId) {
+                  const optIdx = prev.findIndex(
+                    (m) =>
+                      m.senderId === currentUserId &&
+                      m.content === msg.content &&
+                      typeof m.id === 'number' &&
+                      m.id > 1000000000000
+                  );
+                  if (optIdx !== -1) {
+                    const updated = [...prev];
+                    updated[optIdx] = msg;
+                    return updated;
                   }
+                }
 
-                  return [...prev, msg];
-                });
-                chatService.markRead(conversationId).catch(() => {});
-              } catch {/* malformed frame */}
-            },
-          );
+                return [...prev, msg];
+              });
+              chatService.markRead(conversationId).catch(() => {});
+            } catch {/* malformed frame */}
+          };
 
-          // Subscribe: typing indicators
-          client.subscribe(
-            `/topic/typing.${conversationId}`,
-            (frame: IMessage) => {
-              try {
-                const ev: TypingEvent = JSON.parse(frame.body);
-                if (ev.userId === currentUserId) return;
-                setTypingUsers((prev) => {
-                  const next = new Map(prev);
-                  if (ev.typing) {
-                    next.set(ev.userId, ev.name);
-                  } else {
-                    next.delete(ev.userId);
-                  }
-                  return next;
-                });
-              } catch {/* ignore */}
-            },
-          );
+          // Shared handler for typing indicators
+          const handleTypingEvent = (frame: IMessage) => {
+            try {
+              const ev: TypingEvent = JSON.parse(frame.body);
+              if (ev.userId === currentUserId) return;
+              setTypingUsers((prev) => {
+                const next = new Map(prev);
+                if (ev.typing) {
+                  next.set(ev.userId, ev.name);
+                } else {
+                  next.delete(ev.userId);
+                }
+                return next;
+              });
+            } catch {/* ignore */}
+          };
+
+          // Subscribe: incoming chat messages (dot notation per STOMP inventory + slash alias)
+          client.subscribe(`/topic/conversation.${conversationId}`, handleIncomingMessage);
+          client.subscribe(`/topic/conversation/${conversationId}`, handleIncomingMessage);
+
+          // Subscribe: typing indicators (dot notation per STOMP inventory + slash alias)
+          client.subscribe(`/topic/typing.${conversationId}`, handleTypingEvent);
+          client.subscribe(`/topic/typing/${conversationId}`, handleTypingEvent);
         },
 
         onDisconnect: () => setConnected(false),
@@ -173,21 +175,19 @@ export function useChatWindow(
     setIsSending(true);
 
     try {
-      // Try STOMP publish first (real-time path)
+      // 1. Publish over STOMP for instantaneous broker propagation
       if (stompRef.current?.connected) {
         stompRef.current.publish({
           destination: `/app/chat/conversations/${conversationId}/send`,
           body: JSON.stringify({ content: trimmed }),
         });
-        // Server will broadcast back via /topic/conversation.{id};
-        // we'll de-dup by id when it arrives
-      } else {
-        // Fallback to REST if WS is not connected
-        const saved = await chatService.sendMessage(conversationId, trimmed);
-        setMessages((prev) =>
-          prev.map((m) => (m.id === optimistic.id ? saved : m))
-        );
       }
+
+      // 2. Persist via REST to ensure database durability and dispatch offline notifications
+      const saved = await chatService.sendMessage(conversationId, trimmed);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === optimistic.id ? saved : m))
+      );
     } catch (err) {
       secureLog.error('[ChatWindow] Send failed', err);
       // Remove optimistic on error
