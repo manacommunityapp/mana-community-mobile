@@ -90,52 +90,54 @@ export function useChatWindow(
         onConnect: () => {
           setConnected(true);
 
-          // Subscribe: incoming chat messages
-          client.subscribe(
-            `/topic/conversation.${conversationId}`,
-            (frame: IMessage) => {
-              try {
-                const msg: ChatMessageDto = JSON.parse(frame.body);
-                setMessages((prev) => {
-                  if (prev.find((m) => m.id === msg.id && !m._optimisticId)) return prev;
+          // Shared handler for incoming chat messages
+          const handleIncomingMessage = (frame: IMessage) => {
+            try {
+              const msg: ChatMessageDto = JSON.parse(frame.body);
+              setMessages((prev) => {
+                if (prev.find((m) => m.id === msg.id && !m._optimisticId)) return prev;
 
-                  if (msg.senderId === currentUserId) {
-                    const optIdx = prev.findIndex(
-                      (m) => m._optimisticId && m.content === msg.content,
-                    );
-                    if (optIdx !== -1) {
-                      const updated = [...prev];
-                      updated[optIdx] = msg;
-                      return updated;
-                    }
+                if (msg.senderId === currentUserId) {
+                  const optIdx = prev.findIndex(
+                    (m) => m._optimisticId && m.content === msg.content,
+                  );
+                  if (optIdx !== -1) {
+                    const updated = [...prev];
+                    updated[optIdx] = msg;
+                    return updated;
                   }
+                }
 
-                  return [...prev, msg];
-                });
-                chatService.markRead(conversationId).catch(() => {});
-              } catch {/* malformed frame */}
-            },
-          );
+                return [...prev, msg];
+              });
+              chatService.markRead(conversationId).catch(() => {});
+            } catch {/* malformed frame */}
+          };
 
-          // Subscribe: typing indicators
-          client.subscribe(
-            `/topic/typing.${conversationId}`,
-            (frame: IMessage) => {
-              try {
-                const ev: TypingEvent = JSON.parse(frame.body);
-                if (ev.userId === currentUserId) return;
-                setTypingUsers((prev) => {
-                  const next = new Map(prev);
-                  if (ev.typing) {
-                    next.set(ev.userId, ev.name);
-                  } else {
-                    next.delete(ev.userId);
-                  }
-                  return next;
-                });
-              } catch {/* ignore */}
-            },
-          );
+          // Shared handler for typing indicators
+          const handleTypingEvent = (frame: IMessage) => {
+            try {
+              const ev: TypingEvent = JSON.parse(frame.body);
+              if (ev.userId === currentUserId) return;
+              setTypingUsers((prev) => {
+                const next = new Map(prev);
+                if (ev.typing) {
+                  next.set(ev.userId, ev.name);
+                } else {
+                  next.delete(ev.userId);
+                }
+                return next;
+              });
+            } catch {/* ignore */}
+          };
+
+          // Subscribe: incoming chat messages (dot notation per STOMP inventory + slash alias)
+          client.subscribe(`/topic/conversation.${conversationId}`, handleIncomingMessage);
+          client.subscribe(`/topic/conversation/${conversationId}`, handleIncomingMessage);
+
+          // Subscribe: typing indicators (dot notation per STOMP inventory + slash alias)
+          client.subscribe(`/topic/typing.${conversationId}`, handleTypingEvent);
+          client.subscribe(`/topic/typing/${conversationId}`, handleTypingEvent);
         },
 
         onDisconnect: () => setConnected(false),
@@ -177,17 +179,19 @@ export function useChatWindow(
     setIsSending(true);
 
     try {
+      // 1. Publish over STOMP for instantaneous broker propagation
       if (stompRef.current?.connected) {
         stompRef.current.publish({
           destination: `/app/chat/conversations/${conversationId}/send`,
           body: JSON.stringify({ content: trimmed }),
         });
-      } else {
-        const saved = await chatService.sendMessage(conversationId, trimmed);
-        setMessages((prev) =>
-          prev.map((m) => (m._optimisticId === optId ? saved : m))
-        );
       }
+
+      // 2. Persist via REST to ensure database durability and dispatch offline notifications
+      const saved = await chatService.sendMessage(conversationId, trimmed);
+      setMessages((prev) =>
+        prev.map((m) => (m._optimisticId === optId ? saved : m))
+      );
     } catch (err) {
       secureLog.error('[ChatWindow] Send failed', err);
       setMessages((prev) => prev.filter((m) => m._optimisticId !== optId));
