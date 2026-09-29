@@ -1,5 +1,12 @@
+import { Platform } from 'react-native';
 import api from './apiClient';
 import type { ConversationDto, ChatMessageDto, PageResponse } from '@/types/api';
+
+export interface PickedFile {
+  uri: string;
+  name: string;
+  type: string;
+}
 
 export const chatService = {
   async getConversations(): Promise<ConversationDto[]> {
@@ -24,6 +31,28 @@ export const chatService = {
     const res = await api.post<ChatMessageDto>(
       `/chat/conversations/${conversationId}/messages`,
       { content }
+    );
+    return res.data;
+  },
+
+  async sendWithAttachments(
+    conversationId: number,
+    files: PickedFile[],
+    content?: string,
+  ): Promise<ChatMessageDto> {
+    const form = new FormData();
+    if (content?.trim()) form.append('content', content.trim());
+    for (const file of files) {
+      form.append('files', {
+        uri: Platform.OS === 'android' ? file.uri : file.uri.replace('file://', ''),
+        name: file.name,
+        type: file.type,
+      } as any);
+    }
+    const res = await api.post<ChatMessageDto>(
+      `/chat/conversations/${conversationId}/attachments`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
     return res.data;
   },
