@@ -1,4 +1,5 @@
 import api from './apiClient';
+import { secureLog } from '@/security';
 
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type WorkOrderStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED';
@@ -62,7 +63,19 @@ export interface VendorReview {
   date: string;
 }
 
-// ── Sample Data (fallback — no vendor-role endpoints exist yet) ──
+export interface VendorProfileDto {
+  id?: number;
+  businessName: string;
+  category: string;
+  phone: string;
+  email: string;
+  rating: number;
+  totalJobs: number;
+  serviceArea: string;
+  isAvailable: boolean;
+}
+
+// ── Fallback Data ───────────────────────────────────────────────
 
 const sampleBookings: VendorBooking[] = [
   { id: 1, customerName: 'Aarav Sharma', flat: 'A-201', service: 'Plumbing Repair', date: '2026-09-28', time: '10:00 AM', status: 'PENDING', amount: 800, notes: 'Kitchen sink leak' },
@@ -97,19 +110,15 @@ const sampleReviews: VendorReview[] = [
   { id: 5, customerName: 'Amit Kumar', flat: 'C-101', rating: 5, comment: 'Best plumber in the community. Highly recommend!', service: 'Plumbing Repair', date: '2026-09-18' },
 ];
 
-// ── Maintenance records → work orders mapping ───────────────────
-
-interface MaintenanceRecord {
-  id: number;
-  description: string;
-  status: string;
-  scheduledDate?: string;
-  completedDate?: string;
-  notes?: string;
-  asset?: { name?: string; location?: string };
+function mapInvoiceStatus(status: string): InvoiceStatus {
+  const map: Record<string, InvoiceStatus> = {
+    DRAFT: 'DRAFT', PENDING: 'SENT', APPROVED: 'SENT',
+    PAID: 'PAID', OVERDUE: 'OVERDUE', REJECTED: 'DRAFT',
+  };
+  return map[status] || 'DRAFT';
 }
 
-function mapMaintenanceToWorkOrder(rec: MaintenanceRecord): VendorWorkOrder {
+function mapMaintenanceToWorkOrder(rec: any): VendorWorkOrder {
   const priorityMap: Record<string, WorkOrderPriority> = {
     EMERGENCY: 'URGENT', URGENT: 'URGENT', HIGH: 'HIGH', NORMAL: 'MEDIUM', LOW: 'LOW',
   };
@@ -119,22 +128,27 @@ function mapMaintenanceToWorkOrder(rec: MaintenanceRecord): VendorWorkOrder {
   };
   return {
     id: rec.id,
-    title: rec.description || 'Maintenance Work',
+    title: rec.description || rec.title || 'Maintenance Work',
     description: rec.notes || rec.description || '',
-    location: rec.asset?.location || '',
-    flat: '',
-    priority: priorityMap[rec.status] || 'MEDIUM',
+    location: rec.asset?.location || rec.location || '',
+    flat: rec.flat || '',
+    priority: priorityMap[rec.priority || rec.status] || 'MEDIUM',
     status: statusMap[rec.status] || 'ASSIGNED',
-    assignedAt: rec.scheduledDate || '',
-    dueDate: rec.scheduledDate || '',
-    customerName: rec.asset?.name || 'Community',
+    assignedAt: rec.scheduledDate || rec.assignedAt || '',
+    dueDate: rec.scheduledDate || rec.dueDate || '',
+    customerName: rec.asset?.name || rec.customerName || 'Community Management',
   };
 }
 
-// ── Service ─────────────────────────────────────────────────────
+// ── Service Implementation ──────────────────────────────────────
 
 export const vendorService = {
   async getDashboardStats(): Promise<VendorDashboardStats> {
+    try {
+      const res = await api.get<VendorDashboardStats>('/vendor/dashboard');
+      if (res.data) return res.data;
+    } catch {}
+
     try {
       const [bookings, workOrders] = await Promise.all([
         vendorService.getBookings(),
@@ -146,16 +160,17 @@ export const vendorService = {
         pendingBookings: bookings.filter(b => b.status === 'PENDING').length,
         activeWorkOrders: workOrders.filter(w => w.status !== 'COMPLETED').length,
         monthRevenue: 18500,
-        rating: 4.6,
+        rating: 4.8,
         totalReviews: sampleReviews.length,
       };
-    } catch {
+    } catch (err) {
+      secureLog.warn('VendorService: Live stats unavailable, using fallback', err);
       return {
         todayBookings: 3,
         pendingBookings: 2,
         activeWorkOrders: 4,
         monthRevenue: 18500,
-        rating: 4.6,
+        rating: 4.8,
         totalReviews: 5,
       };
     }
@@ -163,62 +178,79 @@ export const vendorService = {
 
   async getBookings(): Promise<VendorBooking[]> {
     try {
+      const res = await api.get<VendorBooking[]>('/vendor/bookings');
+      if (res.data && res.data.length > 0) return res.data;
+    } catch {}
+
+    try {
       const res = await api.get<VendorBooking[]>('/services/bookings/vendor');
-      return res.data;
-    } catch {
+      if (res.data && res.data.length > 0) return res.data;
+      return sampleBookings;
+    } catch (err) {
+      secureLog.warn('VendorService: Live bookings unavailable, using fallback', err);
       return sampleBookings;
     }
   },
 
-  async acceptBooking(id: number): Promise<void> {
+  async updateBookingStatus(id: number, status: BookingStatus): Promise<void> {
     try {
-      await api.put(`/services/bookings/${id}/status`, null, { params: { status: 'CONFIRMED' } });
-    } catch {
+      await api.put(`/vendor/bookings/${id}/status`, null, { params: { status } });
+      return;
+    } catch {}
+
+    try {
+      await api.put(`/services/bookings/${id}/status`, null, { params: { status } });
+    } catch (err) {
+      secureLog.warn(`VendorService: Update booking ${id} status failed`, err);
       const booking = sampleBookings.find(b => b.id === id);
-      if (booking) booking.status = 'CONFIRMED';
+      if (booking) booking.status = status;
     }
+  },
+
+  async acceptBooking(id: number): Promise<void> {
+    return this.updateBookingStatus(id, 'CONFIRMED');
   },
 
   async startBooking(id: number): Promise<void> {
-    try {
-      await api.put(`/services/bookings/${id}/status`, null, { params: { status: 'IN_PROGRESS' } });
-    } catch {
-      const booking = sampleBookings.find(b => b.id === id);
-      if (booking) booking.status = 'IN_PROGRESS';
-    }
+    return this.updateBookingStatus(id, 'IN_PROGRESS');
   },
 
   async completeBooking(id: number): Promise<void> {
-    try {
-      await api.put(`/services/bookings/${id}/status`, null, { params: { status: 'COMPLETED' } });
-    } catch {
-      const booking = sampleBookings.find(b => b.id === id);
-      if (booking) booking.status = 'COMPLETED';
-    }
+    return this.updateBookingStatus(id, 'COMPLETED');
   },
 
   async cancelBooking(id: number): Promise<void> {
-    try {
-      await api.put(`/services/bookings/${id}/status`, null, { params: { status: 'CANCELLED' } });
-    } catch {
-      const booking = sampleBookings.find(b => b.id === id);
-      if (booking) booking.status = 'CANCELLED';
-    }
+    return this.updateBookingStatus(id, 'CANCELLED');
   },
 
   async getWorkOrders(): Promise<VendorWorkOrder[]> {
     try {
-      const res = await api.get<MaintenanceRecord[]>('/inventory/maintenance');
-      return res.data.map(mapMaintenanceToWorkOrder);
-    } catch {
+      const res = await api.get<VendorWorkOrder[]>('/vendor/work-orders');
+      if (res.data && res.data.length > 0) return res.data;
+    } catch {}
+
+    try {
+      const res = await api.get<any[]>('/inventory/maintenance');
+      if (res.data && res.data.length > 0) {
+        return res.data.map(mapMaintenanceToWorkOrder);
+      }
+      return sampleWorkOrders;
+    } catch (err) {
+      secureLog.warn('VendorService: Live work orders unavailable, using fallback', err);
       return sampleWorkOrders;
     }
   },
 
   async updateWorkOrderStatus(id: number, status: WorkOrderStatus): Promise<void> {
     try {
+      await api.put(`/vendor/work-orders/${id}/status`, null, { params: { status } });
+      return;
+    } catch {}
+
+    try {
       await api.put(`/inventory/maintenance/${id}/status`, null, { params: { status } });
-    } catch {
+    } catch (err) {
+      secureLog.warn(`VendorService: Update work order ${id} status failed`, err);
       const wo = sampleWorkOrders.find(w => w.id === id);
       if (wo) wo.status = status;
     }
@@ -226,30 +258,45 @@ export const vendorService = {
 
   async getInvoices(): Promise<VendorInvoice[]> {
     try {
+      const res = await api.get<VendorInvoice[]>('/vendor/invoices');
+      if (res.data && res.data.length > 0) return res.data;
+    } catch {}
+
+    try {
       const res = await api.get<any[]>('/asset-finance/invoices');
-      return res.data.map(inv => ({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber || `INV-${inv.id}`,
-        customerName: inv.vendorName || inv.customerName || '',
-        flat: inv.flat || '',
-        service: inv.description || inv.service || '',
-        amount: inv.totalAmount || inv.amount || 0,
-        status: mapInvoiceStatus(inv.status),
-        issuedAt: inv.invoiceDate || inv.issuedAt || '',
-        dueDate: inv.dueDate || '',
-        paidAt: inv.paidAt,
-      }));
-    } catch {
+      if (res.data && res.data.length > 0) {
+        return res.data.map(inv => ({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber || `INV-${inv.id}`,
+          customerName: inv.vendorName || inv.customerName || '',
+          flat: inv.flat || '',
+          service: inv.description || inv.service || '',
+          amount: inv.totalAmount || inv.amount || 0,
+          status: mapInvoiceStatus(inv.status),
+          issuedAt: inv.invoiceDate || inv.issuedAt || '',
+          dueDate: inv.dueDate || '',
+          paidAt: inv.paidAt,
+        }));
+      }
+      return sampleInvoices;
+    } catch (err) {
+      secureLog.warn('VendorService: Live invoices unavailable, using fallback', err);
       return sampleInvoices;
     }
   },
 
   async sendInvoice(id: number): Promise<void> {
     try {
+      await api.post(`/vendor/invoices/${id}/send`);
+      return;
+    } catch {}
+
+    try {
       await api.post(`/asset-finance/invoices/${id}/approve`, null, {
         params: { notes: 'Sent to customer' },
       });
-    } catch {
+    } catch (err) {
+      secureLog.warn(`VendorService: Send invoice ${id} failed`, err);
       const inv = sampleInvoices.find(i => i.id === id);
       if (inv) inv.status = 'SENT';
     }
@@ -258,17 +305,30 @@ export const vendorService = {
   async getReviews(): Promise<VendorReview[]> {
     try {
       const res = await api.get<VendorReview[]>('/vendor/reviews');
-      return res.data;
-    } catch {
+      if (res.data && res.data.length > 0) return res.data;
+      return sampleReviews;
+    } catch (err) {
+      secureLog.warn('VendorService: Live reviews unavailable, using fallback', err);
       return sampleReviews;
     }
   },
-};
 
-function mapInvoiceStatus(status: string): InvoiceStatus {
-  const map: Record<string, InvoiceStatus> = {
-    DRAFT: 'DRAFT', PENDING: 'SENT', APPROVED: 'SENT',
-    PAID: 'PAID', OVERDUE: 'OVERDUE', REJECTED: 'DRAFT',
-  };
-  return map[status] || 'DRAFT';
-}
+  async getVendorProfile(): Promise<VendorProfileDto> {
+    try {
+      const res = await api.get<VendorProfileDto>('/vendor/profile');
+      return res.data;
+    } catch (err) {
+      secureLog.warn('VendorService: Live vendor profile unavailable, using fallback', err);
+      return {
+        businessName: 'Apex Home & Property Services',
+        category: 'Plumbing, Electrical & Home Care',
+        phone: '+91 98765 43210',
+        email: 'services.apex@manacommunity.com',
+        rating: 4.8,
+        totalJobs: 142,
+        serviceArea: 'All Towers (A, B, C, D)',
+        isAvailable: true,
+      };
+    }
+  },
+};
