@@ -26,6 +26,12 @@ const CATEGORY_ICONS: Record<string, { icon: IoniconsName; color: string; bg: st
   'Repairs': { icon: 'construct', color: '#EA580C', bg: '#FFF7ED' },
   'Utilities': { icon: 'flash', color: '#D97706', bg: '#FEF3C7' },
   'Insurance': { icon: 'umbrella', color: '#059669', bg: '#D1FAE5' },
+  'Invoice': { icon: 'document-text', color: '#4F46E5', bg: '#EEF2FF' },
+  'Receipt': { icon: 'receipt', color: '#059669', bg: '#D1FAE5' },
+  'Advance Payment': { icon: 'cash', color: '#059669', bg: '#D1FAE5' },
+  'Purchases': { icon: 'cart', color: '#EA580C', bg: '#FFF7ED' },
+  'Vendor Payments': { icon: 'briefcase', color: '#D97706', bg: '#FEF3C7' },
+  'Budget': { icon: 'pie-chart', color: '#7C3AED', bg: '#EDE9FE' },
 };
 
 export default function AdminFinanceScreen() {

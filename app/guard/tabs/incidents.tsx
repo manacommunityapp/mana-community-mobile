@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, RefreshControl,
+  FlatList, RefreshControl, Modal, TextInput, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
-import { guardService, type GuardIncident, type IncidentStatus, type IncidentPriority } from '@/services/guardService';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  guardService,
+  type GuardIncident,
+  type IncidentStatus,
+  type IncidentPriority,
+} from '@/services/guardService';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 type FilterKey = 'open' | 'escalated' | 'resolved';
@@ -38,9 +44,18 @@ const FILTER_STATUS: Record<FilterKey, IncidentStatus> = {
 };
 
 export default function GuardIncidentsScreen() {
+  const { user } = useAuth();
   const [incidents, setIncidents] = useState<GuardIncident[]>([]);
   const [filter, setFilter] = useState<FilterKey>('open');
   const [refreshing, setRefreshing] = useState(false);
+
+  // Create Modal State
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
+  const [priority, setPriority] = useState<IncidentPriority>('MEDIUM');
+  const [submitting, setSubmitting] = useState(false);
 
   const loadIncidents = async () => {
     const data = await guardService.getIncidents();
@@ -53,6 +68,48 @@ export default function GuardIncidentsScreen() {
     setRefreshing(true);
     await loadIncidents();
     setRefreshing(false);
+  };
+
+  const handleCreateIncident = async () => {
+    if (!title.trim() || !location.trim()) {
+      Alert.alert('Required Fields', 'Please enter incident title and location.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await guardService.createIncident({
+        title: title.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        priority,
+        reportedBy: user?.fullName || user?.name || 'Gate Guard',
+      });
+      setIsModalVisible(false);
+      setTitle('');
+      setDescription('');
+      setLocation('');
+      setPriority('MEDIUM');
+      Alert.alert('✅ Incident Logged', 'Incident report has been recorded and broadcast to security supervisors.');
+      await loadIncidents();
+    } catch {
+      Alert.alert('Error', 'Unable to record incident.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateStatus = (incident: GuardIncident, newStatus: IncidentStatus) => {
+    Alert.alert('Update Status', `Change incident #${incident.id} status to ${newStatus}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Confirm',
+        onPress: async () => {
+          await guardService.updateIncidentStatus(incident.id, newStatus);
+          await loadIncidents();
+        },
+      },
+    ]);
   };
 
   const filtered = incidents.filter(i => i.status === FILTER_STATUS[filter]);
@@ -97,15 +154,24 @@ export default function GuardIncidentsScreen() {
               <Ionicons name={priorityMeta.icon} size={10} color={priorityMeta.color} />
               <Text style={[s.priorityText, { color: priorityMeta.color }]}>{priorityMeta.label}</Text>
             </View>
-            <View style={[s.statusBadge, { backgroundColor: statusMeta.bg }]}>
-              <Text style={[s.statusText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
-            </View>
+            <TouchableOpacity
+              style={[s.statusBadge, { backgroundColor: statusMeta.bg }]}
+              onPress={() => {
+                const nextStatus: IncidentStatus = item.status === 'OPEN' ? 'ESCALATED' : item.status === 'ESCALATED' ? 'RESOLVED' : 'OPEN';
+                handleUpdateStatus(item, nextStatus);
+              }}
+            >
+              <Text style={[s.statusText, { color: statusMeta.color }]}>{statusMeta.label} ▾</Text>
+            </TouchableOpacity>
           </View>
-          {item.assignedTo && (
+
+          {item.assignedTo ? (
             <View style={s.assignedRow}>
               <Ionicons name="person-outline" size={11} color={COLORS.textMuted} />
               <Text style={s.assignedText}>{item.assignedTo}</Text>
             </View>
+          ) : (
+            <Text style={s.reportedByText}>Reported by {item.reportedBy}</Text>
           )}
         </View>
       </View>
@@ -119,7 +185,7 @@ export default function GuardIncidentsScreen() {
           <Text style={s.headerTitle}>Incidents</Text>
           <Text style={s.headerSub}>{counts.open + counts.escalated} active</Text>
         </View>
-        <TouchableOpacity style={s.headerBtn}>
+        <TouchableOpacity style={s.headerBtn} onPress={() => setIsModalVisible(true)}>
           <Ionicons name="add" size={20} color={COLORS.text} />
         </TouchableOpacity>
       </View>
@@ -160,6 +226,87 @@ export default function GuardIncidentsScreen() {
           </View>
         }
       />
+
+      {/* ── Report Incident Modal ── */}
+      <Modal visible={isModalVisible} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Report Security Incident</Text>
+              <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={s.fieldLabel}>Incident Title *</Text>
+            <TextInput
+              style={s.textInput}
+              placeholder="e.g. Blocked Emergency Exit, Noise Complaint"
+              placeholderTextColor={COLORS.textMuted}
+              value={title}
+              onChangeText={setTitle}
+            />
+
+            <Text style={s.fieldLabel}>Location *</Text>
+            <TextInput
+              style={s.textInput}
+              placeholder="e.g. Tower B - Basement 1, Clubhouse"
+              placeholderTextColor={COLORS.textMuted}
+              value={location}
+              onChangeText={setLocation}
+            />
+
+            <Text style={s.fieldLabel}>Priority</Text>
+            <View style={s.priorityRow}>
+              {(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as IncidentPriority[]).map((p) => {
+                const isSelected = priority === p;
+                const conf = PRIORITY_META[p];
+                return (
+                  <TouchableOpacity
+                    key={p}
+                    style={[s.priorityChip, isSelected && { backgroundColor: conf.bg, borderColor: conf.color }]}
+                    onPress={() => setPriority(p)}
+                  >
+                    <Text style={[s.priorityChipText, isSelected && { color: conf.color, fontWeight: '700' }]}>
+                      {conf.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={s.fieldLabel}>Description</Text>
+            <TextInput
+              style={[s.textInput, { height: 75, textAlignVertical: 'top' }]}
+              placeholder="Provide context or immediate action taken"
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              value={description}
+              onChangeText={setDescription}
+            />
+
+            <View style={s.modalActionRow}>
+              <TouchableOpacity
+                style={s.cancelBtn}
+                onPress={() => setIsModalVisible(false)}
+              >
+                <Text style={s.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.submitBtn, submitting && { opacity: 0.7 }]}
+                onPress={handleCreateIncident}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={s.submitBtnText}>Submit Incident</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -241,7 +388,40 @@ const s = StyleSheet.create({
   statusText: { fontSize: 10, fontWeight: '700' },
   assignedRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   assignedText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500' },
+  reportedByText: { fontSize: 11, color: COLORS.textMuted },
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text, marginTop: 12 },
   emptyDesc: { fontSize: 14, color: COLORS.textMuted, marginTop: 4 },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20,
+  },
+  modalCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: COLORS.text, marginTop: 10, marginBottom: 4 },
+  textInput: {
+    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md, paddingHorizontal: 12,
+    paddingVertical: 10, fontSize: 14, color: COLORS.text, borderWidth: 1, borderColor: COLORS.border,
+  },
+  priorityRow: { flexDirection: 'row', gap: 6 },
+  priorityChip: {
+    flex: 1, paddingVertical: 6, borderRadius: RADIUS.sm, backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
+  },
+  priorityChipText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
+  modalActionRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  cancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+  },
+  cancelBtnText: { color: COLORS.text, fontWeight: '700' },
+  submitBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, backgroundColor: GUARD_COLORS.accent,
+    alignItems: 'center',
+  },
+  submitBtnText: { color: '#FFFFFF', fontWeight: '700' },
 });

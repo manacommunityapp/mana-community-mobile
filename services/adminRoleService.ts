@@ -156,6 +156,60 @@ interface VendorInvoiceResponse {
   dueDate?: string;
 }
 
+interface FinanceInvoiceResponse {
+  id: number;
+  code?: string;
+  status?: string;
+  customerId?: number;
+  customerName?: string;
+  docDate?: string;
+  dueDate?: string;
+  subtotal?: number;
+  grandTotal?: number;
+  notes?: string;
+}
+
+interface FinanceReceiptResponse {
+  id: number;
+  code?: string;
+  receiptType?: string;
+  customerId?: number;
+  customerName?: string;
+  receiptDate?: string;
+  amount?: number;
+  paymentMode?: string;
+  reference?: string;
+  notes?: string;
+}
+
+interface FinancePurchaseResponse {
+  id: number;
+  code?: string;
+  status?: string;
+  vendorId?: number;
+  vendorName?: string;
+  docDate?: string;
+  dueDate?: string;
+  subtotal?: number;
+  grandTotal?: number;
+  notes?: string;
+}
+
+interface FinanceVendorPaymentResponse {
+  id: number;
+  code?: string;
+  paymentType?: string;
+  vendorId?: number;
+  vendorName?: string;
+  paymentDate?: string;
+  amount?: number;
+  paymentMode?: string;
+  paidFrom?: string;
+  reference?: string;
+  status?: string;
+  notes?: string;
+}
+
 interface AuditStatsResponse {
   eventsToday?: number;
   usersCreatedToday?: number;
@@ -238,34 +292,71 @@ const SAMPLE_ANALYTICS: AnalyticsData = {
 let inMemoryApprovals: AdminApproval[] = [...sampleApprovals];
 let inMemoryAlerts: SecurityAlert[] = [...sampleAlerts];
 let inMemoryFinance: FinanceEntry[] = [...sampleFinance];
+const resolvedAlertIds = new Set<number>();
 
 // ── Service ─────────────────────────────────────────────────────
 
 export const adminRoleService = {
   async getDashboardStats(): Promise<AdminDashboardStats> {
     try {
-      const [adminStats, dashboardStats, expenseSummary, billingRes] = await Promise.all([
+      const [
+        adminStats,
+        dashboardStats,
+        expenseSummary,
+        billingRes,
+        receiptsRes,
+        financeInvoicesRes,
+        purchasesRes,
+        vendorPaymentsRes,
+        activeVisitorsRes,
+      ] = await Promise.all([
         api.get<AdminStatsResponse>('/admin/stats').catch(() => null),
         api.get<DashboardAdminStatsResponse>('/dashboard/admin/stats').catch(() => null),
         api.get<ExpenseSummaryResponse>('/expenses/summary').catch(() => null),
         api.get<{ content: BillingInvoiceResponse[] }>('/billing/invoices', {
           params: { page: 0, size: 100, status: 'PAID' },
         }).catch(() => null),
+        api.get<FinanceReceiptResponse[]>('/finance/receipts').catch(() => null),
+        api.get<FinanceInvoiceResponse[]>('/finance/invoices').catch(() => null),
+        api.get<FinancePurchaseResponse[]>('/finance/purchases').catch(() => null),
+        api.get<FinanceVendorPaymentResponse[]>('/finance/vendor-payments').catch(() => null),
+        api.get<any[]>('/visitors/active').catch(() => null),
       ]);
 
       const stats = adminStats?.data;
       const dashboard = dashboardStats?.data;
       const expenses = expenseSummary?.data;
 
-      const paidBilling = billingRes?.data?.content || [];
-      const monthlyRevenue = paidBilling.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 600000;
+      // Dynamic revenue calculation from live queries
+      const paidBillingSum = (billingRes?.data?.content || []).reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+      const receiptsSum = (receiptsRes?.data || []).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+      const paidFinanceInvoicesSum = (financeInvoicesRes?.data || [])
+        .filter(inv => inv.status === 'PAID' || inv.status === 'COMPLETED')
+        .reduce((sum, inv) => sum + (Number(inv.grandTotal ?? inv.subtotal) || 0), 0);
+      const totalLiveRevenue = paidBillingSum + receiptsSum + paidFinanceInvoicesSum;
+      const monthlyRevenue = totalLiveRevenue > 0 ? totalLiveRevenue : 600000;
+
+      // Dynamic expense calculation from live queries
+      const directExpenses = expenses?.totalExpenses ?? 0;
+      const purchasesSum = (purchasesRes?.data || [])
+        .filter(p => p.status === 'PAID' || p.status === 'COMPLETED' || p.status === 'APPROVED')
+        .reduce((sum, p) => sum + (Number(p.grandTotal ?? p.subtotal) || 0), 0);
+      const vendorPaymentsSum = (vendorPaymentsRes?.data || []).reduce((sum, vp) => sum + (Number(vp.amount) || 0), 0);
+      const totalLiveExpenses = directExpenses + purchasesSum + vendorPaymentsSum;
+      const monthlyExpenses = totalLiveExpenses > 0 ? totalLiveExpenses : 350000;
+
+      // Active visitor & alerts count
+      const liveVisitorsCount = Array.isArray(activeVisitorsRes?.data)
+        ? activeVisitorsRes.data.filter((v: any, i: number) => !resolvedAlertIds.has(50000 + (v.id || i))).length
+        : 0;
+      const activeAlerts = liveVisitorsCount + inMemoryAlerts.filter(a => !a.resolved).length;
 
       return {
         totalResidents: dashboard?.totalUsers ?? stats?.totalMembers ?? 842,
         pendingApprovals: (stats?.pendingApprovals ?? 0) + (stats?.reportedContent ?? 0) || inMemoryApprovals.filter(a => a.status === 'PENDING').length,
         monthlyRevenue,
-        monthlyExpenses: expenses?.totalExpenses ?? 350000,
-        activeAlerts: inMemoryAlerts.filter(a => !a.resolved).length,
+        monthlyExpenses,
+        activeAlerts,
         occupancyRate: 94,
         openTickets: stats?.reportedContent ?? 12,
         totalUnits: 450,
@@ -387,7 +478,9 @@ export const adminRoleService = {
   async rejectItem(id: number, reason?: string): Promise<void> {
     try {
       if (id >= 200000) {
-        await api.put(`/vendor/registrations/${id - 200000}/reject`, reason ? { reason } : undefined);
+        await api.put(`/vendor/registrations/${id - 200000}/reject`, null, {
+          params: { reason: reason || 'Application rejected by community admin' },
+        });
       } else if (id >= 100000) {
         await api.put(`/admin/reports/${id - 100000}/dismiss`);
       } else {
@@ -402,7 +495,16 @@ export const adminRoleService = {
 
   async getFinanceEntries(): Promise<FinanceEntry[]> {
     try {
-      const [expensesRes, billingRes, vendorInvRes, budgetRes] = await Promise.all([
+      const [
+        expensesRes,
+        billingRes,
+        vendorInvRes,
+        financeInvoicesRes,
+        receiptsRes,
+        purchasesRes,
+        vendorPaymentsRes,
+        budgetRes,
+      ] = await Promise.all([
         api.get<{ content: ExpenseResponse[] }>('/expenses', {
           params: { page: 0, size: 100 },
         }).catch(() => null),
@@ -410,6 +512,10 @@ export const adminRoleService = {
           params: { page: 0, size: 100 },
         }).catch(() => null),
         api.get<VendorInvoiceResponse[]>('/asset-finance/invoices').catch(() => null),
+        api.get<FinanceInvoiceResponse[]>('/finance/invoices').catch(() => null),
+        api.get<FinanceReceiptResponse[]>('/finance/receipts').catch(() => null),
+        api.get<FinancePurchaseResponse[]>('/finance/purchases').catch(() => null),
+        api.get<FinanceVendorPaymentResponse[]>('/finance/vendor-payments').catch(() => null),
         api.get<BudgetAllocation[]>('/finance/budget').catch(() => null),
       ]);
 
@@ -417,7 +523,7 @@ export const adminRoleService = {
         id: e.id,
         category: formatCategory(e.category),
         description: e.title || e.description || '',
-        amount: e.amount,
+        amount: Number(e.amount) || 0,
         type: 'EXPENSE' as const,
         date: e.createdAt?.split('T')[0] || '',
         status: mapExpenseStatus(e.status),
@@ -427,7 +533,7 @@ export const adminRoleService = {
         id: inv.id + 10000,
         category: 'Maintenance Dues',
         description: inv.description || 'Resident Billing',
-        amount: inv.amount || 0,
+        amount: Number(inv.amount) || 0,
         type: 'INCOME' as const,
         date: inv.createdAt?.split('T')[0] || inv.dueDate?.split('T')[0] || '',
         status: mapExpenseStatus(inv.status),
@@ -437,13 +543,61 @@ export const adminRoleService = {
         id: inv.id + 20000,
         category: 'Vendor Payments',
         description: `${inv.vendorName || 'Vendor'} — ${inv.invoiceNumber || ''}`,
-        amount: inv.totalAmount || 0,
+        amount: Number(inv.totalAmount) || 0,
         type: 'EXPENSE' as const,
         date: inv.invoiceDate?.split('T')[0] || '',
         status: mapVendorInvoiceStatus(inv.status),
       }));
 
-      const allEntries = [...billingIncome, ...expenses, ...vendorExpenses];
+      const financeInvoices: FinanceEntry[] = (financeInvoicesRes?.data || []).map(inv => ({
+        id: inv.id + 30000,
+        category: 'Invoice',
+        description: `${inv.customerName || 'Resident'} — ${inv.code || 'INV'}`,
+        amount: Number(inv.grandTotal ?? inv.subtotal ?? 0),
+        type: 'INCOME' as const,
+        date: inv.docDate || inv.dueDate || '',
+        status: mapExpenseStatus(inv.status),
+      }));
+
+      const financeReceipts: FinanceEntry[] = (receiptsRes?.data || []).map(rcpt => ({
+        id: rcpt.id + 40000,
+        category: rcpt.receiptType === 'ADVANCE_RECEIPT' ? 'Advance Payment' : 'Receipt',
+        description: `${rcpt.customerName || 'Resident'} — ${rcpt.code || 'RCPT'}${rcpt.paymentMode ? ` (${rcpt.paymentMode})` : ''}`,
+        amount: Number(rcpt.amount) || 0,
+        type: 'INCOME' as const,
+        date: rcpt.receiptDate || '',
+        status: 'COMPLETED' as const,
+      }));
+
+      const financePurchases: FinanceEntry[] = (purchasesRes?.data || []).map(p => ({
+        id: p.id + 50000,
+        category: 'Purchases',
+        description: `${p.vendorName || 'Vendor'} — ${p.code || 'PO'}`,
+        amount: Number(p.grandTotal ?? p.subtotal ?? 0),
+        type: 'EXPENSE' as const,
+        date: p.docDate || p.dueDate || '',
+        status: mapExpenseStatus(p.status),
+      }));
+
+      const financeVendorPayments: FinanceEntry[] = (vendorPaymentsRes?.data || []).map(vp => ({
+        id: vp.id + 60000,
+        category: 'Vendor Payments',
+        description: `${vp.vendorName || 'Vendor'} — ${vp.code || 'VPAY'}${vp.paymentMode ? ` (${vp.paymentMode})` : ''}`,
+        amount: Number(vp.amount) || 0,
+        type: 'EXPENSE' as const,
+        date: vp.paymentDate || '',
+        status: mapExpenseStatus(vp.status || 'PAID'),
+      }));
+
+      const allEntries = [
+        ...financeReceipts,
+        ...billingIncome,
+        ...financeInvoices,
+        ...expenses,
+        ...financePurchases,
+        ...financeVendorPayments,
+        ...vendorExpenses,
+      ];
 
       if (budgetRes?.data?.length) {
         const budgets = budgetRes.data;
@@ -475,16 +629,19 @@ export const adminRoleService = {
     try {
       const activeVisitorsRes = await api.get<any[]>('/visitors/active');
       if (Array.isArray(activeVisitorsRes.data) && activeVisitorsRes.data.length > 0) {
-        const liveAlerts: SecurityAlert[] = activeVisitorsRes.data.slice(0, 3).map((v, i) => ({
-          id: 50000 + (v.id || i),
-          title: `Active Visitor on Premises: ${v.visitorName || 'Guest'}`,
-          description: `Vehicle: ${v.vehicleNumber || 'Walk-in'} visiting flat ${v.flatNumber || 'Community'}. Pass code: ${v.passCode || 'N/A'}.`,
-          level: 'INFO' as SecurityAlertLevel,
-          location: `Gate: ${v.gateIn || 'Main Gate'}`,
-          reportedAt: v.checkedInAt || v.createdAt || new Date().toISOString(),
-          resolved: false,
-          assignedGuard: v.guardIn || 'Duty Officer',
-        }));
+        const liveAlerts: SecurityAlert[] = activeVisitorsRes.data.slice(0, 5).map((v, i) => {
+          const passId = 50000 + (v.id || i);
+          return {
+            id: passId,
+            title: `Active Visitor: ${v.visitorName || 'Guest'}`,
+            description: `Vehicle: ${v.vehicleNumber || 'Walk-in'} visiting flat ${v.flatNumber || 'Community'}. Purpose: ${v.purpose || 'Visit'}. Pass code: ${v.passCode || 'N/A'}.`,
+            level: 'INFO' as SecurityAlertLevel,
+            location: `Gate: ${v.gateIn || 'Main Gate'}`,
+            reportedAt: v.checkedInAt || v.createdAt || new Date().toISOString(),
+            resolved: resolvedAlertIds.has(passId),
+            assignedGuard: v.guardIn || 'Gate Officer',
+          };
+        });
         return [...liveAlerts, ...inMemoryAlerts];
       }
     } catch (err) {
@@ -494,6 +651,14 @@ export const adminRoleService = {
   },
 
   async resolveAlert(id: number): Promise<void> {
+    try {
+      if (id >= 50000) {
+        await api.put(`/visitors/${id - 50000}/check-out`);
+      }
+    } catch (err) {
+      secureLog.warn('AdminRoleService: resolveAlert checkout API failed, applying local state update', err);
+    }
+    resolvedAlertIds.add(id);
     const alert = inMemoryAlerts.find(a => a.id === id);
     if (alert) alert.resolved = true;
   },

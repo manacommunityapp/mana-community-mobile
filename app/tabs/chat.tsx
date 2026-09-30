@@ -196,6 +196,31 @@ export default function ChatScreen() {
           keyExtractor={(c) => String(c.id)}
           renderItem={({ item }) => <ConversationItem item={item} />}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            !search ? (
+              <TouchableOpacity
+                style={styles.aiBanner}
+                onPress={() => router.push('/ai-chat')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.aiAvatar}>
+                  <Ionicons name="sparkles" size={18} color="#fff" />
+                </View>
+                <View style={styles.aiTextWrap}>
+                  <View style={styles.aiTitleRow}>
+                    <Text style={styles.aiTitle}>Mana AI Assistant</Text>
+                    <View style={styles.aiBadge}>
+                      <Text style={styles.aiBadgeText}>66 TOOLS</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.aiSub} numberOfLines={1}>
+                    Ask about dues, guest passes, court bookings & bylaws
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <View style={styles.emptyIconWrap}>
@@ -537,4 +562,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#A5B4FC',
   },
   createGroupBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  // AI Banner
+  aiBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 6,
+    padding: 12,
+    backgroundColor: '#EEF2FF',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: '#C7D2FE',
+    gap: 12,
+    ...SHADOWS.sm,
+  },
+  aiAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiTextWrap: { flex: 1 },
+  aiTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  aiTitle: { fontSize: 14, fontWeight: '800', color: '#1E1B4B' },
+  aiBadge: {
+    backgroundColor: '#4F46E5',
+    borderRadius: RADIUS.xs,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  aiBadgeText: { fontSize: 8, fontWeight: '800', color: '#fff' },
+  aiSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
 });

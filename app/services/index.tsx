@@ -686,7 +686,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F9FAFB',
   },
 
   // ── Header ────────────────────────────────────────────────────────

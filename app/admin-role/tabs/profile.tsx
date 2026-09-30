@@ -144,7 +144,7 @@ export default function AdminProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
   scroll: { paddingBottom: 32 },
   hero: {
     backgroundColor: ADMIN_COLORS.heroBg,
