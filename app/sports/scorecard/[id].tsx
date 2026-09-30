@@ -17,18 +17,19 @@ export default function CricketScorecardScreen() {
 
   async function handleShare() {
     if (!card) return;
-    const first  = card.firstInnings;
-    const second = card.secondInnings;
+    const first  = card.firstInnings || card.innings?.[0];
+    const second = card.secondInnings || card.innings?.[1];
+    const momName = card.manOfMatch?.playerName || card.manOfMatch?.name;
     const text = [
-      `🏏 ${card.matchTitle}`,
+      `🏏 ${card.matchTitle || 'Cricket Match'}`,
       ``,
-      `${first.battingTeamName}: ${first.totalRuns}/${first.wickets} (${first.overs} ov)`,
+      first ? `${first.battingTeamName || first.teamName}: ${first.totalRuns}/${first.wickets ?? first.totalWickets} (${first.overs ?? first.totalOvers} ov)` : '',
       second
-        ? `${second.battingTeamName}: ${second.totalRuns}/${second.wickets} (${second.overs} ov)`
+        ? `${second.battingTeamName || second.teamName}: ${second.totalRuns}/${second.wickets ?? second.totalWickets} (${second.overs ?? second.totalOvers} ov)`
         : '',
       ``,
       card.result ?? '',
-      card.manOfMatch ? `⭐ Man of the Match: ${card.manOfMatch.playerName}` : '',
+      momName ? `⭐ Man of the Match: ${momName}` : '',
       ``,
       `via Mana Community`,
     ].filter(Boolean).join('\n');
@@ -44,13 +45,18 @@ export default function CricketScorecardScreen() {
   }
   if (!card) return null;
 
+  const firstInnings = card.firstInnings || card.innings?.[0];
+  const secondInnings = card.secondInnings || card.innings?.[1];
+  const momName = card.manOfMatch?.playerName || card.manOfMatch?.name;
+  const momContrib = card.manOfMatch?.contribution || card.manOfMatch?.performance;
+
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={s.back}>‹</Text>
         </TouchableOpacity>
-        <Text style={s.title} numberOfLines={1}>{card.matchTitle}</Text>
+        <Text style={s.title} numberOfLines={1}>{card.matchTitle || 'Scorecard'}</Text>
         <TouchableOpacity onPress={handleShare} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={s.share}>Share</Text>
         </TouchableOpacity>
@@ -66,22 +72,24 @@ export default function CricketScorecardScreen() {
         )}
 
         {/* Man of the Match */}
-        {card.manOfMatch && (
+        {card.manOfMatch && momName && (
           <View style={s.momCard}>
             <Text style={s.momLabel}>⭐ Man of the Match</Text>
-            <Text style={s.momName}>{card.manOfMatch.playerName}</Text>
-            {card.manOfMatch.contribution && (
-              <Text style={s.momContrib}>{card.manOfMatch.contribution}</Text>
+            <Text style={s.momName}>{momName}</Text>
+            {momContrib && (
+              <Text style={s.momContrib}>{momContrib}</Text>
             )}
           </View>
         )}
 
         {/* First innings */}
-        <InningsCard innings={card.firstInnings} title="1st Innings" />
+        {firstInnings && (
+          <InningsCard innings={firstInnings} title="1st Innings" />
+        )}
 
         {/* Second innings */}
-        {card.secondInnings && (
-          <InningsCard innings={card.secondInnings} title="2nd Innings" />
+        {secondInnings && (
+          <InningsCard innings={secondInnings} title="2nd Innings" />
         )}
 
         <View style={{ height: 24 }} />

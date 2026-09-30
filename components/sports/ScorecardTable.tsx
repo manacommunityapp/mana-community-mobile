@@ -60,7 +60,7 @@ export function InningsCard({ innings, title }: { innings: InningsDto; title?: s
         </Text>
       </View>
       {title && <Text style={ic.subTitle}>{title}</Text>}
-      {innings.extras > 0 && (
+      {(innings.extras ?? 0) > 0 && (
         <Text style={ic.extras}>Extras: {innings.extras}</Text>
       )}
 

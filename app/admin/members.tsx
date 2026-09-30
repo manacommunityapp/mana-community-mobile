@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { useAdminGuard } from '@/security';
 import { format } from 'date-fns';
 import type { AdminMemberDto } from '@/types/api';
@@ -42,7 +42,7 @@ function MemberCard({
       {/* Avatar + info */}
       <View style={mc.row}>
         <View style={mc.avatar}>
-          <Text style={mc.avatarText}>{member.name[0]}</Text>
+          <Text style={mc.avatarText}>{getInitials(member.name)}</Text>
         </View>
         <View style={mc.info}>
           <Text style={mc.name}>{member.name}</Text>
@@ -206,7 +206,7 @@ export default function MembersScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Suspend', style: 'destructive',
-          onPress: (reason) => suspendMutation.mutate({ id: m.id, reason }) },
+          onPress: (reason?: string) => suspendMutation.mutate({ id: m.id, reason }) },
       ],
     );
   }, [suspendMutation]);

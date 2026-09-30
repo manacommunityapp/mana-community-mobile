@@ -124,10 +124,58 @@ interface Props {
   isMine: boolean;
   showAvatar: boolean;          // show avatar for first msg in a received group
   prevMessage?: ChatMessageDto; // used to decide if date separator is needed
+  searchQuery?: string;
+  isCurrentMatch?: boolean;
+}
+
+function HighlightedText({
+  text,
+  query,
+  style,
+  highlightStyle,
+}: {
+  text: string;
+  query?: string;
+  style: any;
+  highlightStyle: any;
+}) {
+  if (!query || !query.trim()) {
+    return <Text style={style}>{text}</Text>;
+  }
+  const cleanQ = query.trim().toLowerCase();
+  const lower = text.toLowerCase();
+  if (!lower.includes(cleanQ)) {
+    return <Text style={style}>{text}</Text>;
+  }
+
+  const parts: { str: string; match: boolean }[] = [];
+  let curr = 0;
+  while (curr < text.length) {
+    const nextIdx = text.toLowerCase().indexOf(cleanQ, curr);
+    if (nextIdx === -1) {
+      parts.push({ str: text.slice(curr), match: false });
+      break;
+    }
+    if (nextIdx > curr) {
+      parts.push({ str: text.slice(curr, nextIdx), match: false });
+    }
+    parts.push({ str: text.slice(nextIdx, nextIdx + cleanQ.length), match: true });
+    curr = nextIdx + cleanQ.length;
+  }
+
+  return (
+    <Text style={style}>
+      {parts.map((p, i) => (
+        <Text key={i} style={p.match ? highlightStyle : undefined}>
+          {p.str}
+        </Text>
+      ))}
+    </Text>
+  );
 }
 
 export const MessageBubble = memo(function MessageBubble({
-  message, isMine, showAvatar, prevMessage,
+  message, isMine, showAvatar, prevMessage, searchQuery, isCurrentMatch,
 }: Props) {
   if (message.type === 'system') {
     return <SystemBubble content={message.content} />;
@@ -141,7 +189,7 @@ export const MessageBubble = memo(function MessageBubble({
     <>
       {showSep && <DateSeparator date={msgDate} />}
 
-      <View style={[bub.row, isMine ? bub.rowMine : bub.rowTheirs]}>
+      <View style={[bub.row, isMine ? bub.rowMine : bub.rowTheirs, isCurrentMatch && bub.focusedMatch]}>
 
         {/* Avatar on the left for received messages */}
         {!isMine && (showAvatar
@@ -162,9 +210,12 @@ export const MessageBubble = memo(function MessageBubble({
 
           {/* Text content — hide placeholder "[attachment]" when files are present */}
           {!(message.attachments?.length && message.content === '[attachment]') && (
-            <Text style={[bub.content, isMine ? bub.contentMine : bub.contentTheirs]}>
-              {message.content}
-            </Text>
+            <HighlightedText
+              text={message.content}
+              query={searchQuery}
+              style={[bub.content, isMine ? bub.contentMine : bub.contentTheirs]}
+              highlightStyle={isMine ? bub.highlightMine : bub.highlightTheirs}
+            />
           )}
 
           <View style={bub.meta}>
@@ -194,4 +245,7 @@ const bub = StyleSheet.create({
   time:         { fontSize: 11 },
   timeMine:     { color: 'rgba(255,255,255,0.7)' },
   timeTheirs:   { color: COLORS.textMuted },
+  highlightMine:{ backgroundColor: '#FDE047', color: '#1E1B4B', fontWeight: '700' },
+  highlightTheirs:{ backgroundColor: '#FEF08A', color: '#854D0E', fontWeight: '700' },
+  focusedMatch: { backgroundColor: 'rgba(254, 240, 138, 0.18)', borderRadius: 8 },
 });

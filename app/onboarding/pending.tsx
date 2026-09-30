@@ -114,7 +114,7 @@ export default function PendingScreen() {
 
         <Text style={s.title}>Application submitted!</Text>
         <Text style={s.sub}>
-          Welcome to {user?.community?.name ?? 'your community'},{' '}
+          Welcome to {typeof user?.community === 'object' ? user?.community?.name : (user?.communityName || user?.community || 'your community')},{' '}
           <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '700' }}>{user?.name?.split(' ')[0]}</Text>!
           {'\n\n'}Your admin will review and approve your account. This usually takes a few hours.
         </Text>

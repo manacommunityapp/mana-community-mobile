@@ -175,7 +175,7 @@ export default function MaintenanceDuesScreen() {
       <View style={styles.walletCard}>
         <View style={styles.walletHeader}>
           <View style={styles.walletIcon}>
-            <Ionicons name="wallet-outline" size={24} color="#047857" />
+            <Ionicons name="wallet-outline" size={24} color={COLORS.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -248,14 +248,14 @@ export default function MaintenanceDuesScreen() {
           ) : (
             <View style={styles.clearedBannerWrap}>
               <View style={styles.clearedBanner}>
-                <Ionicons name="checkmark-circle" size={20} color="#047857" />
+                <Ionicons name="checkmark-circle" size={20} color="#059669" />
                 <Text style={styles.clearedText}>Bill is fully settled. Thank you!</Text>
               </View>
               <TouchableOpacity
                 style={styles.viewReceiptLink}
                 onPress={() => handleReceiptAction(activeBill)}
               >
-                <Ionicons name="receipt-outline" size={15} color="#047857" />
+                <Ionicons name="receipt-outline" size={15} color={COLORS.primary} />
                 <Text style={styles.viewReceiptLinkText}>View Digital Receipt</Text>
               </TouchableOpacity>
             </View>
@@ -284,7 +284,7 @@ export default function MaintenanceDuesScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.historyIconWrap}>
-                <Ionicons name="document-text-outline" size={20} color="#047857" />
+                <Ionicons name="document-text-outline" size={20} color={COLORS.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: SPACING.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -302,7 +302,7 @@ export default function MaintenanceDuesScreen() {
                 style={styles.receiptBtn}
                 onPress={() => handleReceiptAction(item)}
               >
-                <Ionicons name="download-outline" size={16} color="#047857" />
+                <Ionicons name="download-outline" size={16} color={COLORS.primary} />
               </TouchableOpacity>
             </TouchableOpacity>
           ))
@@ -359,7 +359,7 @@ export default function MaintenanceDuesScreen() {
                   <Ionicons
                     name={m.icon as any}
                     size={22}
-                    color={selectedMethod === m.id ? '#047857' : (m.available ? COLORS.textSecondary : COLORS.textMuted)}
+                    color={selectedMethod === m.id ? COLORS.primary : (m.available ? COLORS.textSecondary : COLORS.textMuted)}
                   />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.methodText, selectedMethod === m.id && styles.methodTextActive]}>
@@ -370,7 +370,7 @@ export default function MaintenanceDuesScreen() {
                     </Text>
                   </View>
                   {selectedMethod === m.id && (
-                    <Ionicons name="checkmark-circle" size={20} color="#047857" />
+                    <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -411,7 +411,7 @@ export default function MaintenanceDuesScreen() {
           <View style={styles.receiptModalCard}>
             <View style={styles.receiptModalHeader}>
               <View style={styles.receiptBadge}>
-                <Ionicons name="checkmark-done" size={16} color="#047857" />
+                <Ionicons name="checkmark-done" size={16} color="#059669" />
                 <Text style={styles.receiptBadgeText}>Official Maintenance Receipt</Text>
               </View>
               <TouchableOpacity onPress={() => setReceiptModalBill(null)}>
@@ -439,7 +439,7 @@ export default function MaintenanceDuesScreen() {
                 </View>
                 <View style={styles.receiptMetaRow}>
                   <Text style={styles.receiptMetaKey}>Status:</Text>
-                  <Text style={[styles.receiptMetaVal, { color: '#047857', fontWeight: '800' }]}>SETTLED</Text>
+                  <Text style={[styles.receiptMetaVal, { color: '#059669', fontWeight: '800' }]}>SETTLED</Text>
                 </View>
 
                 <View style={styles.receiptAmountBox}>
@@ -469,66 +469,68 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: SPACING.md, fontSize: 13, color: COLORS.textMuted, fontFamily: 'DMSans-Medium' },
 
   walletCard: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: 'rgba(99, 102, 241, 0.15)',
     marginBottom: SPACING.lg,
+    ...SHADOWS.md,
   },
   walletHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
-  walletIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#D1FAE5', alignItems: 'center', justifyContent: 'center' },
-  walletTitle: { fontSize: 13, fontWeight: '800', color: '#065F46' },
-  walletBadge: { backgroundColor: '#D1FAE5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  walletBadgeText: { fontSize: 9, fontWeight: '800', color: '#047857', textTransform: 'uppercase' },
-  walletSubtitle: { fontSize: 11, color: '#047857', marginTop: 2 },
-  walletAmount: { fontSize: 18, fontWeight: '900', color: '#047857' },
+  walletIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  walletTitle: { fontSize: 13, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  walletBadge: { backgroundColor: '#D1FAE5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  walletBadgeText: { fontSize: 9, fontWeight: '800', color: '#059669', textTransform: 'uppercase' },
+  walletSubtitle: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
+  walletAmount: { fontSize: 19, fontWeight: '900', color: '#059669', fontFamily: 'Outfit-Bold' },
 
   billCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     padding: SPACING.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
     marginBottom: SPACING.lg,
-    ...SHADOWS.sm,
+    ...SHADOWS.md,
   },
   billHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: SPACING.md },
-  billPeriod: { fontSize: 16, fontWeight: '800', color: COLORS.text },
+  billPeriod: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   billNumber: { fontSize: 11, fontFamily: 'monospace', color: COLORS.textMuted, marginTop: 2 },
   statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: RADIUS.sm },
   statusText: { fontSize: 10, fontWeight: '800' },
   statusPending: { backgroundColor: '#EEF2FF' },
-  textPending: { fontSize: 10, fontWeight: '800', color: '#4F46E5' },
+  textPending: { fontSize: 10, fontWeight: '800', color: COLORS.primary },
   statusPaid: { backgroundColor: '#D1FAE5' },
-  textPaid: { fontSize: 10, fontWeight: '800', color: '#047857' },
+  textPaid: { fontSize: 10, fontWeight: '800', color: '#059669' },
   statusOverdue: { backgroundColor: '#FEE2E2' },
   textOverdue: { fontSize: 10, fontWeight: '800', color: '#DC2626' },
 
-  chargeList: { backgroundColor: '#F9FAFB', borderRadius: RADIUS.md, padding: SPACING.md, gap: SPACING.sm },
+  chargeList: { backgroundColor: '#F8FAFC', borderRadius: RADIUS.md, padding: SPACING.md, gap: SPACING.sm },
   chargeRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  chargeItem: { fontSize: 12, color: COLORS.textSecondary },
-  chargeAmount: { fontSize: 12, fontWeight: '600', color: COLORS.text },
+  chargeItem: { fontSize: 12, color: COLORS.textSecondary, fontFamily: 'DMSans-Regular' },
+  chargeAmount: { fontSize: 12, fontWeight: '600', color: COLORS.text, fontFamily: 'DMSans-Medium' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.sm, marginTop: 4 },
-  totalLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text },
-  totalAmount: { fontSize: 14, fontWeight: '800', color: '#047857' },
+  totalLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  totalAmount: { fontSize: 15, fontWeight: '800', color: COLORS.primary, fontFamily: 'Outfit-Bold' },
 
   dueRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: SPACING.md },
-  dueLabel: { fontSize: 12, color: COLORS.textMuted },
-  outstandingLabel: { fontSize: 12, color: COLORS.textMuted },
-  outstandingValue: { fontSize: 15, fontWeight: '800', color: '#DC2626' },
-  clearedValue: { fontSize: 15, fontWeight: '800', color: '#047857' },
+  dueLabel: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
+  outstandingLabel: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
+  outstandingValue: { fontSize: 15, fontWeight: '800', color: '#DC2626', fontFamily: 'Outfit-Bold' },
+  clearedValue: { fontSize: 15, fontWeight: '800', color: '#059669', fontFamily: 'Outfit-Bold' },
 
   payBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#047857',
+    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.md,
     borderRadius: RADIUS.md,
     gap: SPACING.xs,
+    ...SHADOWS.sm,
   },
-  payBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  payBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: 'Outfit-Bold' },
   clearedBannerWrap: { gap: SPACING.sm },
   clearedBanner: {
     flexDirection: 'row',
@@ -538,8 +540,10 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderRadius: RADIUS.md,
     gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
-  clearedText: { color: '#047857', fontSize: 13, fontWeight: '700' },
+  clearedText: { color: '#059669', fontSize: 13, fontWeight: '700', fontFamily: 'DMSans-Medium' },
   viewReceiptLink: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -547,10 +551,10 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     gap: 4,
   },
-  viewReceiptLinkText: { fontSize: 12, fontWeight: '700', color: '#047857' },
+  viewReceiptLinkText: { fontSize: 12, fontWeight: '700', color: COLORS.primary, fontFamily: 'DMSans-Medium' },
 
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   sectionSubCount: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
 
   emptyHistory: {
@@ -558,36 +562,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
     gap: SPACING.sm,
   },
-  emptyHistoryText: { fontSize: 13, color: COLORS.textMuted },
+  emptyHistoryText: { fontSize: 13, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
 
   historyCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    ...SHADOWS.sm,
   },
-  historyIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' },
-  historyPeriod: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  historyIconWrap: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  historyPeriod: { fontSize: 13, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   historyNum: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontFamily: 'monospace' },
-  historyAmount: { fontSize: 14, fontWeight: '800', color: COLORS.text, marginRight: SPACING.sm },
-  methodBadge: { backgroundColor: '#F3F4F6', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
-  methodBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.textMuted },
-  receiptBtn: { padding: SPACING.sm, backgroundColor: '#ECFDF5', borderRadius: RADIUS.sm },
+  historyAmount: { fontSize: 14, fontWeight: '800', color: COLORS.text, marginRight: SPACING.sm, fontFamily: 'Outfit-Bold' },
+  methodBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 },
+  methodBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.textSecondary },
+  receiptBtn: { padding: SPACING.sm, backgroundColor: '#EEF2FF', borderRadius: RADIUS.sm },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: SPACING.lg },
   modalContent: { width: '100%', backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.xl, ...SHADOWS.md },
   modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text },
-  modalSubtitle: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  modalSubtitle: { fontSize: 13, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
   methodCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -597,57 +602,58 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     gap: SPACING.sm,
   },
-  methodCardActive: { borderColor: '#047857', backgroundColor: '#ECFDF5' },
+  methodCardActive: { borderColor: COLORS.primary, backgroundColor: '#EEF2FF' },
   methodCardDisabled: { opacity: 0.6, borderColor: '#F3F4F6', backgroundColor: '#FAFAFA' },
-  methodText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
-  methodTextActive: { color: '#047857', fontWeight: '700' },
-  methodSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  methodText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', fontFamily: 'DMSans-Medium' },
+  methodTextActive: { color: COLORS.primary, fontWeight: '700', fontFamily: 'Outfit-Bold' },
+  methodSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
   modalSummaryBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     marginTop: SPACING.xs,
   },
-  modalSummaryLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
-  modalSummaryValue: { fontSize: 17, fontWeight: '900', color: '#047857' },
+  modalSummaryLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
+  modalSummaryValue: { fontSize: 17, fontWeight: '900', color: COLORS.primary, fontFamily: 'Outfit-Bold' },
 
   modalActions: { flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.md },
   cancelBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
-  cancelBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary },
-  confirmPayBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, backgroundColor: '#047857', alignItems: 'center' },
-  confirmPayText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  cancelBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
+  confirmPayBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center', ...SHADOWS.sm },
+  confirmPayText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Outfit-Bold' },
 
   receiptModalCard: { width: '100%', backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.xl, ...SHADOWS.md },
   receiptModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
   receiptBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  receiptBadgeText: { fontSize: 11, fontWeight: '800', color: '#047857' },
+  receiptBadgeText: { fontSize: 11, fontWeight: '800', color: '#059669', fontFamily: 'Outfit-Bold' },
   receiptBody: { gap: SPACING.xs },
-  receiptSocietyName: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  receiptFlatDetail: { fontSize: 12, color: COLORS.textMuted },
+  receiptSocietyName: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  receiptFlatDetail: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
   receiptDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.sm },
   receiptMetaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  receiptMetaKey: { fontSize: 12, color: COLORS.textMuted },
-  receiptMetaVal: { fontSize: 12, fontWeight: '700', color: COLORS.text },
+  receiptMetaKey: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
+  receiptMetaVal: { fontSize: 12, fontWeight: '700', color: COLORS.text, fontFamily: 'DMSans-Medium' },
   receiptAmountBox: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EEF2FF',
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     alignItems: 'center',
     marginTop: SPACING.md,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: 'rgba(99, 102, 241, 0.2)',
   },
-  receiptAmountLabel: { fontSize: 11, color: '#047857', fontWeight: '600' },
-  receiptAmountValue: { fontSize: 22, fontWeight: '900', color: '#047857', marginTop: 2 },
+  receiptAmountLabel: { fontSize: 11, color: COLORS.primary, fontWeight: '600', fontFamily: 'DMSans-Medium' },
+  receiptAmountValue: { fontSize: 22, fontWeight: '900', color: COLORS.primary, marginTop: 2, fontFamily: 'Outfit-Bold' },
   receiptDoneBtn: {
-    backgroundColor: '#047857',
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.md,
     paddingVertical: SPACING.md,
     alignItems: 'center',
     marginTop: SPACING.lg,
+    ...SHADOWS.sm,
   },
-  receiptDoneBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  receiptDoneBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: 'Outfit-Bold' },
 });

@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { commuteService } from '@/services/commuteService';
 import { StarRating } from '@/components/commute/StarRating';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 
 export default function RideDetailScreen() {
   const router = useRouter();
@@ -180,7 +180,7 @@ export default function RideDetailScreen() {
           <Text style={s.cardTitle}>{isOffer ? 'Driver' : 'Requester'}</Text>
           <View style={s.driverRow}>
             <View style={s.avatar}>
-              <Text style={s.avatarText}>{ride.driverName.charAt(0)}</Text>
+              <Text style={s.avatarText}>{getInitials(ride.driverName)}</Text>
             </View>
             <View>
               <Text style={s.driverName}>{ride.driverName}</Text>

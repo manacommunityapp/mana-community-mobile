@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import type { PlayerReaction, MatchRatingPlayerDto } from '@/types/api';
 
 const REACTIONS: { key: PlayerReaction; emoji: string; label: string }[] = [
@@ -81,14 +81,30 @@ export default function PeerRatingScreen() {
 
   const submitMutation = useMutation({
     mutationFn: () => sportsService.submitMatchRatings(Number(id), {
+      matchId: Number(id),
       ratings: (summary?.players ?? [])
-        .filter((p) => ratings[p.playerId]?.stars)
-        .map((p) => ({
-          playerId:     p.playerId,
-          stars:        ratings[p.playerId].stars,
-          reaction:     ratings[p.playerId].reaction,
-          isManOfMatch: ratings[p.playerId].isManOfMatch ?? false,
-        })),
+        .map((p) => {
+          const pid = p.playerId ?? p.userId ?? p.id ?? 0;
+          return {
+            playerId:     pid,
+            userId:       p.userId ?? pid,
+            stars:        ratings[pid]?.stars ?? 0,
+            rating:       ratings[pid]?.stars ?? 0,
+            reaction:     ratings[pid]?.reaction,
+            isManOfMatch: ratings[pid]?.isManOfMatch ?? false,
+          };
+        })
+        .filter((r) => r.stars > 0),
+      playerRatings: (summary?.players ?? [])
+        .map((p) => {
+          const pid = p.playerId ?? p.userId ?? p.id ?? 0;
+          return {
+            userId: p.userId ?? pid,
+            rating: ratings[pid]?.stars ?? 0,
+            reaction: ratings[pid]?.reaction,
+          };
+        })
+        .filter((r) => r.rating > 0),
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['match-ratings', id] });
@@ -123,31 +139,36 @@ export default function PeerRatingScreen() {
               <Text style={s.momEmoji}>⭐</Text>
               <View>
                 <Text style={s.momLabel}>Man of the Match</Text>
-                <Text style={s.momName}>{summary.manOfMatch.playerName}</Text>
-                <Text style={s.momVotes}>{summary.manOfMatch.voteCount} votes</Text>
+                <Text style={s.momName}>{summary.manOfMatch.playerName || summary.manOfMatch.name || 'Player'}</Text>
+                <Text style={s.momVotes}>{summary.manOfMatch.voteCount ?? 0} votes</Text>
               </View>
             </View>
           )}
-          {summary.players.map((p) => (
-            <View key={p.playerId} style={s.resultRow}>
-              <View style={s.resultAvatar}>
-                <Text style={s.resultAvatarText}>{p.playerName[0]}</Text>
+          {(summary.players || []).map((p: any) => {
+            const pid = p.playerId ?? p.userId ?? p.id ?? 0;
+            const pName = p.playerName || p.name || 'Player';
+            const avgRating = Number(p.averageRating ?? p.rating ?? 0);
+            return (
+              <View key={pid} style={s.resultRow}>
+                <View style={s.resultAvatar}>
+                  <Text style={s.resultAvatarText}>{getInitials(pName)}</Text>
+                </View>
+                <View style={s.resultInfo}>
+                  <Text style={s.resultName}>{pName}</Text>
+                  {p.flatNo && <Text style={s.resultFlat}>{p.flatNo}</Text>}
+                </View>
+                <View style={s.resultStats}>
+                  <Text style={s.resultRating}>{'★'.repeat(Math.round(avgRating))}{'☆'.repeat(Math.max(0, 5 - Math.round(avgRating)))}</Text>
+                  <Text style={s.resultAvg}>{avgRating.toFixed(1)} avg</Text>
+                  {p.topReaction && (
+                    <Text style={s.resultReaction}>
+                      {REACTIONS.find((r) => r.key === p.topReaction)?.emoji} {REACTIONS.find((r) => r.key === p.topReaction)?.label}
+                    </Text>
+                  )}
+                </View>
               </View>
-              <View style={s.resultInfo}>
-                <Text style={s.resultName}>{p.playerName}</Text>
-                {p.flatNo && <Text style={s.resultFlat}>{p.flatNo}</Text>}
-              </View>
-              <View style={s.resultStats}>
-                <Text style={s.resultRating}>{'★'.repeat(Math.round(p.averageRating))}{'☆'.repeat(5 - Math.round(p.averageRating))}</Text>
-                <Text style={s.resultAvg}>{p.averageRating.toFixed(1)} avg</Text>
-                {p.topReaction && (
-                  <Text style={s.resultReaction}>
-                    {REACTIONS.find((r) => r.key === p.topReaction)?.emoji} {REACTIONS.find((r) => r.key === p.topReaction)?.label}
-                  </Text>
-                )}
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       </SafeAreaView>
     );
@@ -198,38 +219,44 @@ export default function PeerRatingScreen() {
         <View style={s.momSection}>
           <Text style={s.momSectionTitle}>⭐ Man of the Match — tap to vote</Text>
           <View style={s.momRow}>
-            {(summary?.players ?? []).map((p) => (
-              <TouchableOpacity
-                key={p.playerId}
-                style={[s.momChip, momId === p.playerId && s.momChipActive]}
-                onPress={() => toggleMom(p.playerId)}
-              >
-                <Text style={s.momChipAvatar}>{p.playerName[0]}</Text>
-                <Text style={[s.momChipName, momId === p.playerId && s.momChipNameActive]} numberOfLines={1}>
-                  {p.playerName.split(' ')[0]}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {(summary?.players ?? []).map((p) => {
+              const pid = p.playerId ?? p.userId ?? p.id ?? 0;
+              const pName = p.playerName || p.name || 'Player';
+              return (
+                <TouchableOpacity
+                  key={pid}
+                  style={[s.momChip, momId === pid && s.momChipActive]}
+                  onPress={() => toggleMom(pid)}
+                >
+                  <Text style={s.momChipAvatar}>{getInitials(pName)}</Text>
+                  <Text style={[s.momChipName, momId === pid && s.momChipNameActive]} numberOfLines={1}>
+                    {pName.split(' ')[0]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Per-player rating */}
         {(summary?.players ?? []).map((p: MatchRatingPlayerDto) => {
-          const r = ratings[p.playerId];
+          const pid = p.playerId ?? p.userId ?? p.id ?? 0;
+          const pName = p.playerName || p.name || 'Player';
+          const r = ratings[pid];
           return (
-            <View key={p.playerId} style={[s.playerCard, momId === p.playerId && s.playerCardMom]}>
+            <View key={pid} style={[s.playerCard, momId === pid && s.playerCardMom]}>
               <View style={s.playerHeader}>
                 <View style={s.playerAvatar}>
-                  <Text style={s.playerAvatarText}>{p.playerName[0]}</Text>
+                  <Text style={s.playerAvatarText}>{getInitials(pName)}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.playerName}>{p.playerName}</Text>
+                  <Text style={s.playerName}>{pName}</Text>
                   {p.flatNo && <Text style={s.playerFlat}>{p.flatNo}</Text>}
                 </View>
-                {momId === p.playerId && <Text style={s.momStar}>⭐ MOM</Text>}
+                {momId === pid && <Text style={s.momStar}>⭐ MOM</Text>}
               </View>
 
-              <StarPicker value={r?.stars ?? 0} onChange={(v) => setStars(p.playerId, v)} />
+              <StarPicker value={r?.stars ?? 0} onChange={(v) => setStars(pid, v)} />
 
               {/* Reactions */}
               <View style={s.reactions}>
@@ -237,7 +264,7 @@ export default function PeerRatingScreen() {
                   <TouchableOpacity
                     key={react.key}
                     style={[s.reactionChip, r?.reaction === react.key && s.reactionChipActive]}
-                    onPress={() => setReaction(p.playerId, react.key)}
+                    onPress={() => setReaction(pid, react.key)}
                   >
                     <Text style={s.reactionEmoji}>{react.emoji}</Text>
                     <Text style={[s.reactionLabel, r?.reaction === react.key && s.reactionLabelActive]}>

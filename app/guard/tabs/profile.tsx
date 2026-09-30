@@ -36,7 +36,8 @@ function MenuItem({ icon, label, onPress, danger, iconColor, iconBg }: MenuItemP
 export default function GuardProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const avatarColor = getAvatarColor(user?.name || 'Guard');
+  const displayName = user?.fullName || user?.name || (user?.email ? user.email.split('@')[0] : 'Guard');
+  const avatarColor = getAvatarColor(displayName);
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -59,10 +60,10 @@ export default function GuardProfileScreen() {
             style={s.heroAvatar}
           >
             <Text style={[s.heroAvatarText, { color: '#FFFFFF' }]}>
-              {getInitials(user?.name || 'Guard')}
+              {getInitials(displayName)}
             </Text>
           </LinearGradient>
-          <Text style={s.heroName}>{user?.name || 'Guard'}</Text>
+          <Text style={s.heroName}>{displayName}</Text>
           <Text style={s.heroEmail}>{user?.email}</Text>
           <View style={s.heroTagRow}>
             <View style={s.heroTag}>

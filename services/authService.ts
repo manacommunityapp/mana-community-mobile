@@ -34,9 +34,11 @@ export const authService = {
   async getProfile(): Promise<UserProfileResponse> {
     const res = await api.get<UserProfileResponse>('/users/me');
     const data = res.data;
+    const resolvedName = data.fullName || data.name || (data as any).username || (data as any).displayName || (data.email ? data.email.split('@')[0] : '');
     return {
       ...data,
-      name: data.fullName ?? data.name ?? '',
+      fullName: resolvedName,
+      name: resolvedName,
       status: data.isActive === false ? 'SUSPENDED' : (data.status ?? 'ACTIVE'),
       createdAt: data.createdAt ?? new Date().toISOString(),
     };
@@ -44,5 +46,28 @@ export const authService = {
 
   async forgotPassword(email: string): Promise<void> {
     await api.post('/auth/forgot-password', { email });
+  },
+
+  async lookupCommunity(inviteCode: string): Promise<any> {
+    const res = await api.get(`/communities/lookup?code=${encodeURIComponent(inviteCode)}`);
+    return res.data;
+  },
+
+  async submitKyc(data: any): Promise<UserProfileResponse> {
+    const res = await api.post<UserProfileResponse>('/users/me/kyc', data);
+    return res.data;
+  },
+
+  async pollApprovalStatus(): Promise<UserProfileResponse> {
+    const res = await api.get<UserProfileResponse>('/users/me');
+    const data = res.data;
+    const resolvedName = data.fullName || data.name || (data as any).username || (data as any).displayName || (data.email ? data.email.split('@')[0] : '');
+    return {
+      ...data,
+      fullName: resolvedName,
+      name: resolvedName,
+      status: data.isActive === false ? 'SUSPENDED' : (data.status ?? 'ACTIVE'),
+      createdAt: data.createdAt ?? new Date().toISOString(),
+    };
   },
 };

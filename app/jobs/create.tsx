@@ -43,7 +43,7 @@ export default function CreateJobScreen() {
       jobType,
       payType,
       payAmount:   payAmount ? Number(payAmount) : undefined,
-      location:    location.trim() || undefined,
+      location:    location.trim() || 'Within community',
       showFlat,
     }),
     onSuccess: (job) => {

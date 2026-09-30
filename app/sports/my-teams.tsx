@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import type { TeamDto } from '@/types/api';
 
@@ -46,7 +46,7 @@ function TeamCard({
       <View style={c.membersRow}>
         {team.members.slice(0, 6).map((m) => (
           <View key={m.userId} style={c.member}>
-            <Text style={c.memberInitial}>{m.name[0]}</Text>
+            <Text style={c.memberInitial}>{getInitials(m.name)}</Text>
           </View>
         ))}
         {team.members.length > 6 && (

@@ -81,7 +81,7 @@ export default function VendorDashboardScreen() {
         <View style={s.welcome}>
           <View>
             <Text style={s.greeting}>Welcome back,</Text>
-            <Text style={s.userName}>{user?.name || 'Vendor'}</Text>
+            <Text style={s.userName}>{user?.fullName || user?.name || 'Vendor'}</Text>
           </View>
           <View style={s.ratingBadge}>
             <Ionicons name="star" size={14} color={VENDOR_COLORS.accent} />

@@ -376,10 +376,14 @@ export default function FeedScreen() {
     return 'Good evening';
   }, []);
 
-  const userName = user?.name?.split(' ')[0] || 'Neighbor';
+  const [userPhotoError, setUserPhotoError] = useState(false);
+  const userDisplayName = user?.fullName || user?.name || (user?.email ? user.email.split('@')[0] : 'Resident');
+  const userName = userDisplayName.split(' ')[0] || 'Neighbor';
   const communityName = user?.communityName || '';
-  const userInitial = getInitials(user?.name);
-  const avatarColor = getAvatarColor(user?.name || 'Resident');
+  const userInitial = getInitials(userDisplayName);
+  const avatarColor = getAvatarColor(userDisplayName);
+  const userPhotoUri = user?.profilePicUrl || user?.profilePhoto;
+  const hasUserPhoto = !userPhotoError && !!userPhotoUri && typeof userPhotoUri === 'string' && userPhotoUri.trim().length > 0 && !userPhotoUri.includes('null') && !userPhotoUri.includes('undefined') && (userPhotoUri.startsWith('http') || userPhotoUri.startsWith('file://') || userPhotoUri.startsWith('data:'));
 
   const announcements = allPosts.filter(p => p.type === 'announcement');
   const latestAnnouncement = announcements.length > 0 ? announcements[0] : null;
@@ -484,10 +488,11 @@ export default function FeedScreen() {
       {/* Composer Card */}
       <View style={styles.composerCard}>
         <View style={styles.composerRow}>
-          {user?.profilePicUrl || user?.profilePhoto ? (
+          {hasUserPhoto ? (
             <Image
-              source={{ uri: user.profilePicUrl || user.profilePhoto }}
+              source={{ uri: userPhotoUri }}
               style={styles.composerAvatarImage}
+              onError={() => setUserPhotoError(true)}
             />
           ) : (
             <LinearGradient
@@ -586,10 +591,11 @@ export default function FeedScreen() {
           onPress={() => router.push('/tabs/profile')}
           activeOpacity={0.7}
         >
-          {user?.profilePicUrl || user?.profilePhoto ? (
+          {hasUserPhoto ? (
             <Image
-              source={{ uri: user.profilePicUrl || user.profilePhoto }}
+              source={{ uri: userPhotoUri }}
               style={styles.profileAvatarImage}
+              onError={() => setUserPhotoError(true)}
             />
           ) : (
             <LinearGradient

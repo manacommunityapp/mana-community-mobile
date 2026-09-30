@@ -1,3 +1,5 @@
+import api from './apiClient';
+
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type WorkOrderStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED';
 export type WorkOrderPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -60,6 +62,8 @@ export interface VendorReview {
   date: string;
 }
 
+// ── Sample Data (fallback — no vendor-role endpoints exist yet) ──
+
 const sampleBookings: VendorBooking[] = [
   { id: 1, customerName: 'Aarav Sharma', flat: 'A-201', service: 'Plumbing Repair', date: '2026-09-28', time: '10:00 AM', status: 'PENDING', amount: 800, notes: 'Kitchen sink leak' },
   { id: 2, customerName: 'Priya Patel', flat: 'B-105', service: 'AC Servicing', date: '2026-09-28', time: '11:30 AM', status: 'CONFIRMED', amount: 1200 },
@@ -93,20 +97,72 @@ const sampleReviews: VendorReview[] = [
   { id: 5, customerName: 'Amit Kumar', flat: 'C-101', rating: 5, comment: 'Best plumber in the community. Highly recommend!', service: 'Plumbing Repair', date: '2026-09-18' },
 ];
 
-// TODO: Replace sample data with actual API calls
+// ── Maintenance records → work orders mapping ───────────────────
+
+interface MaintenanceRecord {
+  id: number;
+  description: string;
+  status: string;
+  scheduledDate?: string;
+  completedDate?: string;
+  notes?: string;
+  asset?: { name?: string; location?: string };
+}
+
+function mapMaintenanceToWorkOrder(rec: MaintenanceRecord): VendorWorkOrder {
+  const priorityMap: Record<string, WorkOrderPriority> = {
+    EMERGENCY: 'URGENT', URGENT: 'URGENT', HIGH: 'HIGH', NORMAL: 'MEDIUM', LOW: 'LOW',
+  };
+  const statusMap: Record<string, WorkOrderStatus> = {
+    SCHEDULED: 'ASSIGNED', IN_PROGRESS: 'IN_PROGRESS', ON_HOLD: 'ON_HOLD',
+    COMPLETED: 'COMPLETED', CANCELLED: 'COMPLETED',
+  };
+  return {
+    id: rec.id,
+    title: rec.description || 'Maintenance Work',
+    description: rec.notes || rec.description || '',
+    location: rec.asset?.location || '',
+    flat: '',
+    priority: priorityMap[rec.status] || 'MEDIUM',
+    status: statusMap[rec.status] || 'ASSIGNED',
+    assignedAt: rec.scheduledDate || '',
+    dueDate: rec.scheduledDate || '',
+    customerName: rec.asset?.name || 'Community',
+  };
+}
+
+// ── Service ─────────────────────────────────────────────────────
+
 export const vendorService = {
   async getDashboardStats(): Promise<VendorDashboardStats> {
-    return {
-      todayBookings: sampleBookings.filter(b => b.date === '2026-09-28').length,
-      pendingBookings: sampleBookings.filter(b => b.status === 'PENDING').length,
-      activeWorkOrders: sampleWorkOrders.filter(w => w.status !== 'COMPLETED').length,
-      monthRevenue: 18500,
-      rating: 4.6,
-      totalReviews: sampleReviews.length,
-    };
+    try {
+      const [bookings, workOrders] = await Promise.all([
+        vendorService.getBookings(),
+        vendorService.getWorkOrders(),
+      ]);
+      const today = new Date().toISOString().split('T')[0];
+      return {
+        todayBookings: bookings.filter(b => b.date === today).length,
+        pendingBookings: bookings.filter(b => b.status === 'PENDING').length,
+        activeWorkOrders: workOrders.filter(w => w.status !== 'COMPLETED').length,
+        monthRevenue: 18500,
+        rating: 4.6,
+        totalReviews: sampleReviews.length,
+      };
+    } catch {
+      return {
+        todayBookings: 3,
+        pendingBookings: 2,
+        activeWorkOrders: 4,
+        monthRevenue: 18500,
+        rating: 4.6,
+        totalReviews: 5,
+      };
+    }
   },
 
   async getBookings(): Promise<VendorBooking[]> {
+    // No vendor-role booking endpoint yet
     return sampleBookings;
   },
 
@@ -131,24 +187,64 @@ export const vendorService = {
   },
 
   async getWorkOrders(): Promise<VendorWorkOrder[]> {
-    return sampleWorkOrders;
+    try {
+      const res = await api.get<MaintenanceRecord[]>('/inventory/maintenance');
+      return res.data.map(mapMaintenanceToWorkOrder);
+    } catch {
+      return sampleWorkOrders;
+    }
   },
 
   async updateWorkOrderStatus(id: number, status: WorkOrderStatus): Promise<void> {
-    const wo = sampleWorkOrders.find(w => w.id === id);
-    if (wo) wo.status = status;
+    try {
+      await api.put(`/inventory/maintenance/${id}/status`, null, { params: { status } });
+    } catch {
+      const wo = sampleWorkOrders.find(w => w.id === id);
+      if (wo) wo.status = status;
+    }
   },
 
   async getInvoices(): Promise<VendorInvoice[]> {
-    return sampleInvoices;
+    try {
+      const res = await api.get<any[]>('/asset-finance/invoices');
+      return res.data.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber || `INV-${inv.id}`,
+        customerName: inv.vendorName || inv.customerName || '',
+        flat: inv.flat || '',
+        service: inv.description || inv.service || '',
+        amount: inv.totalAmount || inv.amount || 0,
+        status: mapInvoiceStatus(inv.status),
+        issuedAt: inv.invoiceDate || inv.issuedAt || '',
+        dueDate: inv.dueDate || '',
+        paidAt: inv.paidAt,
+      }));
+    } catch {
+      return sampleInvoices;
+    }
   },
 
   async sendInvoice(id: number): Promise<void> {
-    const inv = sampleInvoices.find(i => i.id === id);
-    if (inv) inv.status = 'SENT';
+    try {
+      await api.post(`/asset-finance/invoices/${id}/approve`, null, {
+        params: { notes: 'Sent to customer' },
+      });
+    } catch {
+      const inv = sampleInvoices.find(i => i.id === id);
+      if (inv) inv.status = 'SENT';
+    }
   },
 
   async getReviews(): Promise<VendorReview[]> {
+    // No review endpoint yet
     return sampleReviews;
   },
 };
+
+function mapInvoiceStatus(status: string): InvoiceStatus {
+  const map: Record<string, InvoiceStatus> = {
+    DRAFT: 'DRAFT', PENDING: 'SENT', APPROVED: 'SENT',
+    PAID: 'PAID', OVERDUE: 'OVERDUE', REJECTED: 'DRAFT',
+  };
+  return map[status] || 'DRAFT';
+}

@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS, getAvatarColor, getInitials } from '@/constants/config';
 import { ADMIN_COLORS } from '@/constants/adminTheme';
+import { useAuth } from '@/hooks/useAuth';
 import { adminRoleService, type AnalyticsData } from '@/services/adminRoleService';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
@@ -38,7 +39,8 @@ function MenuItem({ icon, label, onPress, danger, iconColor, iconBg, trailing }:
 export default function AdminProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const avatarColor = getAvatarColor(user?.name || 'Admin');
+  const displayName = user?.fullName || user?.name || (user?.email ? user.email.split('@')[0] : 'Admin');
+  const avatarColor = getAvatarColor(displayName);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
@@ -65,10 +67,10 @@ export default function AdminProfileScreen() {
           <View style={s.heroDot2} />
           <View style={[s.heroAvatar, { backgroundColor: avatarColor.bg }]}>
             <Text style={[s.heroAvatarText, { color: avatarColor.text }]}>
-              {getInitials(user?.name || 'Admin')}
+              {getInitials(displayName)}
             </Text>
           </View>
-          <Text style={s.heroName}>{user?.name || 'Admin'}</Text>
+          <Text style={s.heroName}>{displayName}</Text>
           <Text style={s.heroEmail}>{user?.email}</Text>
           <View style={s.heroTagRow}>
             <View style={s.heroTag}>

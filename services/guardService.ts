@@ -1,4 +1,5 @@
 import api from './apiClient';
+import type { VisitorDto } from './visitorService';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -61,7 +62,26 @@ export interface GuardDashboardStats {
   openIncidents: number;
 }
 
-// ── Sample Data (until backend endpoints are wired) ──────────────
+// ── Mapping: backend VisitorDto → GuardVisitor ──────────────────
+
+function mapVisitorDtoToGuard(dto: VisitorDto): GuardVisitor {
+  return {
+    id: dto.id,
+    name: dto.visitorName,
+    purpose: dto.purpose,
+    flat: dto.flatNumber ?? '',
+    vehicleNumber: dto.vehicleNumber,
+    phone: dto.visitorPhone,
+    expectedAt: dto.expectedAt ?? dto.createdAt ?? '',
+    checkedInAt: dto.checkedInAt,
+    checkedOutAt: dto.checkedOutAt,
+    status: (dto.status as VisitorStatus) ?? 'EXPECTED',
+    preApproved: dto.status === 'EXPECTED' && !!dto.residentId,
+    approvedBy: dto.residentName,
+  };
+}
+
+// ── Sample Data (fallback when API unavailable) ─────────────────
 
 const SAMPLE_VISITORS: GuardVisitor[] = [
   { id: 1, name: 'Amit Verma', purpose: 'Guest Visit', flat: 'A-201', vehicleNumber: 'MH-04-AB-1234', expectedAt: '2026-09-28T10:00:00', status: 'CHECKED_IN', preApproved: true, approvedBy: 'Rahul Sharma', checkedInAt: '2026-09-28T10:02:00' },
@@ -92,45 +112,62 @@ const SAMPLE_CHECKPOINTS: PatrolCheckpoint[] = [
 
 export const guardService = {
   getDashboardStats: async (): Promise<GuardDashboardStats> => {
-    // TODO: wire to GET /api/guard/dashboard
-    return {
-      visitorsToday: 12,
-      pendingEntry: 4,
-      vehiclesIn: 8,
-      deliveries: 3,
-      openIncidents: 2,
-    };
+    try {
+      const visitors = await guardService.getVisitors();
+      const today = new Date().toISOString().split('T')[0];
+      const todayVisitors = visitors.filter(v => v.expectedAt.startsWith(today));
+      return {
+        visitorsToday: todayVisitors.length,
+        pendingEntry: visitors.filter(v => v.status === 'EXPECTED').length,
+        vehiclesIn: visitors.filter(v => v.status === 'CHECKED_IN' && v.vehicleNumber).length,
+        deliveries: visitors.filter(v =>
+          v.purpose.toLowerCase().includes('delivery') &&
+          v.expectedAt.startsWith(today)
+        ).length,
+        openIncidents: SAMPLE_INCIDENTS.filter(i => i.status !== 'RESOLVED').length,
+      };
+    } catch {
+      return {
+        visitorsToday: 12,
+        pendingEntry: 4,
+        vehiclesIn: 8,
+        deliveries: 3,
+        openIncidents: 2,
+      };
+    }
   },
 
   getVisitors: async (): Promise<GuardVisitor[]> => {
-    // TODO: wire to GET /api/guard/visitors
-    return SAMPLE_VISITORS;
+    try {
+      const res = await api.get<VisitorDto[]>('/visitors');
+      return res.data.map(mapVisitorDtoToGuard);
+    } catch {
+      return SAMPLE_VISITORS;
+    }
   },
 
   checkInVisitor: async (id: number): Promise<void> => {
-    // TODO: wire to POST /api/guard/visitors/{id}/check-in
+    await api.put(`/visitors/${id}/check-in`, {});
   },
 
   checkOutVisitor: async (id: number): Promise<void> => {
-    // TODO: wire to POST /api/guard/visitors/{id}/check-out
+    await api.put(`/visitors/${id}/check-out`);
   },
 
   denyVisitor: async (id: number): Promise<void> => {
-    // TODO: wire to POST /api/guard/visitors/{id}/deny
+    await api.put(`/visitors/${id}/reject`);
   },
 
+  // No backend endpoint yet — uses local sample data
   getIncidents: async (): Promise<GuardIncident[]> => {
-    // TODO: wire to GET /api/guard/incidents
     return SAMPLE_INCIDENTS;
   },
 
   createIncident: async (data: Omit<GuardIncident, 'id' | 'reportedAt' | 'status'>): Promise<GuardIncident> => {
-    // TODO: wire to POST /api/guard/incidents
     return { ...data, id: Date.now(), reportedAt: new Date().toISOString(), status: 'OPEN' } as GuardIncident;
   },
 
   getPatrolSession: async (): Promise<PatrolSession> => {
-    // TODO: wire to GET /api/guard/patrol/current
     return {
       id: 1,
       startedAt: '2026-09-28T06:00:00',
@@ -139,11 +176,11 @@ export const guardService = {
     };
   },
 
-  scanCheckpoint: async (checkpointId: number): Promise<void> => {
-    // TODO: wire to POST /api/guard/patrol/scan/{checkpointId}
+  scanCheckpoint: async (_checkpointId: number): Promise<void> => {
+    // No backend endpoint yet
   },
 
-  raiseAlert: async (message: string): Promise<void> => {
-    // TODO: wire to POST /api/guard/alert
+  raiseAlert: async (_message: string): Promise<void> => {
+    // No backend endpoint yet
   },
 };

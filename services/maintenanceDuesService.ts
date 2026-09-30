@@ -1,4 +1,5 @@
 import api from './apiClient';
+import { secureLog } from '@/security';
 
 export interface BillChargeDto {
   item: string;
@@ -51,87 +52,6 @@ export interface WalletBalanceResponse {
   currency: string;
 }
 
-// ── In-Memory Fallback State (used when backend endpoints are pending deployment) ──
-let fallbackPendingBills: MaintenanceBillDto[] = [
-  {
-    id: 'b-101',
-    monthYear: 'October 2026',
-    billNumber: 'BILL-2026-10-A1204',
-    maintenanceAmount: 3500,
-    waterCharges: 450,
-    sinkingFund: 800,
-    penaltyLateFee: 0,
-    totalAmount: 5550,
-    paidAmount: 0,
-    dueAmount: 5550,
-    dueDate: 'Oct 15, 2026',
-    status: 'PENDING',
-    charges: [
-      { item: 'Society Maintenance Fee', amount: 3500 },
-      { item: 'Water Consumption Charges', amount: 450 },
-      { item: 'Power Backup & DG Surcharge', amount: 800 },
-      { item: 'Covered Parking Slot 1', amount: 500 },
-      { item: 'Clubhouse & Gym Membership', amount: 300 },
-    ],
-  },
-];
-
-let fallbackHistoryBills: MaintenanceBillDto[] = [
-  {
-    id: 'b-099',
-    monthYear: 'September 2026',
-    billNumber: 'BILL-2026-09-A1204',
-    maintenanceAmount: 3500,
-    waterCharges: 450,
-    sinkingFund: 800,
-    penaltyLateFee: 0,
-    totalAmount: 5550,
-    paidAmount: 5550,
-    dueAmount: 0,
-    dueDate: 'Sep 15, 2026',
-    status: 'PAID',
-    paymentMethod: 'UPI',
-    paidAt: '2026-09-10T14:32:00Z',
-    receiptUrl: 'https://manacommunity.app/receipts/BILL-2026-09-A1204.pdf',
-  },
-  {
-    id: 'b-098',
-    monthYear: 'August 2026',
-    billNumber: 'BILL-2026-08-A1204',
-    maintenanceAmount: 3500,
-    waterCharges: 450,
-    sinkingFund: 800,
-    penaltyLateFee: 0,
-    totalAmount: 5550,
-    paidAmount: 5550,
-    dueAmount: 0,
-    dueDate: 'Aug 15, 2026',
-    status: 'PAID',
-    paymentMethod: 'Advance Wallet',
-    paidAt: '2026-08-08T11:15:00Z',
-    receiptUrl: 'https://manacommunity.app/receipts/BILL-2026-08-A1204.pdf',
-  },
-  {
-    id: 'b-097',
-    monthYear: 'July 2026',
-    billNumber: 'BILL-2026-07-A1204',
-    maintenanceAmount: 3500,
-    waterCharges: 450,
-    sinkingFund: 800,
-    penaltyLateFee: 0,
-    totalAmount: 5550,
-    paidAmount: 5550,
-    dueAmount: 0,
-    dueDate: 'Jul 15, 2026',
-    status: 'PAID',
-    paymentMethod: 'Card',
-    paidAt: '2026-07-12T09:45:00Z',
-    receiptUrl: 'https://manacommunity.app/receipts/BILL-2026-07-A1204.pdf',
-  },
-];
-
-let fallbackWalletBalance = 2500;
-
 export const maintenanceDuesService = {
   /**
    * GET /finance/maintenance/bills/pending
@@ -140,12 +60,10 @@ export const maintenanceDuesService = {
   async getPendingBills(): Promise<MaintenanceBillDto[]> {
     try {
       const res = await api.get<MaintenanceBillDto[]>('/finance/maintenance/bills/pending');
-      if (Array.isArray(res.data) && res.data.length > 0) {
-        return res.data;
-      }
-      return fallbackPendingBills;
-    } catch {
-      return fallbackPendingBills;
+      return Array.isArray(res.data) ? res.data : [];
+    } catch (err) {
+      secureLog.error('[maintenanceDuesService] Failed to load pending bills', err);
+      return [];
     }
   },
 
@@ -156,12 +74,10 @@ export const maintenanceDuesService = {
   async getPaymentHistory(): Promise<MaintenanceBillDto[]> {
     try {
       const res = await api.get<MaintenanceBillDto[]>('/finance/maintenance/bills/history');
-      if (Array.isArray(res.data)) {
-        return res.data;
-      }
-      return fallbackHistoryBills;
-    } catch {
-      return fallbackHistoryBills;
+      return Array.isArray(res.data) ? res.data : [];
+    } catch (err) {
+      secureLog.error('[maintenanceDuesService] Failed to load payment history', err);
+      return [];
     }
   },
 
@@ -175,15 +91,10 @@ export const maintenanceDuesService = {
       if (res.data?.orderId) {
         return res.data;
       }
-      throw new Error('Fallback to local order creation');
-    } catch {
-      const targetBill = fallbackPendingBills.find(b => b.id === billId) || fallbackPendingBills[0];
-      return {
-        orderId: `ord_mana_${Date.now()}`,
-        amount: targetBill?.dueAmount ?? 5550,
-        key: 'rzp_test_manaCommunityKey',
-        currency: 'INR',
-      };
+      throw new Error('Invalid payment order response');
+    } catch (err) {
+      secureLog.error(`[maintenanceDuesService] Failed to initiate payment for ${billId}`, err);
+      throw err;
     }
   },
 
@@ -197,32 +108,10 @@ export const maintenanceDuesService = {
       if (res.data?.success) {
         return res.data;
       }
-      throw new Error('Fallback to local verification');
-    } catch {
-      const targetIndex = fallbackPendingBills.findIndex(b => b.id === payload.billId);
-      const receiptNumber = `RCP-${Date.now().toString().slice(-6)}`;
-      const nowIso = new Date().toISOString();
-
-      if (targetIndex !== -1) {
-        const settledBill: MaintenanceBillDto = {
-          ...fallbackPendingBills[targetIndex],
-          status: 'PAID',
-          paidAmount: fallbackPendingBills[targetIndex].totalAmount,
-          dueAmount: 0,
-          paymentMethod: payload.method,
-          paidAt: nowIso,
-          receiptUrl: `https://manacommunity.app/receipts/${fallbackPendingBills[targetIndex].billNumber}.pdf`,
-        };
-        fallbackHistoryBills = [settledBill, ...fallbackHistoryBills];
-        fallbackPendingBills = fallbackPendingBills.filter(b => b.id !== payload.billId);
-      }
-
-      return {
-        success: true,
-        receiptNumber,
-        paidAt: nowIso,
-        message: 'Payment verified and settled successfully.',
-      };
+      throw new Error(res.data?.message || 'Payment verification failed');
+    } catch (err) {
+      secureLog.error('[maintenanceDuesService] Failed to verify payment', err);
+      throw err;
     }
   },
 
@@ -236,9 +125,10 @@ export const maintenanceDuesService = {
       if (res.data && typeof res.data.balance === 'number') {
         return res.data;
       }
-      return { balance: fallbackWalletBalance, currency: 'INR' };
-    } catch {
-      return { balance: fallbackWalletBalance, currency: 'INR' };
+      return { balance: 0, currency: 'INR' };
+    } catch (err) {
+      secureLog.error('[maintenanceDuesService] Failed to get wallet balance', err);
+      return { balance: 0, currency: 'INR' };
     }
   },
 
@@ -255,33 +145,11 @@ export const maintenanceDuesService = {
       if (res.data?.success) {
         return res.data;
       }
-      throw new Error('Fallback to local wallet settlement');
-    } catch {
-      const targetIndex = fallbackPendingBills.findIndex(b => b.id === billId);
-      const receiptNumber = `RCP-WAL-${Date.now().toString().slice(-6)}`;
-      const nowIso = new Date().toISOString();
-
-      fallbackWalletBalance = Math.max(0, fallbackWalletBalance - amount);
-
-      if (targetIndex !== -1) {
-        const settledBill: MaintenanceBillDto = {
-          ...fallbackPendingBills[targetIndex],
-          status: 'PAID',
-          paidAmount: fallbackPendingBills[targetIndex].totalAmount,
-          dueAmount: 0,
-          paymentMethod: 'Advance Wallet',
-          paidAt: nowIso,
-          receiptUrl: `https://manacommunity.app/receipts/${fallbackPendingBills[targetIndex].billNumber}.pdf`,
-        };
-        fallbackHistoryBills = [settledBill, ...fallbackHistoryBills];
-        fallbackPendingBills = fallbackPendingBills.filter(b => b.id !== billId);
-      }
-
-      return {
-        success: true,
-        newBalance: fallbackWalletBalance,
-        receiptNumber,
-      };
+      throw new Error('Wallet settlement failed');
+    } catch (err) {
+      secureLog.error(`[maintenanceDuesService] Failed to pay with wallet for ${billId}`, err);
+      throw err;
     }
   },
 };
+

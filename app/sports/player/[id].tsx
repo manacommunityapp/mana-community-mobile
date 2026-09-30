@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
 import { BadgeCard, BadgeRow } from '@/components/sports/BadgeCard';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import { format } from 'date-fns';
 import type { SportStatDto } from '@/types/api';
@@ -54,13 +54,13 @@ function SportCard({ stat }: { stat: SportStatDto }) {
         <Text style={sc.emoji}>{SPORT_EMOJI[stat.sport] ?? '🏅'}</Text>
         <View style={sc.info}>
           <Text style={sc.sport}>{stat.sport.replace('_', ' ')}</Text>
-          <Text style={sc.winRate}>{(stat.winRate * 100).toFixed(0)}% win rate</Text>
+          <Text style={sc.winRate}>{(Number(stat.winRate ?? 0) * 100).toFixed(0)}% win rate</Text>
         </View>
         <View style={sc.quickStats}>
-          <Text style={sc.qVal}>{stat.wins}W</Text>
+          <Text style={sc.qVal}>{stat.wins ?? 0}W</Text>
           <Text style={sc.qSep}>/</Text>
-          <Text style={sc.qVal}>{stat.losses}L</Text>
-          {stat.draws > 0 && <><Text style={sc.qSep}>/</Text><Text style={sc.qVal}>{stat.draws}D</Text></>}
+          <Text style={sc.qVal}>{stat.losses ?? 0}L</Text>
+          {(stat.draws ?? 0) > 0 && <><Text style={sc.qSep}>/</Text><Text style={sc.qVal}>{stat.draws}D</Text></>}
         </View>
         <Text style={sc.arrow}>{expanded ? '▲' : '▼'}</Text>
       </View>
@@ -68,9 +68,9 @@ function SportCard({ stat }: { stat: SportStatDto }) {
       {expanded && (
         <View style={sc.details}>
           <View style={sc.statsGrid}>
-            <StatPill label="Matches" value={stat.matchesPlayed} />
-            <StatPill label="Tournaments" value={stat.tournaments} />
-            <StatPill label="Trophies" value={stat.trophies} />
+            <StatPill label="Matches" value={stat.matchesPlayed ?? stat.matches ?? 0} />
+            <StatPill label="Tournaments" value={stat.tournaments ?? 0} />
+            <StatPill label="Trophies" value={stat.trophies ?? 0} />
           </View>
           {/* Cricket specifics */}
           {stat.sport === 'CRICKET' && (stat.totalRuns != null || stat.totalWickets != null) && (
@@ -79,7 +79,7 @@ function SportCard({ stat }: { stat: SportStatDto }) {
                 <View style={sc.statsGrid}>
                   <StatPill label="Total Runs" value={stat.totalRuns} />
                   <StatPill label="Highest" value={stat.highestScore ?? 0} />
-                  <StatPill label="Avg" value={stat.battingAverage?.toFixed(1) ?? '—'} />
+                  <StatPill label="Avg" value={stat.battingAverage != null ? Number(stat.battingAverage).toFixed(1) : '—'} />
                 </View>
               )}
               {stat.totalWickets != null && (
@@ -137,9 +137,11 @@ export default function PlayerProfileScreen() {
   }
   if (!profile) return null;
 
-  const earnedBadges  = [...profile.badges].filter((b) => b.isEarned)
-    .sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]);
-  const lockedBadges  = profile.badges.filter((b) => !b.isEarned);
+  const earnedBadges  = [...(profile.badges || [])].filter((b) => b.isEarned)
+    .sort((a, b) => (RARITY_ORDER[a.rarity ?? 'common'] ?? 99) - (RARITY_ORDER[b.rarity ?? 'common'] ?? 99));
+  const lockedBadges  = (profile.badges || []).filter((b) => !b.isEarned);
+  const displayName   = profile.fullName || profile.name || 'Player';
+  const statsList     = profile.sportStats || profile.stats || [];
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -154,13 +156,13 @@ export default function PlayerProfileScreen() {
         {/* Identity card */}
         <View style={s.identityCard}>
           <View style={s.bigAvatar}>
-            <Text style={s.bigAvatarText}>{profile.name[0]}</Text>
+            <Text style={s.bigAvatarText}>{getInitials(displayName)}</Text>
           </View>
           <View style={s.identityInfo}>
-            <Text style={s.name}>{profile.name}</Text>
-            {profile.flatNo && <Text style={s.flat}>🏠 {profile.flatNo}</Text>}
-            <StarRating value={profile.communityRating} />
-            {profile.ratingCount > 0 && (
+            <Text style={s.name}>{displayName}</Text>
+            {(profile.flatNo || profile.flatNumber) && <Text style={s.flat}>🏠 {profile.flatNo || profile.flatNumber}</Text>}
+            <StarRating value={profile.communityRating ?? profile.rating ?? 0} />
+            {(profile.ratingCount ?? 0) > 0 && (
               <Text style={s.ratingCount}>{profile.ratingCount} peer ratings</Text>
             )}
           </View>
@@ -168,9 +170,9 @@ export default function PlayerProfileScreen() {
 
         {/* Quick summary */}
         <View style={s.summaryRow}>
-          <StatPill label="Matches"  value={profile.totalMatches}  />
+          <StatPill label="Matches"  value={profile.totalMatches ?? 0}  />
           <View style={s.summaryDivider} />
-          <StatPill label="Trophies" value={profile.totalTrophies} />
+          <StatPill label="Trophies" value={profile.totalTrophies ?? 0} />
           <View style={s.summaryDivider} />
           <StatPill label="Badges"   value={earnedBadges.length}   />
         </View>
@@ -179,16 +181,16 @@ export default function PlayerProfileScreen() {
         {earnedBadges.length > 0 && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>🏅 Badges Earned</Text>
-            <BadgeRow badges={profile.badges} maxVisible={8} />
+            <BadgeRow badges={profile.badges || []} maxVisible={8} />
           </View>
         )}
 
         {/* Sport stats */}
-        {profile.sportStats.length > 0 && (
+        {statsList.length > 0 && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>📊 Career Stats</Text>
             <View style={s.cards}>
-              {profile.sportStats.map((stat) => (
+              {statsList.map((stat) => (
                 <SportCard key={stat.sport} stat={stat} />
               ))}
             </View>

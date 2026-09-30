@@ -1,10 +1,11 @@
 import { Stack } from 'expo-router';
+import { COLORS } from '@/constants/config';
 
 export default function TripsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: '#2563EB' },
+        headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: '#FFFFFF',
         headerTitleStyle: { fontFamily: 'DMSans-Bold', fontWeight: 'bold' },
       }}

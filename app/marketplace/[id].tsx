@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { marketplaceService } from '@/services/marketplaceService';
 import { chatService } from '@/services/chatService';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { formatDistanceToNow, format } from 'date-fns';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -253,7 +253,7 @@ export default function ListingDetailScreen() {
             <Text style={scr.sectionTitle}>Seller</Text>
             <View style={scr.sellerCard}>
               <View style={scr.sellerAvatar}>
-                <Text style={scr.sellerAvatarText}>{listing.sellerName[0]}</Text>
+                <Text style={scr.sellerAvatarText}>{getInitials(listing.sellerName)}</Text>
               </View>
               <View style={scr.sellerInfo}>
                 <Text style={scr.sellerName}>{listing.sellerName}</Text>

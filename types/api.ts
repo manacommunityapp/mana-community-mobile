@@ -21,15 +21,21 @@ export interface LoginResponse {
 }
 
 export interface RegisterRequest {
-  fullName: string;
+  fullName?: string;
+  name?: string;
   email: string;
-  phone: string;
+  phone?: string;
+  mobile?: string;
   password: string;
-  inviteCode: string;
+  inviteCode?: string;
+  communityCode?: string;
+  communityId?: number;
   dateOfBirth?: string;
-  gender: string;
-  flatNo: string;
-  block: string;
+  gender?: string;
+  flatNo?: string;
+  flatNumber?: string;
+  block?: string;
+  tower?: string;
   userType?: string;
   occupancyStatus?: string;
   residentType?: string;
@@ -55,7 +61,7 @@ export interface UserProfileResponse {
   profilePhoto?: string;
   role: string;
   roles?: string[];
-  kycStatus?: string;
+  kycStatus?: 'PENDING' | 'VERIFIED' | 'REJECTED' | string;
   gender?: string;
   dateOfBirth?: string;
   residentType?: string;
@@ -67,6 +73,7 @@ export interface UserProfileResponse {
   createdAt: string;
   communityId?: number;
   communityName?: string;
+  community?: string | { id: number; name: string };
   enabledModules?: string[];
   permissions?: string[];
 }
@@ -224,22 +231,37 @@ export interface EventRegistrationDto {
   registeredAt: string;
 }
 
-// ── Chat ───────────────────────────────────────────────────────
+export interface ChatContactDto {
+  id: number;
+  name: string;
+  role?: string;
+  avatarInitials?: string;
+  isOnline?: boolean;
+  online?: boolean;
+  isVerified?: boolean;
+}
+
 export interface ConversationDto {
   id: number;
   type: 'DIRECT' | 'GROUP';
   name?: string;
+  title?: string;
+  isGroup?: boolean;
   lastMessage?: string;
   lastMessageTime?: string;
+  lastMessageAt?: string;
   unreadCount: number;
+  unread?: number;
   participants: ChatParticipantDto[];
+  contact?: ChatContactDto;
 }
 
 export interface ChatParticipantDto {
   userId: number;
   name: string;
   photo?: string;
-  online: boolean;
+  online?: boolean;
+  isOnline?: boolean;
 }
 
 export interface ChatAttachmentDto {
@@ -358,6 +380,20 @@ export interface AuctionEvent {
 
 export interface PlaceBidRequest {
   amount: number;
+}
+
+/** Acknowledgment sent by the server to /user/queue/auction/bid-result after processing a STOMP bid. */
+export interface BidAckMessage {
+  /** Server-confirmed outcome of the bid. */
+  status:    'ACCEPTED' | 'REJECTED' | 'OUTBID';
+  /** Database ID of the persisted bid — present only on ACCEPTED. */
+  bidId?:    number;
+  /** The auction item this ack relates to. */
+  auctionId: number;
+  /** The amount that was submitted. */
+  amount?:   number;
+  /** Human-readable rejection reason — present on REJECTED / OUTBID. */
+  reason?:   string;
 }
 
 // ── Marketplace (append to existing) ──────────────────────────
@@ -942,29 +978,35 @@ export interface CommuteUserProfileDto {
 }
 
 // ── Jobs & Career ──────────────────────────────────────────────
+export type JobCategory = 'TECHNOLOGY' | 'HEALTHCARE' | 'EDUCATION' | 'FINANCE' | 'HOME_SERVICES' | 'HOME_REPAIRS' | 'TUTORING' | 'OTHER' | string;
+export type JobType = 'ONE_TIME' | 'RECURRING' | 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'FREELANCE' | string;
+export type PayType = 'HOURLY' | 'MONTHLY' | 'FIXED' | 'RANGE' | 'NEGOTIABLE' | string;
+
 export interface JobDto {
   id: number;
   title: string;
-  company: string;
-  location: string;
+  company?: string;
+  location?: string;
   category?: string;
   status?: string;
-  type: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'FREELANCE';
+  type?: JobType;
   jobType?: string;
-  experienceLevel: 'ENTRY' | 'MID' | 'SENIOR' | 'LEAD' | 'EXECUTIVE';
+  experienceLevel?: 'ENTRY' | 'MID' | 'SENIOR' | 'LEAD' | 'EXECUTIVE' | string;
   description: string;
   requirements?: string[];
   salaryRange?: string;
   payType?: string;
   payAmount?: number;
   contactEmail?: string;
-  postedById: number;
-  postedByName: string;
+  postedById?: number;
+  posterId?: number;
+  postedByName?: string;
   posterName?: string;
   postedByFlat?: string;
   posterFlat?: string;
-  postedAt: string;
+  postedAt?: string;
   createdAt?: string;
+  expiresAt?: string;
   applicantCount?: number;
   applicationCount?: number;
   hasApplied?: boolean;
@@ -973,14 +1015,19 @@ export interface JobDto {
 
 export interface CreateJobRequest {
   title: string;
-  company: string;
-  location: string;
-  type: string;
+  company?: string;
+  location?: string;
+  category?: string;
+  type?: string;
+  jobType?: string;
+  payType?: string;
+  payAmount?: number;
   experienceLevel?: string;
   description: string;
   requirements?: string[];
   salaryRange?: string;
   contactEmail?: string;
+  showFlat?: boolean;
 }
 
 export interface JobApplicationDto {
@@ -989,33 +1036,41 @@ export interface JobApplicationDto {
   jobTitle: string;
   applicantId: number;
   applicantName: string;
-  applicantEmail: string;
+  applicantEmail?: string;
+  applicantFlat?: string;
   resumeUrl?: string;
   coverNote?: string;
-  status: 'PENDING' | 'REVIEWED' | 'SHORTLISTED' | 'REJECTED';
+  coverMessage?: string;
+  status: 'PENDING' | 'REVIEWED' | 'SHORTLISTED' | 'REJECTED' | 'ACCEPTED';
   appliedAt: string;
 }
 
 export interface ApplyJobRequest {
-  jobId: number;
+  jobId?: number;
   coverNote?: string;
+  coverMessage?: string;
   resumeUrl?: string;
 }
 
 // ── Extended Sports Scoring & Gamification ─────────────────────
-export type LeaderboardCategory = 'RUNS' | 'WICKETS' | 'GOALS' | 'MVP' | 'MOST_VALUABLE' | 'FAIR_PLAY';
+export type LeaderboardCategory = 'RUNS' | 'WICKETS' | 'GOALS' | 'MVP' | 'MOST_VALUABLE' | 'FAIR_PLAY' | 'WINS' | 'MATCHES_PLAYED' | 'TROPHIES' | 'RATING';
 
 export interface LeaderboardEntryDto {
   rank: number;
   userId: number;
   playerName: string;
+  name?: string;
   avatarUrl?: string;
   flatNumber?: string;
+  flatNo?: string;
   teamName?: string;
   score: number;
   matchesPlayed: number;
   strikeRate?: number;
   economyRate?: number;
+  isCurrentUser?: boolean;
+  topBadge?: string;
+  displayValue?: string;
 }
 
 export interface BadgeDto {
@@ -1033,10 +1088,23 @@ export interface BadgeDto {
 
 export interface SportStatDto {
   sport: string;
-  matches: number;
-  wins: number;
-  mvps: number;
-  totalPoints: number;
+  matches?: number;
+  matchesPlayed?: number;
+  wins?: number;
+  losses?: number;
+  draws?: number;
+  winRate?: number | string;
+  mvps?: number;
+  totalPoints?: number;
+  tournaments?: number;
+  trophies?: number;
+  totalRuns?: number;
+  totalWickets?: number;
+  highestScore?: number;
+  battingAverage?: number;
+  bestBowling?: string;
+  goals?: number;
+  assists?: number;
 }
 
 export interface PlayerProfileDto {
@@ -1047,32 +1115,39 @@ export interface PlayerProfileDto {
   flatNo?: string;
   flatNumber?: string;
   communityRating?: number;
+  rating?: number;
   ratingCount?: number;
   totalMatches?: number;
   totalTrophies?: number;
-  sportStats?: any[];
+  sportStats?: SportStatDto[];
   stats: SportStatDto[];
   badges: BadgeDto[];
   recentMatches: any[];
 }
 
 export interface MatchPhotoDto {
-  id: string;
+  id: string | number;
   matchId: number;
-  url: string;
+  url?: string;
+  imageUrl?: string;
   caption?: string;
-  uploadedBy: string;
-  uploadedAt: string;
+  uploadedBy?: string;
+  uploadedById?: number | string;
+  uploaderName?: string;
+  uploadedAt?: string;
+  createdAt?: string;
+  likeCount?: number;
+  isLiked?: boolean;
 }
 
 export interface MatchRatingPlayerDto {
   id?: number;
   playerId?: number;
   userId: number;
-  name: string;
+  name?: string;
   playerName?: string;
   flatNo?: string;
-  teamName: string;
+  teamName?: string;
   rating?: number;
   reaction?: string;
 }
@@ -1085,13 +1160,20 @@ export interface MatchRatingSummaryDto {
   canRate?: boolean;
   hasRated?: boolean;
   manOfMatch?: any;
-  players?: any[];
+  players?: MatchRatingPlayerDto[];
 }
 
 export interface SubmitRatingsRequest {
-  matchId: number;
-  ratings?: any[];
-  playerRatings: Array<{ userId: number; rating: number; reaction?: string }>;
+  matchId?: number;
+  ratings?: Array<{
+    playerId?: number;
+    userId?: number;
+    stars?: number;
+    rating?: number;
+    reaction?: PlayerReaction | string;
+    isManOfMatch?: boolean;
+  }>;
+  playerRatings?: Array<{ userId: number; rating: number; reaction?: string }>;
   mvpUserId?: number;
 }
 
@@ -1141,7 +1223,7 @@ export interface CricketScorecardDto {
   matchId: number;
   matchTitle?: string;
   result?: string;
-  manOfMatch?: { name: string; performance: string; team: string };
+  manOfMatch?: { name?: string; playerName?: string; performance?: string; contribution?: string; team?: string };
   firstInnings?: InningsDto;
   secondInnings?: InningsDto;
   innings: InningsDto[];
@@ -1153,9 +1235,188 @@ export interface CommunityPreviewDto {
   name: string;
   city: string;
   state: string;
+  area?: string;
   unitsCount: number;
+  memberCount?: number;
   bannerImage?: string;
 }
 
-export type GovtIdType = 'AADHAAR' | 'PASSPORT' | 'VOTER_ID' | 'DRIVING_LICENSE';
+export type GovtIdType = 'AADHAAR' | 'PASSPORT' | 'VOTER_ID' | 'DRIVING_LICENSE' | 'PAN';
+
+// ── Notification Preferences ───────────────────────────────────
+export interface NotificationPreferenceDto {
+  id?: number;
+  userId?: number;
+  notificationType: string;
+  smsEnabled: boolean;
+  whatsappEnabled: boolean;
+  pushEnabled?: boolean;
+  preferredLanguage?: string;
+}
+
+export interface UserSmsPreferenceRequest {
+  notificationType: string;
+  smsEnabled: boolean;
+  whatsappEnabled: boolean;
+  preferredLanguage?: string;
+}
+
+// ── Media Presigned S3 ─────────────────────────────────────────
+export type MediaModuleType =
+  | 'MARKETPLACE'
+  | 'SPORTS'
+  | 'COMMUNITY'
+  | 'FACILITY'
+  | 'PROFILE'
+  | 'EVENT'
+  | 'NOTICES'
+  | 'GENERAL';
+
+export type MediaTypeKind = 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'AUDIO';
+
+export interface PresignedUploadRequest {
+  module: MediaModuleType;
+  moduleId: string;
+  communityId: number;
+  subContext?: string;
+  mediaType: MediaTypeKind;
+  mimeType: string;
+  originalFileName: string;
+  fileSize?: number;
+  approvalRequired?: boolean;
+  featured?: boolean;
+  caption?: string;
+  altText?: string;
+  sortOrder?: number;
+}
+
+export interface PresignedUrlResponse {
+  sessionId: string;
+  presignedUploadUrl: string;
+  httpMethod: string;
+  s3Key: string;
+  contentType: string;
+  expiresAt: string;
+}
+
+export interface MediaResponse {
+  id: string;
+  module: MediaModuleType;
+  moduleId: string;
+  communityId: number;
+  subContext?: string;
+  mediaType: MediaTypeKind;
+  fileSize: number;
+  mimeType: string;
+  originalFileName: string;
+  caption?: string;
+  altText?: string;
+  featured: boolean;
+  sortOrder: number;
+  status: string;
+  url: string;
+  thumbnailUrl?: string;
+  compressedUrl?: string;
+  mediumUrl?: string;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+  uploadedBy?: number;
+  uploadedAt?: string;
+  createdAt?: string;
+}
+
+// ── AI Chat ────────────────────────────────────────────────────
+export interface AiChatRequest {
+  message: string;
+  conversationId?: number;
+  auctionConfigId?: number;
+}
+
+export interface AiChatResponse {
+  conversationId: number;
+  reply: string;
+  timestamp: string;
+}
+
+// ── Privacy & GDPR ─────────────────────────────────────────────
+export interface UserPrivacySettingsDto {
+  id?: number;
+  userId?: number;
+  showPhoneToNeighbours?: boolean;
+  showEmailToNeighbours?: boolean;
+  showFlatInDirectory?: boolean;
+  showFamilyMembers?: boolean;
+  showVehicleInDirectory?: boolean;
+  emergencyContactRestricted?: boolean;
+  allowMarketplaceContact?: boolean;
+  allowEventTagging?: boolean;
+  activityVisibility?: 'COMMUNITY' | 'ALL' | 'CONNECTIONS' | 'ONLY_ME' | string;
+  updatedAt?: string;
+}
+
+export interface FamilyMemberExportItem {
+  id: number;
+  name: string;
+  relation: string;
+  age?: number;
+  gender?: string;
+  phone?: string;
+  email?: string;
+  bloodGroup?: string;
+  gothram?: string;
+}
+
+export interface VisitorPassExportItem {
+  id: number;
+  passCode: string;
+  visitorName: string;
+  visitorPhone?: string;
+  vehicleNumber?: string;
+  purpose?: string;
+  status: string;
+  expectedAt?: string;
+  checkedInAt?: string;
+  checkedOutAt?: string;
+}
+
+export interface MarketplaceOrderExportItem {
+  id: number;
+  orderNumber: string;
+  role: string;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+}
+
+export interface UserDataExportDto {
+  userId: number;
+  fullName: string;
+  email: string;
+  phone: string;
+  gender?: string;
+  dateOfBirth?: string;
+  flatNo?: string;
+  block?: string;
+  tower?: string;
+  occupancyStatus?: string;
+  accountCreatedAt?: string;
+  privacySettings?: UserPrivacySettingsDto;
+  familyMembers?: FamilyMemberExportItem[];
+  visitorPasses?: VisitorPassExportItem[];
+  marketplaceOrders?: MarketplaceOrderExportItem[];
+}
+
+export interface DataDeletionRequestDto {
+  id: number;
+  userId: number;
+  communityId?: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | string;
+  reason?: string;
+  requestedAt: string;
+  processedAt?: string;
+  processedBy?: number;
+  notes?: string;
+}
+
 

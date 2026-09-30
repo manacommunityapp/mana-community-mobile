@@ -1,4 +1,5 @@
 import api from './apiClient';
+import { mediaService } from './mediaService';
 import { inferMimeType, verifyServerUploadResponse } from '@/security';
 import type {
   MarketplaceListingDto, CreateListingRequest,
@@ -144,6 +145,17 @@ export const marketplaceService = {
   ): Promise<string> {
     const fileName = localUri.split('/').pop() ?? 'image.jpg';
     const mimeType = inferMimeType(localUri, declaredMimeType);
+
+    try {
+      const media = await mediaService.uploadMedia(
+        { uri: localUri, name: fileName, type: mimeType },
+        { module: 'MARKETPLACE', moduleId: 'listing', communityId: 1, mediaType: 'IMAGE' },
+      );
+      if (media?.url) return media.url;
+    } catch (e) {
+      console.warn('Presigned upload failed; falling back to direct multipart', e);
+    }
+
     const form = new FormData();
     form.append('file', { uri: localUri, name: fileName, type: mimeType } as any);
 

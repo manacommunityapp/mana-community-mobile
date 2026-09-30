@@ -823,13 +823,32 @@ export default function ProfileScreen() {
             />
           )}
           <MenuItem
+            icon="sparkles-outline"
+            label="Mana AI Assistant"
+            sublabel="Society bylaws, amenities & instant answers"
+            onPress={() => router.push('/ai-chat')}
+            iconColor="#6366F1"
+            iconBg="#EEF2FF"
+            badge="AI"
+            badgeBg="#EEF2FF"
+            badgeColor="#6366F1"
+          />
+          <MenuItem
             icon="notifications-outline"
             label="Notification Preferences"
-            sublabel="Push alerts, email & sound settings"
-            onPress={() => router.push('/notifications')}
+            sublabel="Push alerts, SMS & WhatsApp delivery"
+            onPress={() => router.push('/settings/notifications')}
             iconColor="#4F46E5"
             iconBg="#EEF2FF"
             badge={unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined}
+          />
+          <MenuItem
+            icon="shield-checkmark-outline"
+            label="Privacy & GDPR Settings"
+            sublabel="Directory visibility, data export & erasure"
+            onPress={() => router.push('/settings/privacy')}
+            iconColor="#059669"
+            iconBg="#D1FAE5"
           />
           <MenuItem
             icon="lock-closed-outline"

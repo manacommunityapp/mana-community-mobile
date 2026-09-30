@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
 import { BadgeCard } from '@/components/sports/BadgeCard';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import type { LeaderboardCategory, SportType } from '@/types/api';
 
@@ -117,43 +117,50 @@ export default function LeaderboardScreen() {
               <Text style={s.emptyText}>No data yet. Play more matches!</Text>
             </View>
           }
-          renderItem={({ item: entry }) => (
-            <TouchableOpacity
-              style={[s.entryRow, entry.isCurrentUser && s.entryRowMine]}
-              onPress={() => router.push(`/sports/player/${entry.userId}`)}
-              activeOpacity={0.85}
-            >
-              {/* Rank */}
-              <View style={s.rankWrap}>
-                {entry.rank <= 3
-                  ? <Text style={s.rankMedal}>{MEDAL[entry.rank - 1]}</Text>
-                  : <Text style={s.rankNum}>{entry.rank}</Text>
-                }
-              </View>
+          renderItem={({ item: entry }) => {
+            const eName = entry.name || entry.playerName || 'Player';
+            const badgeObj: any = typeof entry.topBadge === 'string'
+              ? { id: entry.topBadge, title: entry.topBadge, tier: 'rare', description: '', icon: 'medal' }
+              : entry.topBadge;
 
-              {/* Avatar */}
-              <View style={[s.avatar, entry.rank <= 3 && s.avatarTop]}>
-                <Text style={s.avatarText}>{entry.name[0]}</Text>
-              </View>
-
-              {/* Info */}
-              <View style={s.entryInfo}>
-                <View style={s.nameRow}>
-                  <Text style={[s.entryName, entry.isCurrentUser && s.entryNameMe]} numberOfLines={1}>
-                    {entry.name}
-                    {entry.isCurrentUser ? ' (You)' : ''}
-                  </Text>
-                  {entry.topBadge && <BadgeCard badge={entry.topBadge} size="sm" />}
+            return (
+              <TouchableOpacity
+                style={[s.entryRow, entry.isCurrentUser && s.entryRowMine]}
+                onPress={() => router.push(`/sports/player/${entry.userId}`)}
+                activeOpacity={0.85}
+              >
+                {/* Rank */}
+                <View style={s.rankWrap}>
+                  {entry.rank <= 3
+                    ? <Text style={s.rankMedal}>{MEDAL[entry.rank - 1]}</Text>
+                    : <Text style={s.rankNum}>{entry.rank}</Text>
+                  }
                 </View>
-                {entry.flatNo && <Text style={s.flat}>🏠 {entry.flatNo}</Text>}
-              </View>
 
-              {/* Value */}
-              <Text style={[s.value, entry.rank === 1 && s.valueFirst]}>
-                {entry.displayValue}
-              </Text>
-            </TouchableOpacity>
-          )}
+                {/* Avatar */}
+                <View style={[s.avatar, entry.rank <= 3 && s.avatarTop]}>
+                  <Text style={s.avatarText}>{getInitials(eName)}</Text>
+                </View>
+
+                {/* Info */}
+                <View style={s.entryInfo}>
+                  <View style={s.nameRow}>
+                    <Text style={[s.entryName, entry.isCurrentUser && s.entryNameMe]} numberOfLines={1}>
+                      {eName}
+                      {entry.isCurrentUser ? ' (You)' : ''}
+                    </Text>
+                    {badgeObj && <BadgeCard badge={badgeObj} size="sm" />}
+                  </View>
+                  {(entry.flatNo || entry.flatNumber) && <Text style={s.flat}>🏠 {entry.flatNo || entry.flatNumber}</Text>}
+                </View>
+
+                {/* Value */}
+                <Text style={[s.value, entry.rank === 1 && s.valueFirst]}>
+                  {entry.displayValue ?? String(entry.score ?? '')}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
     </SafeAreaView>
