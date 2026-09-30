@@ -24,6 +24,7 @@ import {
   foodService,
   RestaurantDto,
   FoodOrderDto,
+  MenuItemDto,
 } from '@/services/foodService';
 
 type TabKey = 'kitchens' | 'orders';
@@ -33,15 +34,7 @@ const STATUS_CONFIG: Record<FoodOrderDto['status'], { label: string; color: stri
   PREPARING:        { label: 'Cooking in Kitchen',color: '#D97706', bg: '#FEF3C7', icon: 'flame-outline' },
   OUT_FOR_DELIVERY: { label: 'Out for Delivery',  color: '#2563EB', bg: '#DBEAFE', icon: 'bicycle-outline' },
   DELIVERED:        { label: 'Delivered',         color: '#059669', bg: '#D1FAE5', icon: 'bag-check-outline' },
-};
-
-// Default sample menu items for restaurants to enable 1-tap cart & checkout
-const RESTAURANT_MENUS: Record<string, Array<{ id: string; name: string; price: number; isVeg: boolean; desc: string }>> = {
-  default: [
-    { id: 'm1', name: 'Special Resident Thali', price: 150, isVeg: true, desc: 'Fresh roti, dal tadka, paneer sabzi, rice & salad' },
-    { id: 'm2', name: 'Home Style Biryani Bowl', price: 220, isVeg: false, desc: 'Aromatic basmati rice cooked with home spices & raita' },
-    { id: 'm3', name: 'Fresh Artisan Brownie / Sweet Box', price: 120, isVeg: true, desc: 'Freshly baked homemade sweet dessert' },
-  ],
+  CANCELLED:        { label: 'Cancelled',         color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
 };
 
 export default function FoodScreen() {
@@ -104,6 +97,17 @@ export default function FoodScreen() {
     staleTime: 15_000,
   });
 
+  // ── 3. Fetch Live Menu for Selected Kitchen ───────────────────────────────
+  const {
+    data: liveMenu = [],
+    isLoading: loadingMenu,
+  } = useQuery<MenuItemDto[]>({
+    queryKey: ['food', 'menu', selectedRestaurant?.id],
+    queryFn: () => (selectedRestaurant ? foodService.getRestaurantMenu(selectedRestaurant.id) : Promise.resolve([])),
+    enabled: !!selectedRestaurant,
+    staleTime: 30_000,
+  });
+
   // ── Pull-to-Refresh ───────────────────────────────────────────────────────
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -114,13 +118,14 @@ export default function FoodScreen() {
     }
   }, [refetchRestaurants, refetchOrders]);
 
-  // ── 3. Place Order Mutation ───────────────────────────────────────────────
+  // ── 4. Place Order Mutation ───────────────────────────────────────────────
   const placeOrderMutation = useMutation({
     mutationFn: (payload: {
       restaurantId?: string;
       restaurantName: string;
-      items: Array<{ name: string; qty: number; price: number }>;
+      items: Array<{ name: string; qty: number; price: number; isVeg?: boolean }>;
       totalAmount: number;
+      deliveryAddress?: string;
     }) => foodService.placeOrder(payload),
     onSuccess: (newOrder) => {
       queryClient.invalidateQueries({ queryKey: ['food'] });
@@ -134,6 +139,21 @@ export default function FoodScreen() {
     },
     onError: (err: any) => {
       Alert.alert('Order Failed', err?.message || 'Unable to place food order. Please try again.');
+    },
+  });
+
+  // ── 5. Cancel Order Mutation ──────────────────────────────────────────────
+  const cancelOrderMutation = useMutation({
+    mutationFn: (orderId: string) => foodService.cancelOrder(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['food'] });
+      if (selectedOrderDetails) {
+        setSelectedOrderDetails((prev) => prev ? { ...prev, status: 'CANCELLED' } : null);
+      }
+      Alert.alert('Order Cancelled', 'Your food order has been cancelled.');
+    },
+    onError: () => {
+      Alert.alert('Error', 'Unable to cancel order at this time.');
     },
   });
 
@@ -170,8 +190,9 @@ export default function FoodScreen() {
   // Cart Helpers
   const menuList = useMemo(() => {
     if (!selectedRestaurant) return [];
-    return RESTAURANT_MENUS[selectedRestaurant.id] || RESTAURANT_MENUS.default;
-  }, [selectedRestaurant]);
+    if (liveMenu && liveMenu.length > 0) return liveMenu;
+    return selectedRestaurant.menu || [];
+  }, [selectedRestaurant, liveMenu]);
 
   const cartTotal = useMemo(() => {
     return menuList.reduce((acc, item) => {
@@ -209,11 +230,13 @@ export default function FoodScreen() {
         name: m.name,
         qty: cart[m.id],
         price: m.price,
+        isVeg: m.isVeg,
       }));
 
     placeOrderMutation.mutate({
       restaurantId: selectedRestaurant.id,
       restaurantName: selectedRestaurant.name,
+      deliveryAddress: `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`,
       items: orderItems,
       totalAmount: cartTotal,
     });
@@ -743,12 +766,37 @@ export default function FoodScreen() {
                   </View>
                 </View>
 
-                <TouchableOpacity
-                  style={styles.doneBtn}
-                  onPress={() => setSelectedOrderDetails(null)}
-                >
-                  <Text style={styles.doneBtnText}>Close</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.xs }}>
+                  <TouchableOpacity
+                    style={[styles.doneBtn, { flex: 1, backgroundColor: COLORS.surfaceAlt }]}
+                    onPress={() => handleShareOrder(selectedOrderDetails)}
+                  >
+                    <Ionicons name="share-social-outline" size={16} color={COLORS.text} style={{ marginRight: 6 }} />
+                    <Text style={[styles.doneBtnText, { color: COLORS.text }]}>Share Receipt</Text>
+                  </TouchableOpacity>
+
+                  {selectedOrderDetails.status === 'PLACED' && (
+                    <TouchableOpacity
+                      style={[styles.doneBtn, { flex: 1, backgroundColor: '#FEE2E2' }]}
+                      onPress={() => {
+                        Alert.alert('Cancel Order', 'Are you sure you want to cancel this food order?', [
+                          { text: 'No', style: 'cancel' },
+                          { text: 'Yes, Cancel', style: 'destructive', onPress: () => cancelOrderMutation.mutate(selectedOrderDetails.id) },
+                        ]);
+                      }}
+                      disabled={cancelOrderMutation.isPending}
+                    >
+                      <Text style={[styles.doneBtnText, { color: '#EF4444' }]}>Cancel Order</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity
+                    style={[styles.doneBtn, { flex: 1 }]}
+                    onPress={() => setSelectedOrderDetails(null)}
+                  >
+                    <Text style={styles.doneBtnText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>

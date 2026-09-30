@@ -147,8 +147,9 @@ export default function DiscoverScreen() {
 
   // ── 2. Connect Mutation ───────────────────────────────────────────────────
   const connectMutation = useMutation({
-    mutationFn: (targetUserId: string) => communityGraphService.connectWithNeighbor(targetUserId),
-    onSuccess: (_, targetUserId) => {
+    mutationFn: ({ targetUserId, message }: { targetUserId: string; message?: string }) =>
+      communityGraphService.connectWithNeighbor(targetUserId, message),
+    onSuccess: (_, { targetUserId }) => {
       queryClient.invalidateQueries({ queryKey: ['community-graph'] });
       setConnectedIds((prev) => [...prev, targetUserId]);
       const targetName = chatModalTarget?.name || 'Neighbor';
@@ -217,7 +218,7 @@ export default function DiscoverScreen() {
 
   const handleSendIntro = () => {
     if (!chatModalTarget) return;
-    connectMutation.mutate(chatModalTarget.id);
+    connectMutation.mutate({ targetUserId: chatModalTarget.id, message: introMessage.trim() });
   };
 
   return (
