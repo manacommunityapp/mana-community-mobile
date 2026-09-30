@@ -159,18 +159,41 @@ export function getAvatarColor(seed: string): { bg: string; text: string } {
 /**
  * Extracts the first letter of the first name and the first letter of the last name in uppercase.
  * Example: "suresh chavatla" -> "SC"
+ * Example: "suresh.chavatla" -> "SC"
+ * Example: "suresh_chavatla" -> "SC"
  * Example: "Suresh" -> "S"
  * Example: "Suresh Kumar Chavatla" -> "SC"
+ * Example: "SureshChavatla" -> "SC"
  */
 export function getInitials(name?: string | null): string {
   if (!name || typeof name !== 'string') return 'U';
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const clean = name.trim();
+  if (!clean) return 'U';
+
+  // If email string, strip @domain first so domain extension (.com) isn't used as last initial
+  const nameOnly = clean.includes('@') ? clean.split('@')[0] : clean;
+
+  // Split on whitespace, dot, underscore, dash, comma, slash
+  const parts = nameOnly
+    .split(/[\s._\-@,/]+/)
+    .map((p) => p.replace(/[^a-zA-Z0-9]/g, ''))
+    .filter((p) => p.length > 0);
+
   if (parts.length === 0) return 'U';
+
   if (parts.length === 1) {
-    return parts[0].charAt(0).toUpperCase();
+    const word = parts[0];
+    // Check for PascalCase / camelCase (e.g., "SureshChavatla")
+    const camelParts = word.match(/[A-Z][a-z0-9]*/g);
+    if (camelParts && camelParts.length >= 2) {
+      return (camelParts[0].charAt(0) + camelParts[camelParts.length - 1].charAt(0)).toUpperCase();
+    }
+    return word.charAt(0).toUpperCase();
   }
+
   const first = parts[0].charAt(0).toUpperCase();
   const last = parts[parts.length - 1].charAt(0).toUpperCase();
   return `${first}${last}`;
 }
+
 

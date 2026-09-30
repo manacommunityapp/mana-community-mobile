@@ -16,7 +16,8 @@ interface BadgeCardProps {
 }
 
 export function BadgeCard({ badge, size = 'md', onPress }: BadgeCardProps) {
-  const style  = RARITY_STYLE[badge.rarity] ?? RARITY_STYLE.common;
+  const rarity = (badge.rarity || 'common').toLowerCase();
+  const style  = RARITY_STYLE[rarity] ?? RARITY_STYLE.common;
   const earned = badge.isEarned;
 
   const emojiSize  = size === 'sm' ? 20 : size === 'lg' ? 36 : 28;
@@ -33,7 +34,7 @@ export function BadgeCard({ badge, size = 'md', onPress }: BadgeCardProps) {
       onPress={onPress}
     >
       {/* Rarity glow dot */}
-      {earned && badge.rarity !== 'common' && (
+      {earned && rarity !== 'common' && (
         <View style={[c.glowDot, { backgroundColor: style.glow }]} />
       )}
 
@@ -48,9 +49,9 @@ export function BadgeCard({ badge, size = 'md', onPress }: BadgeCardProps) {
         {badge.name}
       </Text>
 
-      {earned && badge.rarity !== 'common' && (
+      {earned && rarity !== 'common' && (
         <Text style={[c.rarity, { color: style.label }]}>
-          {badge.rarity.toUpperCase()}
+          {rarity.toUpperCase()}
         </Text>
       )}
 

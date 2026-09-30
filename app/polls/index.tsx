@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { pollService } from '@/services/pollService';
 import { PollCard } from '@/components/polls/PollCard';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { formatDistanceToNow, isPast } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import type { PostDto } from '@/types/api';
@@ -36,7 +36,7 @@ function PollListItem({ post }: { post: PostDto }) {
     <View style={s.item}>
       {/* Author */}
       <View style={s.authorRow}>
-        <View style={s.avatar}><Text style={s.avatarText}>{post.authorName[0]}</Text></View>
+        <View style={s.avatar}><Text style={s.avatarText}>{getInitials(post.authorName)}</Text></View>
         <View style={{ flex: 1 }}>
           <Text style={s.authorName}>{post.authorName}</Text>
           <Text style={s.authorMeta}>

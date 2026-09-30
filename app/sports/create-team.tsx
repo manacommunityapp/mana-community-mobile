@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import api from '@/services/apiClient';
 import type { UserProfileResponse } from '@/types/api';
@@ -153,7 +153,7 @@ export default function CreateTeamScreen() {
                       onPress={() => toggleMember(user.id)}
                     >
                       <View style={s.memberAvatar}>
-                        <Text style={s.memberAvatarText}>{user.name[0]}</Text>
+                        <Text style={s.memberAvatarText}>{getInitials(user.name)}</Text>
                       </View>
                       <View style={s.memberInfo}>
                         <Text style={s.memberName}>{user.name}</Text>

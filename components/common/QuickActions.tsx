@@ -29,8 +29,8 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'cpos',         emoji: '🏠', icon: 'home-outline',              label: 'Property',      route: '/cpos',                 bg: '#DCFCE7', color: '#059669', category: 'Living & Bills',  badge: 'NEW' },
   { id: 'jobs',         emoji: '💼', icon: 'briefcase-outline',         label: 'CPN Jobs',      route: '/cpn',                  bg: '#EFF6FF', color: '#2563EB', category: 'Social & Sports', badge: 'NEW' },
 
-  // Additional Services (for full modal hub)
   { id: 'emergency',    emoji: '🚨', icon: 'alert-circle-outline',      label: 'Emergency SOS', route: '/emergency',            bg: '#FEE2E2', color: '#DC2626', category: 'Safety & Help',   badge: '24x7' },
+  { id: 'ai_chat',      emoji: '✨', icon: 'sparkles-outline',          label: 'Mana AI',       route: '/ai-chat',              bg: '#EEF2FF', color: '#6366F1', category: 'Safety & Help',   badge: 'AI' },
   { id: 'helpdesk',     emoji: '🎧', icon: 'headset-outline',           label: 'Helpdesk',      route: '/helpdesk',             bg: '#FEF3C7', color: '#D97706', category: 'Safety & Help' },
   { id: 'visitors',     emoji: '🛡️', icon: 'shield-checkmark-outline', label: 'Visitors Gate', route: '/visitors',             bg: '#CFFAFE', color: '#0891B2', category: 'Safety & Help' },
   { id: 'services',     emoji: '🛠️', icon: 'construct-outline',        label: 'Home Services', route: '/services',             bg: '#FCE7F3', color: '#DB2777', category: 'Living & Bills' },

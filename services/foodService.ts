@@ -1,4 +1,4 @@
-﻿import api from './apiClient';
+import api from './apiClient';
 
 export interface RestaurantDto {
   id: string;
@@ -29,4 +29,15 @@ export const foodService = {
     const res = await api.get<FoodOrderDto[]>('/food/orders/mine');
     return res.data;
   },
+
+  async placeOrder(payload: {
+    restaurantId?: string;
+    restaurantName: string;
+    items: Array<{ name: string; qty: number; price: number }>;
+    totalAmount: number;
+  }): Promise<FoodOrderDto> {
+    const res = await api.post<FoodOrderDto>('/food/orders', payload);
+    return res.data;
+  },
 };
+

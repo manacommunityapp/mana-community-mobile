@@ -52,9 +52,10 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function VendorProfileScreen() {
-  const { user, logout } = useAuth();
   const router = useRouter();
-  const avatarColor = getAvatarColor(user?.name || 'Vendor');
+  const { user, logout } = useAuth();
+  const displayName = user?.fullName || user?.name || (user?.email ? user.email.split('@')[0] : 'Vendor');
+  const avatarColor = getAvatarColor(displayName);
   const [reviews, setReviews] = useState<VendorReview[]>([]);
 
   useEffect(() => {
@@ -81,10 +82,10 @@ export default function VendorProfileScreen() {
           <View style={s.heroDot2} />
           <View style={[s.heroAvatar, { backgroundColor: avatarColor.bg }]}>
             <Text style={[s.heroAvatarText, { color: avatarColor.text }]}>
-              {getInitials(user?.name || 'Vendor')}
+              {getInitials(displayName)}
             </Text>
           </View>
-          <Text style={s.heroName}>{user?.name || 'Vendor'}</Text>
+          <Text style={s.heroName}>{displayName}</Text>
           <Text style={s.heroEmail}>{user?.email}</Text>
           <View style={s.heroTagRow}>
             <View style={s.heroTag}>

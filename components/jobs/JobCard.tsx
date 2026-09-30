@@ -49,8 +49,8 @@ interface JobCardProps {
 
 export function JobCard({ job, compact = false }: JobCardProps) {
   const router = useRouter();
-  const meta   = JOB_CATEGORY_META[job.category] ?? JOB_CATEGORY_META.OTHER;
-  const status = STATUS_STYLE[job.status] ?? STATUS_STYLE.OPEN;
+  const meta   = (job.category && JOB_CATEGORY_META[job.category]) ? JOB_CATEGORY_META[job.category] : JOB_CATEGORY_META.OTHER;
+  const status = (job.status && STATUS_STYLE[job.status]) ? STATUS_STYLE[job.status] : STATUS_STYLE.OPEN;
 
   return (
     <TouchableOpacity
@@ -85,7 +85,7 @@ export function JobCard({ job, compact = false }: JobCardProps) {
           <Text style={c.tagText}>{meta.label}</Text>
         </View>
         <View style={c.tag}>
-          <Text style={c.tagText}>{JOB_TYPE_LABEL[job.jobType] ?? job.jobType}</Text>
+          <Text style={c.tagText}>{(job.jobType && JOB_TYPE_LABEL[job.jobType]) ? JOB_TYPE_LABEL[job.jobType] : (job.jobType || 'Other')}</Text>
         </View>
         <View style={[c.tag, c.payTag]}>
           <Text style={[c.tagText, c.payText]}>{payLabel(job)}</Text>
@@ -101,7 +101,7 @@ export function JobCard({ job, compact = false }: JobCardProps) {
           👥 {job.applicationCount} applicant{job.applicationCount !== 1 ? 's' : ''}
         </Text>
         <Text style={c.footerItem}>
-          🕐 {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
+          🕐 {job.createdAt ? formatDistanceToNow(new Date(job.createdAt), { addSuffix: true }) : 'Recently'}
         </Text>
         {job.hasApplied && (
           <View style={c.appliedBadge}>

@@ -7,6 +7,8 @@ interface AuthState {
   user: UserProfileResponse | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isPending: boolean;
+  isRejected: boolean;
 
   // Actions
   login: (data: LoginRequest) => Promise<void>;
@@ -20,6 +22,8 @@ export const useAuth = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  isPending: false,
+  isRejected: false,
 
   loadUser: async () => {
     try {
@@ -38,9 +42,11 @@ export const useAuth = create<AuthState>((set) => ({
 
   login: async (data) => {
     const res = await authService.login(data);
+    const resolvedName = (res as any).fullName || (res as any).name || (res as any).username || res.email || '';
     const user: UserProfileResponse = {
       id: Number(res.userId),
-      name: res.fullName,
+      fullName: resolvedName,
+      name: resolvedName,
       email: res.email,
       role: res.role,
       status: 'ACTIVE',
@@ -52,9 +58,11 @@ export const useAuth = create<AuthState>((set) => ({
 
   register: async (data) => {
     const res = await authService.register(data);
+    const resolvedName = (res as any).fullName || (res as any).name || (res as any).username || data.fullName || data.name || res.email || '';
     const user: UserProfileResponse = {
       id: Number(res.userId),
-      name: res.fullName,
+      fullName: resolvedName,
+      name: resolvedName,
       email: res.email,
       role: res.role,
       status: 'ACTIVE',

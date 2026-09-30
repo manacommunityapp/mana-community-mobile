@@ -83,6 +83,24 @@ export const MANAGE_WORK_ORDERS    = "Manage Work Orders";
 export const MANAGE_INVOICES       = "Manage Invoices";
 export const MANAGE_AVAILABILITY   = "Manage Availability";
 
+// ──── SPORTS ADMIN ────
+export const VIEW_SPORTS_DASHBOARD    = "View Sports Dashboard";
+export const MANAGE_TOURNAMENTS       = "Manage Tournaments";
+export const MANAGE_MATCHES           = "Manage Matches";
+export const MANAGE_SPORTS_TEAMS      = "Manage Sports Teams";
+export const VIEW_SPORTS_ANALYTICS    = "View Sports Analytics";
+export const MANAGE_LIVE_SCORING      = "Manage Live Scoring";
+export const MANAGE_VENUES            = "Manage Venues";
+
+// ──── EVENT ADMIN ────
+export const VIEW_EVENT_DASHBOARD     = "View Event Dashboard";
+export const MANAGE_EVENTS            = "Manage Events";
+export const MANAGE_EVENT_VENUES      = "Manage Event Venues";
+export const MANAGE_REGISTRATIONS     = "Manage Registrations";
+export const VIEW_EVENT_ANALYTICS     = "View Event Analytics";
+export const MANAGE_DEPARTMENTS       = "Manage Departments";
+export const MANAGE_PROSPECTUS        = "Manage Prospectus";
+
 // ──── ROLES ────
 export const ROLE_SUPER_ADMIN     = "SUPER_ADMIN";
 export const ROLE_ADMIN           = "ADMIN";
@@ -92,3 +110,5 @@ export const ROLE_USER            = "USER";
 export const ROLE_GUARD           = "GUARD";
 export const ROLE_SECURITY        = "SECURITY";
 export const ROLE_VENDOR          = "VENDOR";
+export const ROLE_SPORTS_ADMIN    = "SPORTS_ADMIN";
+export const ROLE_EVENT_ADMIN     = "EVENT_ADMIN";

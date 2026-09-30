@@ -12,36 +12,40 @@ let Notifications: typeof import('expo-notifications') | null = null;
 try {
   Notifications = require('expo-notifications');
 
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
-
-  if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'Mana Community',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#4F46E5',
-      sound: 'default',
+  if (Notifications) {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
     });
 
-    Notifications.setNotificationChannelAsync('chat', {
-      name: 'Messages',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 150],
-      lightColor: '#4F46E5',
-      sound: 'default',
-    });
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'Mana Community',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#4F46E5',
+        sound: 'default',
+      });
 
-    Notifications.setNotificationChannelAsync('events', {
-      name: 'Events & Announcements',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      sound: 'default',
-    });
+      Notifications.setNotificationChannelAsync('chat', {
+        name: 'Messages',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 150],
+        lightColor: '#4F46E5',
+        sound: 'default',
+      });
+
+      Notifications.setNotificationChannelAsync('events', {
+        name: 'Events & Announcements',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        sound: 'default',
+      });
+    }
   }
 } catch {
   secureLog.warn('[Push] expo-notifications not available');
@@ -77,7 +81,8 @@ export function usePushNotifications(isAuthenticated: boolean) {
   const tokenRegistered = useRef(false);
 
   useEffect(() => {
-    if (!Notifications || !isAuthenticated) {
+    const notifs = Notifications;
+    if (!notifs || !isAuthenticated) {
       tokenRegistered.current = false;
       return;
     }
@@ -90,11 +95,11 @@ export function usePushNotifications(isAuthenticated: boolean) {
         return;
       }
 
-      const { status: existing } = await Notifications.getPermissionsAsync();
+      const { status: existing } = await notifs.getPermissionsAsync();
       let finalStatus = existing;
 
       if (existing !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
+        const { status } = await notifs.requestPermissionsAsync();
         finalStatus = status;
       }
 
@@ -109,7 +114,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
           (Constants as any)?.easConfig?.projectId ??
           undefined;
 
-        const tokenData = await Notifications.getExpoPushTokenAsync(
+        const tokenData = await notifs.getExpoPushTokenAsync(
           projectId ? { projectId } : undefined
         );
 
@@ -125,13 +130,13 @@ export function usePushNotifications(isAuthenticated: boolean) {
       }
     })();
 
-    foregroundSub.current = Notifications.addNotificationReceivedListener(
+    foregroundSub.current = notifs.addNotificationReceivedListener(
       () => {
         secureLog.debug('[Push] Foreground notification received');
       },
     );
 
-    responseSub.current = Notifications.addNotificationResponseReceivedListener(
+    responseSub.current = notifs.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data as Record<string, unknown>;
         const route = resolveRoute(data);

@@ -20,6 +20,20 @@ export interface FacilityBookingRequest {
   guestCount?: number;
 }
 
+export interface FacilityBookingDto {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  guestCount?: number;
+  totalAmount?: number;
+  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+  bookingRef?: string;
+  createdAt?: string;
+}
+
 export const facilityService = {
   async getFacilities(): Promise<FacilityDto[]> {
     const res = await api.get<FacilityDto[]>('/facilities');
@@ -31,13 +45,14 @@ export const facilityService = {
     return res.data;
   },
 
-  async bookSlot(data: FacilityBookingRequest): Promise<any> {
-    const res = await api.post('/facilities/book', data);
+  async bookSlot(data: FacilityBookingRequest): Promise<FacilityBookingDto> {
+    const res = await api.post<FacilityBookingDto>('/facilities/book', data);
     return res.data;
   },
 
-  async getMyBookings(): Promise<any[]> {
-    const res = await api.get('/facilities/my-bookings');
+  async getMyBookings(): Promise<FacilityBookingDto[]> {
+    const res = await api.get<FacilityBookingDto[]>('/facilities/my-bookings');
     return res.data;
   },
 };
+

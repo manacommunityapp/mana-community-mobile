@@ -4,7 +4,7 @@ import { auctionService } from '@/services/auctionService';
 import { tokenStore } from '@/services/apiClient';
 import { CONFIG } from '@/constants/config';
 import { secureLog } from '@/security';
-import type { AuctionDto, BidDto, AuctionEvent } from '@/types/api';
+import type { AuctionDto, BidDto, AuctionEvent, BidAckMessage } from '@/types/api';
 
 export type BidResult = 'success' | 'outbid' | 'below_minimum' | 'error';
 
@@ -32,6 +32,16 @@ function getBidIncrement(currentBid: number): number {
   return 5_000;
 }
 
+/** Maps a server ack status to the BidResult type consumed by UI components. */
+function ackToBidResult(ack: BidAckMessage): BidResult {
+  switch (ack.status) {
+    case 'ACCEPTED': return 'success';
+    case 'OUTBID':   return 'outbid';
+    case 'REJECTED': return 'error';
+    default:         return 'error';
+  }
+}
+
 export function useAuctionLive(
   auctionId: number,
   currentUserId: number,
@@ -49,11 +59,31 @@ export function useAuctionLive(
   const stompRef   = useRef<Client | null>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /**
+   * Holds the resolve callback of the currently pending placeBid Promise.
+   * Set just before publishing the STOMP bid; cleared when the ack arrives
+   * or the timeout fires.
+   */
+  const pendingBidResolveRef = useRef<((result: BidResult) => void) | null>(null);
+  const bidTimeoutRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── Trigger flash animation ────────────────────────────────────
   const triggerFlash = useCallback(() => {
     setFlash(true);
     if (flashTimer.current) clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFlash(false), 800);
+  }, []);
+
+  /** Called when a bid ack arrives or the timeout fires — settles the pending promise. */
+  const settleBid = useCallback((result: BidResult) => {
+    if (bidTimeoutRef.current) {
+      clearTimeout(bidTimeoutRef.current);
+      bidTimeoutRef.current = null;
+    }
+    const resolve = pendingBidResolveRef.current;
+    pendingBidResolveRef.current = null;
+    setIsPlacingBid(false);
+    if (resolve) resolve(result);
   }, []);
 
   // ── Load initial auction + bids ────────────────────────────────
@@ -110,6 +140,26 @@ export function useAuctionLive(
 
           // Alias topic (slash notation for backwards compatibility with backend)
           client.subscribe(`/topic/auction/${auctionId}`, handleIncoming);
+
+          // ── Private bid-result acknowledgment channel ──────────
+          // The server sends { status, bidId, auctionId, amount, reason? } here
+          // after processing a bid from /app/auction/{id}/bid
+          client.subscribe('/user/queue/auction/bid-result', (frame: IMessage) => {
+            try {
+              const ack: BidAckMessage = JSON.parse(frame.body);
+              // Only handle acks for this auction to avoid cross-screen interference
+              if (ack.auctionId !== auctionId) return;
+
+              secureLog.info('[Auction] Bid ack received', { status: ack.status, reason: ack.reason });
+
+              if (ack.status === 'OUTBID') {
+                setWasOutbid(true);
+              }
+
+              // Settle the pending bid Promise with the real server verdict
+              settleBid(ackToBidResult(ack));
+            } catch { /* malformed ack */ }
+          });
         },
 
         onDisconnect: () => setConnected(false),
@@ -127,8 +177,10 @@ export function useAuctionLive(
       stompRef.current?.deactivate();
       stompRef.current = null;
       setConnected(false);
+      // Settle any dangling pending bid on unmount to avoid memory leaks
+      settleBid('error');
     };
-  }, [auctionId]);
+  }, [auctionId, settleBid]);
 
   // ── Handle incoming auction events ─────────────────────────────
   const handleAuctionEvent = useCallback((event: AuctionEvent) => {
@@ -217,25 +269,40 @@ export function useAuctionLive(
 
     setIsPlacingBid(true);
     setWasOutbid(false);
-    try {
-      // 1. Instant broker propagation via STOMP publish if connected
-      if (stompRef.current?.connected) {
-        stompRef.current.publish({
+
+    // ── Path A: STOMP connected — use server-acknowledged flow ─────
+    if (stompRef.current?.connected) {
+      return new Promise<BidResult>((resolve) => {
+        // Store the resolver so the ack subscription can call it
+        pendingBidResolveRef.current = resolve;
+
+        // Safety timeout: if no ack arrives within 8 s, fall back to 'error'
+        // (covers network hiccups, server crash, etc.)
+        bidTimeoutRef.current = setTimeout(() => {
+          secureLog.warn('[Auction] Bid ack timeout — treating as error');
+          settleBid('error');
+        }, 8_000);
+
+        stompRef.current!.publish({
           destination: `/app/auction/${auctionId}/bid`,
           body: JSON.stringify({ amount }),
         });
-      }
-      // 2. Persist bid via REST API to ensure database durability
+        // isPlacingBid stays true until settleBid() is called by ack or timeout
+      });
+    }
+
+    // ── Path B: STOMP disconnected — REST fallback (optimistic) ───
+    try {
       await auctionService.placeBid(auctionId, amount);
+      setIsPlacingBid(false);
       return 'success';
     } catch (err: any) {
       const status = err?.response?.status;
-      if (status === 409) return 'outbid';   // bid race condition
-      return 'error';
-    } finally {
       setIsPlacingBid(false);
+      if (status === 409) return 'outbid';
+      return 'error';
     }
-  }, [auction, auctionId, isPlacingBid]);
+  }, [auction, auctionId, isPlacingBid, settleBid]);
 
   function minNextBid(a: AuctionDto): number {
     const base = Math.max(a.currentBid, a.startingPrice);

@@ -43,12 +43,17 @@ export const groupBuyingService = {
     return res.data;
   },
 
-  async getDemandBoard(): Promise<Array<{ id: string; title: string; category: string; upvotes: number; hasUpvoted?: boolean }>> {
+  async getDemandBoard(): Promise<Array<{ id: string; title: string; category: string; upvotes: number; targetUpvotes?: number; hasUpvoted?: boolean; description?: string }>> {
     const res = await api.get('/group-buying/demand');
     return res.data;
   },
 
   async upvoteDemand(id: string): Promise<void> {
     await api.post(`/group-buying/demand/${id}/upvote`);
+  },
+
+  async createDemand(data: { title: string; category: string; description?: string }): Promise<any> {
+    const res = await api.post('/group-buying/demand', data);
+    return res.data;
   },
 };

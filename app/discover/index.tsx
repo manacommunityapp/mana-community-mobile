@@ -1,141 +1,294 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert,
+  TextInput, Alert, Modal, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, SPACING, RADIUS, SHADOWS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'expo-router';
 
 interface Recommendation {
   id: string;
   type: string;
-  title: string;
-  subtitle: string;
+  name: string;
+  flat: string;
+  tower: string;
+  profession: string;
   description: string;
   matchScore: number;
   tags: string[];
+  availability: string;
+  isVerified: boolean;
+  avatarColor: string;
 }
 
-const RECOMMENDATIONS: Recommendation[] = [
+const SAMPLE_DISCOVER: Recommendation[] = [
   {
     id: 'rec-1',
-    type: 'Doctor / Pediatrician',
-    title: 'Dr. Anita Nair',
-    subtitle: 'Tower A, Flat 304',
-    description: 'Senior Consultant Pediatrician. Open for weekend society emergency guidance.',
-    matchScore: 96,
-    tags: ['Medical', 'Child Care', 'Weekends'],
+    type: 'Healthcare & Medical',
+    name: 'Dr. Anita Nair',
+    flat: 'A-304',
+    tower: 'Tower A',
+    profession: 'Senior Consultant Pediatrician',
+    description: '15+ yrs experience. Available for weekend emergency consultations and pediatric child guidance for society families.',
+    matchScore: 97,
+    tags: ['Pediatrics', 'Child Health', 'Weekend Guidance'],
+    availability: 'Sat-Sun (10 AM - 1 PM)',
+    isVerified: true,
+    avatarColor: '#4F46E5',
   },
   {
     id: 'rec-2',
-    type: 'Sports Partner',
-    title: 'Badminton Doubles Match',
-    subtitle: 'Court A &bull; Saturday 7:00 AM',
-    description: 'Looking for 2 intermediate players for 21-point weekend doubles set.',
-    matchScore: 92,
-    tags: ['Badminton', 'Intermediate', 'Morning'],
+    type: 'Sports & Fitness Partner',
+    name: 'Rohan Deshpande',
+    flat: 'B-601',
+    tower: 'Tower B',
+    profession: 'Badminton & Marathon Enthusiast',
+    description: 'Looking for doubles partner for weekend morning sessions at society court and 10k morning runners.',
+    matchScore: 93,
+    tags: ['Badminton', 'Running 10K', 'Morning 6:30 AM'],
+    availability: 'Daily Mornings',
+    isVerified: true,
+    avatarColor: '#059669',
   },
   {
     id: 'rec-3',
-    type: 'Home Chef',
-    title: 'Rashmi South Kitchen',
-    subtitle: 'Tower B, Flat 202',
-    description: 'Authentic Mangalore style Ghee Roast & soft Idlis made fresh to order.',
-    matchScore: 88,
-    tags: ['Breakfast', 'Home Food', 'Pre-order'],
+    type: 'Home Chef & Bakery',
+    name: 'Rashmi South Kitchen',
+    flat: 'C-202',
+    tower: 'Tower C',
+    profession: 'Artisanal Home Cook',
+    description: 'Authentic Mangalore Ghee Roast, soft Tatte Idlis, and weekend sourdough bakes made with pure ingredients.',
+    matchScore: 89,
+    tags: ['South Indian', 'Fresh Idlis', 'Pre-order'],
+    availability: 'Fri-Sun (Pre-order)',
+    isVerified: true,
+    avatarColor: '#EA580C',
   },
   {
     id: 'rec-4',
-    type: 'Finance Advisor',
-    title: 'Raj Mehta (SEBI Reg)',
-    subtitle: 'Tower C, Flat 102',
-    description: 'Retirement & tax optimization consults for community residents.',
-    matchScore: 84,
-    tags: ['Tax', 'Wealth', 'Free 30m'],
+    type: 'Finance & Tax Advisory',
+    name: 'Rajesh Mehta (CA & SEBI RIA)',
+    flat: 'D-802',
+    tower: 'Tower D',
+    profession: 'Chartered Accountant & Wealth Advisor',
+    description: 'Helping neighbours optimize income tax, retirement corpus, and estate planning with complimentary 30m reviews.',
+    matchScore: 86,
+    tags: ['Tax Filing', 'Retirement', 'Mutual Funds'],
+    availability: 'Weekday Evenings',
+    isVerified: true,
+    avatarColor: '#7C3AED',
+  },
+  {
+    id: 'rec-5',
+    type: 'Tutoring & Mentorship',
+    name: 'Priyanka Sen',
+    flat: 'A-1102',
+    tower: 'Tower A',
+    profession: 'Ex-Google Tech Lead & Math Coach',
+    description: 'Mentoring high school and college students in algorithmic problem solving, Python coding, and career prep.',
+    matchScore: 91,
+    tags: ['Python', 'Data Structures', 'IIT-JEE Prep'],
+    availability: 'Weekend Afternoons',
+    isVerified: true,
+    avatarColor: '#0284C7',
+  },
+  {
+    id: 'rec-6',
+    type: 'Carpool & Daily Commute',
+    name: 'Karthik Varma',
+    flat: 'B-403',
+    tower: 'Tower B',
+    profession: 'Product Manager @ Tech Park',
+    description: 'Daily commute to Whitefield / ITPL. Offering 3 seats in EV SUV with silent ride and wifi.',
+    matchScore: 94,
+    tags: ['EV Carpool', 'Tech Park', '08:30 AM Departure'],
+    availability: 'Mon - Fri',
+    isVerified: true,
+    avatarColor: '#10B981',
   },
 ];
 
 export default function DiscoverScreen() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'for-you' | 'directory'>('for-you');
-  const [connected, setConnected] = useState<string[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState('ALL');
+  const [connectedIds, setConnectedIds] = useState<string[]>([]);
+  const [chatModalTarget, setChatModalTarget] = useState<Recommendation | null>(null);
+  const [introMessage, setIntroMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
-  const handleConnect = (id: string, name: string) => {
-    if (connected.includes(id)) return;
-    setConnected([...connected, id]);
-    Alert.alert('🤝 Connection Sent', `You connected with ${name}!`);
+  const filters = [
+    { key: 'ALL', label: 'All Matches' },
+    { key: 'Medical', label: '🩺 Doctors' },
+    { key: 'Sports', label: '🏸 Sports Buddies' },
+    { key: 'Home Chef', label: '🍲 Home Food' },
+    { key: 'Finance', label: '📈 Wealth & Tax' },
+    { key: 'Tutoring', label: '📚 Mentorship' },
+    { key: 'Carpool', label: '🚗 Carpool' },
+  ];
+
+  const filteredItems = SAMPLE_DISCOVER.filter((item) => {
+    const matchesFilter = selectedFilter === 'ALL' ||
+      item.type.toLowerCase().includes(selectedFilter.toLowerCase()) ||
+      item.tags.some((t) => t.toLowerCase().includes(selectedFilter.toLowerCase()));
+
+    const matchesSearch = !search ||
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.type.toLowerCase().includes(search.toLowerCase()) ||
+      item.profession.toLowerCase().includes(search.toLowerCase()) ||
+      item.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()));
+
+    return matchesFilter && matchesSearch;
+  });
+
+  const handleOpenConnect = (item: Recommendation) => {
+    setChatModalTarget(item);
+    setIntroMessage(`Hi ${item.name.split(' ')[0]}, I saw your profile on Mana Discover and would love to connect!`);
   };
 
-  const filteredRecs = RECOMMENDATIONS.filter((r) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return r.title.toLowerCase().includes(q) || r.type.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q));
-  });
+  const handleSendIntro = () => {
+    if (!chatModalTarget) return;
+    setIsSending(true);
+    setTimeout(() => {
+      setIsSending(false);
+      setConnectedIds((prev) => [...prev, chatModalTarget.id]);
+      const targetName = chatModalTarget.name;
+      setChatModalTarget(null);
+      Alert.alert(
+        '🤝 Connection Request Sent',
+        `Your intro message has been sent to ${targetName}. They will receive a notification in their chat inbox.`,
+      );
+    }, 600);
+  };
 
   return (
     <View style={styles.container}>
       {/* ── Search Bar ── */}
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={18} color={COLORS.textMuted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search skills, sports buddies, mentors..."
-          placeholderTextColor={COLORS.textMuted}
-          value={search}
-          onChangeText={setSearch}
-        />
+      <View style={styles.searchHeader}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={18} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search doctors, sports partners, chefs, mentors..."
+            placeholderTextColor={COLORS.textMuted}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* ── Intro Card ── */}
-        <View style={styles.introCard}>
-          <Ionicons name="sparkles" size={24} color="#7C3AED" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.introTitle}>Community Discovery Graph</Text>
-            <Text style={styles.introText}>
-              Discover neighbours based on shared hobbies, professions, sports teams, and carpool routes.
-            </Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* ── Hero Banner ── */}
+        <LinearGradient colors={GRADIENTS.hero} style={styles.heroBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <View style={styles.heroBadge}>
+            <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+            <Text style={styles.heroBadgeText}>Neighbourhood Graph AI</Text>
           </View>
+          <Text style={styles.heroTitle}>Discover Your Community Talent</Text>
+          <Text style={styles.heroSub}>
+            Connect with verified doctors, badminton partners, home chefs, and career mentors living right next door.
+          </Text>
+        </LinearGradient>
+
+        {/* ── Filter Chips ── */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipScrollContent}>
+          {filters.map((f) => {
+            const isActive = selectedFilter === f.key;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                style={[styles.chip, isActive && styles.chipActive]}
+                onPress={() => setSelectedFilter(f.key)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* ── Section Title ── */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>High Affinity Community Matches</Text>
+          <Text style={styles.sectionSub}>{filteredItems.length} recommendations</Text>
         </View>
 
-        {/* ── Matches ── */}
-        <Text style={styles.sectionTitle}>High Affinity Matches For You</Text>
+        {/* ── Discover Cards ── */}
         <View style={{ gap: SPACING.md }}>
-          {filteredRecs.map((rec) => {
-            const isConn = connected.includes(rec.id);
+          {filteredItems.map((item) => {
+            const isConnected = connectedIds.includes(item.id);
+            const initials = getInitials(item.name);
+
             return (
-              <View key={rec.id} style={styles.recCard}>
-                <View style={styles.recHeader}>
-                  <Text style={styles.recType}>{rec.type}</Text>
-                  <View style={styles.scoreBadge}>
-                    <Text style={styles.scoreText}>{rec.matchScore}% MATCH</Text>
+              <View key={item.id} style={styles.card}>
+                {/* Card Top */}
+                <View style={styles.cardTop}>
+                  <View style={[styles.avatar, { backgroundColor: item.avatarColor }]}>
+                    <Text style={styles.avatarText}>{initials}</Text>
+                  </View>
+
+                  <View style={styles.cardInfo}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.nameText}>{item.name}</Text>
+                      {item.isVerified && (
+                        <View style={styles.verifiedTag}>
+                          <Ionicons name="shield-checkmark" size={12} color="#059669" />
+                          <Text style={styles.verifiedText}>Resident</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.professionText}>{item.profession}</Text>
+                    <Text style={styles.unitText}>🏠 {item.tower}, Flat {item.flat}</Text>
+                  </View>
+
+                  <View style={styles.matchBadge}>
+                    <Text style={styles.matchScore}>{item.matchScore}%</Text>
+                    <Text style={styles.matchLabel}>AFFINITY</Text>
                   </View>
                 </View>
 
-                <Text style={styles.recTitle}>{rec.title}</Text>
-                <Text style={styles.recSubtitle}>{rec.subtitle}</Text>
-                <Text style={styles.recDesc}>{rec.description}</Text>
+                {/* Description */}
+                <Text style={styles.descriptionText}>{item.description}</Text>
 
+                {/* Tags */}
                 <View style={styles.tagRow}>
-                  {rec.tags.map((t, idx) => (
+                  {item.tags.map((tag, idx) => (
                     <View key={idx} style={styles.tag}>
-                      <Text style={styles.tagText}>{t}</Text>
+                      <Text style={styles.tagText}>#{tag}</Text>
                     </View>
                   ))}
                 </View>
 
+                {/* Availability Bar */}
+                <View style={styles.availRow}>
+                  <Ionicons name="time-outline" size={13} color={COLORS.textMuted} />
+                  <Text style={styles.availText}>Active: {item.availability}</Text>
+                </View>
+
+                {/* Action Button */}
                 <TouchableOpacity
-                  style={[styles.connectBtn, isConn && styles.connectedBtn]}
-                  onPress={() => handleConnect(rec.id, rec.title)}
-                  disabled={isConn}
+                  style={[styles.connectBtn, isConnected && styles.connectedBtn]}
+                  onPress={() => handleOpenConnect(item)}
+                  disabled={isConnected}
+                  activeOpacity={0.85}
                 >
                   <Ionicons
-                    name={isConn ? 'checkmark-circle' : 'person-add-outline'}
+                    name={isConnected ? 'checkmark-circle' : 'chatbubbles-outline'}
                     size={16}
-                    color={isConn ? '#059669' : '#FFFFFF'}
+                    color={isConnected ? '#059669' : '#FFFFFF'}
                   />
-                  <Text style={[styles.connectBtnText, isConn && styles.connectedBtnText]}>
-                    {isConn ? 'Connected' : 'Connect & Chat'}
+                  <Text style={[styles.connectBtnText, isConnected && styles.connectedBtnText]}>
+                    {isConnected ? 'Connection Requested' : 'Connect & Say Hello'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -143,66 +296,412 @@ export default function DiscoverScreen() {
           })}
         </View>
       </ScrollView>
+
+      {/* ── Intro Message Dialog ── */}
+      <Modal visible={!!chatModalTarget} transparent animationType="slide" onRequestClose={() => setChatModalTarget(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Connect with {chatModalTarget?.name}</Text>
+                <Text style={styles.modalSub}>{chatModalTarget?.profession}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setChatModalTarget(null)} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputPrompt}>Write a brief friendly greeting:</Text>
+            <TextInput
+              style={styles.introInput}
+              value={introMessage}
+              onChangeText={setIntroMessage}
+              multiline
+              numberOfLines={4}
+              placeholder="Hi, I'd like to connect regarding..."
+              placeholderTextColor={COLORS.textMuted}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelModalBtn}
+                onPress={() => setChatModalTarget(null)}
+                disabled={isSending}
+              >
+                <Text style={styles.cancelModalText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.sendModalBtn}
+                onPress={handleSendIntro}
+                disabled={isSending || !introMessage.trim()}
+              >
+                {isSending ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="paper-plane" size={15} color="#FFFFFF" />
+                    <Text style={styles.sendModalText}>Send Connection</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  searchHeader: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+    backgroundColor: COLORS.background,
+  },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: SPACING.sm,
-  },
-  searchInput: { flex: 1, fontSize: 13, color: COLORS.text },
-  content: { padding: SPACING.lg, paddingBottom: 40 },
-  introCard: {
-    flexDirection: 'row',
-    backgroundColor: '#F5F3FF',
-    padding: SPACING.md,
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-    alignItems: 'center',
-  },
-  introTitle: { fontSize: 14, fontFamily: 'DMSans-Bold', fontWeight: '800', color: '#6D28D9' },
-  introText: { fontSize: 12, color: '#5B21B6', marginTop: 2, lineHeight: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
-  recCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
+    gap: 8,
     ...SHADOWS.sm,
   },
-  recHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  recType: { fontSize: 11, fontWeight: '700', color: '#7C3AED', textTransform: 'uppercase' },
-  scoreBadge: { backgroundColor: '#EDE9FE', paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.sm },
-  scoreText: { fontSize: 10, fontWeight: '800', color: '#6D28D9' },
-  recTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginTop: SPACING.xs },
-  recSubtitle: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  recDesc: { fontSize: 13, color: COLORS.textSecondary, marginTop: SPACING.sm, lineHeight: 18 },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: SPACING.md },
-  tag: { backgroundColor: '#F3F4F6', paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: RADIUS.sm },
-  tagText: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '500' },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.text,
+    padding: 0,
+  },
+  content: {
+    padding: SPACING.md,
+    paddingBottom: 48,
+  },
+  heroBanner: {
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    ...SHADOWS.md,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    gap: 6,
+    marginBottom: 6,
+  },
+  heroBadgeText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit-Bold',
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  heroSub: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.88)',
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  chipScroll: {
+    marginBottom: SPACING.md,
+  },
+  chipScrollContent: {
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  chipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  chipText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  chipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: SPACING.sm,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontFamily: 'Outfit-Bold',
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  sectionSub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 10,
+    ...SHADOWS.sm,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.sm,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontFamily: 'Outfit-Bold',
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  nameText: {
+    fontSize: 15,
+    fontFamily: 'Outfit-Bold',
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  verifiedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+  },
+  verifiedText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#065F46',
+  },
+  professionText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginTop: 2,
+  },
+  unitText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  matchBadge: {
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignItems: 'center',
+  },
+  matchScore: {
+    fontSize: 14,
+    fontFamily: 'Outfit-Bold',
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  matchLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
+    letterSpacing: 0.5,
+  },
+  descriptionText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 19,
+  },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tag: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  availRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  availText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
   connectBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7C3AED',
-    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
     borderRadius: RADIUS.md,
-    gap: SPACING.xs,
+    gap: 6,
+    marginTop: 2,
   },
-  connectBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  connectedBtn: { backgroundColor: '#D1FAE5', borderWidth: 1, borderColor: '#10B981' },
-  connectedBtnText: { color: '#059669', fontSize: 13, fontWeight: '700' },
+  connectBtnText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  connectedBtn: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  connectedBtnText: {
+    color: '#059669',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    ...SHADOWS.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.md,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontFamily: 'Outfit-Bold',
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  inputPrompt: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  introInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: 12,
+    fontSize: 13,
+    color: COLORS.text,
+    textAlignVertical: 'top',
+    height: 100,
+    backgroundColor: '#F9FAFB',
+    marginBottom: SPACING.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  cancelModalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelModalText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  sendModalBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    gap: 6,
+  },
+  sendModalText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
 });

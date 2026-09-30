@@ -55,6 +55,8 @@ function AuthGuard() {
     const inGuard       = group === 'guard';
     const inVendor      = group === 'vendor';
     const inAdminRole   = group === 'admin-role';
+    const inSportsAdmin = group === 'sports-admin';
+    const inEventAdmin  = group === 'event-admin';
 
     if (!isAuthenticated) {
       // Not logged in → welcome / onboarding entry
@@ -75,6 +77,10 @@ function AuthGuard() {
         router.replace('/guard/tabs/dashboard');
       } else if (role === 'VENDOR') {
         router.replace('/vendor/tabs/dashboard');
+      } else if (role === 'SPORTS_ADMIN') {
+        router.replace('/sports-admin/tabs/dashboard');
+      } else if (role === 'EVENT_ADMIN') {
+        router.replace('/event-admin/tabs/dashboard');
       } else if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'COMMUNITY_ADMIN') {
         router.replace('/admin-role/tabs/dashboard');
       } else {
@@ -152,6 +158,8 @@ export default function RootLayout() {
             <Stack.Screen name="guard" />
             <Stack.Screen name="vendor" />
             <Stack.Screen name="admin-role" />
+            <Stack.Screen name="sports-admin" />
+            <Stack.Screen name="event-admin" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

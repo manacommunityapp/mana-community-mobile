@@ -96,7 +96,8 @@ export default function GuardDashboard() {
     setRefreshing(false);
   };
 
-  const avatarColor = getAvatarColor(user?.name || 'Guard');
+  const displayName = user?.fullName || user?.name || (user?.email ? user.email.split('@')[0] : 'Guard');
+  const avatarColor = getAvatarColor(displayName);
   const recentVisitors = visitors.filter(v => v.status === 'CHECKED_IN' || v.status === 'EXPECTED').slice(0, 3);
   const openIncidents = incidents.filter(i => i.status !== 'RESOLVED').slice(0, 3);
 
@@ -116,12 +117,12 @@ export default function GuardDashboard() {
               style={s.avatar}
             >
               <Text style={[s.avatarText, { color: '#FFFFFF' }]}>
-                {getInitials(user?.name || 'Guard')}
+                {getInitials(displayName)}
               </Text>
             </LinearGradient>
             <View>
               <Text style={s.dutyLabel}>On Duty</Text>
-              <Text style={s.userName}>{user?.name || 'Guard'}</Text>
+              <Text style={s.userName}>{displayName}</Text>
             </View>
           </View>
           <View style={s.welcomeRight}>

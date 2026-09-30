@@ -10,7 +10,7 @@ import { pollService } from '@/services/pollService';
 import { feedService } from '@/services/feedService';
 import { PollCard } from '@/components/polls/PollCard';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 
 export default function PollDetailScreen() {
@@ -99,7 +99,7 @@ export default function PollDetailScreen() {
         <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
           {/* Author card */}
           <View style={s.authorCard}>
-            <View style={s.avatar}><Text style={s.avatarText}>{post.authorName[0]}</Text></View>
+            <View style={s.avatar}><Text style={s.avatarText}>{getInitials(post.authorName)}</Text></View>
             <View style={{ flex: 1 }}>
               <Text style={s.authorName}>{post.authorName}</Text>
               <Text style={s.authorMeta}>
@@ -175,7 +175,7 @@ export default function PollDetailScreen() {
               comments.map((c) => (
                 <View key={c.id} style={s.commentRow}>
                   <View style={s.commentAvatar}>
-                    <Text style={s.commentAvatarText}>{c.authorName[0]}</Text>
+                    <Text style={s.commentAvatarText}>{getInitials(c.authorName)}</Text>
                   </View>
                   <View style={s.commentBody}>
                     <View style={s.commentHeader}>

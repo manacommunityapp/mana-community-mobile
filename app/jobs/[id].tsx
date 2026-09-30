@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { jobService } from '@/services/jobService';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS } from '@/constants/config';
+import { COLORS, getInitials } from '@/constants/config';
 import {
   JOB_CATEGORY_META, JOB_TYPE_LABEL,
 } from '@/components/jobs/JobCard';
@@ -49,7 +49,7 @@ function ApplicantRow({
   return (
     <View style={ar.row}>
       <View style={ar.avatar}>
-        <Text style={ar.avatarText}>{app.applicantName[0]}</Text>
+        <Text style={ar.avatarText}>{getInitials(app.applicantName)}</Text>
       </View>
       <View style={ar.info}>
         <Text style={ar.name}>{app.applicantName}</Text>
@@ -122,11 +122,11 @@ export default function JobDetailScreen() {
   const { data: applications = [] } = useQuery({
     queryKey: ['job-applications', id],
     queryFn:  () => jobService.getApplications(Number(id)),
-    enabled:  !!job && job.posterId === user?.id,
+    enabled:  !!job && (job.postedById ?? job.posterId) === user?.id,
   });
 
   const applyMutation = useMutation({
-    mutationFn: () => jobService.applyForJob(Number(id), { coverMessage: coverMessage.trim() }),
+    mutationFn: () => jobService.applyForJob(Number(id), { jobId: Number(id), coverMessage: coverMessage.trim() }),
     onSuccess: () => {
       setApplyVisible(false);
       setCoverMessage('');
@@ -164,9 +164,10 @@ export default function JobDetailScreen() {
   }
   if (!job) return null;
 
-  const isMyJob   = job.posterId === user?.id;
+  const posterId = job.postedById ?? job.posterId;
+  const isMyJob   = posterId === user?.id;
   const isOpen    = job.status === 'OPEN';
-  const meta      = JOB_CATEGORY_META[job.category] ?? JOB_CATEGORY_META.OTHER;
+  const meta      = JOB_CATEGORY_META[job.category ?? 'OTHER'] ?? JOB_CATEGORY_META.OTHER;
   const canApply  = !isMyJob && isOpen && !job.hasApplied;
   const canWithdraw = !isMyJob && job.hasApplied && job.myApplicationStatus === 'PENDING';
 
@@ -199,10 +200,10 @@ export default function JobDetailScreen() {
           <View style={scr.heroText}>
             <Text style={scr.jobTitle}>{job.title}</Text>
             <Text style={scr.posterName}>
-              {job.posterName}{job.posterFlat ? ` · ${job.posterFlat}` : ''}
+              {job.postedByName || job.posterName || 'Resident'}{(job.postedByFlat || job.posterFlat) ? ` · ${job.postedByFlat || job.posterFlat}` : ''}
             </Text>
             <Text style={scr.postedTime}>
-              Posted {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
+              Posted {formatDistanceToNow(new Date(job.createdAt || job.postedAt || Date.now()), { addSuffix: true })}
             </Text>
           </View>
         </View>
@@ -210,17 +211,17 @@ export default function JobDetailScreen() {
         {/* Quick stats */}
         <View style={scr.statsRow}>
           <View style={scr.stat}>
-            <Text style={scr.statVal}>{payDisplay(job.payType, job.payAmount)}</Text>
+            <Text style={scr.statVal}>{payDisplay(job.payType ?? 'FIXED', job.payAmount)}</Text>
             <Text style={scr.statLabel}>Compensation</Text>
           </View>
           <View style={scr.statDivider} />
           <View style={scr.stat}>
-            <Text style={scr.statVal}>{JOB_TYPE_LABEL[job.jobType] ?? job.jobType}</Text>
+            <Text style={scr.statVal}>{JOB_TYPE_LABEL[(job.jobType || job.type || 'FULL_TIME') as keyof typeof JOB_TYPE_LABEL] ?? (job.jobType || job.type || 'Full Time')}</Text>
             <Text style={scr.statLabel}>Type</Text>
           </View>
           <View style={scr.statDivider} />
           <View style={scr.stat}>
-            <Text style={scr.statVal}>{job.applicationCount}</Text>
+            <Text style={scr.statVal}>{job.applicationCount ?? job.applicantCount ?? 0}</Text>
             <Text style={scr.statLabel}>Applied</Text>
           </View>
         </View>
