@@ -49,7 +49,6 @@ function normalizeNotice(item: any): NoticeDto {
 export const noticeService = {
   /**
    * GET /notices
-   * Fetches notices directly from live backend endpoint.
    */
   async getNotices(category?: string): Promise<NoticeDto[]> {
     try {
@@ -59,8 +58,8 @@ export const noticeService = {
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(normalizeNotice);
     } catch (err) {
-      secureLog.error('[noticeService] Failed to fetch notices from backend', err);
-      return [];
+      secureLog.error('[noticeService] Failed to load notices', err);
+      throw err;
     }
   },
 
@@ -70,11 +69,13 @@ export const noticeService = {
   async getNotice(id: string | number): Promise<NoticeDto | null> {
     try {
       const res = await api.get(`/notices/${id}`);
-      return normalizeNotice(res.data);
-    } catch (err) {
-      secureLog.error(`[noticeService] Failed to fetch notice ${id}`, err);
+      if (res.data) {
+        return normalizeNotice(res.data);
+      }
       return null;
+    } catch (err) {
+      secureLog.error(`[noticeService] Failed to load notice ${id}`, err);
+      throw err;
     }
   },
 };
-

@@ -143,7 +143,7 @@ export default function AdminFinanceScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
   header: {
     paddingHorizontal: 16, paddingVertical: 14,
     backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,

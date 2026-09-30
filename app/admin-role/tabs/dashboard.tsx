@@ -197,7 +197,7 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
   welcome: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,

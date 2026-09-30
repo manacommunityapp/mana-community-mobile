@@ -55,101 +55,95 @@ export interface WalletBalanceResponse {
 export const maintenanceDuesService = {
   /**
    * GET /finance/maintenance/bills/pending
-   * Returns active pending / unpaid maintenance bills.
    */
   async getPendingBills(): Promise<MaintenanceBillDto[]> {
     try {
       const res = await api.get<MaintenanceBillDto[]>('/finance/maintenance/bills/pending');
       return Array.isArray(res.data) ? res.data : [];
     } catch (err) {
-      secureLog.error('[maintenanceDuesService] Failed to load pending bills', err);
-      return [];
+      secureLog.error('[maintenanceDuesService] Failed to fetch pending bills', err);
+      throw err;
     }
   },
 
   /**
    * GET /finance/maintenance/bills/history
-   * Returns list of paid maintenance bills / receipts.
    */
   async getPaymentHistory(): Promise<MaintenanceBillDto[]> {
     try {
       const res = await api.get<MaintenanceBillDto[]>('/finance/maintenance/bills/history');
       return Array.isArray(res.data) ? res.data : [];
     } catch (err) {
-      secureLog.error('[maintenanceDuesService] Failed to load payment history', err);
-      return [];
+      secureLog.error('[maintenanceDuesService] Failed to fetch payment history', err);
+      throw err;
     }
   },
 
   /**
    * POST /finance/maintenance/pay/{billId}
-   * Initiates payment order from payment gateway.
    */
   async initiatePayment(billId: string): Promise<PaymentInitiationResponse> {
     try {
       const res = await api.post<PaymentInitiationResponse>(`/finance/maintenance/pay/${billId}`);
-      if (res.data?.orderId) {
-        return res.data;
-      }
-      throw new Error('Invalid payment order response');
+      return res.data;
     } catch (err) {
-      secureLog.error(`[maintenanceDuesService] Failed to initiate payment for ${billId}`, err);
+      secureLog.error(`[maintenanceDuesService] Failed to initiate payment for bill ${billId}`, err);
       throw err;
     }
   },
 
   /**
    * POST /finance/maintenance/verify
-   * Verifies payment callback from payment gateway and settles bill.
    */
   async verifyPayment(payload: PaymentVerificationRequest): Promise<PaymentVerificationResponse> {
     try {
       const res = await api.post<PaymentVerificationResponse>('/finance/maintenance/verify', payload);
-      if (res.data?.success) {
-        return res.data;
-      }
-      throw new Error(res.data?.message || 'Payment verification failed');
+      return res.data;
     } catch (err) {
-      secureLog.error('[maintenanceDuesService] Failed to verify payment', err);
+      secureLog.error('[maintenanceDuesService] Payment verification failed on server', err);
       throw err;
     }
   },
 
   /**
    * GET /finance/wallet/balance
-   * Returns current advance maintenance wallet balance.
    */
   async getWalletBalance(): Promise<WalletBalanceResponse> {
     try {
       const res = await api.get<WalletBalanceResponse>('/finance/wallet/balance');
-      if (res.data && typeof res.data.balance === 'number') {
-        return res.data;
-      }
-      return { balance: 0, currency: 'INR' };
+      return res.data;
     } catch (err) {
-      secureLog.error('[maintenanceDuesService] Failed to get wallet balance', err);
-      return { balance: 0, currency: 'INR' };
+      secureLog.error('[maintenanceDuesService] Failed to fetch wallet balance', err);
+      throw err;
     }
   },
 
   /**
-   * POST /finance/maintenance/pay-wallet/{billId}
-   * Directly debits Advance Wallet to clear maintenance dues.
+   * POST /finance/maintenance/pay-wallet
    */
-  async payWithWallet(billId: string, amount: number): Promise<{ success: boolean; newBalance: number; receiptNumber: string }> {
+  async payWithWallet(billId: string, amount: number): Promise<{ success: boolean; newBalance: number; receiptNumber?: string }> {
     try {
-      const res = await api.post<{ success: boolean; newBalance: number; receiptNumber: string }>(
-        `/finance/maintenance/pay-wallet/${billId}`,
-        { amount },
-      );
-      if (res.data?.success) {
-        return res.data;
-      }
-      throw new Error('Wallet settlement failed');
+      const res = await api.post<{ success: boolean; newBalance: number; receiptNumber?: string }>('/finance/maintenance/pay-wallet', {
+        billId,
+        amount,
+      });
+      return res.data;
     } catch (err) {
-      secureLog.error(`[maintenanceDuesService] Failed to pay with wallet for ${billId}`, err);
+      secureLog.error(`[maintenanceDuesService] Wallet payment failed for bill ${billId}`, err);
+      throw err;
+    }
+  },
+
+  /**
+   * GET /finance/maintenance/bills/{id}/receipt
+   */
+  async downloadReceipt(billId: string): Promise<{ downloadUrl: string }> {
+    try {
+      const res = await api.get<{ downloadUrl: string }>(`/finance/maintenance/bills/${billId}/receipt`);
+      return res.data;
+    } catch (err) {
+      secureLog.error(`[maintenanceDuesService] Failed to download receipt for bill ${billId}`, err);
       throw err;
     }
   },
 };
-

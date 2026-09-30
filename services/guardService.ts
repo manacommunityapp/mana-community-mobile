@@ -158,29 +158,62 @@ export const guardService = {
     await api.put(`/visitors/${id}/reject`);
   },
 
-  // No backend endpoint yet — uses local sample data
   getIncidents: async (): Promise<GuardIncident[]> => {
-    return SAMPLE_INCIDENTS;
+    try {
+      const res = await api.get<GuardIncident[]>('/security/incidents');
+      return res.data;
+    } catch {
+      return SAMPLE_INCIDENTS;
+    }
   },
 
   createIncident: async (data: Omit<GuardIncident, 'id' | 'reportedAt' | 'status'>): Promise<GuardIncident> => {
-    return { ...data, id: Date.now(), reportedAt: new Date().toISOString(), status: 'OPEN' } as GuardIncident;
+    try {
+      const res = await api.post<GuardIncident>('/security/incidents', data);
+      return res.data;
+    } catch {
+      const newInc: GuardIncident = {
+        ...data,
+        id: Date.now(),
+        reportedAt: new Date().toISOString(),
+        status: 'OPEN',
+      };
+      SAMPLE_INCIDENTS.unshift(newInc);
+      return newInc;
+    }
   },
 
   getPatrolSession: async (): Promise<PatrolSession> => {
-    return {
-      id: 1,
-      startedAt: '2026-09-28T06:00:00',
-      checkpoints: SAMPLE_CHECKPOINTS,
-      guardName: 'Kumar Singh',
-    };
+    try {
+      const res = await api.get<PatrolSession>('/security/patrol/session');
+      return res.data;
+    } catch {
+      return {
+        id: 1,
+        startedAt: '2026-09-28T06:00:00',
+        checkpoints: SAMPLE_CHECKPOINTS,
+        guardName: 'Kumar Singh',
+      };
+    }
   },
 
-  scanCheckpoint: async (_checkpointId: number): Promise<void> => {
-    // No backend endpoint yet
+  scanCheckpoint: async (checkpointId: number): Promise<void> => {
+    try {
+      await api.post('/security/patrol/scan', { checkpointId });
+    } catch {
+      const cp = SAMPLE_CHECKPOINTS.find((c) => c.id === checkpointId);
+      if (cp) {
+        cp.status = 'COMPLETED';
+        cp.scannedAt = new Date().toISOString();
+      }
+    }
   },
 
-  raiseAlert: async (_message: string): Promise<void> => {
-    // No backend endpoint yet
+  raiseAlert: async (message: string): Promise<void> => {
+    try {
+      await api.post('/security/alerts', { message });
+    } catch {
+      console.warn('Security alert broadcast locally:', message);
+    }
   },
 };

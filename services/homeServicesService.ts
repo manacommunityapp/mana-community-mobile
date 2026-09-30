@@ -60,10 +60,10 @@ function mapWorkerEntityToDto(w: any): HomeHelpWorkerDto {
     id: w.id,
     name: w.displayName || w.name || 'Verified Service Provider',
     category: (w.category || w.skills?.[0]?.categoryId || 'PLUMBING').toUpperCase(),
-    phone: w.primaryPhone || w.phone || '',
+    phone: w.primaryPhone || w.phone || '+919876543210',
     rating: typeof w.rating === 'number' ? w.rating : 4.8,
     reviewCount: w.totalReviews ?? w.reviewCount ?? 25,
-    priceRange: w.priceRange || '₹200 - ₹800',
+    priceRange: w.priceRange || '?200 - ?800',
     verified: w.verificationStatus === 'VERIFIED' || w.policeVerified === true || w.verified === true,
     available: w.active ?? w.available ?? true,
     statusText: w.statusText || (w.active ? 'Available Today' : 'Busy'),
@@ -95,7 +95,7 @@ function mapBookingEntityToDto(b: any): HomeServiceBookingDto {
 
 export const homeServicesService = {
   /**
-   * GET /api/v1/home-services/workers
+   * GET /v1/home-services/workers
    */
   async getWorkers(category?: string): Promise<HomeHelpWorkerDto[]> {
     try {
@@ -105,13 +105,13 @@ export const homeServicesService = {
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(mapWorkerEntityToDto);
     } catch (err) {
-      secureLog.error('[homeServicesService] Failed to load workers', err);
-      return [];
+      secureLog.error('[homeServicesService] Failed to fetch workers', err);
+      throw err;
     }
   },
 
   /**
-   * POST /api/v1/home-services/bookings
+   * POST /v1/home-services/bookings
    */
   async bookWorker(data: HomeServiceBookingRequest): Promise<{ bookingId: string; status: string }> {
     try {
@@ -127,17 +127,17 @@ export const homeServicesService = {
         payload,
       );
 
-      const bookingId = res.data?.bookingId || res.data?.id || `BK-${Date.now().toString().slice(-4)}`;
+      const bookingId = res.data?.bookingId || res.data?.id || `BK-${Date.now()}`;
       const status = res.data?.status || 'CONFIRMED';
       return { bookingId, status };
     } catch (err) {
-      secureLog.error('[homeServicesService] Failed to create booking', err);
+      secureLog.error('[homeServicesService] Booking creation failed on server', err);
       throw err;
     }
   },
 
   /**
-   * GET /api/v1/home-services/bookings/mine
+   * GET /v1/home-services/bookings/mine
    */
   async getMyBookings(): Promise<HomeServiceBookingDto[]> {
     try {
@@ -145,13 +145,13 @@ export const homeServicesService = {
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(mapBookingEntityToDto);
     } catch (err) {
-      secureLog.error('[homeServicesService] Failed to load bookings', err);
-      return [];
+      secureLog.error('[homeServicesService] Failed to load my bookings', err);
+      throw err;
     }
   },
 
   /**
-   * GET /api/v1/home-services/categories
+   * GET /v1/home-services/categories
    */
   async getCategories(): Promise<HomeServiceCategoryDto[]> {
     try {
@@ -166,12 +166,12 @@ export const homeServicesService = {
       }));
     } catch (err) {
       secureLog.error('[homeServicesService] Failed to load categories', err);
-      return [];
+      throw err;
     }
   },
 
   /**
-   * PATCH /api/v1/home-services/bookings/{id}/status
+   * PATCH /v1/home-services/bookings/{id}/status
    */
   async cancelBooking(bookingId: string): Promise<{ success: boolean }> {
     try {
@@ -185,5 +185,3 @@ export const homeServicesService = {
     }
   },
 };
-
-

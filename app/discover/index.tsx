@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, Modal, ActivityIndicator,
+  TextInput, Alert, Modal, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SPACING, RADIUS, SHADOWS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
+import { communityGraphService, GraphNodeDto } from '@/services/communityGraphService';
 
 interface Recommendation {
   id: string;
@@ -114,12 +116,75 @@ const SAMPLE_DISCOVER: Recommendation[] = [
 export default function DiscoverScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('ALL');
   const [connectedIds, setConnectedIds] = useState<string[]>([]);
   const [chatModalTarget, setChatModalTarget] = useState<Recommendation | null>(null);
   const [introMessage, setIntroMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // ── 1. Fetch Live Discover Graph Recommendations ───────────────────────────
+  const {
+    data: graphFeed,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ['community-graph', 'discover'],
+    queryFn: () => communityGraphService.getDiscoverFeed(),
+    staleTime: 30_000,
+  });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+
+  // ── 2. Connect Mutation ───────────────────────────────────────────────────
+  const connectMutation = useMutation({
+    mutationFn: (targetUserId: string) => communityGraphService.connectWithNeighbor(targetUserId),
+    onSuccess: (_, targetUserId) => {
+      queryClient.invalidateQueries({ queryKey: ['community-graph'] });
+      setConnectedIds((prev) => [...prev, targetUserId]);
+      const targetName = chatModalTarget?.name || 'Neighbor';
+      setChatModalTarget(null);
+      Alert.alert(
+        '🤝 Connection Request Sent',
+        `Your intro message has been sent to ${targetName}. They will receive a notification in their chat inbox.`,
+      );
+    },
+    onError: (err: any) => {
+      Alert.alert('Connection Failed', err?.message || 'Unable to send connection request. Please try again.');
+    },
+  });
+
+  // Combine live API recommendations with rich fallback
+  const allItems: Recommendation[] = useMemo(() => {
+    if (graphFeed?.recommendedNeighbors && graphFeed.recommendedNeighbors.length > 0) {
+      return graphFeed.recommendedNeighbors.map((node, i) => ({
+        id: node.id || `node-${i}`,
+        type: node.type === 'PERSON' ? 'Resident Member' : (node.type || 'Community Neighbor'),
+        name: node.name,
+        flat: node.subtitle || 'Unit',
+        tower: 'Community',
+        profession: node.subtitle || 'Community Member',
+        description: node.commonInterests?.length
+          ? `Shares common interests: ${node.commonInterests.join(', ')}`
+          : 'Active resident in the community looking to network with neighbors.',
+        matchScore: Math.min(99, 85 + ((node.mutualConnections || 1) * 3)),
+        tags: node.commonInterests || ['Community', 'Neighbor'],
+        availability: 'Active this week',
+        isVerified: true,
+        avatarColor: getAvatarColor(node.name).bg,
+      }));
+    }
+    return SAMPLE_DISCOVER;
+  }, [graphFeed]);
 
   const filters = [
     { key: 'ALL', label: 'All Matches' },
@@ -131,7 +196,7 @@ export default function DiscoverScreen() {
     { key: 'Carpool', label: '🚗 Carpool' },
   ];
 
-  const filteredItems = SAMPLE_DISCOVER.filter((item) => {
+  const filteredItems = allItems.filter((item) => {
     const matchesFilter = selectedFilter === 'ALL' ||
       item.type.toLowerCase().includes(selectedFilter.toLowerCase()) ||
       item.tags.some((t) => t.toLowerCase().includes(selectedFilter.toLowerCase()));
@@ -152,17 +217,7 @@ export default function DiscoverScreen() {
 
   const handleSendIntro = () => {
     if (!chatModalTarget) return;
-    setIsSending(true);
-    setTimeout(() => {
-      setIsSending(false);
-      setConnectedIds((prev) => [...prev, chatModalTarget.id]);
-      const targetName = chatModalTarget.name;
-      setChatModalTarget(null);
-      Alert.alert(
-        '🤝 Connection Request Sent',
-        `Your intro message has been sent to ${targetName}. They will receive a notification in their chat inbox.`,
-      );
-    }, 600);
+    connectMutation.mutate(chatModalTarget.id);
   };
 
   return (
@@ -186,7 +241,18 @@ export default function DiscoverScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+      >
         {/* ── Hero Banner ── */}
         <LinearGradient colors={GRADIENTS.hero} style={styles.heroBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.heroBadge}>
@@ -219,8 +285,17 @@ export default function DiscoverScreen() {
         {/* ── Section Title ── */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>High Affinity Community Matches</Text>
-          <Text style={styles.sectionSub}>{filteredItems.length} recommendations</Text>
+          <Text style={styles.sectionSub}>
+            {isLoading ? 'Finding matches...' : `${filteredItems.length} recommendations`}
+          </Text>
         </View>
+
+        {/* Loading Spinner */}
+        {isLoading && (
+          <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        )}
 
         {/* ── Discover Cards ── */}
         <View style={{ gap: SPACING.md }}>
@@ -326,7 +401,7 @@ export default function DiscoverScreen() {
               <TouchableOpacity
                 style={styles.cancelModalBtn}
                 onPress={() => setChatModalTarget(null)}
-                disabled={isSending}
+                disabled={connectMutation.isPending}
               >
                 <Text style={styles.cancelModalText}>Cancel</Text>
               </TouchableOpacity>
@@ -334,9 +409,9 @@ export default function DiscoverScreen() {
               <TouchableOpacity
                 style={styles.sendModalBtn}
                 onPress={handleSendIntro}
-                disabled={isSending || !introMessage.trim()}
+                disabled={connectMutation.isPending || !introMessage.trim()}
               >
-                {isSending ? (
+                {connectMutation.isPending ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, BackHandler, Modal, TextInput, Alert, Share,
@@ -7,9 +7,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
-import { visitorService, VisitorDto } from '@/services/visitorService';
+import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 
 type VisitorStatus = 'EXPECTED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'DENIED';
 type VisitorType = 'GUEST' | 'DELIVERY' | 'CAB' | 'SERVICE';
@@ -98,15 +99,14 @@ const INITIAL_VISITORS: VisitorEntry[] = [
 
 export default function VisitorsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const [tab, setTab] = useState<TabKey>('active');
-  const [visitors, setVisitors] = useState<VisitorEntry[]>(INITIAL_VISITORS);
+  const [localVisitors, setLocalVisitors] = useState<VisitorEntry[]>([]);
   const [isPreApproveModal, setIsPreApproveModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<VisitorEntry | null>(null);
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [submittingPass, setSubmittingPass] = useState(false);
 
   // Form State
   const [guestName, setGuestName] = useState('');
@@ -173,65 +173,57 @@ export default function VisitorsScreen() {
     };
   }, [user]);
 
-  const fetchVisitors = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  // ── 1. Fetch Live Visitor Logs ──────────────────────────────────────────────
+  const {
+    data: rawVisitors,
+    isLoading,
+    refetch,
+  } = useQuery<VisitorDto[]>({
+    queryKey: ['visitors', 'my-visitors'],
+    queryFn: () => visitorService.getMyVisitors(),
+    staleTime: 15_000,
+  });
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      const data = await visitorService.getMyVisitors();
-      if (Array.isArray(data) && data.length > 0) {
-        setVisitors(data.map(mapDtoToEntry));
-      }
-    } catch {
-      // Gracefully retain initial visitors on network failure
+      await refetch();
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, [mapDtoToEntry]);
+  }, [refetch]);
 
-  useEffect(() => {
-    fetchVisitors();
-  }, [fetchVisitors]);
-
-  const filtered = useMemo(() => {
-    if (tab === 'active') {
-      return visitors.filter(v => v.status === 'EXPECTED' || v.status === 'CHECKED_IN');
+  // Merge Live API Visitors with Local/Sample
+  const visitors: VisitorEntry[] = useMemo(() => {
+    if (rawVisitors && rawVisitors.length > 0) {
+      const live = rawVisitors.map(mapDtoToEntry);
+      const liveIds = new Set(live.map(v => v.id));
+      const nonOverlappingLocal = localVisitors.filter(v => !liveIds.has(v.id));
+      return [...nonOverlappingLocal, ...live];
     }
-    return visitors.filter(v => v.status === 'CHECKED_OUT' || v.status === 'DENIED');
-  }, [tab, visitors]);
-
-  const insideCount = useMemo(() => visitors.filter(v => v.status === 'CHECKED_IN').length, [visitors]);
-  const expectedCount = useMemo(() => visitors.filter(v => v.status === 'EXPECTED').length, [visitors]);
-
-  const handleCreatePass = async () => {
-    if (!guestName.trim()) {
-      Alert.alert('Name Required', 'Please enter visitor or company name.');
-      return;
+    if (localVisitors.length > 0) {
+      return [...localVisitors, ...INITIAL_VISITORS];
     }
+    return INITIAL_VISITORS;
+  }, [rawVisitors, localVisitors, mapDtoToEntry]);
 
-    setSubmittingPass(true);
-    try {
-      const flatStr = `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`;
-      const res = await visitorService.preApprove({
-        visitorName: guestName.trim(),
-        visitorPhone: guestPhone.trim() || undefined,
-        vehicleNumber: guestVehicle.trim() || undefined,
-        passType: guestType,
-        purpose: guestPurpose.trim() || `${VISITOR_TYPE_CONFIG[guestType].label} Entry`,
-        flatNumber: flatStr,
-      });
-
+  // ── 2. Pre-Approve Visitor Mutation ─────────────────────────────────────────
+  const preApproveMutation = useMutation({
+    mutationFn: (req: PreApproveVisitorRequest) => visitorService.preApprove(req),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
       const newEntry = mapDtoToEntry(res);
-      setVisitors(prev => [newEntry, ...prev.filter(v => v.id !== newEntry.id)]);
+      setLocalVisitors(prev => [newEntry, ...prev]);
       setIsPreApproveModal(false);
       setGuestName('');
       setGuestPhone('');
       setGuestVehicle('');
       setGuestPurpose('');
       setSelectedPass(newEntry);
-    } catch {
-      // Offline fallback
+      Alert.alert('✅ Pass Generated', `Digital Gate Pass ${newEntry.passCode} has been created.`);
+    },
+    onError: () => {
+      // Offline fallback pass
       const newCode = `MANA-${Math.floor(1000 + Math.random() * 9000)}`;
       const newEntry: VisitorEntry = {
         id: Date.now(),
@@ -244,44 +236,76 @@ export default function VisitorsScreen() {
         flat: `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`,
         passCode: newCode,
       };
-
-      setVisitors(prev => [newEntry, ...prev]);
+      setLocalVisitors(prev => [newEntry, ...prev]);
       setIsPreApproveModal(false);
       setGuestName('');
       setGuestPhone('');
       setGuestVehicle('');
       setGuestPurpose('');
       setSelectedPass(newEntry);
-    } finally {
-      setSubmittingPass(false);
+    },
+  });
+
+  const handleCreatePass = () => {
+    if (!guestName.trim()) {
+      Alert.alert('Name Required', 'Please enter visitor or company name.');
+      return;
     }
+    const flatStr = `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`;
+    preApproveMutation.mutate({
+      visitorName: guestName.trim(),
+      visitorPhone: guestPhone.trim() || undefined,
+      vehicleNumber: guestVehicle.trim() || undefined,
+      passType: guestType,
+      purpose: guestPurpose.trim() || `${VISITOR_TYPE_CONFIG[guestType].label} Entry`,
+      flatNumber: flatStr,
+    });
   };
 
-  const handleSharePass = async (item: VisitorEntry) => {
+  const handleSharePass = async (entry: VisitorEntry) => {
     try {
       await Share.share({
-        message: `🏢 *Mana Community Gate Pass*\nVisitor: ${item.name}\nUnit: ${item.flat}\n🔑 *Passcode: ${item.passCode}*\nShow this digital pass or state the code at Security Gate.`,
+        message: `Mana Community Gate Pass\nVisitor: ${entry.name}\nPasscode: ${entry.passCode}\nDestination: ${entry.flat}\nPurpose: ${entry.purpose}`,
       });
-    } catch (e) {
-      // dismissed
-    }
+    } catch {}
   };
 
   const handleAllowEntry = async (id: number) => {
     try {
       await visitorService.checkIn(id);
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
     } catch {}
-    setVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'CHECKED_IN' as VisitorStatus } : v));
+    setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'CHECKED_IN' as VisitorStatus } : v));
     Alert.alert('Access Granted', 'Security Gate has been notified to allow entry.');
   };
 
   const handleDenyEntry = async (id: number) => {
     try {
       await visitorService.denyEntry(id);
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
     } catch {}
-    setVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'DENIED' as VisitorStatus } : v));
+    setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'DENIED' as VisitorStatus } : v));
     Alert.alert('Access Denied', 'Security Gate has been instructed to decline entry.');
   };
+
+  const handleCheckOut = async (id: number) => {
+    try {
+      await visitorService.checkOut(id);
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
+    } catch {}
+    setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'CHECKED_OUT' as VisitorStatus } : v));
+    Alert.alert('Departure Recorded', 'Visitor departure has been logged.');
+  };
+
+  const filtered = useMemo(() => {
+    if (tab === 'active') {
+      return visitors.filter(v => v.status === 'EXPECTED' || v.status === 'CHECKED_IN');
+    }
+    return visitors.filter(v => v.status === 'CHECKED_OUT' || v.status === 'DENIED');
+  }, [tab, visitors]);
+
+  const insideCount = useMemo(() => visitors.filter(v => v.status === 'CHECKED_IN').length, [visitors]);
+  const expectedCount = useMemo(() => visitors.filter(v => v.status === 'EXPECTED').length, [visitors]);
 
   const renderVisitor = ({ item }: { item: VisitorEntry }) => {
     const typeMeta = VISITOR_TYPE_CONFIG[item.type];
@@ -351,6 +375,17 @@ export default function VisitorsScreen() {
                 <Text style={s.allowBtnText}>Allow Entry</Text>
               </TouchableOpacity>
             </View>
+          )}
+
+          {item.status === 'CHECKED_IN' && (
+            <TouchableOpacity
+              style={s.checkOutBtn}
+              onPress={() => handleCheckOut(item.id)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="log-out-outline" size={15} color="#475569" />
+              <Text style={s.checkOutBtnText}>Check Out</Text>
+            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -430,13 +465,13 @@ export default function VisitorsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => fetchVisitors(true)}
+            onRefresh={onRefresh}
             tintColor={COLORS.primary}
             colors={[COLORS.primary]}
           />
         }
         ListEmptyComponent={
-          loading ? (
+          isLoading ? (
             <View style={s.emptyState}>
               <ActivityIndicator size="large" color={COLORS.primary} />
               <Text style={[s.emptySub, { marginTop: 12 }]}>Loading visitor logs...</Text>
@@ -543,11 +578,11 @@ export default function VisitorsScreen() {
                 <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.confirmBtn, submittingPass && { opacity: 0.7 }]}
+                style={[s.confirmBtn, preApproveMutation.isPending && { opacity: 0.7 }]}
                 onPress={handleCreatePass}
-                disabled={submittingPass}
+                disabled={preApproveMutation.isPending}
               >
-                {submittingPass ? (
+                {preApproveMutation.isPending ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <Text style={s.confirmBtnText}>Create Gate Pass</Text>
@@ -786,6 +821,18 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.sm,
   },
   allowBtnText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Outfit-Bold' },
+  checkOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+  },
+  checkOutBtnText: { fontSize: 11, fontWeight: '700', color: '#475569', fontFamily: 'Outfit-Bold' },
 
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: SPACING.sm },
   emptyTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },

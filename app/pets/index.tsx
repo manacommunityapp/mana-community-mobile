@@ -1,36 +1,23 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, ScrollView, BackHandler,
+  FlatList, ScrollView, BackHandler, Modal, TextInput,
+  Alert, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  petService,
+  PetDto,
+  PetServiceDto,
+  LostFoundPetDto,
+} from '@/services/petService';
 
 type PetFilter = 'REGISTRY' | 'SERVICES' | 'LOST_FOUND';
-
-interface PetEntry {
-  id: number;
-  name: string;
-  type: 'DOG' | 'CAT' | 'BIRD' | 'OTHER';
-  breed: string;
-  ownerName: string;
-  ownerFlat: string;
-  vaccinated: boolean;
-  age: string;
-}
-
-interface PetService {
-  id: number;
-  name: string;
-  type: string;
-  provider: string;
-  flat: string;
-  price: string;
-  rating: number;
-}
 
 const PET_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string }> = {
   DOG:   { icon: 'paw',     color: '#D97706', bg: '#FEF3C7' },
@@ -39,24 +26,20 @@ const PET_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: s
   OTHER: { icon: 'paw',     color: '#2563EB', bg: '#DBEAFE' },
 };
 
-const SAMPLE_PETS: PetEntry[] = [
-  { id: 1, name: 'Bruno',   type: 'DOG',  breed: 'Golden Retriever', ownerName: 'Sanjay R.', ownerFlat: 'A1-302', vaccinated: true,  age: '3 years' },
-  { id: 2, name: 'Whiskers', type: 'CAT',  breed: 'Persian',         ownerName: 'Priya M.',  ownerFlat: 'B2-105', vaccinated: true,  age: '2 years' },
-  { id: 3, name: 'Buddy',   type: 'DOG',  breed: 'Labrador',        ownerName: 'Amit K.',   ownerFlat: 'C1-401', vaccinated: true,  age: '5 years' },
-  { id: 4, name: 'Coco',    type: 'DOG',  breed: 'Shih Tzu',        ownerName: 'Neetha S.', ownerFlat: 'A2-201', vaccinated: false, age: '1 year' },
-  { id: 5, name: 'Kiki',    type: 'BIRD', breed: 'Cockatiel',       ownerName: 'Rahul V.',  ownerFlat: 'B1-304', vaccinated: true,  age: '6 months' },
-];
-
-const SAMPLE_SERVICES: PetService[] = [
-  { id: 1, name: 'Dog Walking',          type: 'Walking',   provider: 'Suresh K.',      flat: 'A3-GF', price: '₹200/walk', rating: 4.8 },
-  { id: 2, name: 'Pet Grooming at Home', type: 'Grooming',  provider: 'PetCare Studio', flat: 'C2-102', price: '₹500-800', rating: 4.6 },
-  { id: 3, name: 'Vet on Call',          type: 'Vet',       provider: 'Dr. Meena',      flat: 'B3-201', price: '₹300/visit', rating: 4.9 },
-  { id: 4, name: 'Pet Sitting',          type: 'Sitting',   provider: 'Deepa M.',       flat: 'A1-105', price: '₹400/day', rating: 4.5 },
-];
-
 export default function PetsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [tab, setTab] = useState<PetFilter>('REGISTRY');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Register Pet Modal state
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [petName, setPetName] = useState('');
+  const [petType, setPetType] = useState<'DOG' | 'CAT' | 'BIRD' | 'OTHER'>('DOG');
+  const [petBreed, setPetBreed] = useState('');
+  const [petAge, setPetAge] = useState('');
+  const [vaccinated, setVaccinated] = useState(true);
 
   const goHome = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -65,13 +48,82 @@ export default function PetsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => { goHome(); return true; });
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (isRegisterOpen) {
+          setIsRegisterOpen(false);
+          return true;
+        }
+        goHome();
+        return true;
+      });
       return () => sub.remove();
-    }, [goHome])
+    }, [goHome, isRegisterOpen])
   );
 
-  const renderPet = ({ item }: { item: PetEntry }) => {
-    const meta = PET_ICONS[item.type];
+  // ── 1. Fetch Pets ──────────────────────────────────────────────────────────
+  const { data: pets = [], isLoading: loadingPets, refetch: refetchPets } = useQuery<PetDto[]>({
+    queryKey: ['pets', 'list'],
+    queryFn: () => petService.getPets(),
+    staleTime: 30_000,
+  });
+
+  // ── 2. Fetch Services ──────────────────────────────────────────────────────
+  const { data: petServices = [], isLoading: loadingServices, refetch: refetchServices } = useQuery<PetServiceDto[]>({
+    queryKey: ['pets', 'services'],
+    queryFn: () => petService.getPetServices(),
+    staleTime: 30_000,
+  });
+
+  // ── 3. Fetch Lost & Found ──────────────────────────────────────────────────
+  const { data: lostFound = [], isLoading: loadingLost, refetch: refetchLost } = useQuery<LostFoundPetDto[]>({
+    queryKey: ['pets', 'lost-found'],
+    queryFn: () => petService.getLostFound(),
+    staleTime: 30_000,
+  });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.allSettled([refetchPets(), refetchServices(), refetchLost()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchPets, refetchServices, refetchLost]);
+
+  // ── 4. Register Mutation ───────────────────────────────────────────────────
+  const registerMutation = useMutation({
+    mutationFn: (data: Omit<PetDto, 'id'>) => petService.registerPet(data),
+    onSuccess: (newPet) => {
+      queryClient.invalidateQueries({ queryKey: ['pets'] });
+      setIsRegisterOpen(false);
+      setPetName('');
+      setPetBreed('');
+      setPetAge('');
+      Alert.alert('🐾 Pet Registered', `${newPet.name} has been added to the community pet registry.`);
+    },
+    onError: (err: any) => {
+      Alert.alert('Error', err?.message || 'Failed to register pet.');
+    },
+  });
+
+  const handleRegisterSubmit = () => {
+    if (!petName.trim() || !petBreed.trim()) {
+      Alert.alert('Validation', 'Please enter pet name and breed.');
+      return;
+    }
+    registerMutation.mutate({
+      name: petName.trim(),
+      type: petType,
+      breed: petBreed.trim(),
+      ownerName: user?.fullName || user?.name || 'Resident',
+      ownerFlat: `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '101'}`,
+      vaccinated,
+      age: petAge.trim() || '1 year',
+    });
+  };
+
+  const renderPet = ({ item }: { item: PetDto }) => {
+    const meta = PET_ICONS[item.type] || PET_ICONS.DOG;
     return (
       <View style={s.petCard}>
         <View style={[s.petIcon, { backgroundColor: meta.bg }]}>
@@ -98,7 +150,7 @@ export default function PetsScreen() {
     );
   };
 
-  const renderService = ({ item }: { item: PetService }) => (
+  const renderService = ({ item }: { item: PetServiceDto }) => (
     <View style={s.serviceCard}>
       <View style={s.serviceInfo}>
         <Text style={s.serviceName}>{item.name}</Text>
@@ -114,7 +166,11 @@ export default function PetsScreen() {
           </View>
         </View>
       </View>
-      <TouchableOpacity style={s.bookBtn} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={s.bookBtn}
+        activeOpacity={0.7}
+        onPress={() => Alert.alert('Book Service', `Contact ${item.provider} at ${item.flat} to confirm your appointment.`)}
+      >
         <Text style={s.bookBtnText}>Book</Text>
       </TouchableOpacity>
     </View>
@@ -130,7 +186,7 @@ export default function PetsScreen() {
           <Text style={s.headerTitle}>Pet Corner</Text>
           <Text style={s.headerSub}>Community pet directory</Text>
         </View>
-        <TouchableOpacity style={s.backBtn} hitSlop={8}>
+        <TouchableOpacity onPress={() => setIsRegisterOpen(true)} style={s.backBtn} hitSlop={8}>
           <Ionicons name="add-outline" size={22} color={COLORS.text} />
         </TouchableOpacity>
       </View>
@@ -154,31 +210,121 @@ export default function PetsScreen() {
 
       {tab === 'REGISTRY' && (
         <FlatList
-          data={SAMPLE_PETS}
+          data={pets}
           keyExtractor={item => String(item.id)}
           renderItem={renderPet}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Ionicons name="paw-outline" size={48} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No pets registered</Text>
+              <Text style={s.emptyDesc}>Be the first to register your pet in the community.</Text>
+            </View>
+          }
         />
       )}
 
       {tab === 'SERVICES' && (
         <FlatList
-          data={SAMPLE_SERVICES}
+          data={petServices}
           keyExtractor={item => String(item.id)}
           renderItem={renderService}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
         />
       )}
 
       {tab === 'LOST_FOUND' && (
-        <View style={s.empty}>
-          <Ionicons name="heart-outline" size={48} color={COLORS.textMuted} />
-          <Text style={s.emptyTitle}>No lost pets</Text>
-          <Text style={s.emptyDesc}>All pets are safe at home! Report if you find a lost pet.</Text>
-        </View>
+        <FlatList
+          data={lostFound}
+          keyExtractor={item => String(item.id)}
+          contentContainerStyle={s.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
+          renderItem={({ item }) => (
+            <View style={s.petCard}>
+              <View style={[s.petIcon, { backgroundColor: item.type === 'LOST' ? '#FEE2E2' : '#D1FAE5' }]}>
+                <Ionicons name={item.type === 'LOST' ? 'alert-circle' : 'checkmark-circle'} size={24} color={item.type === 'LOST' ? '#DC2626' : '#059669'} />
+              </View>
+              <View style={s.petInfo}>
+                <View style={s.petNameRow}>
+                  <Text style={s.petName}>{item.petName || 'Pet'}</Text>
+                  <View style={[s.vacBadge, { backgroundColor: item.type === 'LOST' ? '#FEE2E2' : '#D1FAE5' }]}>
+                    <Text style={[s.vacText, { color: item.type === 'LOST' ? '#DC2626' : '#059669' }]}>{item.type}</Text>
+                  </View>
+                </View>
+                <Text style={s.petBreed}>{item.description}</Text>
+                <Text style={s.ownerText}>📍 {item.lastSeenLocation || 'Club House'} • {item.lastSeenTime || item.date}</Text>
+              </View>
+            </View>
+          )}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Ionicons name="heart-outline" size={48} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No lost pets</Text>
+              <Text style={s.emptyDesc}>All pets are safe at home! Report if you find a lost pet.</Text>
+            </View>
+          }
+        />
       )}
+
+      {/* ── Register Pet Modal ── */}
+      <Modal visible={isRegisterOpen} transparent animationType="slide" onRequestClose={() => setIsRegisterOpen(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Register Your Pet</Text>
+              <TouchableOpacity onPress={() => setIsRegisterOpen(false)}>
+                <Ionicons name="close" size={22} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={s.fieldLabel}>Pet Name *</Text>
+              <TextInput style={s.input} placeholder="e.g. Bruno" value={petName} onChangeText={setPetName} />
+
+              <Text style={s.fieldLabel}>Pet Type</Text>
+              <View style={s.typeSelector}>
+                {(['DOG', 'CAT', 'BIRD', 'OTHER'] as const).map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[s.typeChip, petType === t && s.typeChipActive]}
+                    onPress={() => setPetType(t)}
+                  >
+                    <Text style={[s.typeChipText, petType === t && s.typeChipTextActive]}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={s.fieldLabel}>Breed *</Text>
+              <TextInput style={s.input} placeholder="e.g. Golden Retriever" value={petBreed} onChangeText={setPetBreed} />
+
+              <Text style={s.fieldLabel}>Age</Text>
+              <TextInput style={s.input} placeholder="e.g. 2 years" value={petAge} onChangeText={setPetAge} />
+
+              <TouchableOpacity style={s.vacCheckRow} onPress={() => setVaccinated(v => !v)}>
+                <Ionicons name={vaccinated ? 'checkbox' : 'square-outline'} size={20} color={COLORS.accent} />
+                <Text style={s.vacCheckText}>Up-to-date with vaccinations</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={s.submitModalBtn}
+                onPress={handleRegisterSubmit}
+                disabled={registerMutation.isPending}
+              >
+                {registerMutation.isPending ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={s.submitModalBtnText}>Add Pet to Registry</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -250,4 +396,39 @@ const s = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text, marginTop: 12 },
   emptyDesc: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginTop: 4 },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: 20, maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginTop: 12, marginBottom: 6 },
+  input: {
+    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border, padding: 12, fontSize: 14, color: COLORS.text,
+  },
+  typeSelector: { flexDirection: 'row', gap: 8 },
+  typeChip: {
+    flex: 1, paddingVertical: 8, alignItems: 'center',
+    borderRadius: RADIUS.md, backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
+  },
+  typeChipActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  typeChipText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  typeChipTextActive: { color: '#fff', fontWeight: '700' },
+  vacCheckRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 20,
+  },
+  vacCheckText: { fontSize: 13, color: COLORS.text, fontWeight: '500' },
+  submitModalBtn: {
+    backgroundColor: COLORS.accent, borderRadius: RADIUS.md,
+    paddingVertical: 14, alignItems: 'center',
+  },
+  submitModalBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

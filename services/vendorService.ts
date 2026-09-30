@@ -162,28 +162,48 @@ export const vendorService = {
   },
 
   async getBookings(): Promise<VendorBooking[]> {
-    // No vendor-role booking endpoint yet
-    return sampleBookings;
+    try {
+      const res = await api.get<VendorBooking[]>('/services/bookings/vendor');
+      return res.data;
+    } catch {
+      return sampleBookings;
+    }
   },
 
   async acceptBooking(id: number): Promise<void> {
-    const booking = sampleBookings.find(b => b.id === id);
-    if (booking) booking.status = 'CONFIRMED';
+    try {
+      await api.put(`/services/bookings/${id}/status`, null, { params: { status: 'CONFIRMED' } });
+    } catch {
+      const booking = sampleBookings.find(b => b.id === id);
+      if (booking) booking.status = 'CONFIRMED';
+    }
   },
 
   async startBooking(id: number): Promise<void> {
-    const booking = sampleBookings.find(b => b.id === id);
-    if (booking) booking.status = 'IN_PROGRESS';
+    try {
+      await api.put(`/services/bookings/${id}/status`, null, { params: { status: 'IN_PROGRESS' } });
+    } catch {
+      const booking = sampleBookings.find(b => b.id === id);
+      if (booking) booking.status = 'IN_PROGRESS';
+    }
   },
 
   async completeBooking(id: number): Promise<void> {
-    const booking = sampleBookings.find(b => b.id === id);
-    if (booking) booking.status = 'COMPLETED';
+    try {
+      await api.put(`/services/bookings/${id}/status`, null, { params: { status: 'COMPLETED' } });
+    } catch {
+      const booking = sampleBookings.find(b => b.id === id);
+      if (booking) booking.status = 'COMPLETED';
+    }
   },
 
   async cancelBooking(id: number): Promise<void> {
-    const booking = sampleBookings.find(b => b.id === id);
-    if (booking) booking.status = 'CANCELLED';
+    try {
+      await api.put(`/services/bookings/${id}/status`, null, { params: { status: 'CANCELLED' } });
+    } catch {
+      const booking = sampleBookings.find(b => b.id === id);
+      if (booking) booking.status = 'CANCELLED';
+    }
   },
 
   async getWorkOrders(): Promise<VendorWorkOrder[]> {
@@ -236,8 +256,12 @@ export const vendorService = {
   },
 
   async getReviews(): Promise<VendorReview[]> {
-    // No review endpoint yet
-    return sampleReviews;
+    try {
+      const res = await api.get<VendorReview[]>('/vendor/reviews');
+      return res.data;
+    } catch {
+      return sampleReviews;
+    }
   },
 };
 

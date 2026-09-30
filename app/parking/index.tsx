@@ -22,21 +22,12 @@ const TYPE_ICON: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: s
   EV:   { icon: 'flash',          color: '#059669', bg: '#D1FAE5' },
 };
 
-const SAMPLE_SPOTS: ParkingSpotDto[] = [
-  { id: 1, spotNumber: 'B1-P12', level: 'Basement 1', type: 'CAR',  status: 'OCCUPIED', vehicleNumber: 'KA-01-AB-1234', ownerName: 'You', ownerFlat: 'A1-302' },
-  { id: 2, spotNumber: 'B1-P13', level: 'Basement 1', type: 'BIKE', status: 'OCCUPIED', vehicleNumber: 'KA-01-CD-5678', ownerName: 'You', ownerFlat: 'A1-302' },
-  { id: 3, spotNumber: 'B2-P05', level: 'Basement 2', type: 'CAR',  status: 'AVAILABLE' },
-  { id: 4, spotNumber: 'B1-EV3', level: 'Basement 1', type: 'EV',   status: 'RESERVED', ownerName: 'Rahul K.', ownerFlat: 'B2-201' },
-  { id: 5, spotNumber: 'B2-P22', level: 'Basement 2', type: 'CAR',  status: 'AVAILABLE' },
-  { id: 6, spotNumber: 'B1-P08', level: 'Basement 1', type: 'BIKE', status: 'AVAILABLE' },
-];
-
 export default function ParkingScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<ParkingFilter>('MY_SPOTS');
-  const [spots, setSpots] = useState<ParkingSpotDto[]>(SAMPLE_SPOTS);
+  const [spots, setSpots] = useState<ParkingSpotDto[]>([]);
   const [visitorPasses, setVisitorPasses] = useState<VisitorPassDto[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // Reserve modal state
@@ -73,17 +64,23 @@ export default function ParkingScreen() {
     }, [goHome])
   );
 
-  const fetchSpots = useCallback(async (isRefresh = false) => {
+  const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
     try {
-      const data = await parkingService.getSpots();
-      if (Array.isArray(data) && data.length > 0) {
-        setSpots(data);
+      const [spotsData, passesData] = await Promise.all([
+        parkingService.getSpots(),
+        parkingService.getVisitorPasses(),
+      ]);
+      if (Array.isArray(spotsData)) {
+        setSpots(spotsData);
+      }
+      if (Array.isArray(passesData)) {
+        setVisitorPasses(passesData);
       }
     } catch {
-      // Gracefully retain current/sample spots on offline or initial load
+      // Gracefully handled inside hybrid parkingService
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -91,12 +88,12 @@ export default function ParkingScreen() {
   }, []);
 
   useEffect(() => {
-    fetchSpots();
-  }, [fetchSpots]);
+    fetchData();
+  }, [fetchData]);
 
   const onRefresh = useCallback(() => {
-    fetchSpots(true);
-  }, [fetchSpots]);
+    fetchData(true);
+  }, [fetchData]);
 
   // Open Reserve Modal
   const openReserveModal = (spot: ParkingSpotDto) => {
@@ -609,7 +606,7 @@ export default function ParkingScreen() {
 }
 
 const st = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 10,

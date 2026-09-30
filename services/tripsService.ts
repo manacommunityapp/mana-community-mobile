@@ -101,56 +101,55 @@ function normalizeTrip(t: any): TripDto {
   return {
     id: String(t.id),
     title: t.title || 'Community Trip',
-    category: t.category || 'General',
+    category: t.category || 'Outing',
     description: t.description,
     destination: t.destination || '',
-    departureDate: t.departureDate || 'Upcoming',
-    returnDate: t.returnDate,
-    departurePoint: t.departurePoint || 'Main Gate Society Bay',
-    duration: t.duration || 'Day Trip',
-    totalSeats: typeof t.totalSeats === 'number' ? t.totalSeats : 20,
+    departureDate: t.departureDate ? String(t.departureDate) : '',
+    returnDate: t.returnDate ? String(t.returnDate) : undefined,
+    departurePoint: t.departurePoint || 'Main Gate Bus Bay',
+    duration: t.duration,
+    pickupStops: t.pickupStops ?? [],
+    totalSeats: typeof t.totalSeats === 'number' ? t.totalSeats : 25,
     bookedSeats: typeof t.bookedSeats === 'number' ? t.bookedSeats : 0,
+    waitlistCount: t.waitlistCount,
+    maxWaitlist: t.maxWaitlist,
     pricePerPerson: typeof t.pricePerPerson === 'number' ? t.pricePerPerson : 0,
-    host: t.host || 'Resident Host',
+    hostId: t.hostId ? String(t.hostId) : undefined,
+    host: t.host || t.hostName || 'Resident Host',
     hostFlat: t.hostFlat || t.hostFlatNumber,
     hostFlatNumber: t.hostFlatNumber || t.hostFlat,
-    transport: t.transport || 'Society Coach',
-    highlights: Array.isArray(t.highlights) ? t.highlights : [],
-    includes: Array.isArray(t.includes) ? t.includes : [],
-    excludes: Array.isArray(t.excludes) ? t.excludes : [],
+    hostPhone: t.hostPhone,
+    itinerary: t.itinerary ?? [],
+    transport: t.transport || 'Coach',
+    highlights: t.highlights ?? [],
+    transportDetails: t.transportDetails,
+    accommodationDetails: t.accommodationDetails,
+    emergencyMarshal: t.emergencyMarshal,
+    includes: t.includes ?? [],
+    excludes: t.excludes ?? [],
+    cancellationPolicy: t.cancellationPolicy,
     status: t.status || 'UPCOMING',
+    imagePlaceholderColor: t.imagePlaceholderColor,
   };
 }
 
 function normalizeBooking(b: any): TripBookingDto {
-  let passengers: PassengerDto[] = [];
-  if (Array.isArray(b.passengers)) {
-    passengers = b.passengers;
-  } else if (typeof b.passengersJson === 'string') {
-    try {
-      passengers = JSON.parse(b.passengersJson);
-    } catch {}
-  }
-
   return {
     id: String(b.id),
     tripId: String(b.tripId),
     tripTitle: b.tripTitle || 'Community Trip',
     destination: b.destination || '',
-    departureDate: b.departureDate || 'Upcoming',
-    participantCount: typeof b.participantCount === 'number' ? b.participantCount : 1,
-    passengers,
-    selectedPickupPoint: b.selectedPickupPoint,
+    departureDate: b.departureDate ? String(b.departureDate) : '',
+    participantCount: typeof b.participantCount === 'number' ? b.participantCount : (b.passengers?.length ?? 1),
+    passengers: b.passengers ?? [],
     selectedRoomType: b.selectedRoomType,
+    selectedPickupPoint: b.selectedPickupPoint,
     totalAmount: typeof b.totalAmount === 'number' ? b.totalAmount : 0,
-    status: b.status || 'CONFIRMED',
-    boardingPassQR: b.boardingPassQR || `MANA-${b.id}`,
+    status: (b.status === 'WAITLISTED' || b.status === 'CANCELLED') ? b.status : 'CONFIRMED',
+    boardingPassQR: b.boardingPassQR || `BP-${b.tripId || 'TRIP'}-${b.id}`,
     bookedAt: b.bookedAt || new Date().toISOString(),
-    host: b.host || 'Resident Host',
-    attendance: {
-      checkedIn: Boolean(b.checkedIn),
-      checkedInAt: b.checkedInAt,
-    },
+    host: b.host,
+    attendance: b.attendance,
   };
 }
 
@@ -166,8 +165,8 @@ export const tripsService = {
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(normalizeTrip);
     } catch (err) {
-      secureLog.error('[tripsService] Failed to load trips', err);
-      return [];
+      secureLog.error('[tripsService] Failed to load trips from server', err);
+      throw err;
     }
   },
 
@@ -177,9 +176,12 @@ export const tripsService = {
   async getTrip(id: string): Promise<TripDto> {
     try {
       const res = await api.get<TripDto>(`/trips/${id}`);
-      return normalizeTrip(res.data);
+      if (res.data) {
+        return normalizeTrip(res.data);
+      }
+      throw new Error(`Trip ${id} not found`);
     } catch (err) {
-      secureLog.error(`[tripsService] Failed to load trip ${id}`, err);
+      secureLog.error(`[tripsService] Trip ${id} not found on server`, err);
       throw err;
     }
   },
@@ -187,17 +189,20 @@ export const tripsService = {
   /**
    * POST /api/trips/{id}/book
    */
-  async bookTrip(tripId: string, bookingPayload: {
-    passengers: PassengerDto[];
-    selectedRoomType?: string;
-    selectedPickupPoint?: string;
-    paymentMethod: string;
-  }): Promise<TripBookingDto> {
+  async bookTrip(
+    tripId: string,
+    bookingPayload: {
+      passengers: PassengerDto[];
+      selectedRoomType?: string;
+      selectedPickupPoint?: string;
+      paymentMethod: string;
+    },
+  ): Promise<TripBookingDto> {
     try {
       const res = await api.post<TripBookingDto>(`/trips/${tripId}/book`, bookingPayload);
       return normalizeBooking(res.data);
     } catch (err) {
-      secureLog.error(`[tripsService] Failed to book trip ${tripId}`, err);
+      secureLog.error(`[tripsService] Booking failed for trip ${tripId}`, err);
       throw err;
     }
   },
@@ -212,14 +217,17 @@ export const tripsService = {
       return list.map(normalizeBooking);
     } catch (err) {
       secureLog.error('[tripsService] Failed to load my bookings', err);
-      return [];
+      throw err;
     }
   },
 
   /**
    * POST /api/trips/bookings/{id}/cancel
    */
-  async cancelBooking(bookingId: string, reason?: string): Promise<{ refundAmount: number; penaltyDeducted: number }> {
+  async cancelBooking(
+    bookingId: string,
+    reason?: string,
+  ): Promise<{ refundAmount: number; penaltyDeducted: number }> {
     try {
       const res = await api.post(`/trips/bookings/${bookingId}/cancel`, { reason });
       return res.data;
@@ -237,7 +245,7 @@ export const tripsService = {
       const res = await api.post<TripDto>('/trips', payload);
       return normalizeTrip(res.data);
     } catch (err) {
-      secureLog.error('[tripsService] Failed to create trip', err);
+      secureLog.error('[tripsService] Failed to create trip on server', err);
       throw err;
     }
   },
@@ -252,7 +260,7 @@ export const tripsService = {
       return list.map(normalizeBooking);
     } catch (err) {
       secureLog.error(`[tripsService] Failed to load manifest for ${tripId}`, err);
-      return [];
+      throw err;
     }
   },
 
@@ -264,7 +272,7 @@ export const tripsService = {
       const res = await api.post<TripBookingDto>(`/trips/bookings/${bookingId}/check-in`);
       return normalizeBooking(res.data);
     } catch (err) {
-      secureLog.error(`[tripsService] Failed to check in booking ${bookingId}`, err);
+      secureLog.error(`[tripsService] Check-in failed for booking ${bookingId}`, err);
       throw err;
     }
   },
@@ -272,12 +280,15 @@ export const tripsService = {
   /**
    * POST /api/trips/{id}/reviews
    */
-  async submitReview(tripId: string, review: { rating: number; comment: string }): Promise<void> {
+  async submitReview(
+    tripId: string,
+    review: { rating: number; comment: string },
+  ): Promise<void> {
     try {
       await api.post(`/trips/${tripId}/reviews`, review);
     } catch (err) {
       secureLog.error(`[tripsService] Failed to submit review for ${tripId}`, err);
+      throw err;
     }
   },
 };
-
