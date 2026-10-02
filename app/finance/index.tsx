@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS, SHADOWS, FONTS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -14,6 +15,7 @@ import {
 } from '@/services/maintenanceDuesService';
 
 export default function MaintenanceDuesScreen() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -171,6 +173,24 @@ export default function MaintenanceDuesScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
     >
+      {/* ── Society Accounting ERP Hub Switcher ── */}
+      <TouchableOpacity
+        style={styles.societyHubBanner}
+        onPress={() => router.push('/finance/society-dashboard' as any)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.societyHubLeft}>
+          <View style={styles.societyHubIcon}>
+            <Ionicons name="business" size={18} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.societyHubTitle}>Society Treasury & ERP</Text>
+            <Text style={styles.societyHubSub}>Invoices, Vendors, 3-Tier Approvals & Balance Sheet</Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+      </TouchableOpacity>
+
       {/* ── Advance Wallet Card ── */}
       <View style={styles.walletCard}>
         <View style={styles.walletHeader}>
@@ -656,4 +676,26 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   receiptDoneBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: 'Outfit-Bold' },
+  societyHubBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  societyHubLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  societyHubIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  societyHubTitle: { fontSize: 13, fontWeight: 'bold', color: COLORS.primary, fontFamily: 'Outfit-Bold' },
+  societyHubSub: { fontSize: 11, color: '#64748B', fontFamily: 'DMSans-Regular', marginTop: 1 },
 });
