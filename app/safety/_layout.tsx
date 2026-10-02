@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
 
-export default function CPOSLayout() {
+export default function SafetyLayout() {
   return <Stack screenOptions={{ headerShown: false }} />;
 }

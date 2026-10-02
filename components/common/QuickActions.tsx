@@ -45,6 +45,8 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: 'food',         emoji: '🍽️', icon: 'restaurant-outline',       label: 'Food & Kitchen',route: '/food',                 bg: '#FFE4E6', color: '#E11D48', category: 'Commerce & Food' },
   { id: 'auction',      emoji: '🏷️', icon: 'pricetag-outline',         label: 'Sports Auction',route: '/auction',              bg: '#ECFDF5', color: '#10B981', category: 'Commerce & Food' },
   { id: 'facilities',   emoji: '🏋️', icon: 'fitness-outline',          label: 'Amenities',     route: '/facilities',           bg: '#CCFBF1', color: '#0D9488', category: 'Facilities' },
+  { id: 'inventory',    emoji: '📦', icon: 'cube-outline',             label: 'Inventory',     route: '/inventory',            bg: '#EEF2FF', color: '#4F46E5', category: 'Facilities', badge: 'NEW' },
+  { id: 'safety',       emoji: '🛡️', icon: 'shield-half-outline',      label: 'Safety Center', route: '/safety',               bg: '#0F172A', color: '#F8FAFC', category: 'Safety & Help', badge: 'NEW' },
 ];
 
 const CATEGORY_ICONS: Record<QuickActionItem['category'], keyof typeof Ionicons.glyphMap> = {

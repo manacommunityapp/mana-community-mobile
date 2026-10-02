@@ -50,3 +50,99 @@ export interface AIPropertyInsightDto {
   recommendation: string;
   confidenceScore: number;
 }
+
+// ── Floor Plan / Unit Directory ────────────────────────────────
+
+export interface FloorPlanUnit {
+  id: string;
+  unitNumber: string;
+  tower: string;
+  floor: number;
+  configuration: string;
+  status: 'OCCUPIED' | 'VACANT' | 'RENTED' | 'UNDER_RENOVATION';
+  ownerName?: string;
+  carpetAreaSqFt?: number;
+}
+
+export interface TowerSummary {
+  tower: string;
+  totalFloors: number;
+  totalUnits: number;
+  occupiedCount: number;
+  vacantCount: number;
+  rentedCount: number;
+}
+
+// ── Tenant KYC ─────────────────────────────────────────────────
+
+export type KycDocType = 'AADHAAR' | 'PAN' | 'PASSPORT' | 'VOTER_ID' | 'POLICE_VERIFICATION' | 'RENTAL_AGREEMENT';
+export type KycStatus = 'VERIFIED' | 'PENDING' | 'REJECTED' | 'EXPIRED';
+
+export interface TenantKycDocument {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  unitNumber: string;
+  docType: KycDocType;
+  status: KycStatus;
+  documentNumber?: string;
+  uploadedAt?: string;
+  verifiedAt?: string;
+  expiryDate?: string;
+  notes?: string;
+}
+
+export interface TenantKycSummary {
+  totalTenants: number;
+  fullyVerified: number;
+  pendingKyc: number;
+  expiredDocs: number;
+}
+
+// ── CRM Pipeline ───────────────────────────────────────────────
+
+export type CrmLeadStage = 'INQUIRY' | 'SITE_VISIT' | 'NEGOTIATION' | 'AGREEMENT' | 'CLOSED_WON' | 'CLOSED_LOST';
+export type CrmLeadSource = 'REFERRAL' | 'PORTAL' | 'WALK_IN' | 'BROKER' | 'SOCIAL_MEDIA';
+export type CrmDealType = 'SALE' | 'RENTAL';
+
+export interface CrmLead {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  unitNumber: string;
+  dealType: CrmDealType;
+  stage: CrmLeadStage;
+  source: CrmLeadSource;
+  askingPrice?: number;
+  offeredPrice?: number;
+  monthlyRent?: number;
+  notes?: string;
+  nextFollowUp?: string;
+  createdAt: string;
+  updatedAt: string;
+  assignedTo?: string;
+}
+
+export interface CrmPipelineSummary {
+  totalLeads: number;
+  inquiry: number;
+  siteVisit: number;
+  negotiation: number;
+  agreement: number;
+  closedWon: number;
+  closedLost: number;
+  totalPipelineValue: number;
+}
+
+export interface CreateCrmLeadRequest {
+  name: string;
+  phone: string;
+  email?: string;
+  unitNumber: string;
+  dealType: CrmDealType;
+  source: CrmLeadSource;
+  askingPrice?: number;
+  monthlyRent?: number;
+  notes?: string;
+}
