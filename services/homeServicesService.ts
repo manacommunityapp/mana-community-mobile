@@ -55,6 +55,96 @@ export interface HomeServiceBookingRequest {
   requirementsNotes?: string;
 }
 
+// ── Domestic Staff Types ────────────────────────────────────────
+
+export type StaffRole = 'MAID' | 'COOK' | 'DRIVER' | 'NANNY' | 'GARDENER' | 'WATCHMAN' | 'HELPER';
+export type AttendanceStatus = 'CHECKED_IN' | 'CHECKED_OUT' | 'ABSENT' | 'ON_LEAVE' | 'NOT_MARKED';
+
+export interface DomesticStaffDto {
+  id: string;
+  name: string;
+  role: StaffRole;
+  phone: string;
+  photo?: string;
+  verified: boolean;
+  policeVerified: boolean;
+  aadhaarOnFile: boolean;
+  rating: number;
+  reviewCount: number;
+  experience: string;
+  monthlySalary: number;
+  workingFlats: string[];
+  workingTowers: string;
+  shiftTime: string;
+  joiningDate: string;
+  status: 'ACTIVE' | 'ON_LEAVE' | 'TERMINATED';
+}
+
+export interface StaffAttendanceDto {
+  id: string;
+  staffId: string;
+  staffName: string;
+  role: StaffRole;
+  date: string;
+  checkInTime?: string;
+  checkInGate?: string;
+  checkOutTime?: string;
+  checkOutGate?: string;
+  status: AttendanceStatus;
+  markedBy?: string;
+  photoUrl?: string;
+}
+
+export interface StaffAttendanceSummary {
+  totalStaff: number;
+  checkedIn: number;
+  checkedOut: number;
+  absent: number;
+  onLeave: number;
+  notMarked: number;
+}
+
+export interface ServicePackageDto {
+  id: string;
+  staffId: string;
+  staffName: string;
+  role: StaffRole;
+  flatNumber: string;
+  packageType: 'MONTHLY' | 'WEEKLY' | 'DAILY';
+  services: string[];
+  monthlySalary: number;
+  lastPaidDate?: string;
+  nextDueDate: string;
+  paymentStatus: 'PAID' | 'DUE' | 'OVERDUE';
+  startDate: string;
+  endDate?: string;
+}
+
+export interface StaffJobPostDto {
+  id: string;
+  title: string;
+  role: StaffRole;
+  description: string;
+  requirements: string[];
+  salaryRange: string;
+  shiftPreference: string;
+  tower?: string;
+  flatNumber: string;
+  postedBy: string;
+  postedAt: string;
+  status: 'OPEN' | 'FILLED' | 'CLOSED';
+  applicantCount: number;
+}
+
+export interface CreateJobPostRequest {
+  title: string;
+  role: StaffRole;
+  description: string;
+  requirements?: string[];
+  salaryRange: string;
+  shiftPreference: string;
+}
+
 const FALLBACK_WORKERS: HomeHelpWorkerDto[] = [
   {
     id: 'w-1',
@@ -221,6 +311,42 @@ const FALLBACK_CATEGORIES: HomeServiceCategoryDto[] = [
   { id: '8', name: 'Pest Control', code: 'PEST_CONTROL', description: 'Cockroach, termite & bedbug control', icon: 'bug-outline' },
 ];
 
+const FALLBACK_DOMESTIC_STAFF: DomesticStaffDto[] = [
+  { id: 'ds-1', name: 'Laxmi Devi', role: 'MAID', phone: '+91 98334 56781', verified: true, policeVerified: true, aadhaarOnFile: true, rating: 4.9, reviewCount: 95, experience: '8 yrs', monthlySalary: 3500, workingFlats: ['A-1204', 'A-1205', 'B-302'], workingTowers: 'Tower A & B', shiftTime: '7:00 AM - 11:00 AM', joiningDate: '2022-03-15', status: 'ACTIVE' },
+  { id: 'ds-2', name: 'Meena Kumari', role: 'COOK', phone: '+91 99001 78923', verified: true, policeVerified: true, aadhaarOnFile: true, rating: 4.8, reviewCount: 72, experience: '6 yrs', monthlySalary: 5000, workingFlats: ['A-1204', 'C-302'], workingTowers: 'Tower A & C', shiftTime: '6:30 AM - 9:30 AM', joiningDate: '2023-01-10', status: 'ACTIVE' },
+  { id: 'ds-3', name: 'Raju Driver', role: 'DRIVER', phone: '+91 98765 44321', verified: true, policeVerified: true, aadhaarOnFile: true, rating: 4.7, reviewCount: 45, experience: '12 yrs', monthlySalary: 12000, workingFlats: ['A-1204'], workingTowers: 'Tower A', shiftTime: '8:00 AM - 8:00 PM', joiningDate: '2024-06-01', status: 'ACTIVE' },
+  { id: 'ds-4', name: 'Priya Sharma', role: 'NANNY', phone: '+91 88990 11223', verified: true, policeVerified: true, aadhaarOnFile: true, rating: 4.9, reviewCount: 38, experience: '5 yrs', monthlySalary: 8000, workingFlats: ['B-302'], workingTowers: 'Tower B', shiftTime: '9:00 AM - 5:00 PM', joiningDate: '2025-02-14', status: 'ACTIVE' },
+  { id: 'ds-5', name: 'Babu Gardener', role: 'GARDENER', phone: '+91 97654 33289', verified: true, policeVerified: false, aadhaarOnFile: true, rating: 4.6, reviewCount: 28, experience: '10 yrs', monthlySalary: 2500, workingFlats: ['A-1204', 'A-1205', 'C-302', 'B-101'], workingTowers: 'All Towers', shiftTime: '6:00 AM - 10:00 AM', joiningDate: '2021-08-20', status: 'ACTIVE' },
+  { id: 'ds-6', name: 'Kamla Bai', role: 'MAID', phone: '+91 98112 55678', verified: true, policeVerified: true, aadhaarOnFile: true, rating: 4.8, reviewCount: 64, experience: '9 yrs', monthlySalary: 4000, workingFlats: ['C-302', 'C-303'], workingTowers: 'Tower C', shiftTime: '2:00 PM - 6:00 PM', joiningDate: '2023-07-01', status: 'ON_LEAVE' },
+];
+
+const FALLBACK_ATTENDANCE: StaffAttendanceDto[] = [
+  { id: 'att-1', staffId: 'ds-1', staffName: 'Laxmi Devi', role: 'MAID', date: '2026-10-02', checkInTime: '7:05 AM', checkInGate: 'Main Gate', status: 'CHECKED_IN', markedBy: 'Guard Suresh' },
+  { id: 'att-2', staffId: 'ds-2', staffName: 'Meena Kumari', role: 'COOK', date: '2026-10-02', checkInTime: '6:32 AM', checkInGate: 'Main Gate', checkOutTime: '9:45 AM', checkOutGate: 'Side Gate', status: 'CHECKED_OUT', markedBy: 'Guard Suresh' },
+  { id: 'att-3', staffId: 'ds-3', staffName: 'Raju Driver', role: 'DRIVER', date: '2026-10-02', checkInTime: '7:55 AM', checkInGate: 'Basement', status: 'CHECKED_IN', markedBy: 'ANPR' },
+  { id: 'att-4', staffId: 'ds-4', staffName: 'Priya Sharma', role: 'NANNY', date: '2026-10-02', status: 'NOT_MARKED' },
+  { id: 'att-5', staffId: 'ds-5', staffName: 'Babu Gardener', role: 'GARDENER', date: '2026-10-02', checkInTime: '6:10 AM', checkInGate: 'Service Gate', status: 'CHECKED_IN', markedBy: 'Guard Ram' },
+  { id: 'att-6', staffId: 'ds-6', staffName: 'Kamla Bai', role: 'MAID', date: '2026-10-02', status: 'ON_LEAVE' },
+];
+
+const FALLBACK_ATTENDANCE_SUMMARY: StaffAttendanceSummary = {
+  totalStaff: 6, checkedIn: 3, checkedOut: 1, absent: 0, onLeave: 1, notMarked: 1,
+};
+
+const FALLBACK_PACKAGES: ServicePackageDto[] = [
+  { id: 'pkg-1', staffId: 'ds-1', staffName: 'Laxmi Devi', role: 'MAID', flatNumber: 'A-1204', packageType: 'MONTHLY', services: ['Sweeping', 'Mopping', 'Utensils', 'Dusting'], monthlySalary: 3500, lastPaidDate: '2026-09-01', nextDueDate: '2026-10-01', paymentStatus: 'OVERDUE', startDate: '2022-03-15' },
+  { id: 'pkg-2', staffId: 'ds-2', staffName: 'Meena Kumari', role: 'COOK', flatNumber: 'A-1204', packageType: 'MONTHLY', services: ['Breakfast', 'Lunch Prep', 'Dinner'], monthlySalary: 5000, lastPaidDate: '2026-09-05', nextDueDate: '2026-10-05', paymentStatus: 'DUE', startDate: '2023-01-10' },
+  { id: 'pkg-3', staffId: 'ds-3', staffName: 'Raju Driver', role: 'DRIVER', flatNumber: 'A-1204', packageType: 'MONTHLY', services: ['School Drop', 'Office Commute', 'Errands'], monthlySalary: 12000, lastPaidDate: '2026-09-01', nextDueDate: '2026-10-01', paymentStatus: 'OVERDUE', startDate: '2024-06-01' },
+  { id: 'pkg-4', staffId: 'ds-5', staffName: 'Babu Gardener', role: 'GARDENER', flatNumber: 'A-1204', packageType: 'MONTHLY', services: ['Lawn', 'Plant Watering', 'Pruning'], monthlySalary: 2500, lastPaidDate: '2026-09-15', nextDueDate: '2026-10-15', paymentStatus: 'PAID', startDate: '2021-08-20' },
+];
+
+const FALLBACK_JOB_POSTS: StaffJobPostDto[] = [
+  { id: 'job-1', title: 'Full-time Maid Needed', role: 'MAID', description: 'Looking for experienced maid for 3BHK apartment. Daily sweeping, mopping, utensils, and laundry folding.', requirements: ['Hindi speaking', '3+ years experience', 'Police verified'], salaryRange: '₹3,500 - ₹4,500/mo', shiftPreference: 'Morning (7 AM - 11 AM)', tower: 'Tower B', flatNumber: 'B-501', postedBy: 'Arun Mehta', postedAt: '2026-09-28', status: 'OPEN', applicantCount: 3 },
+  { id: 'job-2', title: 'Part-time Cook (Dinner Only)', role: 'COOK', description: 'Need a cook for dinner preparation. North Indian cuisine preferred. Family of 4.', requirements: ['North Indian cooking', 'Hygiene conscious'], salaryRange: '₹3,000 - ₹4,000/mo', shiftPreference: 'Evening (5 PM - 8 PM)', tower: 'Tower A', flatNumber: 'A-803', postedBy: 'Sunita Roy', postedAt: '2026-09-30', status: 'OPEN', applicantCount: 1 },
+  { id: 'job-3', title: 'Experienced Nanny for Toddler', role: 'NANNY', description: 'Nanny needed for 2-year-old. Must be caring, patient, and have first-aid knowledge.', requirements: ['First aid certified', '2+ years with toddlers', 'English speaking'], salaryRange: '₹8,000 - ₹10,000/mo', shiftPreference: 'Full Day (9 AM - 6 PM)', tower: 'Tower C', flatNumber: 'C-402', postedBy: 'Prateek Sharma', postedAt: '2026-10-01', status: 'OPEN', applicantCount: 5 },
+  { id: 'job-4', title: 'Driver for School & Office', role: 'DRIVER', description: 'Need reliable driver with own two-wheeler for school pickup/drop and occasional office commute.', requirements: ['Valid license', 'Know city routes', '5+ years driving'], salaryRange: '₹10,000 - ₹14,000/mo', shiftPreference: 'Split Shift', flatNumber: 'A-1204', postedBy: 'Resident', postedAt: '2026-09-25', status: 'FILLED', applicantCount: 8 },
+];
+
 function mapWorkerEntityToDto(w: any): HomeHelpWorkerDto {
   return {
     id: w.id,
@@ -379,6 +505,93 @@ export const homeServicesService = {
   /**
    * PATCH /v1/home-services/bookings/{id}/status with hybrid fallback
    */
+  // ── Domestic Staff Directory ────────────────────────────────────
+  async getDomesticStaff(role?: StaffRole): Promise<DomesticStaffDto[]> {
+    try {
+      const res = await api.get<DomesticStaffDto[]>('/v1/home-services/domestic-staff', {
+        params: role ? { role } : {},
+      });
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+
+    try {
+      const res = await api.get<DomesticStaffDto[]>('/home-services/staff', {
+        params: role ? { role } : {},
+      });
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+
+    return role ? FALLBACK_DOMESTIC_STAFF.filter((s) => s.role === role) : FALLBACK_DOMESTIC_STAFF;
+  },
+
+  // ── Staff Attendance ──────────────────────────────────────────
+  async getStaffAttendance(date?: string): Promise<StaffAttendanceDto[]> {
+    try {
+      const res = await api.get<StaffAttendanceDto[]>('/v1/home-services/attendance', {
+        params: date ? { date } : {},
+      });
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+
+    try {
+      const res = await api.get<StaffAttendanceDto[]>('/home-services/staff/attendance', {
+        params: date ? { date } : {},
+      });
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+
+    return FALLBACK_ATTENDANCE;
+  },
+
+  async getAttendanceSummary(): Promise<StaffAttendanceSummary> {
+    try {
+      const res = await api.get<StaffAttendanceSummary>('/v1/home-services/attendance/summary');
+      if (res.data) return res.data;
+    } catch {}
+
+    return FALLBACK_ATTENDANCE_SUMMARY;
+  },
+
+  // ── Service Packages & Salary ─────────────────────────────────
+  async getServicePackages(): Promise<ServicePackageDto[]> {
+    try {
+      const res = await api.get<ServicePackageDto[]>('/v1/home-services/packages');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+
+    try {
+      const res = await api.get<ServicePackageDto[]>('/home-services/packages/mine');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+
+    return FALLBACK_PACKAGES;
+  },
+
+  // ── Job Requirements Board ────────────────────────────────────
+  async getJobPosts(): Promise<StaffJobPostDto[]> {
+    try {
+      const res = await api.get<StaffJobPostDto[]>('/v1/home-services/jobs');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+
+    try {
+      const res = await api.get<StaffJobPostDto[]>('/home-services/job-board');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+
+    return FALLBACK_JOB_POSTS;
+  },
+
+  async createJobPost(data: CreateJobPostRequest): Promise<StaffJobPostDto> {
+    try {
+      const res = await api.post<StaffJobPostDto>('/v1/home-services/jobs', data);
+      return res.data;
+    } catch {
+      const res = await api.post<StaffJobPostDto>('/home-services/job-board', data);
+      return res.data;
+    }
+  },
+
   async cancelBooking(bookingId: string): Promise<{ success: boolean }> {
     try {
       await api.patch(`/v1/home-services/bookings/${bookingId}/status`, null, {
