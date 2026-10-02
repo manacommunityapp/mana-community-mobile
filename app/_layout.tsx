@@ -140,6 +140,7 @@ export default function RootLayout() {
             <Stack.Screen name="parking" />
             <Stack.Screen name="facilities" />
             <Stack.Screen name="inventory" />
+            <Stack.Screen name="safety" />
             <Stack.Screen name="services" />
             <Stack.Screen name="pets" />
             <Stack.Screen name="jobs" />
