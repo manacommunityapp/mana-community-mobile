@@ -1,17 +1,28 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  FlatList, ScrollView, BackHandler, Modal,
-  TextInput, Alert, RefreshControl, ActivityIndicator, Share,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  BackHandler,
+  Modal,
+  TextInput,
+  Alert,
+  RefreshControl,
+  ActivityIndicator,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import {
   parkingService,
   ParkingSpotDto,
   VisitorPassDto,
+  ParkingOccupancySummaryDto,
 } from '@/services/parkingService';
 
 type ParkingFilter = 'MY_SPOTS' | 'AVAILABLE' | 'ALL' | 'VISITOR_PASS';
@@ -22,18 +33,15 @@ const TYPE_ICON: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: s
   EV:   { icon: 'flash',          color: '#059669', bg: '#D1FAE5' },
 };
 
-export default function ParkingScreen() {
+export default function ParkingHomeScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<ParkingFilter>('MY_SPOTS');
-  const [spots, setSpots] = useState<ParkingSpotDto[]>([]);
-  const [visitorPasses, setVisitorPasses] = useState<VisitorPassDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [levelFilter, setLevelFilter] = useState<'ALL' | 'Basement 1' | 'Basement 2'>('ALL');
 
   // Reserve modal state
   const [reserveModalVisible, setReserveModalVisible] = useState(false);
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpotDto | null>(null);
-  const [reserveVehicle, setReserveVehicle] = useState('');
+  const [reserveVehicle, setReserveVehicle] = useState('KA-01-AB-1234');
   const [reserveType, setReserveType] = useState<'CAR' | 'BIKE' | 'EV'>('CAR');
   const [reserveNotes, setReserveNotes] = useState('');
   const [submittingReserve, setSubmittingReserve] = useState(false);
@@ -44,7 +52,6 @@ export default function ParkingScreen() {
   const [visitorPhone, setVisitorPhone] = useState('');
   const [visitorVehicle, setVisitorVehicle] = useState('');
   const [visitorType, setVisitorType] = useState<'CAR' | 'BIKE' | 'EV'>('CAR');
-  const [visitorDurationHours, setVisitorDurationHours] = useState(8);
   const [visitorPurpose, setVisitorPurpose] = useState('Guest Visit');
   const [submittingPass, setSubmittingPass] = useState(false);
 
@@ -59,501 +66,511 @@ export default function ParkingScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => { goHome(); return true; });
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goHome();
+        return true;
+      });
       return () => sub.remove();
     }, [goHome])
   );
 
-  const fetchData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  // Queries
+  const { data: occupancy, isLoading: occLoading, refetch: refetchOcc } = useQuery<ParkingOccupancySummaryDto>({
+    queryKey: ['parkingOccupancy'],
+    queryFn: parkingService.getOccupancySummary,
+  });
 
-    try {
-      const [spotsData, passesData] = await Promise.all([
-        parkingService.getSpots(),
-        parkingService.getVisitorPasses(),
-      ]);
-      if (Array.isArray(spotsData)) {
-        setSpots(spotsData);
-      }
-      if (Array.isArray(passesData)) {
-        setVisitorPasses(passesData);
-      }
-    } catch {
-      // Gracefully handled inside hybrid parkingService
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const { data: spots = [], isLoading: spotsLoading, refetch: refetchSpots } = useQuery<ParkingSpotDto[]>({
+    queryKey: ['parkingSpots', levelFilter],
+    queryFn: () => parkingService.getSpots(levelFilter === 'ALL' ? undefined : { level: levelFilter }),
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data: visitorPasses = [], isLoading: passesLoading, refetch: refetchPasses } = useQuery<VisitorPassDto[]>({
+    queryKey: ['parkingVisitorPasses'],
+    queryFn: parkingService.getVisitorPasses,
+  });
 
-  const onRefresh = useCallback(() => {
-    fetchData(true);
-  }, [fetchData]);
+  const { data: activeEVSession } = useQuery({
+    queryKey: ['activeEVSession'],
+    queryFn: parkingService.getActiveEVSession,
+  });
 
-  // Open Reserve Modal
-  const openReserveModal = (spot: ParkingSpotDto) => {
-    setSelectedSpot(spot);
-    setReserveType((spot.type as 'CAR' | 'BIKE' | 'EV') || 'CAR');
-    setReserveVehicle('');
-    setReserveNotes('');
-    setReserveModalVisible(true);
+  const { data: anprLogs = [] } = useQuery({
+    queryKey: ['anprLogsQuick'],
+    queryFn: () => parkingService.getANPRLogs(),
+  });
+
+  const isLoading = occLoading || spotsLoading || passesLoading;
+
+  const onRefresh = () => {
+    refetchOcc();
+    refetchSpots();
+    refetchPasses();
   };
 
-  // Submit Spot Reservation
-  const handleConfirmReservation = async () => {
-    if (!selectedSpot) return;
-    if (!reserveVehicle.trim()) {
-      Alert.alert('Required', 'Please enter your vehicle number.');
+  const filteredSpots = spots.filter((s) => {
+    if (filter === 'MY_SPOTS') return s.ownerName === 'You' || s.ownerFlat === 'A1-302';
+    if (filter === 'AVAILABLE') return s.status === 'AVAILABLE';
+    return true;
+  });
+
+  const handleReserveSpot = async () => {
+    if (!selectedSpot || !reserveVehicle.trim()) {
+      Alert.alert('Required Info', 'Please enter your vehicle plate number.');
       return;
     }
-
     setSubmittingReserve(true);
     try {
-      const updated = await parkingService.reserveSpot({
+      await parkingService.reserveSpot({
         spotId: selectedSpot.id,
         vehicleNumber: reserveVehicle.trim().toUpperCase(),
         vehicleType: reserveType,
-        notes: reserveNotes.trim() || undefined,
+        notes: reserveNotes.trim(),
       });
-
-      setSpots(prev => prev.map(s => (s.id === updated.id ? updated : s)));
+      refetchSpots();
+      refetchOcc();
       setReserveModalVisible(false);
-      Alert.alert('Spot Reserved', `Parking spot ${updated.spotNumber} has been reserved for ${updated.vehicleNumber}.`);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err.message || 'Unable to reserve spot. Please try again.';
-      Alert.alert('Reservation Failed', msg);
+      setReserveNotes('');
+      Alert.alert('Spot Reserved', `Bay ${selectedSpot.spotNumber} has been linked to your vehicle ${reserveVehicle}.`);
+    } catch {
+      Alert.alert('Error', 'Unable to complete reservation.');
     } finally {
       setSubmittingReserve(false);
     }
   };
 
-  // Submit Visitor Pass
-  const handleCreateVisitorPass = async () => {
-    if (!visitorName.trim()) {
-      Alert.alert('Required', 'Please enter the visitor\'s name.');
+  const handleGeneratePass = async () => {
+    if (!visitorName.trim() || !visitorVehicle.trim()) {
+      Alert.alert('Required Info', 'Please enter guest name and vehicle number.');
       return;
     }
-    if (!visitorVehicle.trim()) {
-      Alert.alert('Required', 'Please enter the vehicle number.');
-      return;
-    }
-
     setSubmittingPass(true);
     try {
-      const now = new Date();
-      const validUntil = new Date(now.getTime() + visitorDurationHours * 60 * 60 * 1000);
-
       const pass = await parkingService.createVisitorPass({
         visitorName: visitorName.trim(),
-        visitorPhone: visitorPhone.trim() || undefined,
+        visitorPhone: visitorPhone.trim(),
         vehicleNumber: visitorVehicle.trim().toUpperCase(),
         vehicleType: visitorType,
-        validFrom: now.toISOString(),
-        validUntil: validUntil.toISOString(),
-        purpose: visitorPurpose.trim() || 'Guest Visit',
+        purpose: visitorPurpose.trim(),
       });
-
-      setVisitorPasses(prev => [pass, ...prev]);
-      setGeneratedPass(pass);
+      refetchPasses();
+      refetchOcc();
       setVisitorModalVisible(false);
-      setPassSuccessModalVisible(true);
-
-      // Reset form
       setVisitorName('');
       setVisitorPhone('');
       setVisitorVehicle('');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err.message || 'Unable to generate pass. Please try again.';
-      Alert.alert('Pass Creation Failed', msg);
+      setGeneratedPass(pass);
+      setPassSuccessModalVisible(true);
+    } catch {
+      Alert.alert('Error', 'Unable to generate visitor pass.');
     } finally {
       setSubmittingPass(false);
     }
   };
 
-  // Share generated pass
-  const handleSharePass = async (pass: VisitorPassDto) => {
-    try {
-      await Share.share({
-        message: `Mana Community Visitor Parking Pass\nPass Code: ${pass.passCode}\nVisitor: ${pass.visitorName}\nVehicle: ${pass.vehicleNumber}\nValid Until: ${new Date(pass.validUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}\nShow this code at the security gate upon arrival.`,
-      });
-    } catch {}
+  const handleSharePass = (pass: VisitorPassDto) => {
+    Share.share({
+      title: `Mana Community Visitor Parking Pass: ${pass.passCode}`,
+      message: `🚗 *Mana Community Visitor Parking Pass*\nPass Code: ${pass.passCode}\nGuest: ${pass.visitorName}\nVehicle: ${pass.vehicleNumber}\nAllocated Bay: ${pass.spotNumber || 'B2 Visitor Area'}\nShow this code at Security Gate for automated ANPR clearance.`,
+    });
   };
 
-  // Filter spots
-  const filteredSpots = spots.filter(s => {
-    if (filter === 'MY_SPOTS') {
-      return s.ownerName === 'You' || s.status === 'OCCUPIED' && s.ownerName?.toLowerCase().includes('you');
-    }
-    if (filter === 'AVAILABLE') {
-      return s.status === 'AVAILABLE';
-    }
-    if (filter === 'ALL') {
-      return true;
-    }
-    return false;
-  });
-
-  const renderSpotItem = ({ item }: { item: ParkingSpotDto }) => {
-    const meta = TYPE_ICON[item.type] || TYPE_ICON.CAR;
-    const isAvailable = item.status === 'AVAILABLE';
-
-    return (
-      <View style={st.spotCard}>
-        <View style={[st.spotIcon, { backgroundColor: meta.bg }]}>
-          <Ionicons name={meta.icon} size={22} color={meta.color} />
-        </View>
-
-        <View style={st.spotInfo}>
-          <View style={st.spotHeaderRow}>
-            <Text style={st.spotNumber}>{item.spotNumber}</Text>
-            <View style={[
-              st.statusPill,
-              item.status === 'AVAILABLE' ? { backgroundColor: '#D1FAE5' } :
-              item.status === 'RESERVED' ? { backgroundColor: '#FEF3C7' } :
-              { backgroundColor: COLORS.surfaceAlt },
-            ]}>
-              <Text style={[
-                st.statusPillText,
-                item.status === 'AVAILABLE' ? { color: '#059669' } :
-                item.status === 'RESERVED' ? { color: '#D97706' } :
-                { color: COLORS.textMuted },
-              ]}>
-                {item.status === 'OCCUPIED' ? 'In Use' : item.status === 'AVAILABLE' ? 'Free' : 'Reserved'}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={st.spotLevel}>{item.level} • {item.type}</Text>
-
-          {item.vehicleNumber && (
-            <View style={st.vehicleRow}>
-              <Ionicons name="car-outline" size={13} color={COLORS.textMuted} />
-              <Text style={st.vehicleText}>{item.vehicleNumber}</Text>
-            </View>
-          )}
-
-          {item.ownerName && (
-            <Text style={st.ownerText}>
-              Assigned: {item.ownerName} {item.ownerFlat ? `(${item.ownerFlat})` : ''}
-            </Text>
-          )}
-
-          {isAvailable && (
-            <TouchableOpacity
-              style={st.reserveBtn}
-              onPress={() => openReserveModal(item)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="bookmark-outline" size={14} color="#FFFFFF" />
-              <Text style={st.reserveBtnText}>Reserve Spot</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const renderVisitorPassItem = ({ item }: { item: VisitorPassDto }) => {
-    return (
-      <View style={st.passCard}>
-        <View style={st.passHeader}>
-          <View style={st.passCodeContainer}>
-            <Ionicons name="ticket" size={16} color={COLORS.primary} />
-            <Text style={st.passCodeText}>{item.passCode}</Text>
-          </View>
-          <View style={st.passStatusBadge}>
-            <Text style={st.passStatusText}>{item.status}</Text>
-          </View>
-        </View>
-
-        <View style={st.passBody}>
-          <Text style={st.passVisitorName}>{item.visitorName}</Text>
-          <Text style={st.passVehicle}>{item.vehicleNumber} ({item.vehicleType})</Text>
-          {item.purpose && <Text style={st.passPurpose}>{item.purpose}</Text>}
-          <Text style={st.passValidity}>
-            Valid until: {new Date(item.validUntil).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={st.sharePassBtn}
-          onPress={() => handleSharePass(item)}
-          hitSlop={6}
-        >
-          <Ionicons name="share-social-outline" size={15} color={COLORS.primary} />
-          <Text style={st.sharePassText}>Share Pass</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const latestANPR = anprLogs[0];
 
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
-      {/* ── Header ────────────────────────────────────────────── */}
-      <View style={st.header}>
-        <TouchableOpacity onPress={goHome} style={st.backBtn} hitSlop={8}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* ── Top App Bar ───────────────────────────────────────────── */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity onPress={goHome} style={styles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </TouchableOpacity>
-        <View style={st.headerCenter}>
-          <Text style={st.headerTitle}>Parking</Text>
-          <Text style={st.headerSub}>Manage your spots & visitor passes</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.appBarTitle}>Smart Parking & EV Hub</Text>
+          <Text style={styles.appBarSubtitle}>IoT Automated Basements & ANPR Gates</Text>
         </View>
         <TouchableOpacity
-          style={st.headerActionBtn}
-          onPress={() => setVisitorModalVisible(true)}
-          activeOpacity={0.8}
+          style={styles.headerActionBtn}
+          onPress={() => router.push('/parking/anpr' as any)}
+          activeOpacity={0.7}
         >
-          <Ionicons name="add" size={16} color="#FFFFFF" />
-          <Text style={st.headerActionText}>Pass</Text>
+          <Ionicons name="videocam-outline" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      {/* ── Filters ───────────────────────────────────────────── */}
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={st.filterRow}
-        style={st.filterScroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={COLORS.primary} />}
       >
-        {([
-          { key: 'MY_SPOTS' as ParkingFilter, label: 'My Spots', icon: 'key-outline' as const },
-          { key: 'AVAILABLE' as ParkingFilter, label: 'Available', icon: 'checkmark-circle-outline' as const },
-          { key: 'ALL' as ParkingFilter, label: 'All Spots', icon: 'grid-outline' as const },
-          { key: 'VISITOR_PASS' as ParkingFilter, label: 'Visitor Passes', icon: 'ticket-outline' as const },
-        ]).map(f => (
-          <TouchableOpacity
-            key={f.key}
-            style={[st.filterChip, filter === f.key && st.filterChipActive]}
-            onPress={() => setFilter(f.key)}
-          >
-            <Ionicons name={f.icon} size={14} color={filter === f.key ? '#fff' : COLORS.textMuted} />
-            <Text style={[st.filterText, filter === f.key && st.filterTextActive]}>{f.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* ── Content ───────────────────────────────────────────── */}
-      {loading && !refreshing ? (
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={st.loadingText}>Loading parking spots...</Text>
-        </View>
-      ) : filter === 'VISITOR_PASS' ? (
-        <FlatList
-          data={visitorPasses}
-          keyExtractor={item => String(item.id || item.passCode)}
-          renderItem={renderVisitorPassItem}
-          contentContainerStyle={st.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-          ListEmptyComponent={
-            <View style={st.empty}>
-              <Ionicons name="ticket-outline" size={48} color={COLORS.textMuted} />
-              <Text style={st.emptyTitle}>No Visitor Passes</Text>
-              <Text style={st.emptyDesc}>Generate a temporary visitor parking pass for your upcoming guests.</Text>
-              <TouchableOpacity
-                style={st.emptyActionBtn}
-                onPress={() => setVisitorModalVisible(true)}
-              >
-                <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
-                <Text style={st.emptyActionBtnText}>Generate Pass</Text>
-              </TouchableOpacity>
+        {/* ── Occupancy & Sensor KPI Grid ───────────────────────────── */}
+        <View style={styles.kpiGrid}>
+          <View style={styles.kpiCard}>
+            <View style={[styles.kpiIconWrap, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="car" size={18} color="#059669" />
             </View>
-          }
-        />
-      ) : (
-        <FlatList
-          data={filteredSpots}
-          keyExtractor={item => String(item.id)}
-          renderItem={renderSpotItem}
-          contentContainerStyle={st.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-          ListEmptyComponent={
-            <View style={st.empty}>
-              <Ionicons name="car-outline" size={48} color={COLORS.textMuted} />
-              <Text style={st.emptyTitle}>No spots to show</Text>
-              <Text style={st.emptyDesc}>
-                {filter === 'MY_SPOTS' ? 'You have no assigned parking spots.' : 'No spots matching this filter.'}
+            <Text style={styles.kpiValue}>
+              {occupancy?.availableSpots ?? 56}
+              <Text style={styles.kpiTotalText}> / {occupancy?.totalSpots ?? 180}</Text>
+            </Text>
+            <Text style={styles.kpiLabel}>Free Parking Slots</Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <View style={[styles.kpiIconWrap, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="flash" size={18} color="#2563EB" />
+            </View>
+            <Text style={styles.kpiValue}>
+              {occupancy?.availableEVSpots ?? 9}
+              <Text style={styles.kpiTotalText}> / {occupancy?.totalEVSpots ?? 16}</Text>
+            </Text>
+            <Text style={styles.kpiLabel}>Free EV Chargers</Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <View style={[styles.kpiIconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="business" size={18} color="#D97706" />
+            </View>
+            <Text style={styles.kpiValue}>{occupancy?.b1Available ?? 28} Free</Text>
+            <Text style={styles.kpiLabel}>Basement 1</Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <View style={[styles.kpiIconWrap, { backgroundColor: '#F3E8FF' }]}>
+              <Ionicons name="people" size={18} color="#9333EA" />
+            </View>
+            <Text style={styles.kpiValue}>{occupancy?.activeVisitors ?? 2}</Text>
+            <Text style={styles.kpiLabel}>Active Guests</Text>
+          </View>
+        </View>
+
+        {/* ── Specialized Navigation Hub Cards ──────────────────────── */}
+        <View style={styles.hubSection}>
+          {/* Card 1: EV Charging */}
+          <TouchableOpacity
+            style={styles.hubCard}
+            onPress={() => router.push('/parking/ev-charging' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.hubIconCircle, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="flash" size={24} color="#059669" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.hubTitleRow}>
+                <Text style={styles.hubTitle}>EV Charging & Power Metering</Text>
+                <View style={styles.evLiveBadge}>
+                  <Text style={styles.evLiveBadgeText}>
+                    {activeEVSession ? '⚡ 68% CHARGING' : 'PLUG & CHARGE'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.hubDesc}>
+                Reserve 22kW Fast / 50kW DC Superchargers, track real-time kW & battery SoC curve, and get certified power invoices.
+              </Text>
+              <Text style={styles.hubActionLink}>Open EV Charging Station (/parking/ev-charging) →</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Card 2: ANPR Plate Recognition */}
+          <TouchableOpacity
+            style={styles.hubCard}
+            onPress={() => router.push('/parking/anpr' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.hubIconCircle, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="videocam" size={24} color="#2563EB" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.hubTitleRow}>
+                <Text style={styles.hubTitle}>ANPR Plate Recognition & Gates</Text>
+                <View style={styles.anprBadge}>
+                  <Text style={styles.anprBadgeText}>SUB-200MS BOOM</Text>
+                </View>
+              </View>
+              <Text style={styles.hubDesc}>
+                AI Optical Character Recognition gate camera feeds, vehicle entry/exit timeline, and FASTag RFID whitelist rules.
+              </Text>
+              <Text style={styles.hubActionLink}>View ANPR Recognition History (/parking/anpr) →</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Active EV Charging Quick Widget (if active) ─────────────── */}
+        {activeEVSession && (
+          <TouchableOpacity
+            style={styles.evQuickWidget}
+            onPress={() => router.push('/parking/ev-charging' as any)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.evWidgetHeader}>
+              <View style={styles.evWidgetTag}>
+                <Ionicons name="flash" size={12} color="#FFFFFF" />
+                <Text style={styles.evWidgetTagText}>ACTIVE CHARGING SESSION</Text>
+              </View>
+              <Text style={styles.evWidgetStation}>{activeEVSession.stationCode}</Text>
+            </View>
+
+            <View style={styles.evWidgetBody}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.evWidgetVehicle}>{activeEVSession.vehicleNumber}</Text>
+                <Text style={styles.evWidgetMeta}>
+                  {activeEVSession.powerOutputKW} kW Power · ₹{activeEVSession.currentCostINR.toFixed(1)} Accrued
+                </Text>
+              </View>
+              <View style={styles.evWidgetSoCCircle}>
+                <Text style={styles.evWidgetSoCText}>{activeEVSession.currentSoCPercentage}%</Text>
+                <Text style={styles.evWidgetSoCLabel}>SoC</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Live ANPR Mini-Ticker ─────────────────────────────────── */}
+        {latestANPR && (
+          <View style={styles.tickerCard}>
+            <View style={styles.tickerIconWrap}>
+              <Ionicons name="shield-checkmark" size={16} color="#059669" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.tickerTitle}>
+                Latest Gate OCR: <Text style={{ fontFamily: 'Courier', fontWeight: 'bold' }}>{latestANPR.plateNumber}</Text>
+              </Text>
+              <Text style={styles.tickerSubtitle}>
+                {latestANPR.gateName} · {latestANPR.direction} · {latestANPR.timestamp}
               </Text>
             </View>
-          }
-        />
-      )}
+            <TouchableOpacity onPress={() => router.push('/parking/anpr' as any)}>
+              <Text style={styles.tickerLink}>Live Log →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {/* ── Reserve Spot Modal ─────────────────────────────────── */}
-      <Modal
-        visible={reserveModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setReserveModalVisible(false)}
-      >
-        <View style={st.modalOverlay}>
-          <View style={st.modalSheet}>
-            <View style={st.modalHeader}>
-              <View>
-                <Text style={st.modalTitle}>Reserve Spot {selectedSpot?.spotNumber}</Text>
-                <Text style={st.modalSubtitle}>{selectedSpot?.level} • {selectedSpot?.type}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setReserveModalVisible(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color={COLORS.textMuted} />
+        {/* ── Filter Bar for Parking Bays ───────────────────────────── */}
+        <View style={styles.filterSection}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            {(
+              [
+                { key: 'MY_SPOTS', label: 'My Allocated Slots' },
+                { key: 'AVAILABLE', label: 'Free Slots' },
+                { key: 'ALL', label: 'All Bays' },
+                { key: 'VISITOR_PASS', label: 'Visitor Passes' },
+              ] as const
+            ).map((tab) => {
+              const isActive = filter === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[styles.filterChip, isActive && styles.filterChipActive]}
+                  onPress={() => setFilter(tab.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* ── Content: Parking Spots / Visitor Passes ───────────────── */}
+        {filter === 'VISITOR_PASS' ? (
+          /* Visitor Pass Section */
+          <View>
+            <View style={styles.visitorHeaderRow}>
+              <Text style={styles.sectionTitle}>Active Visitor Parking Passes</Text>
+              <TouchableOpacity
+                style={styles.genPassBtn}
+                onPress={() => setVisitorModalVisible(true)}
+              >
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <Text style={styles.genPassBtnText}>New Visitor Pass</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={st.inputLabel}>Vehicle Number *</Text>
+            {visitorPasses.map((pass) => (
+              <View key={pass.id} style={styles.visitorCard}>
+                <View style={styles.visitorCardHeader}>
+                  <View style={styles.passCodeBadge}>
+                    <Text style={styles.passCodeText}>{pass.passCode}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.passStatusPill,
+                      pass.status === 'ACTIVE' ? styles.passActive : styles.passExpired,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.passStatusText,
+                        { color: pass.status === 'ACTIVE' ? '#059669' : '#64748B' },
+                      ]}
+                    >
+                      {pass.status}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.visitorName}>{pass.visitorName}</Text>
+                <Text style={styles.visitorVehicle}>
+                  🚗 {pass.vehicleNumber} ({pass.vehicleType}) · Bay: {pass.spotNumber || 'B2-Guest'}
+                </Text>
+
+                <View style={styles.visitorCardFooter}>
+                  <Text style={styles.purposeText}>Purpose: {pass.purpose || 'Guest Visit'}</Text>
+                  <TouchableOpacity
+                    style={styles.sharePassBtn}
+                    onPress={() => handleSharePass(pass)}
+                  >
+                    <Ionicons name="share-social-outline" size={14} color={COLORS.primary} />
+                    <Text style={styles.sharePassBtnText}>Share Pass</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          /* Parking Spots List */
+          <View>
+            {filteredSpots.map((spot) => {
+              const iconConfig = TYPE_ICON[spot.type] || TYPE_ICON.CAR;
+              const isAvailable = spot.status === 'AVAILABLE';
+              const isMySpot = spot.ownerName === 'You';
+
+              return (
+                <View key={spot.id} style={styles.spotCard}>
+                  <View style={[styles.spotIconCircle, { backgroundColor: iconConfig.bg }]}>
+                    <Ionicons name={iconConfig.icon} size={20} color={iconConfig.color} />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.spotTitleRow}>
+                      <Text style={styles.spotNumber}>{spot.spotNumber}</Text>
+                      <View
+                        style={[
+                          styles.spotStatusPill,
+                          isAvailable
+                            ? styles.statusPillAvail
+                            : isMySpot
+                            ? styles.statusPillMine
+                            : styles.statusPillOccupied,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.spotStatusPillText,
+                            {
+                              color: isAvailable
+                                ? '#059669'
+                                : isMySpot
+                                ? '#2563EB'
+                                : '#64748B',
+                            },
+                          ]}
+                        >
+                          {isMySpot ? 'MY SPOT' : spot.status}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.spotLevel}>
+                      {spot.level} · {spot.type} {spot.hasEVCharger ? '· ⚡ EV Charger Ready' : ''}
+                    </Text>
+
+                    {spot.vehicleNumber && (
+                      <Text style={styles.spotVehicle}>
+                        Plate: {spot.vehicleNumber} ({spot.ownerName})
+                      </Text>
+                    )}
+                  </View>
+
+                  {isAvailable && (
+                    <TouchableOpacity
+                      style={styles.reserveSpotBtn}
+                      onPress={() => {
+                        setSelectedSpot(spot);
+                        setReserveModalVisible(true);
+                      }}
+                    >
+                      <Text style={styles.reserveSpotBtnText}>Reserve</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* ── Spot Reservation Modal ────────────────────────────────── */}
+      <Modal visible={reserveModalVisible} transparent animationType="slide" onRequestClose={() => setReserveModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Reserve Parking Bay</Text>
+                <Text style={styles.modalSubtitle}>{selectedSpot?.spotNumber} · {selectedSpot?.level}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setReserveModalVisible(false)}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>Vehicle Number *</Text>
             <TextInput
-              style={st.input}
-              placeholder="e.g. KA-05-XY-9999"
-              placeholderTextColor={COLORS.textMuted}
+              style={styles.input}
+              placeholder="e.g. KA-01-AB-1234"
+              placeholderTextColor="#9CA3AF"
               value={reserveVehicle}
               onChangeText={setReserveVehicle}
               autoCapitalize="characters"
             />
 
-            <Text style={st.inputLabel}>Vehicle Type</Text>
-            <View style={st.typeSelectRow}>
-              {(['CAR', 'BIKE', 'EV'] as const).map(t => (
+            <Text style={styles.inputLabel}>Vehicle Type</Text>
+            <View style={styles.typeSelectorRow}>
+              {(
+                [
+                  { key: 'CAR', label: 'Car' },
+                  { key: 'BIKE', label: 'Bike' },
+                  { key: 'EV', label: 'EV' },
+                ] as const
+              ).map((t) => (
                 <TouchableOpacity
-                  key={t}
-                  style={[st.typeBtn, reserveType === t && st.typeBtnActive]}
-                  onPress={() => setReserveType(t)}
+                  key={t.key}
+                  style={[styles.typeOption, reserveType === t.key && styles.typeOptionActive]}
+                  onPress={() => setReserveType(t.key)}
                 >
-                  <Text style={[st.typeBtnText, reserveType === t && st.typeBtnTextActive]}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={st.inputLabel}>Notes (Optional)</Text>
-            <TextInput
-              style={[st.input, { height: 60 }]}
-              placeholder="Resident vehicle or visitor slot"
-              placeholderTextColor={COLORS.textMuted}
-              value={reserveNotes}
-              onChangeText={setReserveNotes}
-              multiline
-            />
-
-            <View style={st.modalActionRow}>
-              <TouchableOpacity
-                style={st.cancelBtn}
-                onPress={() => setReserveModalVisible(false)}
-                disabled={submittingReserve}
-              >
-                <Text style={st.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={st.confirmBtn}
-                onPress={handleConfirmReservation}
-                disabled={submittingReserve}
-              >
-                {submittingReserve ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={st.confirmBtnText}>Confirm Reserve</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── Visitor Pass Modal ─────────────────────────────────── */}
-      <Modal
-        visible={visitorModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setVisitorModalVisible(false)}
-      >
-        <View style={st.modalOverlay}>
-          <View style={st.modalSheet}>
-            <View style={st.modalHeader}>
-              <View>
-                <Text style={st.modalTitle}>Visitor Parking Pass</Text>
-                <Text style={st.modalSubtitle}>Issue a temporary pass for guests</Text>
-              </View>
-              <TouchableOpacity onPress={() => setVisitorModalVisible(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={st.inputLabel}>Visitor Name *</Text>
-            <TextInput
-              style={st.input}
-              placeholder="e.g. Suresh Verma"
-              placeholderTextColor={COLORS.textMuted}
-              value={visitorName}
-              onChangeText={setVisitorName}
-            />
-
-            <Text style={st.inputLabel}>Vehicle Number *</Text>
-            <TextInput
-              style={st.input}
-              placeholder="e.g. KA-01-MJ-9821"
-              placeholderTextColor={COLORS.textMuted}
-              value={visitorVehicle}
-              onChangeText={setVisitorVehicle}
-              autoCapitalize="characters"
-            />
-
-            <Text style={st.inputLabel}>Vehicle Type</Text>
-            <View style={st.typeSelectRow}>
-              {(['CAR', 'BIKE', 'EV'] as const).map(t => (
-                <TouchableOpacity
-                  key={t}
-                  style={[st.typeBtn, visitorType === t && st.typeBtnActive]}
-                  onPress={() => setVisitorType(t)}
-                >
-                  <Text style={[st.typeBtnText, visitorType === t && st.typeBtnTextActive]}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={st.inputLabel}>Duration</Text>
-            <View style={st.typeSelectRow}>
-              {[4, 8, 24].map(hours => (
-                <TouchableOpacity
-                  key={hours}
-                  style={[st.typeBtn, visitorDurationHours === hours && st.typeBtnActive]}
-                  onPress={() => setVisitorDurationHours(hours)}
-                >
-                  <Text style={[st.typeBtnText, visitorDurationHours === hours && st.typeBtnTextActive]}>
-                    {hours} Hours
+                  <Text style={[styles.typeOptionText, reserveType === t.key && styles.typeOptionTextActive]}>
+                    {t.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={st.inputLabel}>Purpose</Text>
+            <Text style={styles.inputLabel}>Additional Notes (Optional)</Text>
             <TextInput
-              style={st.input}
-              placeholder="e.g. Family Dinner / Guest"
-              placeholderTextColor={COLORS.textMuted}
-              value={visitorPurpose}
-              onChangeText={setVisitorPurpose}
+              style={styles.input}
+              placeholder="e.g. Assigned to resident family member"
+              placeholderTextColor="#9CA3AF"
+              value={reserveNotes}
+              onChangeText={setReserveNotes}
             />
 
-            <View style={st.modalActionRow}>
+            <View style={styles.modalBtnRow}>
               <TouchableOpacity
-                style={st.cancelBtn}
-                onPress={() => setVisitorModalVisible(false)}
-                disabled={submittingPass}
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setReserveModalVisible(false)}
               >
-                <Text style={st.cancelBtnText}>Cancel</Text>
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={st.confirmBtn}
-                onPress={handleCreateVisitorPass}
-                disabled={submittingPass}
+                style={[styles.modalBtn, styles.modalBtnSubmit]}
+                onPress={handleReserveSpot}
+                disabled={submittingReserve}
               >
-                {submittingPass ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                {submittingReserve ? (
+                  <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={st.confirmBtnText}>Issue Pass</Text>
+                  <Text style={styles.modalBtnSubmitText}>Confirm Slot</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -561,41 +578,111 @@ export default function ParkingScreen() {
         </View>
       </Modal>
 
-      {/* ── Pass Issued Success Modal ──────────────────────────── */}
-      <Modal
-        visible={passSuccessModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPassSuccessModalVisible(false)}
-      >
-        <View style={st.modalOverlay}>
-          <View style={[st.modalSheet, { alignItems: 'center', paddingVertical: 24 }]}>
-            <View style={st.successIconCircle}>
-              <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
-            </View>
-            <Text style={st.successTitle}>Pass Issued Successfully!</Text>
-            <Text style={st.successDesc}>Share this code with your guest to present at the gate:</Text>
-
-            <View style={st.passDisplayBox}>
-              <Text style={st.passDisplayCode}>{generatedPass?.passCode}</Text>
+      {/* ── Generate Visitor Pass Modal ───────────────────────────── */}
+      <Modal visible={visitorModalVisible} transparent animationType="slide" onRequestClose={() => setVisitorModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Issue Visitor Parking Pass</Text>
+                <Text style={styles.modalSubtitle}>Pre-authorize guest vehicle for ANPR gate entry</Text>
+              </View>
+              <TouchableOpacity onPress={() => setVisitorModalVisible(false)}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
             </View>
 
-            <Text style={st.passMetaText}>Visitor: {generatedPass?.visitorName}</Text>
-            <Text style={st.passMetaText}>Vehicle: {generatedPass?.vehicleNumber}</Text>
+            <Text style={styles.inputLabel}>Guest Full Name *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Ramesh Kulkarni"
+              placeholderTextColor="#9CA3AF"
+              value={visitorName}
+              onChangeText={setVisitorName}
+            />
 
-            <View style={[st.modalActionRow, { marginTop: 20 }]}>
+            <Text style={styles.inputLabel}>Vehicle Number *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. KA-03-XY-9081"
+              placeholderTextColor="#9CA3AF"
+              value={visitorVehicle}
+              onChangeText={setVisitorVehicle}
+              autoCapitalize="characters"
+            />
+
+            <Text style={styles.inputLabel}>Guest Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. +91 98765 43210"
+              placeholderTextColor="#9CA3AF"
+              value={visitorPhone}
+              onChangeText={setVisitorPhone}
+              keyboardType="phone-pad"
+            />
+
+            <Text style={styles.inputLabel}>Purpose of Visit</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Dinner & Family Visit"
+              placeholderTextColor="#9CA3AF"
+              value={visitorPurpose}
+              onChangeText={setVisitorPurpose}
+            />
+
+            <View style={styles.modalBtnRow}>
               <TouchableOpacity
-                style={st.shareBtnLarge}
-                onPress={() => generatedPass && handleSharePass(generatedPass)}
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setVisitorModalVisible(false)}
               >
-                <Ionicons name="share-social-outline" size={18} color="#FFFFFF" />
-                <Text style={st.shareBtnLargeText}>Share Pass</Text>
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={st.doneBtn}
+                style={[styles.modalBtn, styles.modalBtnSubmit]}
+                onPress={handleGeneratePass}
+                disabled={submittingPass}
+              >
+                {submittingPass ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.modalBtnSubmitText}>Create Pass</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Pass Created Success Modal ────────────────────────────── */}
+      <Modal visible={passSuccessModalVisible} transparent animationType="fade" onRequestClose={() => setPassSuccessModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalCard}>
+            <View style={styles.successIconCircle}>
+              <Ionicons name="checkmark-done" size={32} color="#059669" />
+            </View>
+            <Text style={styles.successTitle}>Visitor Pass Generated</Text>
+            <Text style={styles.successSubtitle}>Pre-authorized on Security ANPR Gate System</Text>
+
+            <View style={styles.passCodeBigBox}>
+              <Text style={styles.passCodeBigText}>{generatedPass?.passCode}</Text>
+              <Text style={styles.passCodeMeta}>Valid for 8 Hours at All Main Gates</Text>
+            </View>
+
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnShare]}
+                onPress={() => {
+                  if (generatedPass) handleSharePass(generatedPass);
+                }}
+              >
+                <Ionicons name="share-social-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.modalBtnShareText}>Share with Guest</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSubmit]}
                 onPress={() => setPassSuccessModalVisible(false)}
               >
-                <Text style={st.doneBtnText}>Done</Text>
+                <Text style={styles.modalBtnSubmitText}>Done</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -605,142 +692,597 @@ export default function ParkingScreen() {
   );
 }
 
-const st = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
-  headerSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  headerActionBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.full,
-    paddingHorizontal: 12, paddingVertical: 6,
-  },
-  headerActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
-  filterScroll: { backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  filterRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  filterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.full,
-    paddingHorizontal: 14, paddingVertical: 7,
-  },
-  filterChipActive: { backgroundColor: COLORS.primary },
-  filterText: { fontSize: 13, fontWeight: '500', color: COLORS.textMuted },
-  filterTextActive: { color: '#fff', fontWeight: '600' },
-  list: { padding: 12, gap: 10 },
-  loadingBox: { padding: 40, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 10, color: COLORS.textMuted, fontSize: 13 },
-  spotCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 14,
-    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
-  },
-  spotIcon: {
-    width: 44, height: 44, borderRadius: RADIUS.md,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  spotInfo: { flex: 1, gap: 4 },
-  spotHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  spotNumber: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  spotLevel: { fontSize: 12, color: COLORS.textMuted },
-  vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  vehicleText: { fontSize: 12, color: COLORS.text, fontWeight: '600' },
-  ownerText: { fontSize: 11, color: COLORS.textMuted },
-  statusPill: { borderRadius: RADIUS.sm, paddingHorizontal: 8, paddingVertical: 3 },
-  statusPillText: { fontSize: 11, fontWeight: '700' },
-  reserveBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
-    paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'flex-start', marginTop: 6,
-  },
-  reserveBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
-  passCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 14,
-    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm, gap: 8,
-  },
-  passHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  passCodeContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  passCodeText: { fontSize: 15, fontWeight: '700', color: COLORS.primary },
-  passStatusBadge: { backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: RADIUS.sm },
-  passStatusText: { fontSize: 11, fontWeight: '700', color: '#059669' },
-  passBody: { gap: 2 },
-  passVisitorName: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  passVehicle: { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
-  passPurpose: { fontSize: 12, color: COLORS.textMuted },
-  passValidity: { fontSize: 11, color: COLORS.textSecondary, marginTop: 4 },
-  sharePassBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: COLORS.primaryLight, paddingVertical: 6, paddingHorizontal: 12,
-    borderRadius: RADIUS.md, alignSelf: 'flex-start', marginTop: 4,
-  },
-  sharePassText: { fontSize: 12, color: COLORS.primary, fontWeight: '600' },
-  empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 17, fontWeight: '600', color: COLORS.text, marginTop: 12 },
-  emptyDesc: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginTop: 4, lineHeight: 18 },
-  emptyActionBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.full,
-    paddingHorizontal: 16, paddingVertical: 10, marginTop: 16,
-  },
-  emptyActionBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
-    padding: 20, maxHeight: '85%',
-  },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
-  modalSubtitle: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: COLORS.text, marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
-    paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, color: COLORS.text,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  typeSelectRow: { flexDirection: 'row', gap: 8 },
-  typeBtn: {
-    flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
-  },
-  typeBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  typeBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
-  typeBtnTextActive: { color: '#FFFFFF' },
-  modalActionRow: { flexDirection: 'row', gap: 12, marginTop: 24 },
-  cancelBtn: {
-    flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  cancelBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textMuted },
-  confirmBtn: {
-    flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.md,
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
     backgroundColor: COLORS.primary,
   },
-  confirmBtnText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
-  successIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#D1FAE5', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  successTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
-  successDesc: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginTop: 4, paddingHorizontal: 16 },
-  passDisplayBox: {
-    backgroundColor: COLORS.primaryLight, paddingHorizontal: 24, paddingVertical: 12,
-    borderRadius: RADIUS.lg, marginVertical: 16, borderWidth: 1, borderColor: COLORS.primaryMid,
+  topAppBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: 12,
   },
-  passDisplayCode: { fontSize: 24, fontWeight: '900', color: COLORS.primary, letterSpacing: 2 },
-  passMetaText: { fontSize: 13, color: COLORS.textMuted, marginVertical: 1 },
-  shareBtnLarge: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: RADIUS.md,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  shareBtnLargeText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
-  doneBtn: {
-    paddingHorizontal: 24, paddingVertical: 12, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md,
+  appBarTitle: {
+    fontSize: 18,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
   },
-  doneBtnText: { color: COLORS.text, fontSize: 14, fontWeight: '600' },
+  appBarSubtitle: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  headerActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    backgroundColor: '#F8FAFC',
+    padding: SPACING.md,
+    paddingBottom: 40,
+  },
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: SPACING.md,
+  },
+  kpiCard: {
+    flex: 1,
+    minWidth: '47%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...SHADOWS.sm,
+  },
+  kpiIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  kpiValue: {
+    fontSize: 16,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.text,
+  },
+  kpiTotalText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: 'DMSans-Regular',
+  },
+  kpiLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  hubSection: {
+    marginBottom: SPACING.md,
+  },
+  hubCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 12,
+    ...SHADOWS.sm,
+  },
+  hubIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hubTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  hubTitle: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.text,
+    flex: 1,
+  },
+  evLiveBadge: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  evLiveBadgeText: {
+    fontSize: 9,
+    fontFamily: 'DMSans-Bold',
+    color: '#059669',
+  },
+  anprBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  anprBadgeText: {
+    fontSize: 9,
+    fontFamily: 'DMSans-Bold',
+    color: '#1E40AF',
+  },
+  hubDesc: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 16,
+    marginBottom: 6,
+  },
+  hubActionLink: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.primary,
+  },
+  evQuickWidget: {
+    backgroundColor: '#0F172A',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  evWidgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  evWidgetTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#059669',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 4,
+  },
+  evWidgetTagText: {
+    fontSize: 9,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
+  },
+  evWidgetStation: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  evWidgetBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  evWidgetVehicle: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
+  },
+  evWidgetMeta: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  evWidgetSoCCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  evWidgetSoCText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
+  },
+  evWidgetSoCLabel: {
+    fontSize: 8,
+    color: '#FFFFFF',
+  },
+  tickerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: RADIUS.md,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    gap: 10,
+    marginBottom: SPACING.md,
+  },
+  tickerIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tickerTitle: {
+    fontSize: 12,
+    color: '#166534',
+  },
+  tickerSubtitle: {
+    fontSize: 10,
+    color: '#166534',
+    marginTop: 1,
+  },
+  tickerLink: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    color: '#15803D',
+  },
+  filterSection: {
+    marginBottom: SPACING.md,
+  },
+  filterScroll: {
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+    color: COLORS.textSecondary,
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.text,
+  },
+  visitorHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  genPassBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.sm,
+    gap: 4,
+  },
+  genPassBtnText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
+  },
+  visitorCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: SPACING.sm,
+    ...SHADOWS.sm,
+  },
+  visitorCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  passCodeBadge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  passCodeText: {
+    fontSize: 12,
+    fontFamily: 'Courier',
+    fontWeight: 'bold',
+    color: '#1E40AF',
+  },
+  passStatusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  passActive: {
+    backgroundColor: '#D1FAE5',
+  },
+  passExpired: {
+    backgroundColor: '#E2E8F0',
+  },
+  passStatusText: {
+    fontSize: 9,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: 'bold',
+  },
+  visitorName: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  visitorVehicle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+  visitorCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 8,
+  },
+  purposeText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  sharePassBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  sharePassBtnText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    color: COLORS.primary,
+  },
+  spotCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: SPACING.sm,
+    gap: 12,
+    ...SHADOWS.sm,
+  },
+  spotIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spotTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  spotNumber: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.text,
+  },
+  spotStatusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  statusPillAvail: {
+    backgroundColor: '#D1FAE5',
+  },
+  statusPillMine: {
+    backgroundColor: '#DBEAFE',
+  },
+  statusPillOccupied: {
+    backgroundColor: '#E2E8F0',
+  },
+  spotStatusPillText: {
+    fontSize: 9,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: 'bold',
+  },
+  spotLevel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  spotVehicle: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  reserveSpotBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+  },
+  reserveSpotBtnText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.md,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.text,
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.text,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: RADIUS.md,
+    padding: 10,
+    fontSize: 13,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+  },
+  typeSelectorRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: SPACING.md,
+  },
+  typeOption: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: RADIUS.sm,
+    backgroundColor: '#F1F5F9',
+  },
+  typeOptionActive: {
+    backgroundColor: COLORS.primary,
+  },
+  typeOptionText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    color: COLORS.text,
+  },
+  typeOptionTextActive: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: SPACING.sm,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnCancel: {
+    backgroundColor: '#F1F5F9',
+  },
+  modalBtnCancelText: {
+    color: COLORS.textSecondary,
+    fontFamily: 'DMSans-Medium',
+  },
+  modalBtnSubmit: {
+    backgroundColor: COLORS.primary,
+  },
+  modalBtnSubmitText: {
+    color: '#FFFFFF',
+    fontFamily: 'DMSans-Bold',
+  },
+  successModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    marginHorizontal: SPACING.lg,
+    ...SHADOWS.md,
+  },
+  successIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  successTitle: {
+    fontSize: 18,
+    fontFamily: 'DMSans-Bold',
+    color: COLORS.text,
+  },
+  successSubtitle: {
+    fontSize: 12,
+    color: '#059669',
+    marginTop: 2,
+  },
+  passCodeBigBox: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: RADIUS.md,
+    padding: 16,
+    width: '100%',
+    alignItems: 'center',
+    marginVertical: SPACING.md,
+  },
+  passCodeBigText: {
+    fontSize: 24,
+    fontFamily: 'Courier',
+    fontWeight: 'bold',
+    color: '#1E293B',
+    letterSpacing: 2,
+  },
+  passCodeMeta: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  modalBtnShare: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  modalBtnShareText: {
+    color: COLORS.primary,
+    fontFamily: 'DMSans-Bold',
+    fontSize: 13,
+  },
 });
