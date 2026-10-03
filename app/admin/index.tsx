@@ -140,7 +140,7 @@ export default function AdminDashboard() {
         )}
 
         {/* ── Quick Actions ── */}
-        <Text style={[s.sectionTitle, { marginTop: 8 }]}>Quick Actions</Text>
+        <Text style={[s.sectionTitle, { marginTop: 8 }]}>Management Tools</Text>
         <View style={s.actionsGrid}>
           {quickActions.map((a) => (
             <TouchableOpacity
@@ -163,13 +163,61 @@ export default function AdminDashboard() {
           ))}
         </View>
 
+        {/* ── SuperAdmin & Security Compliance Hub ── */}
+        <Text style={[s.sectionTitle, { marginTop: 12 }]}>🛡️ SuperAdmin & Security Hub</Text>
+        <View style={s.superAdminGrid}>
+          <TouchableOpacity
+            style={[s.superCard, { backgroundColor: '#0F172A', borderColor: '#334155' }]}
+            onPress={() => router.push('/admin/audit-logs' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={s.superCardTop}>
+              <Text style={s.superEmoji}>🛡️</Text>
+              <View style={[s.superBadge, { backgroundColor: '#065F46' }]}>
+                <Text style={[s.superBadgeText, { color: '#6EE7B7' }]}>SHA-256 Chain</Text>
+              </View>
+            </View>
+            <Text style={[s.superTitle, { color: '#FFFFFF' }]}>Audit Trail Logs</Text>
+            <Text style={[s.superSub, { color: '#94A3B8' }]}>Immutable cryptographic access & change records</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.superCard, { backgroundColor: '#064E3B', borderColor: '#047857' }]}
+            onPress={() => router.push('/admin/bulk-upload' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={s.superCardTop}>
+              <Text style={s.superEmoji}>👥</Text>
+              <View style={[s.superBadge, { backgroundColor: '#022C22' }]}>
+                <Text style={[s.superBadgeText, { color: '#A7F3D0' }]}>CSV Engine</Text>
+              </View>
+            </View>
+            <Text style={[s.superTitle, { color: '#FFFFFF' }]}>Bulk Resident Onboard</Text>
+            <Text style={[s.superSub, { color: '#D1FAE5' }]}>Batch import flats, validate rows & dispatch invites</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.superCard, { backgroundColor: '#312E81', borderColor: '#4338CA' }]}
+            onPress={() => router.push('/admin/privacy' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={s.superCardTop}>
+              <Text style={s.superEmoji}>⚖️</Text>
+              <View style={[s.superBadge, { backgroundColor: '#1E1B4B' }]}>
+                <Text style={[s.superBadgeText, { color: '#C7D2FE' }]}>DPDP & GDPR</Text>
+              </View>
+            </View>
+            <Text style={[s.superTitle, { color: '#FFFFFF' }]}>Privacy & Data Rights</Text>
+            <Text style={[s.superSub, { color: '#C7D2FE' }]}>Data portability archives & dual-signoff erasure</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* ── Role info ── */}
         <View style={s.infoCard}>
-          <Text style={s.infoTitle}>🔐 Admin Access</Text>
+          <Text style={s.infoTitle}>🔐 SuperAdmin Access</Text>
           <Text style={s.infoText}>
             You are logged in as <Text style={s.infoRole}>{user?.role}</Text>.
-            Actions taken here affect all community members.
-            Changes are logged and attributed to your account.
+            Actions taken in this panel are recorded in the cryptographic audit trail and affect all society residents.
           </Text>
         </View>
 
@@ -199,6 +247,17 @@ const s = StyleSheet.create({
   actionLabel:     { fontSize: 15, fontWeight: '700', color: COLORS.text },
   actionSub:       { fontSize: 12, color: COLORS.textMuted },
   actionBar:       { position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, borderRadius: 0 },
+
+  // SuperAdmin Grid
+  superAdminGrid:  { gap: 10 },
+  superCard:       { borderRadius: 14, padding: 14, borderWidth: 1 },
+  superCardTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  superEmoji:      { fontSize: 22 },
+  superBadge:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9999 },
+  superBadgeText:  { fontSize: 10, fontWeight: '800' },
+  superTitle:      { fontSize: 15, fontWeight: '800', marginBottom: 2 },
+  superSub:        { fontSize: 12, lineHeight: 16 },
+
   infoCard:        { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 14, gap: 6, borderWidth: 1, borderColor: '#FCD34D', marginTop: 4 },
   infoTitle:       { fontSize: 14, fontWeight: '700', color: '#92400E' },
   infoText:        { fontSize: 13, color: '#78350F', lineHeight: 19 },

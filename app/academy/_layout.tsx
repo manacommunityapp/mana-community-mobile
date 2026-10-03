@@ -8,9 +8,14 @@ export default function AcademyLayout() {
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: '#FFFFFF',
         headerTitleStyle: { fontFamily: 'DMSans-Bold', fontWeight: 'bold' },
+        headerBackTitle: 'Back',
       }}
     >
-      <Stack.Screen name="index" options={{ title: '🎓 Mana Academy & Learning' }} />
+      <Stack.Screen name="index" options={{ title: '🎓 Mana Academy' }} />
+      <Stack.Screen name="my-learning" options={{ title: '📚 My Learning & Passes' }} />
+      <Stack.Screen name="teaching" options={{ title: '👨‍🏫 Instructor Hub' }} />
+      <Stack.Screen name="admin" options={{ title: '🛡️ Academy Admin' }} />
     </Stack>
   );
 }
+

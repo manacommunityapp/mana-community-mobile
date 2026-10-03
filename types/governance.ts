@@ -15,7 +15,9 @@ export interface AgendaItemDto {
   presenter: string;
   duration: string;
   description: string;
-  status: 'PENDING' | 'DISCUSSED' | 'VOTING_OPEN' | 'APPROVED';
+  status: 'PENDING' | 'IN_PROGRESS' | 'DISCUSSED' | 'VOTING_OPEN' | 'APPROVED';
+  notes?: string;
+  attachmentName?: string;
 }
 
 export interface MeetingDto {
@@ -27,14 +29,23 @@ export interface MeetingDto {
   time: string;
   location: string;
   meetingLink?: string;
+  status: 'UPCOMING' | 'LIVE_NOW' | 'CONCLUDED';
   quorumConfirmed: number;
   quorumRequired: number;
   quorumPercentage: number;
   isQuorumAchieved: boolean;
   hasUserConfirmed: boolean;
-  attendanceMode: 'PHYSICAL' | 'ONLINE';
+  attendanceMode: 'PHYSICAL' | 'ONLINE' | 'PROXY';
+  proxyNominee?: string;
   annualReportUrl?: string;
+  minutesUrl?: string;
   agenda: AgendaItemDto[];
+  liveMinutes?: {
+    id: string;
+    timestamp: string;
+    speaker: string;
+    content: string;
+  }[];
 }
 
 export interface ProposalDto {
@@ -42,14 +53,18 @@ export interface ProposalDto {
   title: string;
   description: string;
   category: 'INFRASTRUCTURE' | 'ENVIRONMENT' | 'AMENITIES' | 'SECURITY' | 'FINANCE' | 'RULES';
+  type: 'PROPOSAL' | 'GRIEVANCE';
   estimatedCost: string;
   submittedBy: string;
+  submittedByFlat?: string;
   submittedDate: string;
   supportCount: number;
+  supportThreshold: number;
   hasUserSupported: boolean;
   status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED_FOR_AGM' | 'REJECTED' | 'PASSED';
   pros?: string[];
   cons?: string[];
+  committeeNotes?: string;
 }
 
 export interface BallotOptionDto {
@@ -57,6 +72,7 @@ export interface BallotOptionDto {
   text: string;
   votesCount: number;
   percentage: number;
+  description?: string;
 }
 
 export interface BallotDto {
@@ -64,6 +80,7 @@ export interface BallotDto {
   title: string;
   category: string;
   description: string;
+  resolutionMotionText: string;
   startDate: string;
   endDate: string;
   totalEligibleVoters: number;
@@ -73,8 +90,14 @@ export interface BallotDto {
   isQuorumReached: boolean;
   hasUserVoted: boolean;
   userVotedOptionId?: string;
+  voteReceiptHash?: string;
   status: 'ACTIVE' | 'CLOSED' | 'UPCOMING';
   options: BallotOptionDto[];
+  wingBreakdown?: {
+    wing: string;
+    voted: number;
+    total: number;
+  }[];
 }
 
 export interface ResolutionDto {
@@ -93,6 +116,9 @@ export interface ResolutionDto {
     totalPercentageFor: number;
   };
   keyProvisions: string[];
+  presidingOfficer: string;
+  legalBindingStatement?: string;
+  documentUrl?: string;
 }
 
 export interface VaultDocumentDto {
@@ -104,4 +130,6 @@ export interface VaultDocumentDto {
   lastUpdated: string;
   documentUrl: string;
   isConfidential: boolean;
+  resolutionRef?: string;
+  digitalSealVerified: boolean;
 }
