@@ -8,11 +8,13 @@ import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppBack } from '@/hooks/useAppBack';
 import { getBiometricCapability, authenticateWithBiometric, BiometricCapability } from '@/hooks/useBiometricAuth';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS } from '@/constants/config';
 
 export default function LoginScreen() {
   const { login, loadUser } = useAuth();
+  const { goBack } = useAppBack({ fallbackRoute: '/onboarding' });
   const [identifier, setIdentifier]       = useState('');
   const [password, setPassword]           = useState('');
   const [loading, setLoading]             = useState(false);
@@ -111,6 +113,16 @@ export default function LoginScreen() {
           {/* Decorative circles */}
           <View style={styles.decCircle1} />
           <View style={styles.decCircle2} />
+
+          {/* Back Button */}
+          <TouchableOpacity
+            style={styles.heroBackBtn}
+            onPress={goBack}
+            hitSlop={8}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
 
           <View style={styles.logoBox}>
             <Text style={styles.logoText}>M</Text>
@@ -257,6 +269,20 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
     overflow: 'hidden',
     position: 'relative',
+  },
+  heroBackBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 52 : 36,
+    left: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    zIndex: 10,
   },
   decCircle1: {
     position: 'absolute',

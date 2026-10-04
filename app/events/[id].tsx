@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventService } from '@/services/eventService';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppBack } from '@/hooks/useAppBack';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { format, parseISO, isPast } from 'date-fns';
 
@@ -17,6 +18,7 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { goBack } = useAppBack({ fallbackRoute: '/events' });
 
   const { data: event, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['event', id],
@@ -86,7 +88,7 @@ export default function EventDetailScreen() {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <TouchableOpacity onPress={goBack} style={s.backBtn}>
             <Ionicons name="arrow-back" size={22} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Event Not Found</Text>
@@ -105,7 +107,7 @@ export default function EventDetailScreen() {
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={8}>
+        <TouchableOpacity onPress={goBack} style={s.backBtn} hitSlop={8}>
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={s.headerTitle} numberOfLines={1}>Event Details</Text>
@@ -227,6 +229,37 @@ export default function EventDetailScreen() {
           </View>
         </View>
 
+        {/* Event Features / Hub Grid */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Event Hub</Text>
+          <View style={s.gridContainer}>
+            {[
+              { title: 'Programs', sub: 'Schedule & acts', icon: 'list-outline', color: '#4F46E5', bg: '#EEF2FF', route: `/events/programs?id=${id}` },
+              { title: 'Gate Pass', sub: 'QR Entry', icon: 'qr-code-outline', color: '#059669', bg: '#ECFDF5', route: `/events/gatepass?id=${id}` },
+              { title: 'Donations', sub: 'Contribute', icon: 'heart-outline', color: '#E11D48', bg: '#FFF1F2', route: `/events/donations?id=${id}` },
+              { title: 'Volunteers', sub: 'Join team', icon: 'hand-left-outline', color: '#D97706', bg: '#FEF3C7', route: `/events/volunteers?id=${id}` },
+              { title: 'Gallery', sub: 'Photos & video', icon: 'images-outline', color: '#2563EB', bg: '#EFF6FF', route: `/events/gallery?id=${id}` },
+              { title: 'Food & Meals', sub: 'Diet & tokens', icon: 'restaurant-outline', color: '#EA580C', bg: '#FFF7ED', route: `/events/meals?id=${id}` },
+              { title: 'Sponsors', sub: 'Partners', icon: 'ribbon-outline', color: '#7C3AED', bg: '#F5F3FF', route: `/events/sponsors?id=${id}` },
+              { title: 'Tasks', sub: 'To-do items', icon: 'checkbox-outline', color: '#0D9488', bg: '#F0FDFA', route: `/events/tasks?id=${id}` },
+              { title: 'Expenses', sub: 'Budget & bills', icon: 'receipt-outline', color: '#475569', bg: '#F1F5F9', route: `/events/expenses?id=${id}` },
+            ].map((item, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={s.gridCard}
+                onPress={() => router.push(item.route as any)}
+                activeOpacity={0.7}
+              >
+                <View style={[s.gridIconWrap, { backgroundColor: item.bg }]}>
+                  <Ionicons name={item.icon as any} size={22} color={item.color} />
+                </View>
+                <Text style={s.gridTitle}>{item.title}</Text>
+                <Text style={s.gridSub} numberOfLines={1}>{item.sub}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {/* Description */}
         {event.description && (
           <View style={s.section}>
@@ -317,7 +350,16 @@ const s = StyleSheet.create({
   infoValue: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   infoSub: { fontSize: 13, color: COLORS.textMuted, marginTop: 1 },
   section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  gridCard: {
+    width: '31%', backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
+    padding: 10, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  gridIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  gridTitle: { fontSize: 12, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
+  gridSub: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', marginTop: 1 },
   description: { fontSize: 15, color: COLORS.textSecondary, lineHeight: 22 },
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,

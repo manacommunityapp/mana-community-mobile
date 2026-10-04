@@ -114,9 +114,12 @@ export default function WelcomeScreen() {
           <TouchableOpacity
             style={s.secondaryBtn}
             onPress={() => router.push('/auth/login')}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <Text style={s.secondaryBtnText}>I already have an account</Text>
+            <View style={s.secondaryBtnInner}>
+              <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+              <Text style={s.secondaryBtnText}>I already have an account</Text>
+            </View>
           </TouchableOpacity>
         </Animated.View>
 
@@ -303,13 +306,24 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   secondaryBtn: {
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+    overflow: 'hidden',
+  },
+  secondaryBtnInner: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    gap: 8,
   },
   secondaryBtnText: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.82)',
-    fontWeight: '500',
-    fontFamily: FONTS.medium,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontFamily: FONTS.bold,
+    letterSpacing: -0.2,
   },
 });
