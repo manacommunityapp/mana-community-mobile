@@ -1,0 +1,97 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "noResults": "No results found",
+    "error": "Something went wrong",
+    "success": "Success",
+    "offline": "You are offline",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "all": "All",
+    "viewAll": "View All",
+    "new": "NEW"
+  },
+  "auth": {
+    "login": "Log In",
+    "register": "Register",
+    "logout": "Log Out",
+    "forgotPassword": "Forgot Password?",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "fullName": "Full Name",
+    "phone": "Phone Number"
+  },
+  "feed": {
+    "title": "Community Feed",
+    "createPost": "Create Post",
+    "whatsOnMind": "What's on your mind?",
+    "like": "Like",
+    "comment": "Comment",
+    "share": "Share"
+  },
+  "services": {
+    "title": "Domestic Help & Home Services",
+    "subtitle": "Staff Directory, Attendance & Service Catalog",
+    "myStaff": "My Staff",
+    "attendance": "Attendance",
+    "salary": "Salary",
+    "jobBoard": "Job Board",
+    "bookings": "Bookings",
+    "bookVisit": "Book Visit",
+    "verified": "VERIFIED",
+    "providers": "Providers"
+  },
+  "safety": {
+    "title": "Safety Command Center",
+    "sos": "SOS",
+    "anpr": "ANPR",
+    "patrol": "Patrol",
+    "incidents": "Incidents",
+    "triggerSos": "Trigger SOS",
+    "sosConfirm": "Are you sure you want to trigger an SOS alert?"
+  },
+  "visitors": {
+    "title": "Visitors",
+    "invite": "Invite Visitor",
+    "expected": "Expected",
+    "checkedIn": "Checked In",
+    "checkedOut": "Checked Out"
+  },
+  "parking": {
+    "title": "Parking",
+    "mySpot": "My Spot",
+    "available": "Available",
+    "occupied": "Occupied"
+  },
+  "finance": {
+    "title": "Finance",
+    "dues": "Dues",
+    "payments": "Payments",
+    "invoices": "Invoices"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark All as Read",
+    "noNotifications": "No notifications yet"
+  },
+  "profile": {
+    "title": "My Profile",
+    "editProfile": "Edit Profile",
+    "settings": "Settings",
+    "myListings": "My Listings",
+    "myBookings": "My Bookings"
+  }
+}

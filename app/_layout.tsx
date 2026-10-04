@@ -24,9 +24,11 @@ import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
 import { setupGlobalFonts } from '@/utils/globalFonts';
 import { initSentry, setUser, clearUser } from '@/utils/sentry';
+import { offlineSyncService } from '@/services/offlineSyncService';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
+offlineSyncService.init();
 
 const queryClient = new QueryClient({
   defaultOptions: {

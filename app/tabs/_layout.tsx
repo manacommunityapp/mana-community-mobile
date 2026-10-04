@@ -67,6 +67,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="feed"
         options={{
+          tabBarAccessibilityLabel: 'Home feed',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="home-outline" iconFocused="home" label="Home" focused={focused} />
           ),
@@ -75,6 +76,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="marketplace"
         options={{
+          tabBarAccessibilityLabel: 'Marketplace',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="storefront-outline" iconFocused="storefront" label="Shop" focused={focused} />
           ),
@@ -83,6 +85,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="services"
         options={{
+          tabBarAccessibilityLabel: 'Home services',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="construct-outline" iconFocused="construct" label="Services" focused={focused} />
           ),
@@ -91,6 +94,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="events"
         options={{
+          tabBarAccessibilityLabel: 'Events calendar',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="calendar-outline" iconFocused="calendar" label="Events" focused={focused} />
           ),
@@ -99,6 +103,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="chat"
         options={{
+          tabBarAccessibilityLabel: chatUnreadCount > 0 ? `Chat, ${chatUnreadCount} unread` : 'Chat',
           tabBarIcon: ({ focused }) => (
             <TabIcon
               icon="chatbubbles-outline"
@@ -114,6 +119,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           href: null,
+          tabBarAccessibilityLabel: 'Profile',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="person-outline" iconFocused="person" label="Profile" focused={focused} />
           ),
