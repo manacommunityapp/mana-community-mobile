@@ -10,27 +10,25 @@ import {
   TextInput,
   Alert,
   Modal,
+  Clipboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { offersService } from '@/services/offersService';
 import type {
   CommunityOffer,
-  CommerceCategory,
   UserOfferClaim,
-  CommunityDemandPool,
-  BusinessPartner,
 } from '@/types/offers';
 
-type TabType = 'DEALS' | 'CLAIMS' | 'DEMAND' | 'DIRECTORY';
-
-export default function OffersScreen() {
+export default function DealsHubScreen() {
+  const router = useRouter();
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<TabType>('DEALS');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [activeClaimModal, setActiveClaimModal] = useState<UserOfferClaim | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   // ── Queries ──────────────────────────────────────────────────────────
   const { data: categories = [] } = useQuery({
@@ -38,31 +36,40 @@ export default function OffersScreen() {
     queryFn: offersService.getCategories,
   });
 
-  const { data: offers = [], isLoading: offersLoading, refetch: refetchOffers, isRefetching } = useQuery({
+  const {
+    data: offers = [],
+    isLoading: offersLoading,
+    refetch: refetchOffers,
+    isRefetching,
+  } = useQuery({
     queryKey: ['communityOffers', selectedCategory],
     queryFn: () => offersService.getOffers(selectedCategory === 'ALL' ? undefined : selectedCategory),
   });
 
-  const { data: claims = [], isLoading: claimsLoading, refetch: refetchClaims } = useQuery({
+  const { data: claims = [], refetch: refetchClaims } = useQuery({
     queryKey: ['myClaims'],
     queryFn: offersService.getMyClaims,
   });
 
-  const { data: demandPools = [], isLoading: demandLoading, refetch: refetchDemand } = useQuery({
+  const { data: marketDays = [], refetch: refetchMarkets } = useQuery({
+    queryKey: ['farmersMarketDays'],
+    queryFn: offersService.getMarketDays,
+  });
+
+  const { data: demandPools = [], refetch: refetchDemand } = useQuery({
     queryKey: ['demandPools'],
     queryFn: offersService.getDemandPools,
   });
 
-  const { data: businesses = [], isLoading: bizLoading, refetch: refetchBiz } = useQuery({
+  const { data: businesses = [], refetch: refetchBiz } = useQuery({
     queryKey: ['businessPartners'],
-    queryFn: offersService.getBusinesses,
+    queryFn: () => offersService.getBusinesses(),
   });
-
-  const isLoading = offersLoading || claimsLoading || demandLoading || bizLoading;
 
   const onRefresh = () => {
     refetchOffers();
     refetchClaims();
+    refetchMarkets();
     refetchDemand();
     refetchBiz();
   };
@@ -77,13 +84,16 @@ export default function OffersScreen() {
     },
   });
 
-  const supportDemandMutation = useMutation({
-    mutationFn: (poolId: string) => offersService.supportDemandPool(poolId),
+  const rsvpMutation = useMutation({
+    mutationFn: (marketId: string) => offersService.rsvpMarketDay(marketId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['demandPools'] });
-      Alert.alert('Joined Group Pool!', 'Your participation has been added. When target is reached, bulk discount will unlock.');
+      qc.invalidateQueries({ queryKey: ['farmersMarketDays'] });
     },
   });
+
+  const activeClaimsCount = claims.filter((c) => c.status === 'ACTIVE').length;
+  const primaryMarket = marketDays[0];
+  const activeDemandPool = demandPools[0];
 
   // Filter offers by search query
   const filteredOffers = offers.filter((o) => {
@@ -96,6 +106,12 @@ export default function OffersScreen() {
     );
   });
 
+  const handleCopyCode = (code: string) => {
+    Clipboard.setString(code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -107,22 +123,178 @@ export default function OffersScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroBadgeRow}>
             <View style={styles.heroPill}>
-              <Ionicons name="flame" size={12} color="#D97706" />
-              <Text style={styles.heroPillText}>Mana Community Advantage</Text>
+              <Ionicons name="flame" size={13} color="#F59E0B" />
+              <Text style={styles.heroPillText}>Mana Resident Advantage</Text>
             </View>
             <View style={styles.savingsBox}>
-              <Text style={styles.savingsAmount}>₹1,84,500+</Text>
-              <Text style={styles.savingsLabel}>Community Savings</Text>
+              <Text style={styles.savingsAmount}>₹2,48,500+</Text>
+              <Text style={styles.savingsLabel}>Resident Savings</Text>
             </View>
           </View>
 
           <Text style={styles.heroTitle}>Hyperlocal Pricing You Won't Find Online</Text>
           <Text style={styles.heroDesc}>
-            Verified neighborhood businesses give lower rates directly to our residents by skipping delivery aggregators.
+            Vetted neighborhood partners pass aggregator commission savings directly to our society residents.
           </Text>
         </View>
 
-        {/* ── Search Bar ──────────────────────────────────────────────── */}
+        {/* ── 4 Key Navigation Hub Quick Actions ────────────────────────── */}
+        <View style={styles.quickGrid}>
+          <TouchableOpacity
+            style={[styles.quickCard, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}
+            onPress={() => router.push('/offers/market-days' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.quickTopRow}>
+              <View style={[styles.quickIconBox, { backgroundColor: '#059669' }]}>
+                <Ionicons name="leaf" size={16} color="#FFFFFF" />
+              </View>
+              <View style={[styles.quickBadge, { backgroundColor: '#D1FAE5' }]}>
+                <Text style={[styles.quickBadgeText, { color: '#065F46' }]}>This Sat</Text>
+              </View>
+            </View>
+            <Text style={styles.quickTitle}>Market Days</Text>
+            <Text style={styles.quickSub}>Farmers & bakery stalls</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickCard, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}
+            onPress={() => router.push('/offers/demands' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.quickTopRow}>
+              <View style={[styles.quickIconBox, { backgroundColor: '#2563EB' }]}>
+                <Ionicons name="people" size={16} color="#FFFFFF" />
+              </View>
+              <View style={[styles.quickBadge, { backgroundColor: '#DBEAFE' }]}>
+                <Text style={[styles.quickBadgeText, { color: '#1E40AF' }]}>Wholesale</Text>
+              </View>
+            </View>
+            <Text style={styles.quickTitle}>Group Buying</Text>
+            <Text style={styles.quickSub}>Collective demand pools</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickCard, { backgroundColor: '#FAF5FF', borderColor: '#E9D5FF' }]}
+            onPress={() => router.push('/offers/partners' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.quickTopRow}>
+              <View style={[styles.quickIconBox, { backgroundColor: '#7C3AED' }]}>
+                <Ionicons name="storefront" size={16} color="#FFFFFF" />
+              </View>
+              <View style={[styles.quickBadge, { backgroundColor: '#F3E8FF' }]}>
+                <Text style={[styles.quickBadgeText, { color: '#6B21A8' }]}>Vetted</Text>
+              </View>
+            </View>
+            <Text style={styles.quickTitle}>Merchant Directory</Text>
+            <Text style={styles.quickSub}>Verified local businesses</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickCard, { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }]}
+            onPress={() => router.push('/offers/my-claims' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.quickTopRow}>
+              <View style={[styles.quickIconBox, { backgroundColor: COLORS.primary }]}>
+                <Ionicons name="ticket" size={16} color="#FFFFFF" />
+              </View>
+              {activeClaimsCount > 0 && (
+                <View style={[styles.quickBadge, { backgroundColor: '#DC2626' }]}>
+                  <Text style={[styles.quickBadgeText, { color: '#FFFFFF' }]}>{activeClaimsCount} Active</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.quickTitle}>Voucher Wallet</Text>
+            <Text style={styles.quickSub}>QR pass & promo codes</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Weekend Farmers Market Highlight Banner ──────────────────── */}
+        {primaryMarket && (
+          <View style={styles.marketBanner}>
+            <View style={styles.marketBannerHeader}>
+              <View style={styles.marketBadge}>
+                <Ionicons name="sparkles" size={12} color="#FDE68A" />
+                <Text style={styles.marketBadgeText}>WEEKEND SOCIETY EVENT</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.marketRsvpBtn, primaryMarket.userRsvp && styles.marketRsvpBtnActive]}
+                onPress={() => rsvpMutation.mutate(primaryMarket.id)}
+              >
+                <Ionicons
+                  name={primaryMarket.userRsvp ? 'checkmark' : 'calendar-outline'}
+                  size={12}
+                  color={primaryMarket.userRsvp ? '#065F46' : '#FFFFFF'}
+                />
+                <Text
+                  style={[
+                    styles.marketRsvpText,
+                    primaryMarket.userRsvp && { color: '#065F46' },
+                  ]}
+                >
+                  {primaryMarket.userRsvp ? 'RSVP Done' : 'RSVP'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.marketBannerTitle}>{primaryMarket.title}</Text>
+            <Text style={styles.marketBannerTime}>
+              📅 {primaryMarket.date} · ⏰ {primaryMarket.time} · 📍 Clubhouse Lawn
+            </Text>
+
+            <View style={styles.marketBannerFooter}>
+              <Text style={styles.marketStallsCount}>
+                👨‍🌾 {primaryMarket.vendorCount} Confirmed Stalls · {primaryMarket.rsvpCount} Attending
+              </Text>
+              <TouchableOpacity
+                style={styles.viewStallsBtn}
+                onPress={() => router.push('/offers/market-days' as any)}
+              >
+                <Text style={styles.viewStallsBtnText}>View Stalls & Pre-Order →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* ── Active Collective Demand Pool Sneak Peek ────────────────── */}
+        {activeDemandPool && (
+          <TouchableOpacity
+            style={styles.demandTeaserCard}
+            onPress={() => router.push('/offers/demands' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.demandTeaserHead}>
+              <View style={styles.demandPill}>
+                <Text style={styles.demandPillText}>⚡ GROUP BUY CAMPAIGN</Text>
+              </View>
+              <Text style={styles.demandSavingsTag}>
+                Save ₹{(activeDemandPool.regularPrice - activeDemandPool.discountedPrice).toLocaleString('en-IN')}
+              </Text>
+            </View>
+
+            <Text style={styles.demandTeaserTitle}>{activeDemandPool.title}</Text>
+            <Text style={styles.demandTeaserProduct}>📦 {activeDemandPool.targetProduct}</Text>
+
+            <View style={styles.demandProgressRow}>
+              <Text style={styles.demandProgressLabel}>
+                {activeDemandPool.currentSupporters} of {activeDemandPool.targetCount} committed neighbors
+              </Text>
+              <Text style={styles.demandProgressVal}>
+                ₹{activeDemandPool.discountedPrice.toLocaleString('en-IN')}{' '}
+                <Text style={styles.demandRetailStriked}>₹{activeDemandPool.regularPrice}</Text>
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Search Bar & Category Filters ───────────────────────────── */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Featured Resident Offers</Text>
+          <Text style={styles.sectionSub}>Exclusive discounts claimable at local checkout</Text>
+        </View>
+
         <View style={styles.searchWrap}>
           <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
           <TextInput
@@ -139,7 +311,7 @@ export default function OffersScreen() {
           )}
         </View>
 
-        {/* ── Category Filter Pills ───────────────────────────────────── */}
+        {/* Categories */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScroll}>
           {categories.map((c) => {
             const isSel = selectedCategory === c.code;
@@ -156,259 +328,107 @@ export default function OffersScreen() {
           })}
         </ScrollView>
 
-        {/* ── Navigation Tab Bar ──────────────────────────────────────── */}
-        <View style={styles.tabBar}>
-          {[
-            { key: 'DEALS', label: 'All Deals', icon: 'pricetag-outline' },
-            { key: 'CLAIMS', label: 'My Vouchers', icon: 'ticket-outline' },
-            { key: 'DEMAND', label: 'Group Buying', icon: 'people-outline' },
-            { key: 'DIRECTORY', label: 'Directory', icon: 'storefront-outline' },
-          ].map((t) => {
-            const isActive = activeTab === t.key;
-            return (
-              <TouchableOpacity
-                key={t.key}
-                style={[styles.tabBtn, isActive && styles.tabBtnActive]}
-                onPress={() => setActiveTab(t.key as TabType)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name={t.icon as any} size={15} color={isActive ? COLORS.primary : COLORS.textMuted} />
-                <Text style={[styles.tabBtnText, isActive && styles.tabBtnTextActive]}>{t.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.primary} size="large" />
+        {/* ── Deals Feed ──────────────────────────────────────────────── */}
+        {offersLoading ? (
+          <ActivityIndicator style={{ marginTop: 30 }} color={COLORS.primary} size="large" />
         ) : (
-          <>
-            {/* ── TAB 1: ALL DEALS ────────────────────────────────────── */}
-            {activeTab === 'DEALS' && (
-              <View style={styles.tabContent}>
-                {filteredOffers.map((offer) => (
-                  <View key={offer.id} style={styles.offerCard}>
-                    <View style={styles.offerHeader}>
-                      <View style={styles.bizInfo}>
-                        <Text style={styles.bizName}>{offer.businessName}</Text>
-                        <Text style={styles.bizCategory}>
-                          {offer.categoryName} · 📍 {offer.distanceKm} km away
-                        </Text>
-                      </View>
-                      {offer.discountPercentage && (
-                        <View style={styles.discountBadge}>
-                          <Text style={styles.discountBadgeText}>{offer.discountPercentage}% OFF</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <Text style={styles.offerTitle}>{offer.title}</Text>
-                    {offer.tagline && <Text style={styles.offerTagline}>✨ {offer.tagline}</Text>}
-                    <Text style={styles.offerDesc}>{offer.description}</Text>
-
-                    {/* Price & Claim Row */}
-                    <View style={styles.priceAndClaimRow}>
-                      <View style={styles.priceBox}>
-                        {offer.communityPrice ? (
-                          <>
-                            <Text style={styles.communityPriceText}>₹{offer.communityPrice}</Text>
-                            {offer.originalPrice && (
-                              <Text style={styles.originalPriceText}>₹{offer.originalPrice}</Text>
-                            )}
-                          </>
-                        ) : (
-                          <Text style={styles.communityPriceText}>Special Offer</Text>
-                        )}
-                      </View>
-
-                      <TouchableOpacity
-                        style={styles.claimBtn}
-                        onPress={() => claimMutation.mutate(offer.id)}
-                        disabled={claimMutation.isPending}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="ticket-outline" size={16} color="#fff" />
-                        <Text style={styles.claimBtnText}>Claim Voucher</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.offerFooter}>
-                      <Text style={styles.offerValidText}>⏳ Valid until {offer.validUntil}</Text>
-                      <Text style={styles.offerClaimedText}>🔥 {offer.claimedCount} residents claimed</Text>
-                    </View>
+          <View style={styles.dealsList}>
+            {filteredOffers.map((offer) => (
+              <View key={offer.id} style={styles.offerCard}>
+                <View style={styles.offerHeader}>
+                  <View style={styles.bizInfo}>
+                    <Text style={styles.bizName}>{offer.businessName}</Text>
+                    <Text style={styles.bizCategory}>
+                      {offer.categoryName} · 📍 {offer.distanceKm} km from gate
+                    </Text>
                   </View>
-                ))}
-              </View>
-            )}
-
-            {/* ── TAB 2: MY VOUCHERS / CLAIMS ─────────────────────────── */}
-            {activeTab === 'CLAIMS' && (
-              <View style={styles.tabContent}>
-                {claims.length === 0 ? (
-                  <View style={styles.emptyWrap}>
-                    <Ionicons name="ticket-outline" size={48} color={COLORS.textMuted} />
-                    <Text style={styles.emptyTitle}>No Claimed Vouchers Yet</Text>
-                    <Text style={styles.emptySub}>Browse community deals and claim vouchers to redeem at stores.</Text>
-                  </View>
-                ) : (
-                  claims.map((c) => (
-                    <View key={c.id} style={styles.voucherCard}>
-                      <View style={styles.voucherTop}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.voucherBiz}>{c.businessName}</Text>
-                          <Text style={styles.voucherTitle}>{c.offerTitle}</Text>
-                          <Text style={styles.voucherDiscount}>{c.discountSummary}</Text>
-                        </View>
-                        <View style={styles.voucherStatusBadge}>
-                          <Text style={styles.voucherStatusText}>{c.status}</Text>
-                        </View>
-                      </View>
-
-                      {/* Code Box */}
-                      <View style={styles.voucherCodeBox}>
-                        <View>
-                          <Text style={styles.voucherCodeLabel}>PROMO CODE AT COUNTER</Text>
-                          <Text style={styles.voucherCode}>{c.voucherCode}</Text>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.showQrBtn}
-                          onPress={() => setActiveClaimModal(c)}
-                        >
-                          <Ionicons name="qr-code-outline" size={18} color={COLORS.primary} />
-                          <Text style={styles.showQrBtnText}>Show QR</Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <Text style={styles.voucherValidUntil}>📅 Valid until {c.validUntil}</Text>
+                  {offer.discountPercentage && (
+                    <View style={styles.discountBadge}>
+                      <Text style={styles.discountBadgeText}>{offer.discountPercentage}% OFF</Text>
                     </View>
-                  ))
-                )}
-              </View>
-            )}
-
-            {/* ── TAB 3: GROUP DEMAND POOLS ────────────────────────────── */}
-            {activeTab === 'DEMAND' && (
-              <View style={styles.tabContent}>
-                <View style={styles.demandHeader}>
-                  <Text style={styles.demandHeading}>Collective Resident Demand</Text>
-                  <Text style={styles.demandSub}>
-                    When enough neighbors commit, wholesale bulk discounts unlock automatically!
-                  </Text>
+                  )}
                 </View>
 
-                {demandPools.map((dp) => {
-                  const pct = Math.min((dp.currentSupporters / dp.targetCount) * 100, 100);
-                  const isLockedIn = dp.status === 'LOCKED_IN';
-                  return (
-                    <View key={dp.id} style={styles.demandCard}>
-                      <View style={styles.demandTopRow}>
-                        <View style={styles.demandCatPill}>
-                          <Text style={styles.demandCatText}>{dp.category}</Text>
-                        </View>
-                        <View style={[styles.demandStatusPill, isLockedIn && { backgroundColor: '#D1FAE5' }]}>
-                          <Text style={[styles.demandStatusText, isLockedIn && { color: '#065F46' }]}>
-                            {isLockedIn ? '✅ DISCOUNT UNLOCKED' : '⚡ GATHERING SUPPORT'}
-                          </Text>
-                        </View>
-                      </View>
+                <Text style={styles.offerTitle}>{offer.title}</Text>
+                {offer.tagline && <Text style={styles.offerTagline}>✨ {offer.tagline}</Text>}
+                <Text style={styles.offerDesc}>{offer.description}</Text>
 
-                      <Text style={styles.demandTitle}>{dp.title}</Text>
-                      <Text style={styles.demandProduct}>📦 {dp.targetProduct}</Text>
+                {/* Price & Claim Row */}
+                <View style={styles.priceAndClaimRow}>
+                  <View style={styles.priceBox}>
+                    {offer.communityPrice !== undefined ? (
+                      <>
+                        <Text style={styles.communityPriceText}>₹{offer.communityPrice}</Text>
+                        {offer.originalPrice && (
+                          <Text style={styles.originalPriceText}>₹{offer.originalPrice}</Text>
+                        )}
+                      </>
+                    ) : (
+                      <Text style={styles.communityPriceText}>Society Special</Text>
+                    )}
+                  </View>
 
-                      <View style={styles.demandPriceRow}>
-                        <View>
-                          <Text style={styles.demandPriceLabel}>GROUP PRICE</Text>
-                          <Text style={styles.demandPriceVal}>₹{dp.discountedPrice}</Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={styles.demandPriceLabel}>REGULAR RETAIL</Text>
-                          <Text style={styles.demandRetailVal}>₹{dp.regularPrice}</Text>
-                        </View>
-                      </View>
+                  <TouchableOpacity
+                    style={styles.claimBtn}
+                    onPress={() => claimMutation.mutate(offer.id)}
+                    disabled={claimMutation.isPending}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="ticket-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.claimBtnText}>Claim Voucher</Text>
+                  </TouchableOpacity>
+                </View>
 
-                      {/* Progress */}
-                      <View style={styles.demandProgressBox}>
-                        <View style={styles.demandProgressHead}>
-                          <Text style={styles.demandProgressText}>
-                            {dp.currentSupporters} of {dp.targetCount} Neighbors Committed
-                          </Text>
-                          <Text style={styles.demandProgressPct}>{Math.round(pct)}%</Text>
-                        </View>
-                        <View style={styles.demandProgressBarBg}>
-                          <View style={[styles.demandProgressBarFill, { width: `${pct}%` }]} />
-                        </View>
-                      </View>
-
-                      <TouchableOpacity
-                        style={[styles.joinDemandBtn, dp.userSupported && styles.joinDemandBtnActive]}
-                        onPress={() => supportDemandMutation.mutate(dp.id)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons
-                          name={dp.userSupported ? 'checkmark-circle' : 'hand-right-outline'}
-                          size={16}
-                          color="#fff"
-                        />
-                        <Text style={styles.joinDemandBtnText}>
-                          {dp.userSupported ? 'You Have Committed' : 'Join Group Buy Demand'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
+                <View style={styles.offerFooter}>
+                  <Text style={styles.offerValidText}>⏳ Valid until {offer.validUntil}</Text>
+                  <Text style={styles.offerClaimedText}>🔥 {offer.claimedCount} residents claimed</Text>
+                </View>
               </View>
-            )}
+            ))}
+          </View>
+        )}
 
-            {/* ── TAB 4: DIRECTORY ────────────────────────────────────── */}
-            {activeTab === 'DIRECTORY' && (
-              <View style={styles.tabContent}>
-                {businesses.map((biz) => (
-                  <View key={biz.id} style={styles.bizCard}>
-                    <View style={styles.bizHeaderRow}>
-                      <View style={{ flex: 1 }}>
-                        <View style={styles.bizNameRow}>
-                          <Text style={styles.bizCardName}>{biz.name}</Text>
-                          {biz.isVerified && (
-                            <Ionicons name="checkmark-circle" size={16} color="#059669" />
-                          )}
-                        </View>
-                        <Text style={styles.bizCardCat}>{biz.categoryName} · {biz.tagline}</Text>
-                      </View>
-                      <View style={styles.ratingBadge}>
-                        <Ionicons name="star" size={12} color="#D97706" />
-                        <Text style={styles.ratingText}>{biz.averageRating}</Text>
-                      </View>
-                    </View>
+        {/* ── Top Verified Merchants Spotlight ────────────────────────── */}
+        {businesses.length > 0 && (
+          <View style={styles.merchantSpotlightBox}>
+            <View style={styles.spotlightHeader}>
+              <Text style={styles.spotlightTitle}>Top Local Verified Partners</Text>
+              <TouchableOpacity onPress={() => router.push('/offers/partners' as any)}>
+                <Text style={styles.viewAllText}>View All Directory →</Text>
+              </TouchableOpacity>
+            </View>
 
-                    <Text style={styles.bizAddress}>📍 {biz.address} ({biz.distanceKm} km)</Text>
-
-                    <View style={styles.bizActionRow}>
-                      <TouchableOpacity
-                        style={styles.bizCallBtn}
-                        onPress={() => Alert.alert('Contact Merchant', `Calling ${biz.phone}...`)}
-                      >
-                        <Ionicons name="call-outline" size={15} color={COLORS.primary} />
-                        <Text style={styles.bizCallText}>Call Partner</Text>
-                      </TouchableOpacity>
-                      <View style={styles.dealCountBadge}>
-                        <Ionicons name="pricetag-outline" size={14} color="#059669" />
-                        <Text style={styles.dealCountText}>{biz.activeDealsCount} Active Deals</Text>
-                      </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {businesses.slice(0, 4).map((b) => (
+                <View key={b.id} style={styles.spotlightCard}>
+                  <View style={styles.spotlightTop}>
+                    <Text style={styles.spotlightBizName} numberOfLines={1}>{b.name}</Text>
+                    <View style={styles.spotlightRating}>
+                      <Ionicons name="star" size={11} color="#D97706" />
+                      <Text style={styles.spotlightRatingText}>{b.averageRating}</Text>
                     </View>
                   </View>
-                ))}
-              </View>
-            )}
-          </>
+                  <Text style={styles.spotlightCat}>{b.categoryName}</Text>
+                  <Text style={styles.spotlightDiscount} numberOfLines={2}>
+                    🏷️ {b.societyDiscount || 'Resident exclusive rates'}
+                  </Text>
+                  <Text style={styles.spotlightDist}>📍 {b.distanceKm} km away</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
         )}
       </ScrollView>
 
-      {/* ── QR Claim Modal ──────────────────────────────────────────── */}
+      {/* ── Voucher Claimed Pass Modal ───────────────────────────────── */}
       <Modal visible={!!activeClaimModal} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Voucher Pass</Text>
+              <View>
+                <Text style={styles.modalTitle}>Voucher Pass Unlocked!</Text>
+                <Text style={styles.modalSubtitle}>Added to your Resident Wallet</Text>
+              </View>
               <TouchableOpacity onPress={() => setActiveClaimModal(null)}>
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </TouchableOpacity>
@@ -423,17 +443,37 @@ export default function OffersScreen() {
                 <View style={styles.simulatedQrBox}>
                   <Ionicons name="qr-code" size={140} color="#1E1B4B" />
                   <Text style={styles.qrCodeText}>{activeClaimModal.voucherCode}</Text>
+                  {activeClaimModal.counterPin && (
+                    <Text style={styles.counterPinText}>Counter PIN: {activeClaimModal.counterPin}</Text>
+                  )}
                 </View>
 
+                <TouchableOpacity
+                  style={styles.copyCodeBtn}
+                  onPress={() => handleCopyCode(activeClaimModal.voucherCode)}
+                >
+                  <Ionicons
+                    name={copiedCode ? 'checkmark' : 'copy-outline'}
+                    size={14}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.copyCodeText}>
+                    {copiedCode ? 'Promo Code Copied!' : 'Copy Promo Code'}
+                  </Text>
+                </TouchableOpacity>
+
                 <Text style={styles.qrInstructions}>
-                  Show this QR code or promo code at the checkout counter to apply your resident discount.
+                  Show this QR pass or mention promo code at the checkout counter to apply your resident discount.
                 </Text>
 
                 <TouchableOpacity
-                  style={styles.closeModalBtn}
-                  onPress={() => setActiveClaimModal(null)}
+                  style={styles.goToWalletBtn}
+                  onPress={() => {
+                    setActiveClaimModal(null);
+                    router.push('/offers/my-claims' as any);
+                  }}
                 >
-                  <Text style={styles.closeModalBtnText}>Done</Text>
+                  <Text style={styles.goToWalletBtnText}>View in My Voucher Wallet</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -460,7 +500,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   heroPill: {
     flexDirection: 'row',
@@ -475,8 +515,124 @@ const styles = StyleSheet.create({
   savingsBox: { alignItems: 'flex-end' },
   savingsAmount: { fontSize: 16, fontWeight: '900', color: '#34D399' },
   savingsLabel: { fontSize: 9, color: '#A7F3D0' },
-  heroTitle: { fontSize: 17, fontWeight: '900', color: '#fff', marginBottom: 4 },
+  heroTitle: { fontSize: 17, fontWeight: '900', color: '#FFFFFF', marginBottom: 4 },
   heroDesc: { fontSize: 12, color: '#D1FAE5', lineHeight: 17 },
+
+  // ── 4 Quick Actions ───────────────────────────────────────────────
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: SPACING.md,
+  },
+  quickCard: {
+    width: '48.5%',
+    padding: 12,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    ...SHADOWS.sm,
+  },
+  quickTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+  },
+  quickBadgeText: { fontSize: 9, fontWeight: '800' },
+  quickTitle: { fontSize: 13, fontWeight: '800', color: COLORS.text },
+  quickSub: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+
+  // ── Farmers Market Highlight ──────────────────────────────────────
+  marketBanner: {
+    backgroundColor: '#047857',
+    padding: 14,
+    borderRadius: RADIUS.xl,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  marketBannerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  marketBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+  },
+  marketBadgeText: { fontSize: 9, fontWeight: '800', color: '#FDE68A' },
+  marketRsvpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#065F46',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  marketRsvpBtnActive: { backgroundColor: '#D1FAE5' },
+  marketRsvpText: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
+  marketBannerTitle: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 2 },
+  marketBannerTime: { fontSize: 11, color: '#D1FAE5', marginBottom: 8 },
+  marketBannerFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.15)',
+    paddingTop: 8,
+  },
+  marketStallsCount: { fontSize: 11, color: '#FDE68A', fontWeight: '700' },
+  viewStallsBtn: {},
+  viewStallsBtnText: { fontSize: 11, fontWeight: '800', color: '#FFFFFF', textDecorationLine: 'underline' },
+
+  // ── Demand Teaser ─────────────────────────────────────────────────
+  demandTeaserCard: {
+    backgroundColor: COLORS.surface,
+    padding: 14,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  demandTeaserHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  demandPill: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
+  },
+  demandPillText: { fontSize: 9, fontWeight: '800', color: '#1D4ED8' },
+  demandSavingsTag: { fontSize: 11, fontWeight: '900', color: '#059669' },
+  demandTeaserTitle: { fontSize: 14, fontWeight: '800', color: COLORS.text, marginBottom: 2 },
+  demandTeaserProduct: { fontSize: 11, color: COLORS.textMuted, marginBottom: 8 },
+  demandProgressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  demandProgressLabel: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600' },
+  demandProgressVal: { fontSize: 13, fontWeight: '900', color: '#059669' },
+  demandRetailStriked: { fontSize: 11, color: COLORS.textMuted, textDecorationLine: 'line-through' },
+
+  // ── Section Header ────────────────────────────────────────────────
+  sectionHeader: { marginBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '900', color: COLORS.text },
+  sectionSub: { fontSize: 12, color: COLORS.textMuted },
 
   // ── Search & Filter ───────────────────────────────────────────────
   searchWrap: {
@@ -492,7 +648,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   searchInput: { flex: 1, fontSize: 13, color: COLORS.text },
-  catScroll: { flexDirection: 'row', gap: 6, paddingBottom: 12 },
+  catScroll: { flexDirection: 'row', gap: 6, paddingBottom: 14 },
   catPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -506,36 +662,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   catPillText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
-  catPillTextSelected: { color: '#fff' },
+  catPillTextSelected: { color: '#FFFFFF' },
 
-  // ── Tab Bar ───────────────────────────────────────────────────────
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.md,
-  },
-  tabBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    borderRadius: RADIUS.md,
-  },
-  tabBtnActive: {
-    backgroundColor: COLORS.primaryLight,
-  },
-  tabBtnText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
-  tabBtnTextActive: { color: COLORS.primary, fontWeight: '800' },
-
-  tabContent: { gap: SPACING.md },
-
-  // ── Offer Card ────────────────────────────────────────────────────
+  // ── Deals List ────────────────────────────────────────────────────
+  dealsList: { gap: SPACING.md },
   offerCard: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.xl,
@@ -584,7 +714,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: RADIUS.md,
   },
-  claimBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  claimBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   offerFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -595,160 +725,36 @@ const styles = StyleSheet.create({
   offerValidText: { fontSize: 11, color: COLORS.textMuted },
   offerClaimedText: { fontSize: 11, fontWeight: '700', color: '#D97706' },
 
-  // ── Voucher Card ──────────────────────────────────────────────────
-  voucherCard: {
-    backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryMid,
-    ...SHADOWS.sm,
+  // ── Merchant Spotlight ────────────────────────────────────────────
+  merchantSpotlightBox: {
+    marginTop: SPACING.xl,
   },
-  voucherTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  voucherBiz: { fontSize: 12, fontWeight: '800', color: COLORS.primary },
-  voucherTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginTop: 2 },
-  voucherDiscount: { fontSize: 12, fontWeight: '700', color: '#059669', marginTop: 2 },
-  voucherStatusBadge: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.sm,
-    alignSelf: 'flex-start',
-  },
-  voucherStatusText: { fontSize: 10, fontWeight: '800', color: '#065F46' },
-  voucherCodeBox: {
+  spotlightHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    padding: 10,
-    borderRadius: RADIUS.md,
-    marginBottom: 8,
-  },
-  voucherCodeLabel: { fontSize: 9, fontWeight: '800', color: COLORS.primary },
-  voucherCode: { fontSize: 16, fontWeight: '900', color: COLORS.primary, letterSpacing: 1 },
-  showQrBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#fff',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: RADIUS.sm,
-  },
-  showQrBtnText: { fontSize: 11, fontWeight: '800', color: COLORS.primary },
-  voucherValidUntil: { fontSize: 11, color: COLORS.textMuted },
-
-  // ── Demand Card ───────────────────────────────────────────────────
-  demandHeader: { marginBottom: 6 },
-  demandHeading: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  demandSub: { fontSize: 12, color: COLORS.textMuted },
-  demandCard: {
-    backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.sm,
-  },
-  demandTopRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  demandCatPill: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
-  },
-  demandCatText: { fontSize: 10, fontWeight: '800', color: COLORS.primary },
-  demandStatusPill: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
-  },
-  demandStatusText: { fontSize: 10, fontWeight: '800', color: '#92400E' },
-  demandTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text, marginBottom: 2 },
-  demandProduct: { fontSize: 12, color: COLORS.textMuted, marginBottom: 10 },
-  demandPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.surfaceAlt,
-    padding: 10,
-    borderRadius: RADIUS.md,
     marginBottom: 10,
   },
-  demandPriceLabel: { fontSize: 9, fontWeight: '800', color: COLORS.textMuted },
-  demandPriceVal: { fontSize: 16, fontWeight: '900', color: '#059669' },
-  demandRetailVal: { fontSize: 14, color: COLORS.textMuted, textDecorationLine: 'line-through' },
-  demandProgressBox: { marginBottom: 12 },
-  demandProgressHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  demandProgressText: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary },
-  demandProgressPct: { fontSize: 11, fontWeight: '800', color: COLORS.primary },
-  demandProgressBarBg: {
-    height: 6,
-    backgroundColor: COLORS.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  demandProgressBarFill: {
-    height: '100%',
-    backgroundColor: '#059669',
-    borderRadius: 3,
-  },
-  joinDemandBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#059669',
-    paddingVertical: 10,
-    borderRadius: RADIUS.md,
-  },
-  joinDemandBtnActive: { backgroundColor: '#047857' },
-  joinDemandBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
-
-  // ── Directory Card ────────────────────────────────────────────────
-  bizCard: {
+  spotlightTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text },
+  viewAllText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+  spotlightCard: {
+    width: 170,
     backgroundColor: COLORS.surface,
-    padding: 14,
-    borderRadius: RADIUS.xl,
+    padding: 12,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
     ...SHADOWS.sm,
   },
-  bizHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  bizNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  bizCardName: { fontSize: 14, fontWeight: '800', color: COLORS.text },
-  bizCardCat: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
-  },
-  ratingText: { fontSize: 11, fontWeight: '800', color: '#B45309' },
-  bizAddress: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 10 },
-  bizActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 8,
-  },
-  bizCallBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  bizCallText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  dealCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  dealCountText: { fontSize: 11, fontWeight: '700', color: '#059669' },
+  spotlightTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  spotlightBizName: { fontSize: 12, fontWeight: '800', color: COLORS.text, flex: 1 },
+  spotlightRating: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  spotlightRatingText: { fontSize: 10, fontWeight: '800', color: '#B45309' },
+  spotlightCat: { fontSize: 10, color: COLORS.textMuted, marginBottom: 4 },
+  spotlightDiscount: { fontSize: 11, fontWeight: '700', color: '#059669', marginBottom: 6 },
+  spotlightDist: { fontSize: 10, color: COLORS.textMuted },
 
-  // ── Empty State ───────────────────────────────────────────────────
-  emptyWrap: { alignItems: 'center', paddingTop: 40, gap: 8 },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  emptySub: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', paddingHorizontal: 24 },
-
-  // ── Modal Styles ──────────────────────────────────────────────────
+  // ── Modal ─────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -763,8 +769,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
   },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  modalTitle: { fontSize: 17, fontWeight: '900', color: '#059669' },
+  modalSubtitle: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   qrContent: { alignItems: 'center', marginTop: 12 },
   qrBizName: { fontSize: 15, fontWeight: '800', color: COLORS.primary },
   qrOfferTitle: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', marginTop: 2 },
@@ -775,17 +782,30 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginVertical: 14,
+    marginVertical: 12,
+    width: '100%',
   },
   qrCodeText: { fontSize: 16, fontWeight: '900', color: '#1E1B4B', letterSpacing: 2, marginTop: 8 },
+  counterPinText: { fontSize: 11, fontWeight: '800', color: COLORS.primary, marginTop: 4 },
+  copyCodeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+    marginBottom: 10,
+  },
+  copyCodeText: { fontSize: 11, fontWeight: '800', color: COLORS.primary },
   qrInstructions: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 16 },
-  closeModalBtn: {
+  goToWalletBtn: {
     backgroundColor: COLORS.primary,
     width: '100%',
     paddingVertical: 12,
     borderRadius: RADIUS.md,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 14,
   },
-  closeModalBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  goToWalletBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
 });

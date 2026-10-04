@@ -21,6 +21,7 @@ import { PostDto, EventDto } from '@/types/api';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppBack } from '@/hooks/useAppBack';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.68;
@@ -311,6 +312,17 @@ export default function FeedScreen() {
   const [filter, setFilter] = useState<FeedFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useAppBack({
+    isRootScreen: true,
+    onBeforeBack: () => {
+      if (isSearchOpen) {
+        setIsSearchOpen(false);
+        setSearchQuery('');
+        return true;
+      }
+    },
+  });
 
   const {
     data, fetchNextPage, hasNextPage,

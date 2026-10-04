@@ -36,6 +36,9 @@ export default function AdminLayout() {
       <Stack.Screen name="moderation" />
       <Stack.Screen name="announcements" />
       <Stack.Screen name="community-settings" />
+      <Stack.Screen name="audit-logs" />
+      <Stack.Screen name="bulk-upload" />
+      <Stack.Screen name="privacy" />
     </Stack>
   );
 }

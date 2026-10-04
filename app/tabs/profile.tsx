@@ -662,6 +662,17 @@ export default function ProfileScreen() {
             />
           )}
           <MenuItem
+            icon="wallet-outline"
+            label="My Finance (Personal)"
+            sublabel="Track income, expenses, budgets & savings"
+            onPress={() => router.push('/personal-finance')}
+            iconColor="#10B981"
+            iconBg="#D1FAE5"
+            badge="NEW"
+            badgeBg="#D1FAE5"
+            badgeColor="#059669"
+          />
+          <MenuItem
             icon="newspaper-outline"
             label="Notices & Circulars"
             sublabel="Official RWA announcements & guidelines"
