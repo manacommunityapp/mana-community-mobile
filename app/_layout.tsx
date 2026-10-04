@@ -25,6 +25,7 @@ import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
 import { setupGlobalFonts } from '@/utils/globalFonts';
 import { initSentry, setUser, clearUser } from '@/utils/sentry';
 import { offlineSyncService } from '@/services/offlineSyncService';
+import { getPortalForRole } from '@/hooks/useRoleSwitcher';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
@@ -85,20 +86,8 @@ function AuthGuard() {
 
     // Fully verified — send to role-appropriate home
     if (inOnboarding || inAuth) {
-      const role = user?.role;
-      if (role === 'SECURITY' || role === 'GUARD') {
-        router.replace('/guard/tabs/dashboard');
-      } else if (role === 'VENDOR') {
-        router.replace('/vendor/tabs/dashboard');
-      } else if (role === 'SPORTS_ADMIN') {
-        router.replace('/sports-admin/tabs/dashboard');
-      } else if (role === 'EVENT_ADMIN') {
-        router.replace('/event-admin/tabs/dashboard');
-      } else if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'COMMUNITY_ADMIN') {
-        router.replace('/admin-role/tabs/dashboard');
-      } else {
-        router.replace('/tabs/feed');
-      }
+      const portal = getPortalForRole(user?.role ?? '');
+      router.replace((portal?.route ?? '/tabs/feed') as any);
     }
   }, [isAuthenticated, isLoading, isPending, segments]);
 

@@ -11,6 +11,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useRoleSwitcher } from '@/hooks/useRoleSwitcher';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getInitials } from '@/constants/config';
 import { profileService } from '@/services/profileService';
 import { eventService } from '@/services/eventService';
@@ -242,9 +244,10 @@ export default function ProfileScreen() {
     );
   }
 
-  const isSuperAdmin = user.role === 'SUPER_ADMIN';
-  const hasPerm = (perm: string) => isSuperAdmin || (user?.permissions || []).includes(perm);
-  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'].includes(user.role);
+  const { hasPerm, isAdmin, isSuperAdmin, hasMultiplePortals, availablePortals, switchToRole } = {
+    ...usePermissions(),
+    ...useRoleSwitcher(),
+  };
 
   // Community service permissions
   const showEmergency = hasPerm(VIEW_EMERGENCY);
@@ -544,8 +547,43 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ── VIP Admin Console Card (Role-Based) ─────────────────── */}
-        {isAdmin && (isSuperAdmin || hasPerm(VIEW_ADMIN)) && (
+        {/* ── Role Portal Cards ─────────────────── */}
+        {hasMultiplePortals && availablePortals.length > 1 && (
+          <View style={styles.adminCardWrap}>
+            {availablePortals.map((portal) => (
+              <TouchableOpacity
+                key={portal.role}
+                style={[styles.adminCard, { marginBottom: 8 }]}
+                onPress={() => switchToRole(portal.role)}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#0F172A', '#1E293B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.adminGradient}
+                >
+                  <View style={styles.adminIconBox}>
+                    <Ionicons name={portal.icon as IoniconsName} size={20} color="#FDE047" />
+                  </View>
+                  <View style={styles.adminInfo}>
+                    <View style={styles.adminBadgeRow}>
+                      <Text style={styles.adminTitle}>{portal.label}</Text>
+                      <View style={styles.adminTag}>
+                        <Text style={styles.adminTagText}>{portal.role.replace('_', ' ')}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.adminSub}>
+                      Switch to {portal.label}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        {!hasMultiplePortals && isAdmin && (isSuperAdmin || hasPerm(VIEW_ADMIN)) && (
           <View style={styles.adminCardWrap}>
             <TouchableOpacity
               style={styles.adminCard}
