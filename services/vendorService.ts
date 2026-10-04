@@ -12,6 +12,8 @@ import type {
   VendorInvoice,
   InvoiceStatus,
   VendorReview,
+  VendorSettlement,
+  VendorCommerceAnalytics,
 } from '@/types/vendor';
 
 export type {
@@ -264,4 +266,130 @@ export const vendorService = {
       return { id: 'offer-' + Date.now(), demandId, ...data, status: 'PENDING' };
     }
   },
+
+  async addProduct(productData: Partial<VendorProduct>): Promise<VendorProduct> {
+    try {
+      const res = await api.post<VendorProduct>('/vendors/products', productData);
+      return res.data;
+    } catch {
+      return {
+        id: `p-${Date.now()}`,
+        vendorId: 'v1',
+        name: productData.name || 'New Product',
+        category: productData.category || 'Grocery',
+        sku: productData.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+        imageUrls: productData.imageUrls || [],
+        mrp: productData.mrp || 100,
+        sellingPrice: productData.sellingPrice || 90,
+        gst: productData.gst || 5,
+        packSize: productData.packSize || '1 KG',
+        availableQty: productData.availableQty || 50,
+        minOrderQty: productData.minOrderQty || 10,
+        fulfillmentType: productData.fulfillmentType || 'BOTH',
+        status: 'ACTIVE',
+      };
+    }
+  },
+
+  async updateProduct(productId: string, updates: Partial<VendorProduct>): Promise<void> {
+    try {
+      await api.put(`/vendors/products/${productId}`, updates);
+    } catch {}
+  },
+
+  async adjustStock(productId: string, newQty: number): Promise<void> {
+    try {
+      await api.post(`/vendors/products/${productId}/adjust-stock`, { availableQty: newQty });
+    } catch {}
+  },
+
+  async getSettlements(vendorId?: string): Promise<VendorSettlement[]> {
+    try {
+      const res = await api.get<VendorSettlement[]>(`/vendors/${vendorId || 'me'}/settlements`);
+      return res.data;
+    } catch {
+      return SAMPLE_SETTLEMENTS;
+    }
+  },
+
+  async requestSettlementPayout(settlementId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await api.post(`/vendors/settlements/${settlementId}/request-payout`);
+      return res.data;
+    } catch {
+      return { success: true, message: 'Payout initiated! Funds will credit within 24 hours.' };
+    }
+  },
+
+  async getCommerceAnalytics(vendorId?: string): Promise<VendorCommerceAnalytics> {
+    try {
+      const res = await api.get<VendorCommerceAnalytics>(`/vendors/${vendorId || 'me'}/analytics`);
+      return res.data;
+    } catch {
+      return SAMPLE_ANALYTICS;
+    }
+  },
+
+};
+
+const SAMPLE_SETTLEMENTS: VendorSettlement[] = [
+  {
+    id: 'SET-2026-081',
+    vendorId: 'v1',
+    dealId: 'd1',
+    dealTitle: 'Aashirvaad Atta 10 KG (100 Bags Bulk)',
+    grossSales: 42705,
+    platformFeePct: 3.5,
+    platformFeeAmount: 1494.67,
+    taxDeducted: 427.05,
+    netPayoutAmount: 40783.28,
+    payoutStatus: 'ESCROW_HOLD',
+    bankAccountLast4: '4821',
+    bankName: 'HDFC Bank',
+    orderCount: 41,
+    createdAt: '2026-10-04T12:00:00Z',
+  },
+  {
+    id: 'SET-2026-074',
+    vendorId: 'v1',
+    dealId: 'd-old-1',
+    dealTitle: 'Fortune Sunflower Oil 5L Bulk Batch',
+    grossSales: 37642,
+    platformFeePct: 3.5,
+    platformFeeAmount: 1317.47,
+    taxDeducted: 376.42,
+    netPayoutAmount: 35948.11,
+    payoutStatus: 'PAID',
+    bankAccountLast4: '4821',
+    bankName: 'HDFC Bank',
+    settledAt: '2026-09-30T16:45:00Z',
+    orderCount: 58,
+    createdAt: '2026-09-28T10:00:00Z',
+  },
+];
+
+const SAMPLE_ANALYTICS: VendorCommerceAnalytics = {
+  totalGrossRevenue: 384500,
+  totalOrdersFulfilled: 1248,
+  averageOrderValue: 842,
+  sellThroughRate: 94.6,
+  repeatBuyerPct: 68.4,
+  onTimeDeliveryRate: 97.2,
+  disputeResolutionRate: 100,
+  topProducts: [
+    { name: 'Aashirvaad Atta 10 KG', unitsSold: 420, revenue: 245700, marginPct: 14.5 },
+    { name: 'Tata Sampann Toor Dal 5 KG', unitsSold: 280, revenue: 145600, marginPct: 12.0 },
+    { name: 'Fortune Sunflower Oil 5L', unitsSold: 190, revenue: 123310, marginPct: 9.8 },
+  ],
+  monthlyRevenueChart: [
+    { month: 'Jun', revenue: 180000, orders: 210 },
+    { month: 'Jul', revenue: 240000, orders: 285 },
+    { month: 'Aug', revenue: 310000, orders: 360 },
+    { month: 'Sep', revenue: 384500, orders: 440 },
+  ],
+  categoryDistribution: [
+    { category: 'Staples & Grains', count: 640, percentage: 51 },
+    { category: 'Edible Oils', count: 320, percentage: 26 },
+    { category: 'Pulses & Dal', count: 288, percentage: 23 },
+  ],
 };

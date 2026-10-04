@@ -31,8 +31,8 @@ export default function VendorDealsScreen() {
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.headerTitle}>Group Buy Deals</Text>
-          <Text style={s.headerSub}>Manage wholesale campaigns & track volume unlock</Text>
+          <Text style={s.headerTitle}>Wholesale Commerce</Text>
+          <Text style={s.headerSub}>Manage products, campaigns, payouts & analytics</Text>
         </View>
         <TouchableOpacity
           style={s.createBtn}
@@ -42,6 +42,32 @@ export default function VendorDealsScreen() {
           <Ionicons name="add" size={18} color="#FFFFFF" />
           <Text style={s.createBtnText}>New Deal</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Commerce Navigation Bar */}
+      <View style={s.commerceNav}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.navScroll}>
+          <TouchableOpacity style={s.navPill} onPress={() => router.push('/vendor/products' as any)}>
+            <Ionicons name="cube-outline" size={15} color={COLORS.textSecondary} />
+            <Text style={s.navPillText}>Products</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.navPill, s.navPillActive]}>
+            <Ionicons name="pricetags" size={15} color="#FFFFFF" />
+            <Text style={[s.navPillText, s.navPillTextActive]}>Group Deals</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.navPill} onPress={() => router.push('/vendor/demand/bidding' as any)}>
+            <Ionicons name="megaphone-outline" size={15} color={COLORS.textSecondary} />
+            <Text style={s.navPillText}>Demand Bids</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.navPill} onPress={() => router.push('/vendor/settlements' as any)}>
+            <Ionicons name="cash-outline" size={15} color={COLORS.textSecondary} />
+            <Text style={s.navPillText}>Settlements</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.navPill} onPress={() => router.push('/vendor/analytics' as any)}>
+            <Ionicons name="stats-chart-outline" size={15} color={COLORS.textSecondary} />
+            <Text style={s.navPillText}>Analytics</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -162,6 +188,30 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   createBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  commerceNav: {
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    paddingVertical: 10,
+  },
+  navScroll: { paddingHorizontal: 14, gap: 8 },
+  navPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  navPillActive: {
+    backgroundColor: VENDOR_COLORS.accent,
+    borderColor: VENDOR_COLORS.accent,
+  },
+  navPillText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
+  navPillTextActive: { color: '#FFFFFF' },
   content: { padding: 16, gap: 14, paddingBottom: 40 },
   center: { alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyBox: { alignItems: 'center', padding: 40, backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, gap: 10 },

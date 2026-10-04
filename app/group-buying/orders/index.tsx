@@ -10,6 +10,8 @@ import { groupBuyingService } from '@/services/groupBuyingService';
 import QRPickupPass from '@/components/group-buying/QRPickupPass';
 import type { GroupOrderDto } from '@/types/groupBuying';
 
+import { useRouter } from 'expo-router';
+
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   CONFIRMED:       { label: 'Confirmed', color: '#2563EB', bg: '#DBEAFE' },
   PAYMENT_PENDING: { label: 'Payment Pending', color: '#D97706', bg: '#FEF3C7' },
@@ -19,6 +21,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 };
 
 export default function MyGroupOrders() {
+  const router = useRouter();
   const [selectedOrder, setSelectedOrder] = useState<GroupOrderDto | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -38,6 +41,8 @@ export default function MyGroupOrders() {
 
   function OrderCard({ order }: { order: GroupOrderDto }) {
     const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.CONFIRMED;
+    const isCollected = order.status === 'PICKED_UP';
+
     return (
       <View style={s.card}>
         <View style={s.cardTop}>
@@ -62,11 +67,30 @@ export default function MyGroupOrders() {
         ) : null}
         <View style={s.actions}>
           {order.status !== 'CANCELLED' && order.status !== 'REFUNDED' && (
-            <TouchableOpacity style={s.qrBtn} onPress={() => setSelectedOrder(order)}>
+            <TouchableOpacity style={s.qrBtn} onPress={() => router.push(`/group-buying/pickup/${order.id}`)}>
               <Ionicons name="qr-code-outline" size={15} color={COLORS.primary} />
-              <Text style={s.qrBtnText}>Show Pickup Pass</Text>
+              <Text style={s.qrBtnText}>Pickup Pass</Text>
             </TouchableOpacity>
           )}
+
+          {isCollected && (
+            <TouchableOpacity
+              style={s.reviewBtn}
+              onPress={() => router.push(`/group-buying/orders/${order.id}/review`)}
+            >
+              <Ionicons name="star-outline" size={14} color="#D97706" />
+              <Text style={s.reviewBtnText}>Rate</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={s.disputeBtn}
+            onPress={() => router.push(`/group-buying/orders/${order.id}/dispute`)}
+          >
+            <Ionicons name="shield-outline" size={14} color={COLORS.textSecondary} />
+            <Text style={s.disputeBtnText}>Report Issue</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={s.shareBtn} onPress={() => handleShare(order)}>
             <Ionicons name="share-social-outline" size={15} color={COLORS.textSecondary} />
           </TouchableOpacity>
@@ -149,6 +173,10 @@ const s = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10, alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10 },
   qrBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 9 },
   qrBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
+  reviewBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 9, borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#FDE68A' },
+  reviewBtnText: { fontSize: 12, fontWeight: '800', color: '#B45309' },
+  disputeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: COLORS.surfaceAlt, paddingHorizontal: 10, paddingVertical: 9, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border },
+  disputeBtnText: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
   shareBtn: { padding: 9, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: COLORS.background, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, gap: SPACING.md, maxHeight: '90%' },

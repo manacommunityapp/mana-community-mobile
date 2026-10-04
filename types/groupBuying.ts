@@ -224,3 +224,42 @@ export interface CommunityAIQueryResponse {
   confidenceScore: number;
   explanation: string;
 }
+
+export interface OrderReview {
+  id: string;
+  orderId: string;
+  dealId: string;
+  residentName: string;
+  productRating: number;
+  deliveryRating: number;
+  comment: string;
+  photos?: string[];
+  createdAt: string;
+}
+
+export interface OrderDispute {
+  id: string;
+  orderId: string;
+  dealId: string;
+  dealTitle: string;
+  residentName: string;
+  flat: string;
+  reason: 'DAMAGED_ITEMS' | 'MISSING_QUANTITY' | 'POOR_QUALITY' | 'WRONG_ITEM' | 'NOT_DELIVERED';
+  description: string;
+  requestedResolution: 'REFUND' | 'REPLACEMENT';
+  claimAmount: number;
+  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REPLACED' | 'REFUNDED' | 'REJECTED';
+  photoUrls?: string[];
+  createdAt: string;
+  resolvedAt?: string;
+  vendorResponse?: string;
+}
+
+export interface CheckoutPaymentDetails {
+  paymentMethod: 'UPI' | 'CREDIT_DEBIT_CARD' | 'NET_BANKING' | 'ADVANCE_DEPOSIT' | 'ESCROW_HOLD';
+  amountToPayNow: number;
+  escrowHoldAmount?: number;
+  advanceDepositAmount?: number;
+  deliveryAddressOrPickup: string;
+  specialNotes?: string;
+}

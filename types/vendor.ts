@@ -166,3 +166,34 @@ export interface VendorFulfillmentManifest {
   status: string;
   orders: VendorOrder[];
 }
+
+export interface VendorSettlement {
+  id: string;
+  vendorId: string;
+  dealId: string;
+  dealTitle: string;
+  grossSales: number;
+  platformFeePct: number;
+  platformFeeAmount: number;
+  taxDeducted: number;
+  netPayoutAmount: number;
+  payoutStatus: 'PENDING_DELIVERY' | 'ESCROW_HOLD' | 'PROCESSED' | 'PAID';
+  bankAccountLast4: string;
+  bankName: string;
+  settledAt?: string;
+  createdAt: string;
+  orderCount: number;
+}
+
+export interface VendorCommerceAnalytics {
+  totalGrossRevenue: number;
+  totalOrdersFulfilled: number;
+  averageOrderValue: number;
+  sellThroughRate: number;
+  repeatBuyerPct: number;
+  onTimeDeliveryRate: number;
+  disputeResolutionRate: number;
+  topProducts: Array<{ name: string; unitsSold: number; revenue: number; marginPct: number }>;
+  monthlyRevenueChart: Array<{ month: string; revenue: number; orders: number }>;
+  categoryDistribution: Array<{ category: string; count: number; percentage: number }>;
+}

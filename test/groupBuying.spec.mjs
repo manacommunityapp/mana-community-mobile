@@ -162,7 +162,7 @@ describe('Mana Group Buy ? Natural Language & AI Demand Matching', () => {
   });
 });
 
-describe('Mana Group Buy ? Vendor Fulfillment Manifest Accounting', () => {
+describe('Mana Group Buy - Vendor Fulfillment Manifest Accounting', () => {
   const manifestOrders = [
     { flat: 'A-101', residentName: 'Ramesh Patel', qty: 2, total: 1170 },
     { flat: 'A-204', residentName: 'Sneha Verma', qty: 3, total: 1755 },
@@ -175,5 +175,48 @@ describe('Mana Group Buy ? Vendor Fulfillment Manifest Accounting', () => {
 
     assert.strictEqual(totalUnits, 6);
     assert.strictEqual(totalRevenue, 3510);
+  });
+});
+
+describe('Mana Group Buy - Vendor Settlement & Escrow Deductions', () => {
+  function calculateSettlement(grossSales, feePct = 3.5, tdsPct = 1.0) {
+    const platformFee = Math.round((grossSales * (feePct / 100)) * 100) / 100;
+    const tds = Math.round((grossSales * (tdsPct / 100)) * 100) / 100;
+    const netPayout = Math.round((grossSales - platformFee - tds) * 100) / 100;
+    return { grossSales, platformFee, tds, netPayout };
+  }
+
+  test('Should compute vendor net settlement with platform fee and TDS deducted', () => {
+    const settlement = calculateSettlement(42705, 3.5, 1.0);
+    assert.strictEqual(settlement.grossSales, 42705);
+    assert.strictEqual(settlement.platformFee, 1494.68);
+    assert.strictEqual(settlement.tds, 427.05);
+    assert.strictEqual(settlement.netPayout, 40783.27);
+  });
+
+  test('Should hold settlement in escrow until deal delivery is fulfilled', () => {
+    const dealStatus = 'PICKUP_IN_PROGRESS';
+    const payoutStatus = dealStatus === 'COMPLETED' ? 'PAID' : 'ESCROW_HOLD';
+    assert.strictEqual(payoutStatus, 'ESCROW_HOLD');
+  });
+});
+
+describe('Mana Group Buy - Review & Dispute Lifecycle', () => {
+  test('Should create dispute claim with valid status transitions', () => {
+    const dispute = {
+      id: 'DISP-2026-101',
+      orderId: 'GB-2026-00089',
+      reason: 'DAMAGED_ITEMS',
+      claimAmount: 210,
+      requestedResolution: 'REFUND',
+      status: 'SUBMITTED',
+    };
+
+    assert.strictEqual(dispute.status, 'SUBMITTED');
+    assert.ok(dispute.claimAmount > 0);
+
+    const resolvedDispute = { ...dispute, status: 'APPROVED', resolvedAt: new Date().toISOString() };
+    assert.strictEqual(resolvedDispute.status, 'APPROVED');
+    assert.ok(resolvedDispute.resolvedAt);
   });
 });

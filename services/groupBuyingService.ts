@@ -2,6 +2,9 @@ import api from './apiClient';
 import type {
   GroupDealDto, GroupOrderDto, DemandRequest,
   MonthlyBasket, CommunitySavings, BuyAgainSuggestion, FestivalDealCategory, BuyingGroup, CommunityAIQueryResponse,
+  OrderReview,
+  OrderDispute,
+  CheckoutPaymentDetails,
 } from '@/types/groupBuying';
 
 const SAMPLE_TIERS = (base: number) => [
@@ -518,6 +521,72 @@ export const groupBuyingService = {
       return (await groupBuyingService.getDeals())[0];
     }
   },
+
+  async submitOrderReview(data: Omit<OrderReview, 'id' | 'createdAt'>): Promise<OrderReview> {
+    try {
+      const res = await api.post<OrderReview>('/group-buying/reviews', data);
+      return res.data;
+    } catch {
+      return {
+        id: 'rev-' + Date.now(),
+        ...data,
+        createdAt: new Date().toISOString(),
+      };
+    }
+  },
+
+  async raiseOrderDispute(data: Omit<OrderDispute, 'id' | 'createdAt' | 'status'>): Promise<OrderDispute> {
+    try {
+      const res = await api.post<OrderDispute>('/group-buying/disputes', data);
+      return res.data;
+    } catch {
+      return {
+        id: 'DISP-2026-' + Math.floor(100 + Math.random() * 900),
+        ...data,
+        status: 'SUBMITTED',
+        createdAt: new Date().toISOString(),
+      };
+    }
+  },
+
+  async getMyDisputes(): Promise<OrderDispute[]> {
+    try {
+      const res = await api.get<OrderDispute[]>('/group-buying/disputes');
+      return res.data;
+    } catch {
+      return SAMPLE_DISPUTES;
+    }
+  },
+
+  async checkoutGroupBuy(dealId: string, qty: number, checkoutDetails: CheckoutPaymentDetails): Promise<GroupOrderDto> {
+    try {
+      const res = await api.post<GroupOrderDto>('/group-buying/deals/' + dealId + '/checkout', {
+        quantity: qty,
+        ...checkoutDetails,
+      });
+      return res.data;
+    } catch {
+      const deal = SAMPLE_DEALS.find(d => d.id === dealId) ?? SAMPLE_DEALS[0];
+      const orderId = 'GB-2026-' + Math.floor(10000 + Math.random() * 90000);
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      return {
+        id: orderId,
+        dealId,
+        title: deal.title,
+        category: deal.category,
+        qty,
+        unitPrice: deal.currentTierPrice,
+        total: deal.currentTierPrice * qty,
+        savings: (deal.mrp - deal.currentTierPrice) * qty,
+        status: 'CONFIRMED',
+        qrCode: 'TKN-' + dealId + '-' + Date.now() + '-' + otp,
+        pickupPoint: checkoutDetails.deliveryAddressOrPickup || deal.pickupPoint,
+        pickupDate: deal.pickupDate,
+        pickupSlot: deal.pickupSlots?.[0],
+        createdAt: new Date().toISOString(),
+      };
+    }
+  },
 };
 
 const SAMPLE_TOWER_GROUPS: BuyingGroup[] = [
@@ -527,4 +596,35 @@ const SAMPLE_TOWER_GROUPS: BuyingGroup[] = [
   { id: 'bg4', name: 'Villas Collective Bulk Hub', tower: 'Villas Row', block: 'Villas', leaderName: 'Kiran Patel', leaderFlat: 'Villa-12', memberCount: 18, totalSaved: 22500, activeDealsCount: 3, description: 'Household cleaning, dairy and bulk staples.', isMember: false },
 ];
 
-export type { GroupDealDto, GroupOrderDto, DemandRequest, MonthlyBasket, CommunitySavings, BuyAgainSuggestion, BuyingGroup, CommunityAIQueryResponse };
+const SAMPLE_DISPUTES: OrderDispute[] = [
+  {
+    id: 'DISP-2026-001',
+    orderId: 'GB-2026-00089',
+    dealId: 'd2',
+    dealTitle: 'Alphonso Mango Box (5 KG)',
+    residentName: 'Sandeep V',
+    flat: 'A-402',
+    reason: 'DAMAGED_ITEMS',
+    description: '2 mangoes were bruised during delivery.',
+    requestedResolution: 'REFUND',
+    claimAmount: 210,
+    status: 'APPROVED',
+    createdAt: '2026-09-26T10:00:00Z',
+    resolvedAt: '2026-09-26T14:30:00Z',
+    vendorResponse: 'Approved. Partial refund of ₹210 credited back to source account.',
+  },
+];
+
+export type {
+  GroupDealDto,
+  GroupOrderDto,
+  DemandRequest,
+  MonthlyBasket,
+  CommunitySavings,
+  BuyAgainSuggestion,
+  BuyingGroup,
+  CommunityAIQueryResponse,
+  OrderReview,
+  OrderDispute,
+  CheckoutPaymentDetails,
+};
