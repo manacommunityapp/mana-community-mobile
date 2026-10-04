@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Image,
+  View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Dimensions, FlatList,
   ActivityIndicator, Alert, Share, NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, RefreshControl, Image,
+  View, Text, FlatList, StyleSheet, RefreshControl,
   TouchableOpacity, ActivityIndicator, ListRenderItemInfo,
   Share, ScrollView, Dimensions, TextInput, Platform,
 } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
