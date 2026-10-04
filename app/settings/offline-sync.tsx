@@ -26,11 +26,11 @@ export default function OfflineSyncScreen() {
   }, []);
 
   const loadQueue = () => {
-    const q = offlineSyncService.getQueue();
+    const q = offlineSyncService.getServerQueue();
     if (q.length === 0) {
       offlineSyncService.enqueueMutation(1, 101, 'VISITOR_PASS', 'CREATE', { visitorName: 'Amazon Delivery', slot: 'Tower B' });
       offlineSyncService.enqueueMutation(1, 101, 'METER_READING', 'CREATE', { meterId: 102, pulseDelta: 250 });
-      setQueue(offlineSyncService.getQueue());
+      setQueue(offlineSyncService.getServerQueue());
     } else {
       setQueue(q);
     }
@@ -41,7 +41,7 @@ export default function OfflineSyncScreen() {
     try {
       const pushRes = await offlineSyncService.pushPendingMutations(1);
       const pullRes = await offlineSyncService.pullDeltaChanges(1);
-      setQueue(offlineSyncService.getQueue());
+      setQueue(offlineSyncService.getServerQueue());
       Alert.alert('Sync Complete', `Processed ${pushRes.acceptedMutationIds.length} mutations. Delta checkpoint updated.`);
     } catch {
       Alert.alert('Sync Staged', 'Network unreachable. Mutations safely queued in local storage.');
@@ -87,7 +87,7 @@ export default function OfflineSyncScreen() {
         {/* Pending Queue List */}
         <View style={styles.sectionRow}>
           <Text style={styles.sectionHeader}>Local Mutation Queue ({queue.length})</Text>
-          <TouchableOpacity onPress={() => { offlineSyncService.clearSynced(); setQueue(offlineSyncService.getQueue()); }}>
+          <TouchableOpacity onPress={() => { offlineSyncService.clearSynced(); setQueue(offlineSyncService.getServerQueue()); }}>
             <Text style={styles.clearBtnText}>Clear Synced</Text>
           </TouchableOpacity>
         </View>
