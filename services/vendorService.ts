@@ -1,334 +1,267 @@
 import api from './apiClient';
-import { secureLog } from '@/security';
+import type {
+  VendorProfile,
+  VendorProduct,
+  VendorDashboardStats,
+  VendorFulfillmentManifest,
+  VendorBooking,
+  BookingStatus,
+  VendorWorkOrder,
+  WorkOrderStatus,
+  WorkOrderPriority,
+  VendorInvoice,
+  InvoiceStatus,
+  VendorReview,
+} from '@/types/vendor';
 
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-export type WorkOrderStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED';
-export type WorkOrderPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE';
+export type {
+  VendorBooking,
+  BookingStatus,
+  VendorWorkOrder,
+  WorkOrderStatus,
+  WorkOrderPriority,
+  VendorInvoice,
+  InvoiceStatus,
+  VendorReview,
+  VendorProfile,
+  VendorProduct,
+  VendorDashboardStats,
+  VendorFulfillmentManifest,
+};
 
-export interface VendorBooking {
-  id: number;
-  customerName: string;
-  flat: string;
-  service: string;
-  date: string;
-  time: string;
-  status: BookingStatus;
-  amount: number;
-  notes?: string;
-}
-
-export interface VendorWorkOrder {
-  id: number;
-  title: string;
-  description: string;
-  location: string;
-  flat: string;
-  priority: WorkOrderPriority;
-  status: WorkOrderStatus;
-  assignedAt: string;
-  dueDate: string;
-  customerName: string;
-}
-
-export interface VendorInvoice {
-  id: number;
-  invoiceNumber: string;
-  customerName: string;
-  flat: string;
-  service: string;
-  amount: number;
-  status: InvoiceStatus;
-  issuedAt: string;
-  dueDate: string;
-  paidAt?: string;
-}
-
-export interface VendorDashboardStats {
-  todayBookings: number;
-  pendingBookings: number;
-  activeWorkOrders: number;
-  monthRevenue: number;
-  rating: number;
-  totalReviews: number;
-}
-
-export interface VendorReview {
-  id: number;
-  customerName: string;
-  flat: string;
-  rating: number;
-  comment: string;
-  service: string;
-  date: string;
-}
-
-export interface VendorProfileDto {
-  id?: number;
-  businessName: string;
-  category: string;
-  phone: string;
-  email: string;
-  rating: number;
-  totalJobs: number;
-  serviceArea: string;
-  isAvailable: boolean;
-}
-
-// ── Fallback Data ───────────────────────────────────────────────
-
-const sampleBookings: VendorBooking[] = [
-  { id: 1, customerName: 'Aarav Sharma', flat: 'A-201', service: 'Plumbing Repair', date: '2026-09-28', time: '10:00 AM', status: 'PENDING', amount: 800, notes: 'Kitchen sink leak' },
-  { id: 2, customerName: 'Priya Patel', flat: 'B-105', service: 'AC Servicing', date: '2026-09-28', time: '11:30 AM', status: 'CONFIRMED', amount: 1200 },
-  { id: 3, customerName: 'Rahul Gupta', flat: 'C-302', service: 'Electrical Wiring', date: '2026-09-28', time: '2:00 PM', status: 'IN_PROGRESS', amount: 1500, notes: 'Living room switchboard' },
-  { id: 4, customerName: 'Meera Reddy', flat: 'A-404', service: 'Painting', date: '2026-09-27', time: '9:00 AM', status: 'COMPLETED', amount: 5000 },
-  { id: 5, customerName: 'Vikram Singh', flat: 'D-101', service: 'Plumbing Repair', date: '2026-09-29', time: '10:00 AM', status: 'PENDING', amount: 600 },
-  { id: 6, customerName: 'Anjali Nair', flat: 'B-303', service: 'Carpentry Work', date: '2026-09-26', time: '3:00 PM', status: 'CANCELLED', amount: 2000 },
+const SAMPLE_VENDORS: VendorProfile[] = [
+  {
+    id: 'v1', businessName: 'ABC Wholesale Foods', categories: ['Grocery', 'Pulses', 'Dry Fruits', 'Festival Foods'],
+    isVerified: true, isGSTVerified: true, isFSSAIVerified: true, isCommunityApproved: true,
+    rating: 4.8, totalOrders: 327, memberSince: '2026-01',
+    fulfillmentRate: 98, onTimeRate: 96, cancellationRate: 1.2, disputeRate: 0.4,
+    activeDeals: 5, description: 'Wholesale grocery supplier with 15 years in Hyderabad. Direct farm-to-community sourcing.',
+    city: 'Hyderabad', tags: ['Bulk Grocery', 'Direct Sourcing', 'FSSAI Certified'],
+  },
+  {
+    id: 'v2', businessName: 'FreshMart Direct', categories: ['Fresh Produce', 'Fruits', 'Vegetables', 'Dairy'],
+    isVerified: true, isGSTVerified: true, isFSSAIVerified: true, isCommunityApproved: true,
+    rating: 4.6, totalOrders: 218, memberSince: '2026-03',
+    fulfillmentRate: 95, onTimeRate: 93, cancellationRate: 2.1, disputeRate: 0.8,
+    activeDeals: 3, description: 'Farm-fresh seasonal produce with next-day community delivery.',
+    city: 'Hyderabad',
+  },
+  {
+    id: 'v3', businessName: 'Sri Traders', categories: ['Grocery', 'Rice', 'Spices', 'Oils'],
+    isVerified: true, isGSTVerified: true, isFSSAIVerified: true, isCommunityApproved: true,
+    rating: 4.9, totalOrders: 512, memberSince: '2025-11',
+    fulfillmentRate: 99, onTimeRate: 98, cancellationRate: 0.6, disputeRate: 0.2,
+    activeDeals: 4, description: 'Decade-old rice and spice merchant. Premium quality with GI-tagged products.',
+    city: 'Hyderabad', tags: ['GI Tagged', 'Premium Quality', 'Zero Disputes'],
+  },
 ];
 
-const sampleWorkOrders: VendorWorkOrder[] = [
-  { id: 1, title: 'Fix water heater', description: 'Water heater not heating. Needs thermostat check.', location: 'Bathroom', flat: 'A-201', priority: 'HIGH', status: 'ASSIGNED', assignedAt: '2026-09-28T06:00:00Z', dueDate: '2026-09-28', customerName: 'Aarav Sharma' },
-  { id: 2, title: 'Replace kitchen faucet', description: 'Old faucet leaking, customer wants replacement.', location: 'Kitchen', flat: 'C-102', priority: 'MEDIUM', status: 'IN_PROGRESS', assignedAt: '2026-09-27T10:00:00Z', dueDate: '2026-09-28', customerName: 'Kiran Joshi' },
-  { id: 3, title: 'Repaint bedroom walls', description: 'Two coats of Asian Paints Royale, light grey shade.', location: 'Master Bedroom', flat: 'B-204', priority: 'LOW', status: 'ON_HOLD', assignedAt: '2026-09-26T08:00:00Z', dueDate: '2026-09-30', customerName: 'Neha Kapoor' },
-  { id: 4, title: 'Install ceiling fan', description: 'New ceiling fan installation in guest room.', location: 'Guest Room', flat: 'D-301', priority: 'MEDIUM', status: 'COMPLETED', assignedAt: '2026-09-25T09:00:00Z', dueDate: '2026-09-26', customerName: 'Suresh Menon' },
-  { id: 5, title: 'Emergency pipe burst', description: 'Main water pipe burst under sink. Flooding risk.', location: 'Kitchen', flat: 'A-103', priority: 'URGENT', status: 'ASSIGNED', assignedAt: '2026-09-28T07:30:00Z', dueDate: '2026-09-28', customerName: 'Deepa Iyer' },
+const SAMPLE_BOOKINGS: VendorBooking[] = [
+  { id: 'b1', residentName: 'Ramesh Kumar', customerName: 'Ramesh Kumar', flatNumber: 'A-402', flat: 'A-402', serviceName: 'AC Maintenance', service: 'AC Maintenance', date: '2026-10-06', timeSlot: '10:00 AM', time: '10:00 AM', status: 'PENDING', phone: '9876543210', amount: 800 },
+  { id: 'b2', residentName: 'Priya Sharma', customerName: 'Priya Sharma', flatNumber: 'B-105', flat: 'B-105', serviceName: 'Plumbing Repair', service: 'Plumbing Repair', date: '2026-10-06', timeSlot: '02:00 PM', time: '02:00 PM', status: 'CONFIRMED', phone: '9876543211', amount: 450 },
 ];
 
-const sampleInvoices: VendorInvoice[] = [
-  { id: 1, invoiceNumber: 'INV-2026-041', customerName: 'Meera Reddy', flat: 'A-404', service: 'Painting', amount: 5000, status: 'PAID', issuedAt: '2026-09-27T10:00:00Z', dueDate: '2026-10-07', paidAt: '2026-09-27T18:00:00Z' },
-  { id: 2, invoiceNumber: 'INV-2026-042', customerName: 'Suresh Menon', flat: 'D-301', service: 'Ceiling Fan Install', amount: 2500, status: 'SENT', issuedAt: '2026-09-26T14:00:00Z', dueDate: '2026-10-06' },
-  { id: 3, invoiceNumber: 'INV-2026-038', customerName: 'Rohit Desai', flat: 'C-205', service: 'Plumbing Work', amount: 3200, status: 'OVERDUE', issuedAt: '2026-09-15T09:00:00Z', dueDate: '2026-09-25' },
-  { id: 4, invoiceNumber: 'INV-2026-043', customerName: 'Priya Patel', flat: 'B-105', service: 'AC Servicing', amount: 1200, status: 'DRAFT', issuedAt: '2026-09-28T08:00:00Z', dueDate: '2026-10-08' },
-  { id: 5, invoiceNumber: 'INV-2026-040', customerName: 'Arjun Das', flat: 'A-301', service: 'Electrical Repair', amount: 1800, status: 'PAID', issuedAt: '2026-09-22T11:00:00Z', dueDate: '2026-10-02', paidAt: '2026-09-24T09:00:00Z' },
+const SAMPLE_WORK_ORDERS: VendorWorkOrder[] = [
+  { id: 'wo1', title: 'Clubhouse Lighting Repair', society: 'Mana Residency', block: 'Clubhouse', description: 'Replace ballast and LED tubes in badminton court', priority: 'HIGH', status: 'ASSIGNED', assignedDate: '2026-10-04', dueDate: '2026-10-07', customerName: 'Society Admin', flat: 'Clubhouse', location: 'Badminton Court' },
+  { id: 'wo2', title: 'Main Gate Boom Barrier Check', society: 'Mana Residency', block: 'Gate 1', description: 'Periodic motor lubrication and loop sensor check', priority: 'MEDIUM', status: 'IN_PROGRESS', assignedDate: '2026-10-03', dueDate: '2026-10-08', customerName: 'Security Desk', flat: 'Gate 1', location: 'Gate 1 Entry' },
 ];
 
-const sampleReviews: VendorReview[] = [
-  { id: 1, customerName: 'Meera Reddy', flat: 'A-404', rating: 5, comment: 'Excellent painting job! Very neat and professional work.', service: 'Painting', date: '2026-09-27' },
-  { id: 2, customerName: 'Suresh Menon', flat: 'D-301', rating: 4, comment: 'Good installation, but arrived 30 minutes late.', service: 'Ceiling Fan Install', date: '2026-09-26' },
-  { id: 3, customerName: 'Arjun Das', flat: 'A-301', rating: 5, comment: 'Fixed the issue quickly. Very knowledgeable.', service: 'Electrical Repair', date: '2026-09-24' },
-  { id: 4, customerName: 'Pooja Verma', flat: 'B-402', rating: 3, comment: 'Work was okay but took longer than expected.', service: 'Plumbing Repair', date: '2026-09-20' },
-  { id: 5, customerName: 'Amit Kumar', flat: 'C-101', rating: 5, comment: 'Best plumber in the community. Highly recommend!', service: 'Plumbing Repair', date: '2026-09-18' },
+const SAMPLE_INVOICES: VendorInvoice[] = [
+  { id: 'inv1', invoiceNumber: 'INV-2026-001', residentName: 'Ramesh Kumar', customerName: 'Ramesh Kumar', flatNumber: 'A-402', flat: 'A-402', amount: 1200, date: '2026-10-01', issuedAt: '2026-10-01', dueDate: '2026-10-15', status: 'SENT', description: 'AC Filter cleaning and gas top-up', service: 'AC Service' },
+  { id: 'inv2', invoiceNumber: 'INV-2026-002', residentName: 'Priya Sharma', customerName: 'Priya Sharma', flatNumber: 'B-105', flat: 'B-105', amount: 850, date: '2026-09-28', issuedAt: '2026-09-28', paidAt: '2026-09-30', dueDate: '2026-10-10', status: 'PAID', description: 'Kitchen sink trap replacement', service: 'Plumbing' },
 ];
 
-function mapInvoiceStatus(status: string): InvoiceStatus {
-  const map: Record<string, InvoiceStatus> = {
-    DRAFT: 'DRAFT', PENDING: 'SENT', APPROVED: 'SENT',
-    PAID: 'PAID', OVERDUE: 'OVERDUE', REJECTED: 'DRAFT',
-  };
-  return map[status] || 'DRAFT';
-}
-
-function mapMaintenanceToWorkOrder(rec: any): VendorWorkOrder {
-  const priorityMap: Record<string, WorkOrderPriority> = {
-    EMERGENCY: 'URGENT', URGENT: 'URGENT', HIGH: 'HIGH', NORMAL: 'MEDIUM', LOW: 'LOW',
-  };
-  const statusMap: Record<string, WorkOrderStatus> = {
-    SCHEDULED: 'ASSIGNED', IN_PROGRESS: 'IN_PROGRESS', ON_HOLD: 'ON_HOLD',
-    COMPLETED: 'COMPLETED', CANCELLED: 'COMPLETED',
-  };
-  return {
-    id: rec.id,
-    title: rec.description || rec.title || 'Maintenance Work',
-    description: rec.notes || rec.description || '',
-    location: rec.asset?.location || rec.location || '',
-    flat: rec.flat || '',
-    priority: priorityMap[rec.priority || rec.status] || 'MEDIUM',
-    status: statusMap[rec.status] || 'ASSIGNED',
-    assignedAt: rec.scheduledDate || rec.assignedAt || '',
-    dueDate: rec.scheduledDate || rec.dueDate || '',
-    customerName: rec.asset?.name || rec.customerName || 'Community Management',
-  };
-}
-
-// ── Service Implementation ──────────────────────────────────────
+const SAMPLE_REVIEWS: VendorReview[] = [
+  { id: 'rev1', residentName: 'Suresh Menon', customerName: 'Suresh Menon', rating: 5, comment: 'Prompt service and very clean work!', date: '2026-10-02', service: 'Electrical' },
+  { id: 'rev2', residentName: 'Ananya Roy', customerName: 'Ananya Roy', rating: 4.5, comment: 'Punctual and resolved the issue quickly.', date: '2026-09-29', service: 'Plumbing' },
+];
 
 export const vendorService = {
-  async getDashboardStats(): Promise<VendorDashboardStats> {
+  // ── Commerce Methods ──
+  async getVendorProfile(vendorId: string): Promise<VendorProfile> {
     try {
-      const res = await api.get<VendorDashboardStats>('/vendor/dashboard');
-      if (res.data) return res.data;
-    } catch {}
+      const res = await api.get<VendorProfile>(`/vendors/${vendorId}`);
+      return res.data;
+    } catch {
+      return SAMPLE_VENDORS.find(v => v.id === vendorId) ?? SAMPLE_VENDORS[0];
+    }
+  },
 
+  async getVendorProducts(vendorId: string): Promise<VendorProduct[]> {
     try {
-      const [bookings, workOrders] = await Promise.all([
-        vendorService.getBookings(),
-        vendorService.getWorkOrders(),
-      ]);
-      const today = new Date().toISOString().split('T')[0];
+      const res = await api.get<VendorProduct[]>(`/vendors/${vendorId}/products`);
+      return res.data;
+    } catch {
+      return [
+        { id: 'p1', vendorId, name: 'Aashirvaad Atta 10 KG', category: 'Grocery', subCategory: 'Atta', brand: 'Aashirvaad', sku: 'ATT-1002', description: 'Premium whole wheat atta.', imageUrls: [], mrp: 680, sellingPrice: 620, gst: 5, packSize: '10 KG', availableQty: 240, committedQty: 73, minOrderQty: 20, fulfillmentType: 'BOTH', status: 'ACTIVE' },
+        { id: 'p2', vendorId, name: 'Tata Sampann Toor Dal 5 KG', category: 'Grocery', subCategory: 'Dal', brand: 'Tata Sampann', sku: 'DAL-2005', description: 'Unpolished double-filtered toor dal.', imageUrls: [], mrp: 620, sellingPrice: 580, gst: 5, packSize: '5 KG', availableQty: 180, committedQty: 62, minOrderQty: 20, fulfillmentType: 'PICKUP', status: 'ACTIVE' },
+        { id: 'p3', vendorId, name: 'Fortune Sunflower Oil 5L', category: 'Grocery', subCategory: 'Oils', brand: 'Fortune', sku: 'OIL-5005', description: 'Refined sunflower oil, zero cholesterol.', imageUrls: [], mrp: 750, sellingPrice: 700, gst: 5, packSize: '5 L', availableQty: 120, committedQty: 58, minOrderQty: 10, fulfillmentType: 'BOTH', status: 'ACTIVE' },
+      ];
+    }
+  },
+
+  async getVendorDashboardStats(vendorId?: string): Promise<VendorDashboardStats> {
+    try {
+      const res = await api.get<VendorDashboardStats>(`/vendors/${vendorId ?? 'me'}/dashboard`);
+      return res.data;
+    } catch {
       return {
-        todayBookings: bookings.filter(b => b.date === today).length,
-        pendingBookings: bookings.filter(b => b.status === 'PENDING').length,
-        activeWorkOrders: workOrders.filter(w => w.status !== 'COMPLETED').length,
-        monthRevenue: 18500,
-        rating: 4.8,
-        totalReviews: sampleReviews.length,
-      };
-    } catch (err) {
-      secureLog.warn('VendorService: Live stats unavailable, using fallback', err);
-      return {
-        todayBookings: 3,
-        pendingBookings: 2,
-        activeWorkOrders: 4,
-        monthRevenue: 18500,
-        rating: 4.8,
-        totalReviews: 5,
+        activeDeals: 12, todayOrders: 238, unitsSold: 1482, todayRevenue: 384500,
+        pendingOrders: 32, pendingSettlement: 72000,
+        totalParticipants: 846, unitsCommitted: 3241,
+        topProduct: '10 KG Basmati Rice', topProductUnits: 347, topProductPrice: 499,
+        rating: 4.8, totalReviews: 46, todayBookings: 3, pendingBookings: 2,
+        activeWorkOrders: 4, monthRevenue: 42500,
       };
     }
+  },
+
+  async getFulfillmentManifest(dealId: string): Promise<VendorFulfillmentManifest> {
+    try {
+      const res = await api.get<VendorFulfillmentManifest>(`/vendors/deals/${dealId}/manifest`);
+      return res.data;
+    } catch {
+      return {
+        dealId, dealTitle: 'Aashirvaad Atta 10 KG',
+        totalQty: 73, totalRevenue: 42705,
+        pickupLocation: 'Mana Residency Clubhouse',
+        deliveryDate: '2026-10-09', status: 'PROCESSING',
+        orders: [
+          { id: 'vo1', dealId, dealTitle: 'Aashirvaad Atta 10 KG', flat: 'A-101', residentName: 'Ramesh Patel',   qty: 2, total: 1170, status: 'READY', orderId: 'GB-2026-00191' },
+          { id: 'vo2', dealId, dealTitle: 'Aashirvaad Atta 10 KG', flat: 'A-204', residentName: 'Sneha Verma',    qty: 3, total: 1755, status: 'READY', orderId: 'GB-2026-00192' },
+          { id: 'vo3', dealId, dealTitle: 'Aashirvaad Atta 10 KG', flat: 'B-301', residentName: 'Kiran Rao',      qty: 1, total: 585,  status: 'NEW',   orderId: 'GB-2026-00193' },
+          { id: 'vo4', dealId, dealTitle: 'Aashirvaad Atta 10 KG', flat: 'B-405', residentName: 'Vikram Singh',   qty: 4, total: 2340, status: 'READY', orderId: 'GB-2026-00194' },
+          { id: 'vo5', dealId, dealTitle: 'Aashirvaad Atta 10 KG', flat: 'C-201', residentName: 'Priya Sharma',   qty: 2, total: 1170, status: 'NEW',   orderId: 'GB-2026-00195' },
+        ],
+      };
+    }
+  },
+
+  // ── Legacy Portal Methods for /vendor/tabs/* ──
+  async getDashboardStats(): Promise<VendorDashboardStats> {
+    return this.getVendorDashboardStats();
   },
 
   async getBookings(): Promise<VendorBooking[]> {
     try {
       const res = await api.get<VendorBooking[]>('/vendor/bookings');
-      if (res.data && res.data.length > 0) return res.data;
-    } catch {}
-
-    try {
-      const res = await api.get<VendorBooking[]>('/services/bookings/vendor');
-      if (res.data && res.data.length > 0) return res.data;
-      return sampleBookings;
-    } catch (err) {
-      secureLog.warn('VendorService: Live bookings unavailable, using fallback', err);
-      return sampleBookings;
+      return res.data;
+    } catch {
+      return SAMPLE_BOOKINGS;
     }
   },
 
-  async updateBookingStatus(id: number, status: BookingStatus): Promise<void> {
-    try {
-      await api.put(`/vendor/bookings/${id}/status`, null, { params: { status } });
-      return;
-    } catch {}
-
-    try {
-      await api.put(`/services/bookings/${id}/status`, null, { params: { status } });
-    } catch (err) {
-      secureLog.warn(`VendorService: Update booking ${id} status failed`, err);
-      const booking = sampleBookings.find(b => b.id === id);
-      if (booking) booking.status = status;
-    }
+  async acceptBooking(id: string): Promise<void> {
+    try { await api.post(`/vendor/bookings/${id}/accept`); } catch {}
   },
 
-  async acceptBooking(id: number): Promise<void> {
-    return this.updateBookingStatus(id, 'CONFIRMED');
+  async startBooking(id: string): Promise<void> {
+    try { await api.post(`/vendor/bookings/${id}/start`); } catch {}
   },
 
-  async startBooking(id: number): Promise<void> {
-    return this.updateBookingStatus(id, 'IN_PROGRESS');
+  async completeBooking(id: string): Promise<void> {
+    try { await api.post(`/vendor/bookings/${id}/complete`); } catch {}
   },
 
-  async completeBooking(id: number): Promise<void> {
-    return this.updateBookingStatus(id, 'COMPLETED');
-  },
-
-  async cancelBooking(id: number): Promise<void> {
-    return this.updateBookingStatus(id, 'CANCELLED');
+  async cancelBooking(id: string): Promise<void> {
+    try { await api.post(`/vendor/bookings/${id}/cancel`); } catch {}
   },
 
   async getWorkOrders(): Promise<VendorWorkOrder[]> {
     try {
       const res = await api.get<VendorWorkOrder[]>('/vendor/work-orders');
-      if (res.data && res.data.length > 0) return res.data;
-    } catch {}
-
-    try {
-      const res = await api.get<any[]>('/inventory/maintenance');
-      if (res.data && res.data.length > 0) {
-        return res.data.map(mapMaintenanceToWorkOrder);
-      }
-      return sampleWorkOrders;
-    } catch (err) {
-      secureLog.warn('VendorService: Live work orders unavailable, using fallback', err);
-      return sampleWorkOrders;
+      return res.data;
+    } catch {
+      return SAMPLE_WORK_ORDERS;
     }
   },
 
-  async updateWorkOrderStatus(id: number, status: WorkOrderStatus): Promise<void> {
-    try {
-      await api.put(`/vendor/work-orders/${id}/status`, null, { params: { status } });
-      return;
-    } catch {}
-
-    try {
-      await api.put(`/inventory/maintenance/${id}/status`, null, { params: { status } });
-    } catch (err) {
-      secureLog.warn(`VendorService: Update work order ${id} status failed`, err);
-      const wo = sampleWorkOrders.find(w => w.id === id);
-      if (wo) wo.status = status;
-    }
+  async updateWorkOrderStatus(id: string, status: WorkOrderStatus): Promise<void> {
+    try { await api.put(`/vendor/work-orders/${id}/status`, { status }); } catch {}
   },
 
   async getInvoices(): Promise<VendorInvoice[]> {
     try {
       const res = await api.get<VendorInvoice[]>('/vendor/invoices');
-      if (res.data && res.data.length > 0) return res.data;
-    } catch {}
-
-    try {
-      const res = await api.get<any[]>('/asset-finance/invoices');
-      if (res.data && res.data.length > 0) {
-        return res.data.map(inv => ({
-          id: inv.id,
-          invoiceNumber: inv.invoiceNumber || `INV-${inv.id}`,
-          customerName: inv.vendorName || inv.customerName || '',
-          flat: inv.flat || '',
-          service: inv.description || inv.service || '',
-          amount: inv.totalAmount || inv.amount || 0,
-          status: mapInvoiceStatus(inv.status),
-          issuedAt: inv.invoiceDate || inv.issuedAt || '',
-          dueDate: inv.dueDate || '',
-          paidAt: inv.paidAt,
-        }));
-      }
-      return sampleInvoices;
-    } catch (err) {
-      secureLog.warn('VendorService: Live invoices unavailable, using fallback', err);
-      return sampleInvoices;
+      return res.data;
+    } catch {
+      return SAMPLE_INVOICES;
     }
   },
 
-  async sendInvoice(id: number): Promise<void> {
-    try {
-      await api.post(`/vendor/invoices/${id}/send`);
-      return;
-    } catch {}
-
-    try {
-      await api.post(`/asset-finance/invoices/${id}/approve`, null, {
-        params: { notes: 'Sent to customer' },
-      });
-    } catch (err) {
-      secureLog.warn(`VendorService: Send invoice ${id} failed`, err);
-      const inv = sampleInvoices.find(i => i.id === id);
-      if (inv) inv.status = 'SENT';
-    }
+  async sendInvoice(data: any): Promise<void> {
+    try { await api.post('/vendor/invoices', data); } catch {}
   },
 
   async getReviews(): Promise<VendorReview[]> {
     try {
       const res = await api.get<VendorReview[]>('/vendor/reviews');
-      if (res.data && res.data.length > 0) return res.data;
-      return sampleReviews;
-    } catch (err) {
-      secureLog.warn('VendorService: Live reviews unavailable, using fallback', err);
-      return sampleReviews;
+      return res.data;
+    } catch {
+      return SAMPLE_REVIEWS;
+    }
+  },
+  async createGroupDealCampaign(data: any): Promise<any> {
+    try {
+      const res = await api.post('/group-buying/vendor/deals', data);
+      return res.data;
+    } catch {
+      return { id: 'deal-' + Date.now(), ...data, dealStatus: 'OPEN', currentParticipants: 0, committedQty: 0 };
     }
   },
 
-  async getVendorProfile(): Promise<VendorProfileDto> {
+  async getVendorActiveDeals(vendorId: string): Promise<any[]> {
     try {
-      const res = await api.get<VendorProfileDto>('/vendor/profile');
+      const res = await api.get(`/vendors/${vendorId}/deals`);
       return res.data;
-    } catch (err) {
-      secureLog.warn('VendorService: Live vendor profile unavailable, using fallback', err);
+    } catch {
+      return [
+        {
+          id: 'd1', title: 'Aashirvaad Atta 10 KG', category: 'Grocery',
+          pricingModel: 'THRESHOLD', mrp: 680, currentTierPrice: 585, nextTierPrice: 560,
+          committedQty: 73, targetQty: 100, currentParticipants: 41,
+          dealStatus: 'OPEN', daysLeft: 3, dealEndsAt: '2026-10-07T18:00:00Z',
+          pickupPoint: 'Clubhouse Desk', fulfillmentType: 'BOTH',
+        },
+        {
+          id: 'd5', title: 'Tata Sampann Toor Dal 5 KG', category: 'Grocery',
+          pricingModel: 'TARGET_OR_CANCEL', mrp: 620, currentTierPrice: 520,
+          committedQty: 62, targetQty: 100, currentParticipants: 44,
+          dealStatus: 'OPEN', daysLeft: 4, dealEndsAt: '2026-10-08T18:00:00Z',
+          pickupPoint: 'Clubhouse Desk', fulfillmentType: 'PICKUP',
+        }
+      ];
+    }
+  },
+
+  async createGroupDeal(data: any): Promise<any> {
+    try {
+      const res = await api.post('/vendors/deals', data);
+      return res.data;
+    } catch {
       return {
-        businessName: 'Apex Home & Property Services',
-        category: 'Plumbing, Electrical & Home Care',
-        phone: '+91 98765 43210',
-        email: 'services.apex@manacommunity.com',
-        rating: 4.8,
-        totalJobs: 142,
-        serviceArea: 'All Towers (A, B, C, D)',
-        isAvailable: true,
+        id: `d-${Date.now()}`,
+        ...data,
+        committedQty: 0,
+        currentParticipants: 0,
+        dealStatus: 'OPEN',
+        createdAt: new Date().toISOString(),
       };
+    }
+  },
+
+  async updateManifestOrderStatus(dealId: string, orderId: string, status: string): Promise<void> {
+    try {
+      await api.put(`/vendors/deals/${dealId}/manifest/orders/${orderId}`, { status });
+    } catch {}
+  },
+
+  async submitDemandOffer(demandId: string, data: { offeredPrice: number; minimumQty: number; maximumQty?: number; deliveryDate?: string; terms?: string }): Promise<any> {
+    try {
+      const res = await api.post(`/group-buying/demand/${demandId}/offers`, data);
+      return res.data;
+    } catch {
+      return { id: 'offer-' + Date.now(), demandId, ...data, status: 'PENDING' };
     }
   },
 };
