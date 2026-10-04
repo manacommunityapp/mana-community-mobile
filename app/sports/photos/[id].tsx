@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Image, Modal, TextInput, Alert, ActivityIndicator,
+  Modal, TextInput, Alert, ActivityIndicator,
   Dimensions, RefreshControl, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

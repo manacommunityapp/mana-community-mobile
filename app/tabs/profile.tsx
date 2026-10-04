@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator, RefreshControl, Image,
+  ScrollView, Alert, ActivityIndicator, RefreshControl,
   Modal, Share,
 } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';

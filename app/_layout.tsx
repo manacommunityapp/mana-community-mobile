@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import * as ScreenCapture from 'expo-screen-capture';
+import * as Sentry from '@sentry/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -22,8 +23,10 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
 import { setupGlobalFonts } from '@/utils/globalFonts';
+import { initSentry, setUser, clearUser } from '@/utils/sentry';
 
 SplashScreen.preventAutoHideAsync();
+initSentry();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +44,14 @@ function AuthGuard() {
   usePushNotifications(isAuthenticated && !isPending);
   useIdleTimeout(isAuthenticated && !isPending, logout);
   useDeviceSecurity();
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      setUser(String(user.id), user.email);
+    } else {
+      clearUser();
+    }
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => { loadUser(); }, []);
 
@@ -92,7 +103,7 @@ function AuthGuard() {
   return null;
 }
 
-export default function RootLayout() {
+function RootLayout() {
   useEffect(() => {
     ScreenCapture.preventScreenCaptureAsync();
     return () => { ScreenCapture.allowScreenCaptureAsync(); };
@@ -168,3 +179,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

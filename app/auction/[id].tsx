@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Image,
+  View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Animated, ActivityIndicator,
   Modal, Dimensions, FlatList,
 } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';

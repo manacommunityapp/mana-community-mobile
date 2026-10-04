@@ -40,6 +40,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "@sentry/react-native/expo",
       [
         "expo-notifications",
         {
@@ -59,7 +60,9 @@
         {
           "faceIDPermission": "Use Face ID to sign in to Mana Community."
         }
-      ]
+      ],
+      "@sentry/react-native",
+      "expo-image"
     ],
     "scheme": "mana-community",
     "extra": {
