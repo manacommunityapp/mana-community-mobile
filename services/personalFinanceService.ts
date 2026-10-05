@@ -1257,6 +1257,53 @@ export const personalFinanceService = {
     );
   },
 
+  // ── Community Finance Integration (Smart Linking) ──────────────────────────
+  linkCommunityFinanceTransaction: async (params: {
+    communityInvoiceId: string;
+    amount: number;
+    description?: string;
+    paidDate?: string;
+    accountId?: string;
+  }): Promise<PersonalTransactionDto> => {
+    const existing = LOCAL_TRANSACTIONS.find(
+      t => t.sourceModule === 'COMMUNITY_FINANCE' && t.sourceId === params.communityInvoiceId
+    );
+    if (existing) {
+      return existing; // Avoid duplicate transactions
+    }
+
+    const housingCat = LOCAL_CATEGORIES.find(c => c.name.includes('Housing')) || LOCAL_CATEGORIES[0];
+    const acc = LOCAL_ACCOUNTS.find(a => a.id === params.accountId) || LOCAL_ACCOUNTS[0];
+
+    const linkedTxn: PersonalTransactionDto = {
+      id: `txn-link-${Date.now()}`,
+      type: 'EXPENSE',
+      amount: params.amount,
+      currency: acc.currency || '₹',
+      categoryId: housingCat.id,
+      categoryName: housingCat.name,
+      categoryIcon: housingCat.icon,
+      categoryColor: housingCat.color,
+      subcategoryName: 'Maintenance Dues',
+      accountId: acc.id,
+      accountName: acc.name,
+      description: params.description || `Community Maintenance - Invoice #${params.communityInvoiceId}`,
+      date: params.paidDate || new Date().toISOString().split('T')[0],
+      isManaProjection: true,
+      sourceModule: 'COMMUNITY_FINANCE',
+      sourceType: 'INVOICE',
+      sourceId: params.communityInvoiceId,
+      sourceLabel: `Mana Community Finance (Invoice #${params.communityInvoiceId})`,
+      createdAt: new Date().toISOString(),
+    };
+
+    LOCAL_TRANSACTIONS.unshift(linkedTxn);
+    if (acc) {
+      acc.balance -= params.amount;
+    }
+    return linkedTxn;
+  },
+
   // ── Mana Projections ────────────────────────────────────────────────────────
   getManaProjections: async (): Promise<PersonalTransactionDto[]> => {
     const live = await tryPaths<PersonalTransactionDto[]>(

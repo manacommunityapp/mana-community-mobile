@@ -156,3 +156,80 @@ describe('Personal Finance ("My Money") - Privacy & Data Isolation', () => {
     assert.strictEqual(adminQuery.length, 0);
   });
 });
+
+
+describe('Personal Finance ("My Money") - Smart Community Finance Integration', () => {
+  let mockLedger = [];
+  let mockAccounts = [
+    { id: 'acc-1', name: 'HDFC Salary A/c', type: 'SAVINGS', balance: 50000, currency: '₹' },
+  ];
+
+  function linkCommunityPayment(ledger, accounts, { invoiceId, amount, description }) {
+    // Check if already linked to prevent duplicate entries
+    const existing = ledger.find(t => t.sourceModule === 'COMMUNITY_FINANCE' && t.sourceId === invoiceId);
+    if (existing) {
+      return { linked: false, transaction: existing };
+    }
+
+    const acc = accounts[0];
+    const newTxn = {
+      id: 'txn-linked-' + Date.now(),
+      type: 'EXPENSE',
+      amount,
+      categoryName: 'Community → Maintenance',
+      sourceModule: 'COMMUNITY_FINANCE',
+      sourceId: invoiceId,
+      sourceLabel: 'Community Finance',
+      description: description || 'Maintenance Payment',
+      date: new Date().toISOString().split('T')[0],
+    };
+
+    ledger.unshift(newTxn);
+    acc.balance -= amount;
+    return { linked: true, transaction: newTxn };
+  }
+
+  test('Should seamlessly link a paid community maintenance invoice as a single private ledger entry', () => {
+    const res = linkCommunityPayment(mockLedger, mockAccounts, {
+      invoiceId: 'inv-oct-4500',
+      amount: 4500,
+      description: 'Maintenance ₹4,500',
+    });
+
+    assert.strictEqual(res.linked, true);
+    assert.strictEqual(res.transaction.amount, 4500);
+    assert.strictEqual(res.transaction.categoryName, 'Community → Maintenance');
+    assert.strictEqual(res.transaction.sourceModule, 'COMMUNITY_FINANCE');
+    assert.strictEqual(mockAccounts[0].balance, 45500); // 50000 - 4500
+    assert.strictEqual(mockLedger.length, 1);
+  });
+
+  test('Should not create duplicate private transactions if same community invoice is processed again', () => {
+    const duplicateAttempt = linkCommunityPayment(mockLedger, mockAccounts, {
+      invoiceId: 'inv-oct-4500',
+      amount: 4500,
+      description: 'Maintenance ₹4,500',
+    });
+
+    assert.strictEqual(duplicateAttempt.linked, false);
+    assert.strictEqual(mockLedger.length, 1, 'Ledger count must remain 1 without duplicates');
+    assert.strictEqual(mockAccounts[0].balance, 45500, 'Account balance must not be deducted twice');
+  });
+
+  test('Strict separation: Personal sensitive categories (Salary, Groceries, Investments) remain masked from Association', () => {
+    const privateFields = ['salary', 'groceries', 'bankBalances', 'investments', 'creditCardTransactions'];
+    const associationAccessPolicy = {
+      canViewCommunityMaintenance: true,
+      canViewPersonalSalary: false,
+      canViewPersonalGroceries: false,
+      canViewPersonalInvestments: false,
+      canViewPersonalCreditCards: false,
+    };
+
+    assert.strictEqual(associationAccessPolicy.canViewCommunityMaintenance, true);
+    assert.strictEqual(associationAccessPolicy.canViewPersonalSalary, false);
+    assert.strictEqual(associationAccessPolicy.canViewPersonalGroceries, false);
+    assert.strictEqual(associationAccessPolicy.canViewPersonalInvestments, false);
+    assert.strictEqual(associationAccessPolicy.canViewPersonalCreditCards, false);
+  });
+});

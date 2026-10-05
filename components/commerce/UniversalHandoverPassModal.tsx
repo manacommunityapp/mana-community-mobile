@@ -17,8 +17,8 @@ export const UniversalHandoverPassModal: React.FC<UniversalHandoverPassModalProp
   orderNumber,
   handoverPass,
 }) => {
-  const pin = handoverPass?.verificationPin || '8421';
-  const location = handoverPass?.pickupLocation || 'Clubhouse Gate 2 Handover Hub';
+  const pin = handoverPass?.handoverOtp || '8421';
+  const location = handoverPass?.pickupPoint || 'Clubhouse Gate 2 Handover Hub';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -46,7 +46,7 @@ export const UniversalHandoverPassModal: React.FC<UniversalHandoverPassModalProp
           <View style={styles.pinSection}>
             <Text style={styles.pinSub}>Or share 4-Digit Pickup PIN</Text>
             <View style={styles.pinDisplay}>
-              {pin.split('').map((digit, idx) => (
+              {pin.split('').map((digit: string, idx: number) => (
                 <View key={idx} style={styles.pinBox}>
                   <Text style={styles.pinDigit}>{digit}</Text>
                 </View>
