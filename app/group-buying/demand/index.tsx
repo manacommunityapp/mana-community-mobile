@@ -262,7 +262,7 @@ export default function DemandBoard() {
                 {selectedDemand.vendorOffers.length > 0 ? (
                   <View style={{ gap: 10, marginTop: 12 }}>
                     <Text style={s.offersTitle}>Vendor Offers (sorted by price)</Text>
-                    {[...selectedDemand.vendorOffers].sort((a, b) => a.offeredPrice - b.offeredPrice).map(offer => (
+                    {[...selectedDemand.vendorOffers].sort((a, b) => (a.offeredPrice ?? a.pricePerUnit ?? 0) - (b.offeredPrice ?? b.pricePerUnit ?? 0)).map(offer => (
                       <VendorOfferCard key={offer.id} offer={offer} onSelect={() => { setSelectedDemand(null); }} />
                     ))}
                   </View>

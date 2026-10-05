@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import type { GroupDealDto } from '@/types/groupBuying';
-import PricingModelBadge from './PricingModelBadge';
+import { PricingModelBadge } from './PricingModelBadge';
 import Countdown from './Countdown';
 
 interface DealCardProps {
@@ -97,7 +97,7 @@ export default function DealCard({ deal, onPress }: DealCardProps) {
       </View>
 
       <View style={s.dealCardFooter}>
-        <Countdown endsAt={deal.dealEndsAt} label="Ends in" />
+        <Countdown endsAt={deal.dealEndsAt || deal.endDate || new Date().toISOString()} label="Ends in" />
         <View style={s.viewDealBtn}>
           <Text style={s.viewDealBtnText}>View Deal</Text>
           <Ionicons name="chevron-forward" size={13} color="#fff" />

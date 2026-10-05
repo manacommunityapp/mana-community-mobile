@@ -23,14 +23,14 @@ export default function QRPickupPass({ order }: { order: GroupOrderDto }) {
         <View style={s.qrInner}>
           <Ionicons name="qr-code-outline" size={100} color={COLORS.text} />
         </View>
-        <Text style={s.tokenText}>{token.slice(0, 22)}…</Text>
+        <Text style={s.tokenText}>{(token || "").slice(0, 22)}…</Text>
       </View>
       {/* Order details */}
       <View style={s.details}>
         <Row label="Order ID" value={order.id} />
-        <Row label="Product" value={order.title} />
-        <Row label="Quantity" value={`${order.qty} unit${order.qty > 1 ? 's' : ''}`} />
-        <Row label="Total" value={`₹${order.total.toLocaleString()}`} bold />
+        <Row label="Product" value={order.title || order.dealTitle || "Group Order"} />
+        <Row label="Quantity" value={`${order.qty ?? order.quantity ?? 1} unit${(order.qty ?? order.quantity ?? 1) > 1 ? "s" : ""}`} />
+        <Row label="Total" value={`₹${(order.total ?? order.totalPrice ?? 0).toLocaleString()}`} bold />
         {order.pickupPoint && <Row label="Pickup At" value={order.pickupPoint} />}
         {order.pickupDate && <Row label="Pickup Date" value={order.pickupDate} />}
         {order.pickupSlot && <Row label="Time Slot" value={order.pickupSlot} />}

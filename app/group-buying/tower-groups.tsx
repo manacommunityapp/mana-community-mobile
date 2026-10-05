@@ -89,7 +89,7 @@ export default function TowerGroupsScreen() {
                   </View>
                   <View style={s.statDivider} />
                   <View style={s.statItem}>
-                    <Text style={s.statNum}>?{(grp.totalSaved / 1000).toFixed(1)}k</Text>
+                    <Text style={s.statNum}>?{((grp.totalSaved ?? grp.totalSavings ?? 0) / 1000).toFixed(1)}k</Text>
                     <Text style={s.statLabel}>Total Saved</Text>
                   </View>
                   <View style={s.statDivider} />

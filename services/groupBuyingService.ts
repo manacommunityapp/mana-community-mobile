@@ -1,630 +1,730 @@
-import api from './apiClient';
-import type {
-  GroupDealDto, GroupOrderDto, DemandRequest,
-  MonthlyBasket, CommunitySavings, BuyAgainSuggestion, FestivalDealCategory, BuyingGroup, CommunityAIQueryResponse,
-  OrderReview,
+import {
+  GroupDeal,
+  GroupOrder,
+  DemandPool,
+  DemandRequest,
+  CommunitySavings,
+  DealFilterState,
+  JoinDealPayload,
+  CreateDemandPayload,
+  VendorOffer,
+  VendorOfferScoring,
+  BuyingGroup,
   OrderDispute,
-  CheckoutPaymentDetails,
-} from '@/types/groupBuying';
+  VerifyPickupResponse,
+  CommunityAIQueryResponse,
+  BuyAgainSuggestion,
+  MonthlyBasket,
+  FestivalCampaign,
+} from '../types/groupBuying';
 
-const SAMPLE_TIERS = (base: number) => [
-  { id: 't1', minQty: 1,   maxQty: 19,   price: base,            label: '1–19 units',   isCurrentTier: false, isNextTier: false, savingsVsMrp: 0,  unitsToUnlock: 0 },
-  { id: 't2', minQty: 20,  maxQty: 49,   price: base - 30,       label: '20+ units',    isCurrentTier: false, isNextTier: true,  savingsVsMrp: 30, unitsToUnlock: 0 },
-  { id: 't3', minQty: 50,  maxQty: 99,   price: base - 55,       label: '50+ units',    isCurrentTier: true,  isNextTier: false, savingsVsMrp: 55, unitsToUnlock: 0 },
-  { id: 't4', minQty: 100, maxQty: null, price: base - 80,       label: '100+ units',   isCurrentTier: false, isNextTier: false, savingsVsMrp: 80, unitsToUnlock: 27 },
-];
+export function calculateVendorScore(
+  offer: Omit<VendorOffer, 'scoring'>,
+  demand: { expectedQuantity?: number; expectedQty?: number; preferredPriceMin?: number; preferredPriceMax?: number }
+): VendorOfferScoring {
+  const price = offer.pricePerUnit || offer.offeredPrice || 500;
+  const pMin = demand.preferredPriceMin || 500;
+  const pMax = demand.preferredPriceMax || 600;
+  const expQty = demand.expectedQuantity || demand.expectedQty || 100;
+  const moq = offer.moq || offer.minimumQty || 100;
 
-const SAMPLE_DEALS: GroupDealDto[] = [
-  {
-    id: 'd1', title: 'Aashirvaad Atta 10 KG', category: 'Grocery', subCategory: 'Atta & Flour',
-    description: 'Premium whole wheat atta directly sourced from ITC. Fresh milling, no additives. Bulk deal for 100+ bags.',
-    vendor: 'ABC Wholesale Foods', vendorId: 'v1', vendorRating: 4.8, vendorVerified: true,
-    pricingModel: 'THRESHOLD', pricingType: 'QUANTITY',
-    mrp: 680, standardPrice: 640, currentPrice: 585, currentTierPrice: 585, nextTierPrice: 560, nextTierUnitsNeeded: 27,
-    priceTiers: SAMPLE_TIERS(640),
-    committedQty: 73, targetQty: 100, currentParticipants: 41, targetParticipants: 60,
-    inventoryRemaining: 427, moqLabel: '100 bags',
-    dealStatus: 'OPEN', daysLeft: 3, dealEndsAt: '2026-10-07T18:00:00Z',
-    pickupPoint: 'Clubhouse Desk', pickupDate: '2026-10-09', pickupSlots: ['10 AM – 1 PM', '4 PM – 7 PM'],
-    fulfillmentType: 'BOTH', paymentType: 'FULL',
-    isTrending: true, isAlmostUnlocked: true,
-  },
-  {
-    id: 'd2', title: 'Alphonso Mango Box (5 KG)', category: 'Fresh', subCategory: 'Fruits & Seasonal',
-    description: 'Ratnagiri GI-certified Alphonso mangoes. Straight from the orchard, handpicked & graded. Season ending soon.',
-    vendor: 'FreshMart Direct', vendorId: 'v2', vendorRating: 4.6, vendorVerified: true,
-    pricingModel: 'THRESHOLD', pricingType: 'QUANTITY',
-    mrp: 1300, standardPrice: 1200, currentPrice: 1050, currentTierPrice: 1050, nextTierPrice: 999, nextTierUnitsNeeded: 3,
-    priceTiers: [
-      { id: 't1', minQty: 1,  maxQty: 24, price: 1150, label: '1–24 boxes',  isCurrentTier: false, isNextTier: false, savingsVsMrp: 150 },
-      { id: 't2', minQty: 25, maxQty: 49, price: 1100, label: '25–49 boxes', isCurrentTier: false, isNextTier: false, savingsVsMrp: 200 },
-      { id: 't3', minQty: 50, maxQty: 99, price: 1050, label: '50–99 boxes', isCurrentTier: true,  isNextTier: false, savingsVsMrp: 250 },
-      { id: 't4', minQty: 50, maxQty: null, price: 999, label: '50+ boxes',  isCurrentTier: false, isNextTier: true,  savingsVsMrp: 301, unitsToUnlock: 3 },
-    ],
-    committedQty: 47, targetQty: 50, currentParticipants: 32, targetParticipants: 35,
-    moqLabel: '50 boxes', dealStatus: 'OPEN', daysLeft: 1, dealEndsAt: '2026-10-05T23:59:00Z',
-    pickupPoint: 'Tower A Lobby', pickupDate: '2026-10-06', pickupSlots: ['8 AM – 11 AM'],
-    fulfillmentType: 'PICKUP', paymentType: 'FULL',
-    isAlmostUnlocked: true, isEndingSoon: true, isFestivalDeal: false,
-  },
-  {
-    id: 'd3', title: 'Fortune Sunflower Oil 5L', category: 'Grocery', subCategory: 'Oils & Ghee',
-    description: 'Fortune refined sunflower oil in 5L pack. Zero cholesterol, vitamin E enriched. Bulk deal for 80 units.',
-    vendor: 'Sri Traders', vendorId: 'v3', vendorRating: 4.9, vendorVerified: true,
-    pricingModel: 'GUARANTEED', pricingType: 'QUANTITY',
-    mrp: 750, standardPrice: 720, currentPrice: 649, currentTierPrice: 649,
-    priceTiers: [
-      { id: 't1', minQty: 1, maxQty: null, price: 649, label: 'Flat community price', isCurrentTier: true, isNextTier: false, savingsVsMrp: 101 },
-    ],
-    committedQty: 58, targetQty: 80, currentParticipants: 38, targetParticipants: 50,
-    moqLabel: '80 units', dealStatus: 'OPEN', daysLeft: 5, dealEndsAt: '2026-10-09T18:00:00Z',
-    pickupPoint: 'Clubhouse Desk', pickupDate: '2026-10-11',
-    fulfillmentType: 'BOTH', paymentType: 'FULL', isTrending: true,
-  },
-  {
-    id: 'd4', title: 'Diwali Dry Fruits Premium Box', category: 'Festival', subCategory: 'Dry Fruits',
-    description: 'Curated festive dry fruits box — cashews, almonds, pistachios, raisins & figs. Perfect for gifting.',
-    vendor: 'Organic Farms Co.', vendorId: 'v4', vendorRating: 4.7, vendorVerified: true,
-    pricingModel: 'THRESHOLD', pricingType: 'QUANTITY',
-    mrp: 1800, standardPrice: 1650, currentPrice: 1299, currentTierPrice: 1299, nextTierPrice: 1199, nextTierUnitsNeeded: 15,
-    priceTiers: [
-      { id: 't1', minQty: 10,  maxQty: 24, price: 1399, label: '10–24 boxes',  isCurrentTier: false, isNextTier: false, savingsVsMrp: 401 },
-      { id: 't2', minQty: 25,  maxQty: 49, price: 1299, label: '25+ boxes',    isCurrentTier: true,  isNextTier: false, savingsVsMrp: 501 },
-      { id: 't3', minQty: 50,  maxQty: null, price: 1199, label: '50+ boxes',  isCurrentTier: false, isNextTier: true,  savingsVsMrp: 601, unitsToUnlock: 15 },
-    ],
-    committedQty: 35, targetQty: 50, currentParticipants: 28, targetParticipants: 40,
-    moqLabel: '50 boxes', dealStatus: 'OPEN', daysLeft: 12, dealEndsAt: '2026-10-16T18:00:00Z',
-    pickupPoint: 'Community Hall Foyer', pickupDate: '2026-10-18',
-    fulfillmentType: 'PICKUP', paymentType: 'ADVANCE', isFestivalDeal: true,
-  },
-  {
-    id: 'd5', title: 'Tata Sampann Toor Dal 5 KG', category: 'Grocery', subCategory: 'Dal & Pulses',
-    description: 'Premium Tata Sampann Toor Dal 5KG pack. Unpolished, double filtered, high protein. Great for bulk storage.',
-    vendor: 'ABC Wholesale Foods', vendorId: 'v1', vendorRating: 4.8, vendorVerified: true,
-    pricingModel: 'TARGET_OR_CANCEL', pricingType: 'QUANTITY',
-    mrp: 620, standardPrice: 595, currentPrice: 520, currentTierPrice: 520,
-    priceTiers: [
-      { id: 't1', minQty: 100, maxQty: null, price: 520, label: '100+ units or cancel', isCurrentTier: true, isNextTier: false, savingsVsMrp: 100 },
-    ],
-    committedQty: 62, targetQty: 100, currentParticipants: 44, targetParticipants: 70,
-    moqLabel: '100 packs (or deal cancelled)',
-    dealStatus: 'OPEN', daysLeft: 4, dealEndsAt: '2026-10-08T18:00:00Z',
-    pickupPoint: 'Clubhouse Desk', pickupDate: '2026-10-10',
-    fulfillmentType: 'PICKUP', paymentType: 'PAY_AT_PICKUP',
-  },
-];
+  const targetAvg = (pMin + pMax) / 2;
+  const priceRatio = targetAvg / price;
+  const priceScore = Math.min(100, Math.max(0, Math.round(priceRatio * 85)));
 
-const SAMPLE_DEMANDS: DemandRequest[] = [
+  const vendorRatingScore = Math.round(((offer.vendorRating || 4.5) / 5.0) * 100);
+  const fulfillmentRateScore = Math.round(offer.fulfillmentRate || 95);
+  const onTimeRateScore = Math.round(offer.onTimeRate || 95);
+  const lowCancellationScore = Math.round(Math.max(0, 100 - (offer.cancellationRate || 1) * 10));
+  const lowDisputeScore = Math.round(Math.max(0, 100 - (offer.disputeRate || 0.5) * 20));
+  const qualityScore = Math.round(((offer.qualityScore || 4.5) / 5.0) * 100);
+  const moqFeasibility = moq <= expQty ? 100 : Math.max(20, Math.round((expQty / moq) * 100));
+  const moqFeasibilityScore = moqFeasibility;
+
+  const compositeScore = Math.round(
+    priceScore * 0.30 +
+    vendorRatingScore * 0.15 +
+    fulfillmentRateScore * 0.15 +
+    onTimeRateScore * 0.15 +
+    lowCancellationScore * 0.10 +
+    lowDisputeScore * 0.05 +
+    qualityScore * 0.05 +
+    moqFeasibilityScore * 0.05
+  );
+
+  const scoringHighlights: string[] = [];
+  if (offer.isVerified || offer.vendorVerified) scoringHighlights.push('Verified Gold Partner');
+  if ((offer.fulfillmentRate || 0) >= 98) scoringHighlights.push(`${offer.fulfillmentRate}% Fulfillment Record`);
+  if ((offer.onTimeRate || 0) >= 95) scoringHighlights.push(`${offer.onTimeRate}% On-Time Delivery`);
+  if ((offer.cancellationRate || 0) < 1) scoringHighlights.push('Zero/Low Cancellation Risk');
+  if (moq <= expQty) scoringHighlights.push(`MOQ (${moq}) already met by pooled demand`);
+
+  return {
+    priceScore,
+    vendorRatingScore,
+    fulfillmentRateScore,
+    onTimeRateScore,
+    lowCancellationScore,
+    lowDisputeScore,
+    qualityScore,
+    moqFeasibilityScore,
+    compositeScore,
+    isBestValue: false,
+    scoringHighlights,
+  };
+}
+
+export function rankVendorOffers(
+  offers: Omit<VendorOffer, 'scoring'>[],
+  demand: { expectedQuantity?: number; expectedQty?: number; preferredPriceMin?: number; preferredPriceMax?: number }
+): VendorOffer[] {
+  const scoredOffers: VendorOffer[] = offers.map(o => {
+    const scoring = calculateVendorScore(o, demand);
+    return {
+      ...o,
+      pricePerUnit: o.pricePerUnit || o.offeredPrice || 500,
+      offeredPrice: o.offeredPrice || o.pricePerUnit || 500,
+      moq: o.moq || o.minimumQty || 100,
+      minimumQty: o.minimumQty || o.moq || 100,
+      scoring,
+    };
+  });
+
+  let bestIdx = 0;
+  let maxScore = -1;
+  scoredOffers.forEach((o, idx) => {
+    if (o.scoring && o.scoring.compositeScore > maxScore) {
+      maxScore = o.scoring.compositeScore;
+      bestIdx = idx;
+    }
+  });
+
+  if (scoredOffers[bestIdx] && scoredOffers[bestIdx].scoring) {
+    scoredOffers[bestIdx].scoring!.isBestValue = true;
+    scoredOffers[bestIdx].isBestValue = true;
+  }
+
+  return scoredOffers.sort((a, b) => (b.scoring?.compositeScore ?? 0) - (a.scoring?.compositeScore ?? 0));
+}
+
+let DEMAND_POOLS: DemandPool[] = [
   {
-    id: 'dem1', title: 'Basmati Rice Premium 5 KG', category: 'Grocery',
-    description: 'Long grain basmati rice, aged 2 years minimum.',
-    interestedResidents: 86, expectedQty: 143, upvotes: 86, targetUpvotes: 100, hasUpvoted: false,
-    preferredPriceMin: 500, preferredPriceMax: 560, preferredBrand: 'India Gate or Daawat', preferredPackSize: '5 KG',
-    vendorOffers: [
-      { id: 'vo1', demandId: 'dem1', vendorId: 'v1', vendorName: 'ABC Wholesale Foods', vendorRating: 4.8, vendorVerified: true, offeredPrice: 580, minimumQty: 100, maximumQty: 500, deliveryDate: '2026-10-10', validUntil: '2026-10-06T18:00:00Z', isBestValue: false, status: 'PENDING' },
-      { id: 'vo2', demandId: 'dem1', vendorId: 'v2', vendorName: 'FreshMart Direct', vendorRating: 4.6, vendorVerified: true, offeredPrice: 565, minimumQty: 150, maximumQty: 400, deliveryDate: '2026-10-10', validUntil: '2026-10-06T18:00:00Z', isBestValue: false, status: 'PENDING' },
-      { id: 'vo3', demandId: 'dem1', vendorId: 'v3', vendorName: 'Sri Traders', vendorRating: 4.9, vendorVerified: true, offeredPrice: 550, minimumQty: 200, maximumQty: 600, deliveryDate: '2026-10-11', validUntil: '2026-10-06T18:00:00Z', isBestValue: true, status: 'PENDING', terms: 'GI-tagged Dehraduni or Pusa basmati, packaged on order.' },
-    ],
+    id: 'demand-rice-01',
+    title: 'Premium Aged Basmati Rice (5kg)',
+    productName: 'Premium Aged Basmati Rice (5kg)',
+    category: 'GROCERIES',
+    description: 'Bulk community procurement for festival and monthly staple needs.',
+    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80',
+    interestedResidents: 86,
+    expectedQty: 143,
+    expectedQuantity: 143,
+    targetQuantity: 150,
+    targetUpvotes: 50,
+    upvotes: 86,
+    hasUpvoted: true,
+    preferredPriceMin: 500,
+    preferredPriceMax: 560,
+    preferredBrand: 'India Gate / Daawat',
+    preferredBrands: ['India Gate', 'Daawat', 'Fortune'],
+    suggestedBy: 'Priya Sharma (Tower A - 402)',
+    suggestedAt: '2026-10-02T10:00:00Z',
     status: 'VENDOR_OFFERED',
+    vendorOffers: rankVendorOffers(
+      [
+        {
+          id: 'offer-a',
+          demandId: 'demand-rice-01',
+          vendorId: 'vendor-a',
+          vendorName: 'Heritage Grains & Pulses',
+          vendorRating: 4.8,
+          isVerified: true,
+          vendorVerified: true,
+          pricePerUnit: 580,
+          offeredPrice: 580,
+          moq: 100,
+          minimumQty: 100,
+          estimatedDeliveryDays: 2,
+          deliveryDate: '2026-10-10',
+          notes: 'India Gate Feast Basmati 5kg pack with batch test certificates.',
+          terms: 'India Gate Feast Basmati 5kg pack with batch test certificates.',
+          createdAt: '2026-10-03T11:00:00Z',
+          status: 'PENDING',
+          fulfillmentRate: 99.4,
+          onTimeRate: 98.5,
+          cancellationRate: 0.2,
+          disputeRate: 0.1,
+          qualityScore: 4.9,
+        },
+        {
+          id: 'offer-b',
+          demandId: 'demand-rice-01',
+          vendorId: 'vendor-b',
+          vendorName: 'DirectAgro Direct Wholesaler',
+          vendorRating: 4.6,
+          isVerified: true,
+          vendorVerified: true,
+          pricePerUnit: 550,
+          offeredPrice: 550,
+          moq: 150,
+          minimumQty: 150,
+          estimatedDeliveryDays: 3,
+          deliveryDate: '2026-10-11',
+          notes: 'Daawat Rozana Super Gold 5kg. Best value offer for community batch.',
+          terms: 'Daawat Rozana Super Gold 5kg. Best value offer for community batch.',
+          createdAt: '2026-10-03T14:30:00Z',
+          status: 'PENDING',
+          fulfillmentRate: 99.2,
+          onTimeRate: 97.8,
+          cancellationRate: 0.6,
+          disputeRate: 0.3,
+          qualityScore: 4.8,
+        },
+        {
+          id: 'offer-c',
+          demandId: 'demand-rice-01',
+          vendorId: 'vendor-c',
+          vendorName: 'BazaarMart Bulk Hub',
+          vendorRating: 3.9,
+          isVerified: false,
+          vendorVerified: false,
+          pricePerUnit: 535,
+          offeredPrice: 535,
+          moq: 200,
+          minimumQty: 200,
+          estimatedDeliveryDays: 5,
+          deliveryDate: '2026-10-14',
+          notes: 'Lowest raw price. High MOQ required (200 units).',
+          terms: 'Lowest raw price. High MOQ required (200 units).',
+          createdAt: '2026-10-04T09:00:00Z',
+          status: 'PENDING',
+          fulfillmentRate: 91.0,
+          onTimeRate: 88.0,
+          cancellationRate: 4.5,
+          disputeRate: 2.8,
+          qualityScore: 3.9,
+        },
+      ],
+      { expectedQuantity: 143, preferredPriceMin: 500, preferredPriceMax: 560 }
+    ),
   },
   {
-    id: 'dem2', title: 'Organic Cold-Pressed Coconut Oil 1L', category: 'Grocery',
-    description: 'Pure cold-pressed virgin coconut oil without chemical processing.',
-    interestedResidents: 54, expectedQty: 78, upvotes: 54, targetUpvotes: 75, hasUpvoted: true,
-    preferredPriceMin: 300, preferredPriceMax: 380, preferredPackSize: '1L',
-    vendorOffers: [], status: 'OPEN',
-  },
-  {
-    id: 'dem3', title: 'Bioenzyme Cleaning Liquid 5L', category: 'Home',
-    description: 'Eco-friendly bioenzyme floor and surface cleaner. Biodegradable, safe for kids.',
-    interestedResidents: 42, expectedQty: 55, upvotes: 42, targetUpvotes: 50, hasUpvoted: false,
-    vendorOffers: [], status: 'OPEN',
-  },
-  {
-    id: 'dem4', title: 'Diwali Gift Hamper Pack', category: 'Festival',
-    description: 'Corporate / family gift hamper: dry fruits, sweets, chocolates under ₹800.',
-    interestedResidents: 120, expectedQty: 180, upvotes: 120, targetUpvotes: 100, hasUpvoted: false,
-    vendorOffers: [], status: 'APPROVED',
+    id: 'demand-oil-02',
+    title: 'Cold Pressed Wood Pressed Mustard Oil (5L)',
+    productName: 'Cold Pressed Wood Pressed Mustard Oil (5L)',
+    category: 'GROCERIES',
+    description: 'Direct-from-farm organic kachi ghani oil.',
+    imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=80',
+    interestedResidents: 42,
+    expectedQty: 65,
+    expectedQuantity: 65,
+    targetQuantity: 80,
+    targetUpvotes: 40,
+    upvotes: 42,
+    hasUpvoted: false,
+    preferredPriceMin: 700,
+    preferredPriceMax: 800,
+    preferredBrand: 'Organic Tattva',
+    preferredBrands: ['Organic Tattva', 'FarmPure', 'Two Brothers'],
+    suggestedBy: 'Amit Verma (Tower C - 901)',
+    suggestedAt: '2026-10-04T12:00:00Z',
+    status: 'OPEN',
+    vendorOffers: [],
   },
 ];
 
-const SAMPLE_BASKETS: MonthlyBasket[] = [
+let MOCK_DEALS: GroupDeal[] = [
   {
-    id: 'b1', name: 'Mana Monthly Family Basket', tagline: 'Everything you need for the month',
-    items: [
-      { name: 'Basmati Rice 5KG', qty: '5 KG', mrp: 550, groupPrice: 490 },
-      { name: 'Aashirvaad Atta 5KG', qty: '5 KG', mrp: 350, groupPrice: 310 },
-      { name: 'Toor Dal 2KG', qty: '2 KG', mrp: 260, groupPrice: 225 },
-      { name: 'Sunflower Oil 2L', qty: '2 L', mrp: 320, groupPrice: 280 },
-      { name: 'Sugar 2KG', qty: '2 KG', mrp: 100, groupPrice: 88 },
-      { name: 'Mixed Spice Pack', qty: 'Assorted', mrp: 220, groupPrice: 189 },
-      { name: 'Surf Excel 2KG', qty: '2 KG', mrp: 320, groupPrice: 275 },
+    id: 'deal-mango-01',
+    title: 'Fresh Devgad Alphonso Mangoes (Grade A - 1 Dozen)',
+    description: 'Naturally ripened, chemical-free Alphonso mangoes directly sourced from GI-tagged orchards in Devgad, Maharashtra.',
+    category: 'FRUITS_VEGETABLES',
+    subCategory: 'Seasonal Fruits',
+    imageUrl: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&auto=format&fit=crop&q=80',
+    productName: 'Devgad Alphonso Mangoes (1 Dozen)',
+    unit: 'Dozen',
+    originalPrice: 1200,
+    mrp: 1200,
+    standardPrice: 1200,
+    currentTierPrice: 850,
+    currentPrice: 850,
+    lowestPrice: 700,
+    targetQuantity: 100,
+    targetQty: 100,
+    currentQuantity: 82,
+    committedQty: 82,
+    minCommitmentQty: 1,
+    maxCommitmentQty: 5,
+    joinedCount: 46,
+    currentParticipants: 46,
+    savingsSoFar: 28700,
+    status: 'ACTIVE',
+    startDate: '2026-10-01T00:00:00Z',
+    endDate: '2026-10-08T23:59:59Z',
+    deliveryDate: '2026-10-10T11:00:00Z',
+    pickupLocation: 'Clubhouse Ground Floor & Tower Lobby B',
+    pickupPoint: 'Clubhouse Ground Floor & Tower Lobby B',
+    pickupDate: '2026-10-10',
+    pickupSlots: ['Morning (9 AM - 12 PM)', 'Evening (4 PM - 7 PM)'],
+    vendorName: 'Konkan Fresh Farms & Agro Direct',
+    vendor: 'Konkan Fresh Farms & Agro Direct',
+    vendorRating: 4.8,
+    vendorVerified: true,
+    vendorId: 'vendor-konkan-01',
+    pricingModel: 'THRESHOLD',
+    paymentType: 'ONLINE_ONLY',
+    fulfillmentType: 'GATE_PICKUP',
+    inventoryRemaining: 18,
+    moqLabel: 'Min 25 Dozen for Tier 1',
+    nextTierUnitsNeeded: 18,
+    daysLeft: 3,
+    nextTierPrice: 700,
+    dealEndsAt: '2026-10-08T23:59:59Z',
+    isTrending: true,
+    isFestivalDeal: true,
+    isEndingSoon: false,
+    tiers: [
+      { id: 't1', minQuantity: 25, minQty: 25, discountPercent: 15, pricePerUnit: 1020, price: 1020, description: 'Starter Community Tier', label: '25+ units', status: 'UNLOCKED' },
+      { id: 't2', minQuantity: 50, minQty: 50, discountPercent: 29, pricePerUnit: 850, price: 850, description: 'Silver Community Tier (Active)', label: '50+ units', status: 'UNLOCKED' },
+      { id: 't3', minQuantity: 100, minQty: 100, discountPercent: 41, pricePerUnit: 700, price: 700, description: 'Mega Gold Tier (Save ₹500/doz)', label: '100+ units', status: 'NEXT' },
     ],
-    mrpTotal: 2120, groupPrice: 1857, savings: 263, savingsPct: 12,
-    targetFamilies: 100, committedFamilies: 67, isRecurring: true,
-    nextDeliveryDate: '2026-10-15', cutoffDate: '2026-10-12',
-  },
-  {
-    id: 'b2', name: 'Diwali Celebration Basket', tagline: 'Festival essentials at community price',
-    items: [
-      { name: 'Premium Dry Fruits Assorted', qty: '500g', mrp: 800, groupPrice: 680 },
-      { name: 'Festive Sweets Box', qty: '500g', mrp: 500, groupPrice: 420 },
-      { name: 'Puja Items Kit', qty: '1 Set', mrp: 350, groupPrice: 290 },
-      { name: 'Diyas Pack (50 pcs)', qty: '50 pcs', mrp: 200, groupPrice: 160 },
-      { name: 'Gift Wrap & Ribbon Set', qty: '1 Set', mrp: 150, groupPrice: 120 },
+    priceTiers: [
+      { id: 't1', minQuantity: 25, minQty: 25, discountPercent: 15, pricePerUnit: 1020, price: 1020, description: 'Starter Community Tier', label: '25+ units', status: 'UNLOCKED' },
+      { id: 't2', minQuantity: 50, minQty: 50, discountPercent: 29, pricePerUnit: 850, price: 850, description: 'Silver Community Tier (Active)', label: '50+ units', status: 'UNLOCKED' },
+      { id: 't3', minQuantity: 100, minQty: 100, discountPercent: 41, pricePerUnit: 700, price: 700, description: 'Mega Gold Tier (Save ₹500/doz)', label: '100+ units', status: 'NEXT' },
     ],
-    mrpTotal: 2000, groupPrice: 1670, savings: 330, savingsPct: 16,
-    targetFamilies: 80, committedFamilies: 52, isRecurring: false,
-    nextDeliveryDate: '2026-10-18', cutoffDate: '2026-10-15',
+    highlights: ['GI Certified Devgad Origin', '100% Carbide Free', 'Direct Farm-to-Gate Dispatch'],
+    termsAndConditions: ['Quality inspection on delivery', 'Replacement guarantee within 24h'],
   },
 ];
 
-const COMMUNITY_SAVINGS: CommunitySavings = {
-  totalSavedThisMonth: 184520,
-  totalOrders: 1248,
-  activeDeals: 38,
-  avgSavingPerOrder: 147,
-  totalKgsBought: 2450,
-  topCategory: 'Grocery',
-  totalSavedAllTime: 820000,
-};
+let MOCK_ORDERS: GroupOrder[] = [
+  {
+    id: 'ord-mango-8821',
+    dealId: 'deal-mango-01',
+    dealTitle: 'Fresh Devgad Alphonso Mangoes (Grade A - 1 Dozen)',
+    title: 'Fresh Devgad Alphonso Mangoes (Grade A - 1 Dozen)',
+    productName: 'Devgad Alphonso Mangoes (1 Dozen)',
+    imageUrl: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&auto=format&fit=crop&q=80',
+    quantity: 2,
+    qty: 2,
+    unit: 'Dozen',
+    committedPrice: 850,
+    unitPrice: 850,
+    finalPrice: 850,
+    totalCommittedAmount: 1700,
+    total: 1700,
+    finalAmount: 1700,
+    savings: 700,
+    status: 'CONFIRMED',
+    joinedAt: '2026-10-03T14:20:00Z',
+    createdAt: '2026-10-03T14:20:00Z',
+    pickupLocation: 'Clubhouse Ground Floor',
+    pickupPoint: 'Clubhouse Ground Floor',
+    pickupOtp: '8492',
+    pickupQrCode: 'MANA-ORDER-8821-DEVGAD',
+    qrCode: 'MANA-ORDER-8821-DEVGAD',
+    pickupDate: '2026-10-10',
+    pickupSlot: 'Morning (9 AM - 12 PM)',
+    paymentMethod: 'UPI',
+    paymentStatus: 'PAID',
+    authorizedCollectors: [
+      {
+        id: 'col-1',
+        name: 'Ramesh (House Helper)',
+        relationship: 'Helper',
+        authPin: '8492',
+        expiresAt: '2026-10-10T18:00:00Z',
+      },
+    ],
+  },
+];
+
+let MOCK_GROUPS: BuyingGroup[] = [
+  { id: 'bg-1', name: 'Tower A Collective', tower: 'Tower A', block: 'Tower A', isMember: true, description: 'Bulk buying group for Tower A residents', totalSaved: 62450, totalSavings: 62450, leaderName: 'Priya Sharma', leaderFlat: 'A-402', memberCount: 142, activeDealsCount: 12 },
+  { id: 'bg-2', name: 'Tower B Bulk Buyers', tower: 'Tower B', block: 'Tower B', isMember: false, description: 'Bulk buying group for Tower B residents', totalSaved: 58200, totalSavings: 58200, leaderName: 'Rahul Mehta', leaderFlat: 'B-604', memberCount: 128, activeDealsCount: 10 },
+  { id: 'bg-3', name: 'Tower C Eco Club', tower: 'Tower C', block: 'Tower C', isMember: false, description: 'Organic essentials for Tower C', totalSaved: 42870, totalSavings: 42870, leaderName: 'Amit Verma', leaderFlat: 'C-901', memberCount: 95, activeDealsCount: 8 },
+];
+
+let MOCK_BASKETS: MonthlyBasket[] = [
+  {
+    id: 'mb-1',
+    name: 'Essential Monthly Grocery Kit',
+    tagline: 'Atta, Rice, Oil, Pulses & Spices for a family of 4',
+    month: 'October 2026',
+    items: [
+      { id: 'i1', name: 'Aashirvaad Atta 10kg', quantity: 1, unit: 'Bag', estimatedPrice: 680, savedAmount: 95, groupPrice: 585 },
+      { id: 'i2', name: 'Fortune Sunflower Oil 5L', quantity: 1, unit: 'Jar', estimatedPrice: 750, savedAmount: 110, groupPrice: 640 },
+    ],
+    totalEstimated: 1430,
+    totalSavings: 205,
+    isRecurring: true,
+    savingsPct: 14.3,
+    groupPrice: 1225,
+    mrpTotal: 1430,
+    savings: 205,
+    committedFamilies: 78,
+    targetFamilies: 100,
+    cutoffDate: '2026-10-07',
+    nextDeliveryDate: '2026-10-10',
+  },
+];
+
+let MOCK_BUY_AGAIN: BuyAgainSuggestion[] = [
+  {
+    id: 'ba-1',
+    productName: 'Fresh Devgad Alphonso Mangoes (1 Dozen)',
+    category: 'Fruits & Vegetables',
+    imageUrl: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&auto=format&fit=crop&q=80',
+    lastPurchasedPrice: 850,
+    lastPrice: 850,
+    currentPrice: 850,
+    currentDealPrice: 850,
+    lastBoughtDaysAgo: 14,
+    activeGroupBuyAvailable: true,
+    groupBuyPrice: 850,
+    unit: 'Dozen',
+    lastOrderedDate: '2026-10-03',
+    dealId: 'deal-mango-01',
+    savings: 350,
+  },
+];
 
 export const groupBuyingService = {
-  // ── Deals ─────────────────────────────────────────────────────────────────
-  async getDeals(): Promise<GroupDealDto[]> {
-    try {
-      const res = await api.get<GroupDealDto[]>('/group-buying/deals');
-      return res.data;
-    } catch {
-      return SAMPLE_DEALS;
-    }
-  },
-
-  async getDealById(dealId: string): Promise<GroupDealDto> {
-    try {
-      const res = await api.get<GroupDealDto>(`/group-buying/deals/${dealId}`);
-      return res.data;
-    } catch {
-      return SAMPLE_DEALS.find(d => d.id === dealId) ?? SAMPLE_DEALS[0];
-    }
-  },
-
-  async getAlmostUnlockedDeals(): Promise<GroupDealDto[]> {
-    try {
-      const res = await api.get<GroupDealDto[]>('/group-buying/deals/almost-unlocked');
-      return res.data;
-    } catch {
-      return SAMPLE_DEALS.filter(d => d.isAlmostUnlocked);
-    }
-  },
-
-  async getFeaturedDeals(): Promise<GroupDealDto[]> {
-    try {
-      const res = await api.get<GroupDealDto[]>('/group-buying/deals/featured');
-      return res.data;
-    } catch {
-      return SAMPLE_DEALS.filter(d => d.isTrending).slice(0, 3);
-    }
-  },
-
-  async getFestivalDeals(): Promise<GroupDealDto[]> {
-    try {
-      const res = await api.get<GroupDealDto[]>('/group-buying/deals/festival');
-      return res.data;
-    } catch {
-      return SAMPLE_DEALS.filter(d => d.isFestivalDeal);
-    }
-  },
-
-  async getEndingSoonDeals(): Promise<GroupDealDto[]> {
-    try {
-      const res = await api.get<GroupDealDto[]>('/group-buying/deals/ending-soon');
-      return res.data;
-    } catch {
-      return SAMPLE_DEALS.filter(d => d.isEndingSoon || d.daysLeft <= 1);
-    }
-  },
-
-  async getGroupBuyPrice(dealId: string, qty: number): Promise<{ tierPrice: number; totalPrice: number; savings: number; tier: string }> {
-    try {
-      const res = await api.get(`/group-buying/deals/${dealId}/price?qty=${qty}`);
-      return res.data;
-    } catch {
-      const deal = SAMPLE_DEALS.find(d => d.id === dealId) ?? SAMPLE_DEALS[0];
-      const tier = [...deal.priceTiers].sort((a, b) => b.minQty - a.minQty).find(t => t.minQty <= deal.committedQty + qty);
-      const tierPrice = tier?.price ?? deal.currentTierPrice;
-      return { tierPrice, totalPrice: tierPrice * qty, savings: (deal.mrp - tierPrice) * qty, tier: tier?.label ?? '' };
-    }
-  },
-
-  async getGroupBuyProgress(dealId: string): Promise<{ committedQty: number; targetQty: number; participants: number; currentTierPrice: number; nextTierPrice?: number; nextTierUnitsNeeded?: number }> {
-    try {
-      const res = await api.get(`/group-buying/deals/${dealId}/progress`);
-      return res.data;
-    } catch {
-      const deal = SAMPLE_DEALS.find(d => d.id === dealId) ?? SAMPLE_DEALS[0];
-      return {
-        committedQty: deal.committedQty,
-        targetQty: deal.targetQty,
-        participants: deal.currentParticipants,
-        currentTierPrice: deal.currentTierPrice,
-        nextTierPrice: deal.nextTierPrice,
-        nextTierUnitsNeeded: deal.nextTierUnitsNeeded,
-      };
-    }
-  },
-
-  // ── Orders ────────────────────────────────────────────────────────────────
-  async joinDeal(dealId: string, quantity: number): Promise<GroupOrderDto> {
-    try {
-      const res = await api.post<GroupOrderDto>(`/group-buying/deals/${dealId}/join`, { quantity });
-      return res.data;
-    } catch {
-      const deal = SAMPLE_DEALS.find(d => d.id === dealId) ?? SAMPLE_DEALS[0];
-      return {
-        id: `GB-2026-${String(Date.now()).slice(-5)}`,
-        dealId,
-        title: deal.title,
-        category: deal.category,
-        qty: quantity,
-        unitPrice: deal.currentTierPrice,
-        total: deal.currentTierPrice * quantity,
-        savings: (deal.mrp - deal.currentTierPrice) * quantity,
-        status: 'CONFIRMED',
-        qrCode: `TKN-${dealId}-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-        pickupPoint: deal.pickupPoint,
-        pickupDate: deal.pickupDate,
-        pickupSlot: deal.pickupSlots?.[0],
-        createdAt: new Date().toISOString(),
-      };
-    }
-  },
-
-  async getMyOrders(): Promise<GroupOrderDto[]> {
-    try {
-      const res = await api.get<GroupOrderDto[]>('/group-buying/my-orders');
-      return res.data;
-    } catch {
-      return [
-        { id: 'GB-2026-00101', dealId: 'd3', title: 'Fortune Sunflower Oil 5L', category: 'Grocery', qty: 2, unitPrice: 649, total: 1298, savings: 202, status: 'CONFIRMED', qrCode: 'TKN-D3-20261001-XQ9K2P', pickupPoint: 'Clubhouse Desk', pickupDate: '2026-10-11', pickupSlot: '10 AM – 1 PM', createdAt: '2026-10-01T11:00:00Z' },
-        { id: 'GB-2026-00089', dealId: 'd2', title: 'Alphonso Mango Box (5 KG)', category: 'Fresh', qty: 1, unitPrice: 1050, total: 1050, savings: 250, status: 'PICKED_UP', qrCode: 'TKN-D2-20260925-LM4N8R', pickupPoint: 'Tower A Lobby', createdAt: '2026-09-25T14:00:00Z' },
-      ];
-    }
-  },
-
-  async getBuyAgainSuggestions(): Promise<BuyAgainSuggestion[]> {
-    try {
-      const res = await api.get<BuyAgainSuggestion[]>('/group-buying/buy-again');
-      return res.data;
-    } catch {
-      return [
-        { dealId: 'd1', orderId: 'GB-2026-00045', title: 'Aashirvaad Atta 10 KG', category: 'Grocery', lastPrice: 570, currentPrice: 585, lastPurchasedAt: '2026-09-01', isAvailable: true },
-        { dealId: 'd3', orderId: 'GB-2026-00062', title: 'Fortune Sunflower Oil 5L', category: 'Grocery', lastPrice: 649, currentPrice: 649, lastPurchasedAt: '2026-09-15', isAvailable: true },
-        { dealId: 'old-dal', orderId: 'GB-2026-00038', title: 'Tata Sampann Toor Dal 5KG', category: 'Grocery', lastPrice: 520, currentPrice: undefined, lastPurchasedAt: '2026-08-20', isAvailable: false },
-      ];
-    }
-  },
-
-  // ── Demand Board ──────────────────────────────────────────────────────────
-  async getDemandBoard(): Promise<DemandRequest[]> {
-    try {
-      const res = await api.get<DemandRequest[]>('/group-buying/demand');
-      return res.data;
-    } catch {
-      return SAMPLE_DEMANDS;
-    }
-  },
-
-  async getDemandById(demandId: string): Promise<DemandRequest> {
-    try {
-      const res = await api.get<DemandRequest>(`/group-buying/demand/${demandId}`);
-      return res.data;
-    } catch {
-      return SAMPLE_DEMANDS.find(d => d.id === demandId) ?? SAMPLE_DEMANDS[0];
-    }
-  },
-
-  async upvoteDemand(id: string): Promise<void> {
-    try {
-      await api.post(`/group-buying/demand/${id}/upvote`);
-    } catch {
-      // optimistic update handled in UI
-    }
-  },
-
-  async createDemand(data: { title: string; category: string; description?: string; expectedQty?: number; preferredPriceMin?: number; preferredPriceMax?: number; preferredBrand?: string }): Promise<DemandRequest> {
-    try {
-      const res = await api.post<DemandRequest>('/group-buying/demand', data);
-      return res.data;
-    } catch {
-      return {
-        id: `dem-${Date.now()}`,
-        ...data,
-        interestedResidents: 1,
-        expectedQty: data.expectedQty ?? 1,
-        upvotes: 1,
-        targetUpvotes: 25,
-        hasUpvoted: true,
-        vendorOffers: [],
-        status: 'OPEN',
-      };
-    }
-  },
-
-  // ── Community Savings ─────────────────────────────────────────────────────
-  async getCommunitySavings(): Promise<CommunitySavings> {
-    try {
-      const res = await api.get<CommunitySavings>('/group-buying/community-savings');
-      return res.data;
-    } catch {
-      return COMMUNITY_SAVINGS;
-    }
-  },
-
-  // ── Monthly Baskets ───────────────────────────────────────────────────────
-  async getMonthlyBaskets(): Promise<MonthlyBasket[]> {
-    try {
-      const res = await api.get<MonthlyBasket[]>('/group-buying/baskets');
-      return res.data;
-    } catch {
-      return SAMPLE_BASKETS;
-    }
-  },
-
-  async joinBasket(basketId: string, qty?: number): Promise<GroupOrderDto> {
-    try {
-      const res = await api.post<GroupOrderDto>(`/group-buying/baskets/${basketId}/join`, { qty: qty ?? 1 });
-      return res.data;
-    } catch {
-      const basket = SAMPLE_BASKETS.find(b => b.id === basketId) ?? SAMPLE_BASKETS[0];
-      return {
-        id: `GB-BSK-${Date.now()}`,
-        dealId: basketId,
-        title: basket.name,
-        qty: qty ?? 1,
-        unitPrice: basket.groupPrice,
-        total: basket.groupPrice * (qty ?? 1),
-        savings: basket.savings * (qty ?? 1),
-        status: 'CONFIRMED',
-        qrCode: `TKN-BSK-${basketId}-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-      };
-    }
-  },
-
-  // ── Festival ──────────────────────────────────────────────────────────────
-  async getFestivalCategories(): Promise<FestivalDealCategory[]> {
-    try {
-      const res = await api.get<FestivalDealCategory[]>('/group-buying/festival/categories');
-      return res.data;
-    } catch {
-      return [
-        { id: 'fc1', name: 'Diwali', emoji: '🪔', description: 'Sweets, dry fruits, lamps & decorations', dealsCount: 8 },
-        { id: 'fc2', name: 'Navratri', emoji: '🌺', description: 'Pooja items, flowers & festive foods', dealsCount: 5 },
-        { id: 'fc3', name: 'Ganesh Chaturthi', emoji: '🐘', description: 'Pooja materials, modak & decorations', dealsCount: 4 },
-        { id: 'fc4', name: 'Dasara', emoji: '🌻', description: 'Gifts, sweets & flower garlands', dealsCount: 3 },
-        { id: 'fc5', name: 'Ugadi', emoji: '🌸', description: 'Festival groceries & traditional sweets', dealsCount: 4 },
-        { id: 'fc6', name: 'Sankranti', emoji: '🪁', description: 'Sesame sweets, flowers & kite supplies', dealsCount: 3 },
-      ];
-    }
-  },
-
-  async verifyPickupPass(qrToken: string): Promise<{ success: boolean; order?: GroupOrderDto; message: string }> {
-    try {
-      const res = await api.post<{ success: boolean; order?: GroupOrderDto; message: string }>('/group-buying/orders/verify-pickup', { qrToken });
-      return res.data;
-    } catch {
-      return {
-        success: true,
-        message: 'Pass verified successfully!',
-        order: {
-          id: 'GB-2026-00191',
-          dealId: 'd1',
-          title: 'Aashirvaad Atta 10 KG',
-          category: 'Grocery',
-          qty: 2,
-          unitPrice: 585,
-          total: 1170,
-          status: 'PICKED_UP',
-          qrCode: qrToken,
-          pickupPoint: 'Clubhouse Desk',
-          createdAt: new Date().toISOString(),
-        }
-      };
-    }
-  },
-
-  async authorizeCollector(orderId: string, data: { name: string; relationship: string; phone?: string }): Promise<{ pin: string; expiresAt: string }> {
-    try {
-      const res = await api.post(`/group-buying/orders/${orderId}/authorize-collector`, data);
-      return res.data;
-    } catch {
-      return {
-        pin: String(Math.floor(1000 + Math.random() * 9000)),
-        expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-      };
-    }
-  },
-
-  // ── Tower / Buying Groups ───────────────────────────────────────────────
-  async getBuyingGroups(): Promise<BuyingGroup[]> {
-    try {
-      const res = await api.get<BuyingGroup[]>('/group-buying/tower-groups');
-      return res.data;
-    } catch {
-      return SAMPLE_TOWER_GROUPS;
-    }
-  },
-
-  async joinBuyingGroup(groupId: string): Promise<void> {
-    try {
-      await api.post(`/group-buying/tower-groups/${groupId}/join`);
-    } catch {}
-  },
-
-  // ── Ask Your Community (AI Search) ──────────────────────────────────────
-  async askCommunityAI(query: string): Promise<CommunityAIQueryResponse> {
-    try {
-      const res = await api.post<CommunityAIQueryResponse>('/group-buying/ask-community', { query });
-      return res.data;
-    } catch {
-      const q = query.toLowerCase();
-      const matchedDeals = SAMPLE_DEALS.filter(d => 
-        d.title.toLowerCase().includes(q) || 
-        d.category.toLowerCase().includes(q) ||
-        (d.subCategory && d.subCategory.toLowerCase().includes(q))
-      );
-      const matchedDemands = SAMPLE_DEMANDS.filter(d =>
-        d.title.toLowerCase().includes(q) ||
-        d.category.toLowerCase().includes(q)
-      );
-
-      if (matchedDeals.length > 0) {
-        return {
-          query,
-          matchedDeals,
-          matchedDemands,
-          suggestedAction: 'JOIN_DEAL',
-          suggestedPrice: matchedDeals[0].currentTierPrice,
-          estimatedCommunitySavings: matchedDeals[0].mrp - matchedDeals[0].currentTierPrice,
-          confidenceScore: 0.95,
-          explanation: `Found ${matchedDeals.length} active wholesale deal matching "${query}". Community rate starts at ₹${matchedDeals[0].currentTierPrice}.`,
-        };
-      } else if (matchedDemands.length > 0) {
-        return {
-          query,
-          matchedDeals: [],
-          matchedDemands,
-          suggestedAction: 'UPVOTE_DEMAND',
-          confidenceScore: 0.88,
-          explanation: `${matchedDemands[0].interestedResidents} neighbours already requested "${matchedDemands[0].title}". Upvote to attract wholesale vendor bids.`,
-        };
-      } else {
-        return {
-          query,
-          matchedDeals: [],
-          matchedDemands,
-          suggestedAction: 'CREATE_DEMAND',
-          suggestedPrice: 450,
-          confidenceScore: 0.75,
-          explanation: `No live deals found for "${query}". Start a community demand with target MOQ to get competing quotes from verified suppliers.`,
-        };
+  getDeals: async (filters?: any): Promise<GroupDeal[]> => {
+    let result = [...MOCK_DEALS];
+    if (filters && typeof filters === 'object') {
+      if (filters.category && filters.category !== 'ALL') {
+        result = result.filter(d => d.category === filters.category);
+      }
+      if (filters.status && filters.status !== 'ALL') {
+        result = result.filter(d => d.status === filters.status);
+      }
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        result = result.filter(d => d.title.toLowerCase().includes(q) || d.productName.toLowerCase().includes(q));
       }
     }
+    return result;
   },
 
-  async acceptVendorOffer(demandId: string, offerId: string): Promise<GroupDealDto> {
-    try {
-      const res = await api.post<GroupDealDto>(`/group-buying/demand/${demandId}/offers/${offerId}/accept`);
-      return res.data;
-    } catch {
-      return (await groupBuyingService.getDeals())[0];
+  getFestivalCategories: async (): Promise<string[]> => {
+    return ['All', 'Diwali Sweets & Snacks', 'Puja Essentials', 'Dry Fruits Gift Boxes', 'Ethnic Grocery'];
+  },
+
+  getFestivalDeals: async (): Promise<GroupDeal[]> => {
+    return MOCK_DEALS;
+  },
+
+  getAlmostUnlockedDeals: async (): Promise<GroupDeal[]> => {
+    return MOCK_DEALS;
+  },
+
+  getDealById: async (dealId: string): Promise<GroupDeal | null> => {
+    return MOCK_DEALS.find(d => d.id === dealId) || null;
+  },
+
+  joinDeal: async (arg1: any, arg2?: any, arg3?: any): Promise<GroupOrder> => {
+    const payload: JoinDealPayload = typeof arg1 === 'string'
+      ? { dealId: arg1, quantity: arg2 || 1, paymentMethod: arg3 || 'UPI' }
+      : arg1;
+    const deal = MOCK_DEALS.find(d => d.id === payload.dealId);
+    if (!deal) throw new Error('Deal not found');
+
+    const newOrder: GroupOrder = {
+      id: `ord-${Date.now()}`,
+      dealId: deal.id,
+      dealTitle: deal.title,
+      title: deal.title,
+      productName: deal.productName,
+      imageUrl: deal.imageUrl,
+      quantity: payload.quantity,
+      qty: payload.quantity,
+      unit: deal.unit,
+      committedPrice: deal.currentPrice,
+      unitPrice: deal.currentPrice,
+      totalCommittedAmount: deal.currentPrice * payload.quantity,
+      total: deal.currentPrice * payload.quantity,
+      savings: (deal.originalPrice - deal.currentPrice) * payload.quantity,
+      status: 'CONFIRMED',
+      joinedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      pickupLocation: deal.pickupLocation,
+      pickupPoint: deal.pickupLocation,
+      pickupOtp: Math.floor(1000 + Math.random() * 9000).toString(),
+      pickupQrCode: `MANA-ORDER-${deal.id}-${Date.now()}`,
+      qrCode: `MANA-ORDER-${deal.id}-${Date.now()}`,
+      pickupDate: deal.deliveryDate,
+      pickupSlot: payload.deliverySlot || 'Morning (9 AM - 12 PM)',
+      deliverySlot: payload.deliverySlot,
+      paymentMethod: payload.paymentMethod,
+      paymentStatus: 'PAID',
+    };
+
+    deal.currentQuantity += payload.quantity;
+    deal.committedQty += payload.quantity;
+    deal.joinedCount += 1;
+    deal.savingsSoFar += (deal.originalPrice - deal.currentPrice) * payload.quantity;
+    MOCK_ORDERS.unshift(newOrder);
+    return newOrder;
+  },
+
+  checkoutGroupBuy: async (arg1: any, arg2?: any, arg3?: any): Promise<GroupOrder> => {
+    return groupBuyingService.joinDeal(arg1, arg2, arg3);
+  },
+
+  getUserOrders: async (): Promise<GroupOrder[]> => {
+    return MOCK_ORDERS;
+  },
+
+  getMyOrders: async (): Promise<GroupOrder[]> => {
+    return MOCK_ORDERS;
+  },
+
+  getOrderById: async (orderId: string): Promise<GroupOrder | null> => {
+    return MOCK_ORDERS.find(o => o.id === orderId) || null;
+  },
+
+  verifyPickupPass: async (qrOrOtp: string): Promise<VerifyPickupResponse> => {
+    const order = MOCK_ORDERS.find(o => o.pickupOtp === qrOrOtp || o.pickupQrCode === qrOrOtp || o.qrCode === qrOrOtp || o.id === qrOrOtp);
+    if (order) {
+      order.status = 'DELIVERED';
+      order.deliveredAt = new Date().toISOString();
+      return { success: true, order, message: 'Pickup verified successfully' };
     }
+    return { success: false, message: 'Invalid OTP or QR code' };
   },
 
-  async submitOrderReview(data: Omit<OrderReview, 'id' | 'createdAt'>): Promise<OrderReview> {
-    try {
-      const res = await api.post<OrderReview>('/group-buying/reviews', data);
-      return res.data;
-    } catch {
-      return {
-        id: 'rev-' + Date.now(),
-        ...data,
-        createdAt: new Date().toISOString(),
-      };
+  raiseOrderDispute: async (payload: any): Promise<OrderDispute> => {
+    return {
+      id: `disp-${Date.now()}`,
+      orderId: payload.orderId || 'ord-test',
+      reason: payload.reason || 'DAMAGED_ITEMS',
+      claimAmount: payload.claimAmount || 100,
+      description: payload.description || '',
+      requestedResolution: payload.requestedResolution || 'REFUND',
+      status: 'SUBMITTED',
+      createdAt: new Date().toISOString(),
+    };
+  },
+
+  submitOrderReview: async (payload: any): Promise<any> => {
+    return { success: true, reviewId: `rev-${Date.now()}` };
+  },
+
+  getBuyingGroups: async (): Promise<BuyingGroup[]> => {
+    return MOCK_GROUPS;
+  },
+
+  joinBuyingGroup: async (groupId: string): Promise<BuyingGroup> => {
+    const grp = MOCK_GROUPS.find(g => g.id === groupId);
+    if (!grp) throw new Error('Buying group not found');
+    if (grp.membersCount != null) grp.membersCount += 1;
+    if (grp.memberCount != null) grp.memberCount += 1;
+    grp.isMember = true;
+    return grp;
+  },
+
+  getFestivalCampaigns: async (): Promise<FestivalCampaign[]> => {
+    return [
+      {
+        id: 'fest-diwali',
+        name: 'Diwali Dhamaka',
+        tagline: 'Save up to 40% on Dry Fruits, Sweets & Puja essentials',
+        bannerImage: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=500',
+        festivalDate: '2026-11-01',
+        daysRemaining: 27,
+        categories: [
+          { id: 'DIWALI', name: 'Diwali Specials', emoji: '🪔', dealsCount: 12 },
+          { id: 'SWEETS', name: 'Mithai & Sweets', emoji: '🍬', dealsCount: 8 },
+          { id: 'DRY_FRUITS', name: 'Premium Dry Fruits', emoji: '🥜', dealsCount: 15 },
+          { id: 'PUJA', name: 'Puja Samagri', emoji: '🌸', dealsCount: 6 },
+        ],
+      },
+    ];
+  },
+  getMonthlyBaskets: async (): Promise<MonthlyBasket[]> => {
+    return MOCK_BASKETS;
+  },
+
+  joinBasket: async (basketId: string): Promise<any> => {
+    const b = MOCK_BASKETS.find(x => x.id === basketId);
+    if (b) b.committedFamilies += 1;
+    return { success: true };
+  },
+
+  getBuyAgainSuggestions: async (): Promise<BuyAgainSuggestion[]> => {
+    return MOCK_BUY_AGAIN;
+  },
+
+  askCommunityAI: async (query: string): Promise<CommunityAIQueryResponse> => {
+    const q = query.toLowerCase();
+    const matchedDeals = MOCK_DEALS.filter(d => d.title.toLowerCase().includes(q) || d.productName.toLowerCase().includes(q));
+    const matchedDemands = DEMAND_POOLS.filter(d => d.title.toLowerCase().includes(q) || (d.productName && d.productName.toLowerCase().includes(q)));
+    return {
+      answer: `I found ${matchedDeals.length} deals and ${matchedDemands.length} community demand requests matching "${query}".`,
+      action: matchedDeals.length > 0 ? 'JOIN_DEAL' : (matchedDemands.length > 0 ? 'UPVOTE_DEMAND' : 'CREATE_DEMAND'),
+      matchedDeals,
+      matchedDemands,
+      confidence: 0.95,
+    };
+  },
+
+  getDemands: async (): Promise<DemandPool[]> => {
+    return DEMAND_POOLS;
+  },
+
+  getDemandBoard: async (): Promise<DemandPool[]> => {
+    return DEMAND_POOLS;
+  },
+
+  getDemandById: async (demandId: string): Promise<DemandPool | null> => {
+    return DEMAND_POOLS.find(d => d.id === demandId) || null;
+  },
+
+  createDemand: async (payload: CreateDemandPayload): Promise<DemandPool> => {
+    const title = payload.productName || payload.title || 'Community Request';
+    const newDemand: DemandPool = {
+      id: `demand-${Date.now()}`,
+      title,
+      productName: title,
+      category: payload.category,
+      description: payload.description || '',
+      imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&auto=format&fit=crop&q=80',
+      interestedResidents: 1,
+      expectedQty: payload.expectedQuantity || payload.expectedQty || 1,
+      expectedQuantity: payload.expectedQuantity || payload.expectedQty || 1,
+      targetQuantity: 50,
+      targetUpvotes: 25,
+      upvotes: 1,
+      hasUpvoted: true,
+      preferredPriceMin: payload.preferredPriceMin || 100,
+      preferredPriceMax: payload.preferredPriceMax || 200,
+      preferredBrand: payload.preferredBrand || (payload.preferredBrands ? payload.preferredBrands[0] : undefined),
+      preferredBrands: payload.preferredBrands || (payload.preferredBrand ? [payload.preferredBrand] : []),
+      suggestedBy: 'You (Tower B - 604)',
+      suggestedAt: new Date().toISOString(),
+      status: 'OPEN',
+      vendorOffers: [],
+    };
+    DEMAND_POOLS.unshift(newDemand);
+    return newDemand;
+  },
+
+  upvoteDemand: async (demandId: string): Promise<DemandPool> => {
+    const pool = DEMAND_POOLS.find(d => d.id === demandId);
+    if (!pool) throw new Error('Demand pool not found');
+    if (pool.hasUpvoted) {
+      pool.upvotes -= 1;
+      pool.interestedResidents -= 1;
+      pool.hasUpvoted = false;
+    } else {
+      pool.upvotes += 1;
+      pool.interestedResidents += 1;
+      pool.hasUpvoted = true;
     }
+    return pool;
   },
 
-  async raiseOrderDispute(data: Omit<OrderDispute, 'id' | 'createdAt' | 'status'>): Promise<OrderDispute> {
-    try {
-      const res = await api.post<OrderDispute>('/group-buying/disputes', data);
-      return res.data;
-    } catch {
-      return {
-        id: 'DISP-2026-' + Math.floor(100 + Math.random() * 900),
-        ...data,
-        status: 'SUBMITTED',
-        createdAt: new Date().toISOString(),
-      };
-    }
+  acceptVendorOffer: async (demandId: string, offerId: string): Promise<GroupDeal> => {
+    const pool = DEMAND_POOLS.find(d => d.id === demandId);
+    if (!pool) throw new Error('Demand pool not found');
+    const offer = pool.vendorOffers.find(o => o.id === offerId);
+    if (!offer) throw new Error('Vendor offer not found');
+
+    offer.status = 'ACCEPTED';
+    pool.status = 'APPROVED';
+
+    const pMax = pool.preferredPriceMax || (offer.pricePerUnit * 1.2);
+    const expQty = pool.expectedQuantity || pool.expectedQty || 50;
+
+    const newDeal: GroupDeal = {
+      id: `deal-from-demand-${Date.now()}`,
+      title: `Bulk ${pool.title || pool.productName} by ${offer.vendorName}`,
+      description: pool.description || '',
+      category: pool.category,
+      imageUrl: pool.imageUrl || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80',
+      productName: pool.productName || pool.title || '',
+      unit: 'Pack',
+      originalPrice: pMax * 1.2,
+      mrp: pMax * 1.2,
+      standardPrice: pMax * 1.2,
+      currentTierPrice: offer.pricePerUnit || offer.offeredPrice || 500,
+      currentPrice: offer.pricePerUnit || offer.offeredPrice || 500,
+      lowestPrice: (offer.pricePerUnit || offer.offeredPrice || 500) * 0.9,
+      targetQuantity: offer.moq || offer.minimumQty || 100,
+      targetQty: offer.moq || offer.minimumQty || 100,
+      currentQuantity: expQty,
+      committedQty: expQty,
+      minCommitmentQty: 1,
+      maxCommitmentQty: 10,
+      joinedCount: pool.interestedResidents,
+      savingsSoFar: (pMax * 1.2 - (offer.pricePerUnit || offer.offeredPrice || 500)) * expQty,
+      status: 'ACTIVE',
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 5 * 86400000).toISOString(),
+      deliveryDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+      pickupLocation: 'Clubhouse Entrance & Lobby Delivery Hub',
+      pickupPoint: 'Clubhouse Entrance & Lobby Delivery Hub',
+      vendorName: offer.vendorName,
+      vendor: offer.vendorName,
+      vendorRating: offer.vendorRating,
+      vendorVerified: true,
+      vendorId: offer.vendorId,
+      pricingModel: 'THRESHOLD',
+      nextTierUnitsNeeded: 10,
+      daysLeft: 5,
+      nextTierPrice: Math.round((offer.pricePerUnit || 500) * 0.95),
+      dealEndsAt: new Date(Date.now() + 5 * 86400000).toISOString(),
+      tiers: [
+        { id: 'dt1', minQuantity: Math.round((offer.moq || 100) * 0.5), minQty: Math.round((offer.moq || 100) * 0.5), discountPercent: 15, pricePerUnit: offer.pricePerUnit || 500, price: offer.pricePerUnit || 500, description: 'Base Tier', label: 'Base Tier', status: 'UNLOCKED' },
+        { id: 'dt2', minQuantity: offer.moq || 100, minQty: offer.moq || 100, discountPercent: 25, pricePerUnit: Math.round((offer.pricePerUnit || 500) * 0.95), price: Math.round((offer.pricePerUnit || 500) * 0.95), description: 'Bulk MOQ Tier', label: 'Bulk MOQ Tier', status: 'NEXT' },
+      ],
+      priceTiers: [
+        { id: 'dt1', minQuantity: Math.round((offer.moq || 100) * 0.5), minQty: Math.round((offer.moq || 100) * 0.5), discountPercent: 15, pricePerUnit: offer.pricePerUnit || 500, price: offer.pricePerUnit || 500, description: 'Base Tier', label: 'Base Tier', status: 'UNLOCKED' },
+        { id: 'dt2', minQuantity: offer.moq || 100, minQty: offer.moq || 100, discountPercent: 25, pricePerUnit: Math.round((offer.pricePerUnit || 500) * 0.95), price: Math.round((offer.pricePerUnit || 500) * 0.95), description: 'Bulk MOQ Tier', label: 'Bulk MOQ Tier', status: 'NEXT' },
+      ],
+      highlights: ['Formed from Community Demand Board', 'Direct Vendor Best Value Selection', 'Guaranteed Quality Assurance'],
+      termsAndConditions: ['Community pickup required within 24 hours of delivery'],
+    };
+
+    pool.dealId = newDeal.id;
+    MOCK_DEALS.unshift(newDeal);
+    return newDeal;
   },
 
-  async getMyDisputes(): Promise<OrderDispute[]> {
-    try {
-      const res = await api.get<OrderDispute[]>('/group-buying/disputes');
-      return res.data;
-    } catch {
-      return SAMPLE_DISPUTES;
-    }
+  getCommunitySavings: async (): Promise<CommunitySavings> => {
+    return {
+      totalSavedAllTime: 1840000,
+      totalOrdersAllTime: 12480,
+      activeParticipants: 412,
+      thisMonthSaved: 184520,
+      totalSavedThisMonth: 184520,
+      totalOrders: 1248,
+      activeDeals: 38,
+      avgSavingPerOrder: 147,
+      totalKgsBought: 2450,
+      monthlyBuyingPower: {
+        totalSaved: 184520,
+        totalOrders: 1248,
+        activeDeals: 38,
+        totalKgBought: 2450,
+        avgSavingPerOrder: 147,
+        topSavingCategory: 'Groceries & Farm Produce',
+        collectiveDiscountPercent: 23.8,
+        heroMilestoneText: 'Your community saved ₹18.4 lakh through collective purchasing this year.',
+      },
+      topDealsThisMonth: [
+        { dealTitle: 'Devgad Alphonso Mangoes (1 Dozen)', savings: 68400, participants: 84 },
+        { dealTitle: 'Premium Aged Basmati Rice (5kg)', savings: 45200, participants: 86 },
+        { dealTitle: 'A2 Vedic Bilona Cow Ghee (1L)', savings: 36800, participants: 52 },
+        { dealTitle: 'Wood Pressed Mustard Oil (5L)', savings: 34120, participants: 65 },
+      ],
+      towerLeaderboard: [
+        { tower: 'Tower A', orders: 412, totalSaved: 62450 },
+        { tower: 'Tower B', orders: 386, totalSaved: 58200 },
+        { tower: 'Tower C', orders: 298, totalSaved: 42870 },
+        { tower: 'Tower D', orders: 152, totalSaved: 21000 },
+      ],
+    };
   },
-
-  async checkoutGroupBuy(dealId: string, qty: number, checkoutDetails: CheckoutPaymentDetails): Promise<GroupOrderDto> {
-    try {
-      const res = await api.post<GroupOrderDto>('/group-buying/deals/' + dealId + '/checkout', {
-        quantity: qty,
-        ...checkoutDetails,
-      });
-      return res.data;
-    } catch {
-      const deal = SAMPLE_DEALS.find(d => d.id === dealId) ?? SAMPLE_DEALS[0];
-      const orderId = 'GB-2026-' + Math.floor(10000 + Math.random() * 90000);
-      const otp = Math.floor(1000 + Math.random() * 9000).toString();
-      return {
-        id: orderId,
-        dealId,
-        title: deal.title,
-        category: deal.category,
-        qty,
-        unitPrice: deal.currentTierPrice,
-        total: deal.currentTierPrice * qty,
-        savings: (deal.mrp - deal.currentTierPrice) * qty,
-        status: 'CONFIRMED',
-        qrCode: 'TKN-' + dealId + '-' + Date.now() + '-' + otp,
-        pickupPoint: checkoutDetails.deliveryAddressOrPickup || deal.pickupPoint,
-        pickupDate: deal.pickupDate,
-        pickupSlot: deal.pickupSlots?.[0],
-        createdAt: new Date().toISOString(),
-      };
-    }
-  },
-};
-
-const SAMPLE_TOWER_GROUPS: BuyingGroup[] = [
-  { id: 'bg1', name: 'Tower A Wholesale Club', tower: 'Tower A', block: 'Block 1', leaderName: 'Rajesh Sharma', leaderFlat: 'A-502', memberCount: 42, totalSaved: 34800, activeDealsCount: 6, description: 'Bulk groceries, oil and atta procurement for Tower A residents.', isMember: true },
-  { id: 'bg2', name: 'Tower B Organic & Fresh', tower: 'Tower B', block: 'Block 2', leaderName: 'Ananya Rao', leaderFlat: 'B-201', memberCount: 35, totalSaved: 28400, activeDealsCount: 4, description: 'Farm fresh fruits, organic honey and seasonal vegetables.', isMember: false },
-  { id: 'bg3', name: 'Tower C Festival Buyers', tower: 'Tower C', block: 'Block 3', leaderName: 'Suresh Menon', leaderFlat: 'C-804', memberCount: 29, totalSaved: 19200, activeDealsCount: 5, description: 'Sweets, puja items and gifting hampers for festivals.', isMember: false },
-  { id: 'bg4', name: 'Villas Collective Bulk Hub', tower: 'Villas Row', block: 'Villas', leaderName: 'Kiran Patel', leaderFlat: 'Villa-12', memberCount: 18, totalSaved: 22500, activeDealsCount: 3, description: 'Household cleaning, dairy and bulk staples.', isMember: false },
-];
-
-const SAMPLE_DISPUTES: OrderDispute[] = [
-  {
-    id: 'DISP-2026-001',
-    orderId: 'GB-2026-00089',
-    dealId: 'd2',
-    dealTitle: 'Alphonso Mango Box (5 KG)',
-    residentName: 'Sandeep V',
-    flat: 'A-402',
-    reason: 'DAMAGED_ITEMS',
-    description: '2 mangoes were bruised during delivery.',
-    requestedResolution: 'REFUND',
-    claimAmount: 210,
-    status: 'APPROVED',
-    createdAt: '2026-09-26T10:00:00Z',
-    resolvedAt: '2026-09-26T14:30:00Z',
-    vendorResponse: 'Approved. Partial refund of ₹210 credited back to source account.',
-  },
-];
-
-export type {
-  GroupDealDto,
-  GroupOrderDto,
-  DemandRequest,
-  MonthlyBasket,
-  CommunitySavings,
-  BuyAgainSuggestion,
-  BuyingGroup,
-  CommunityAIQueryResponse,
-  OrderReview,
-  OrderDispute,
-  CheckoutPaymentDetails,
 };

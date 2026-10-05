@@ -172,19 +172,30 @@ export default function PersonalFinanceDashboard() {
         </View>
       </View>
 
-      {/* ── P3: Quick Navigation 8-Grid ── */}
+      
+      {/* ── Privacy Shield Guarantee Banner ── */}
+      <View style={styles.privacyBanner}>
+        <Ionicons name="shield-checkmark" size={16} color="#059669" />
+        <Text style={styles.privacyBannerText}>
+          Private to You • Zero Access by Community Administrators
+        </Text>
+      </View>
+
+      {/* ── My Money: 10 Core Modules Grid ── */}
       <View style={styles.quickNavSection}>
-        <Text style={styles.sectionTitle}>Finance Hub</Text>
+        <Text style={styles.sectionTitle}>My Money</Text>
         <View style={styles.quickGrid}>
           {[
             { label: 'Accounts', icon: 'wallet-outline', color: '#3B82F6', path: '/personal-finance/accounts' },
-            { label: 'Ledger', icon: 'receipt-outline', color: '#10B981', path: '/personal-finance/transactions' },
+            { label: 'Income', icon: 'trending-up-outline', color: '#10B981', path: '/personal-finance/transactions' },
+            { label: 'Expenses', icon: 'trending-down-outline', color: '#EF4444', path: '/personal-finance/transactions' },
+            { label: 'Transfers', icon: 'swap-horizontal-outline', color: '#6366F1', path: '/personal-finance/transactions' },
+            { label: 'Categories', icon: 'grid-outline', color: '#0284C7', path: '/personal-finance/categories' },
             { label: 'Budgets', icon: 'pie-chart-outline', color: '#8B5CF6', path: '/personal-finance/budgets' },
-            { label: 'Reports', icon: 'bar-chart-outline', color: '#F59E0B', path: '/personal-finance/reports' },
-            { label: 'Calendar', icon: 'calendar-outline', color: '#EC4899', path: '/personal-finance/calendar' },
-            { label: 'Recurring', icon: 'repeat-outline', color: '#6366F1', path: '/personal-finance/recurring' },
-            { label: 'Goals', icon: 'flag-outline', color: '#059669', path: '/personal-finance/goals' },
-            { label: 'Loans & EMI', icon: 'card-outline', color: '#DC2626', path: '/personal-finance/installments' },
+            { label: 'Recurring', icon: 'repeat-outline', color: '#EC4899', path: '/personal-finance/recurring' },
+            { label: 'Bills', icon: 'receipt-outline', color: '#F59E0B', path: '/personal-finance/bills' },
+            { label: 'Receipts', icon: 'camera-outline', color: '#059669', path: '/personal-finance/receipts' },
+            { label: 'Reports', icon: 'bar-chart-outline', color: '#0D9488', path: '/personal-finance/reports' },
           ].map(item => (
             <TouchableOpacity
               key={item.label}
@@ -200,6 +211,7 @@ export default function PersonalFinanceDashboard() {
           ))}
         </View>
       </View>
+
 
       {/* ── Active EMI & Goals Snapshot Strip ── */}
       {(goals.length > 0 || activeInstallments.length > 0) && (
@@ -379,6 +391,20 @@ export default function PersonalFinanceDashboard() {
 }
 
 const styles = StyleSheet.create({
+  privacyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.md,
+    gap: 6,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  privacyBannerText: { fontSize: 11, fontWeight: '700', color: '#065F46' },
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { padding: SPACING.md, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },

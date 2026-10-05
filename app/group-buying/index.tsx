@@ -109,7 +109,7 @@ export default function GroupBuyingHome() {
           <Text style={s.dealProgressText}>{deal.committedQty}/{deal.targetQty} units · {deal.daysLeft}d left</Text>
         </View>
         <View style={s.dealCardFooter}>
-          <Countdown endsAt={deal.dealEndsAt} label="Ends in" />
+          <Countdown endsAt={deal.dealEndsAt || deal.endDate || new Date().toISOString()} label="Ends in" />
           <View style={s.viewDealBtn}><Text style={s.viewDealBtnText}>View Deal</Text></View>
         </View>
       </TouchableOpacity>

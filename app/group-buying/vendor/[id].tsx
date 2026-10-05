@@ -31,7 +31,7 @@ export default function VendorProfileScreen() {
 
   const { data: allDeals = [] } = useQuery({
     queryKey: ['group-deals'],
-    queryFn: groupBuyingService.getDeals,
+    queryFn: () => groupBuyingService.getDeals(),
   });
 
   const { data: products = [] } = useQuery({

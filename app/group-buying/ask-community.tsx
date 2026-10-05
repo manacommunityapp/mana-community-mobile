@@ -119,7 +119,7 @@ export default function AskCommunityScreen() {
                 <Ionicons name="sparkles" size={18} color={COLORS.primary} />
                 <Text style={s.explanationTitle}>Community Intelligence</Text>
                 <View style={s.confidencePill}>
-                  <Text style={s.confidenceText}>{Math.round(result.confidenceScore * 100)}% Match</Text>
+                  <Text style={s.confidenceText}>{Math.round((result.confidenceScore ?? result.confidence ?? 90) * 100)}% Match</Text>
                 </View>
               </View>
               <Text style={s.explanationText}>{result.explanation}</Text>
@@ -136,27 +136,27 @@ export default function AskCommunityScreen() {
             </View>
 
             {/* Matched Deals */}
-            {result.matchedDeals.length > 0 && (
+            {(result.matchedDeals ?? result.dealMatches ?? []).length > 0 && (
               <View style={s.matchesWrap}>
                 <Text style={s.matchesHeading}>Live Group Buys Matching "{result.query}"</Text>
-                {result.matchedDeals.map(deal => (
+                {(result.matchedDeals ?? result.dealMatches ?? []).map(deal => (
                   <DealCard key={deal.id} deal={deal} />
                 ))}
               </View>
             )}
 
             {/* Matched Demands */}
-            {result.matchedDemands.length > 0 && (
+            {(result.matchedDemands ?? []).length > 0 && (
               <View style={s.matchesWrap}>
                 <Text style={s.matchesHeading}>Active Community Demand Requests</Text>
-                {result.matchedDemands.map(dem => (
+                {(result.matchedDemands ?? []).map(dem => (
                   <DemandCard key={dem.id} item={dem} />
                 ))}
               </View>
             )}
 
             {/* Create Demand CTA if no matches */}
-            {result.matchedDeals.length === 0 && (
+            {(result.matchedDeals ?? result.dealMatches ?? []).length === 0 && (
               <View style={s.createDemandCard}>
                 <Ionicons name="megaphone-outline" size={28} color={COLORS.primary} />
                 <View style={{ flex: 1, gap: 4 }}>

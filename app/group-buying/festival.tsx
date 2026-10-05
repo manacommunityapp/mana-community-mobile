@@ -1,27 +1,31 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { groupBuyingService } from '@/services/groupBuyingService';
 
-export default function FestivalDeals() {
+export default function FestivalBuyingScreen() {
   const router = useRouter();
-  const [refreshing, setRefreshing] = useState(false);
-  const { data: categories = [], isLoading: loadingCats, refetch: refetchCats } = useQuery({
-    queryKey: ['festival-categories'],
-    queryFn: groupBuyingService.getFestivalCategories,
+  const [selectedCategory, setSelectedCategory] = useState<string>('DIWALI');
+
+  const { data: campaigns = [], isLoading } = useQuery({
+    queryKey: ['festival-campaigns'],
+    queryFn: () => groupBuyingService.getFestivalCampaigns(),
   });
-  const { data: featuredFestivalDeals = [], isLoading: loadingDeals, refetch: refetchDeals } = useQuery({
+
+  const { data: allDeals = [] } = useQuery({
     queryKey: ['festival-deals'],
-    queryFn: groupBuyingService.getFestivalDeals,
+    queryFn: () => groupBuyingService.getDeals(),
   });
-  const onRefresh = useCallback(async () => { setRefreshing(true); await Promise.all([refetchCats(), refetchDeals()]); setRefreshing(false); }, [refetchCats, refetchDeals]);
-  const isLoading = loadingCats || loadingDeals;
+
+  const campaign = campaigns[0];
+  const categories = campaign?.categories || [];
+  const featuredFestivalDeals = allDeals.filter(d => d.isFestivalDeal || (d.category && d.category.toUpperCase().includes('FESTIVAL'))).slice(0, 5);
+
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}>
+    <ScrollView style={s.container} contentContainerStyle={s.content}>
       <LinearGradient colors={['#7C3AED','#C026D3']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.hero}>
         <Text style={s.heroEmoji}>🎊</Text>
         <Text style={s.heroTitle}>Festival Bulk Buying</Text>
@@ -33,27 +37,43 @@ export default function FestivalDeals() {
         <>
           <Text style={s.sectionTitle}>Festivals</Text>
           <View style={s.festGrid}>
-            {categories.map(cat => (
-              <TouchableOpacity key={cat.id} style={s.festCard} onPress={() => router.push(('/group-buying?cat=' + cat.name) as any)} activeOpacity={0.85}>
-                <Text style={s.festEmoji}>{cat.emoji}</Text>
-                <Text style={s.festName}>{cat.name}</Text>
-                <Text style={s.festDeals}>{cat.dealsCount} deals</Text>
-              </TouchableOpacity>
-            ))}
+            {categories.map((cat: any, idx: number) => {
+              const catName = typeof cat === 'string' ? cat : (cat.name || '');
+              const catEmoji = typeof cat === 'object' && cat.emoji ? cat.emoji : '🎉';
+              const catDeals = typeof cat === 'object' && cat.dealsCount ? cat.dealsCount : 0;
+              const catKey = typeof cat === 'string' ? cat : (cat.id || String(idx));
+              return (
+                <TouchableOpacity
+                  key={catKey}
+                  style={s.festCard}
+                  onPress={() => router.push(('/group-buying?cat=' + catName) as any)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={s.festEmoji}>{catEmoji}</Text>
+                  <Text style={s.festName}>{catName}</Text>
+                  <Text style={s.festDeals}>{catDeals} deals</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
           {featuredFestivalDeals.length > 0 && (
             <>
               <Text style={s.sectionTitle}>Featured Festival Deals</Text>
               {featuredFestivalDeals.map(deal => (
-                <TouchableOpacity key={deal.id} style={s.dealCard} onPress={() => router.push(('/group-buying/deal/' + deal.id) as any)} activeOpacity={0.85}>
+                <TouchableOpacity
+                  key={deal.id}
+                  style={s.dealCard}
+                  onPress={() => router.push(('/group-buying/deal/' + deal.id) as any)}
+                  activeOpacity={0.85}
+                >
                   <View style={s.dealTop}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.dealTitle}>{deal.title}</Text>
                       <Text style={s.dealVendor}>{deal.vendor}</Text>
                     </View>
                     <View style={s.dealPriceCol}>
-                      <Text style={s.dealPrice}>Rs {deal.currentTierPrice}</Text>
-                      <Text style={s.dealMrp}>Rs {deal.mrp}</Text>
+                      <Text style={s.dealPrice}>₹{deal.currentTierPrice}</Text>
+                      <Text style={s.dealMrp}>₹{deal.mrp}</Text>
                     </View>
                   </View>
                   <View style={s.dealFooter}>
@@ -70,29 +90,30 @@ export default function FestivalDeals() {
     </ScrollView>
   );
 }
+
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { paddingBottom: 32, gap: SPACING.md },
-  hero: { padding: 28, alignItems: 'center', gap: 8 },
-  heroEmoji: { fontSize: 40 },
-  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  heroSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', textAlign: 'center' },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 60 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text, paddingHorizontal: SPACING.md },
-  festGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: SPACING.md, gap: 10 },
-  festCard: { width: '30%', backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 14, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
-  festEmoji: { fontSize: 28 },
-  festName: { fontSize: 12, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
-  festDeals: { fontSize: 11, color: COLORS.textMuted },
-  dealCard: { marginHorizontal: SPACING.md, backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, gap: 10, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
-  dealTop: { flexDirection: 'row', gap: 10 },
-  dealTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  dealVendor: { fontSize: 12, color: COLORS.textMuted, marginTop: 3 },
+  content: { padding: SPACING.md },
+  center: { padding: 40, alignItems: 'center' },
+  hero: { borderRadius: RADIUS.lg, padding: SPACING.lg, alignItems: 'center', marginBottom: SPACING.lg },
+  heroEmoji: { fontSize: 40, marginBottom: 8 },
+  heroTitle: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  heroSub: { fontSize: 13, color: 'rgba(255,255,255,0.9)', textAlign: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm, marginTop: SPACING.md },
+  festGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
+  festCard: { flex: 1, minWidth: '45%', backgroundColor: '#fff', borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center', ...SHADOWS.sm },
+  festEmoji: { fontSize: 32, marginBottom: 4 },
+  festName: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  festDeals: { fontSize: 12, color: COLORS.textMuted },
+  dealCard: { backgroundColor: '#fff', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.sm },
+  dealTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm },
+  dealTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  dealVendor: { fontSize: 12, color: COLORS.textMuted },
   dealPriceCol: { alignItems: 'flex-end' },
-  dealPrice: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
+  dealPrice: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
   dealMrp: { fontSize: 12, color: COLORS.textMuted, textDecorationLine: 'line-through' },
-  dealFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10 },
+  dealFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: SPACING.xs },
   dealProgress: { fontSize: 12, color: COLORS.textMuted },
-  viewBtn: { backgroundColor: COLORS.primaryLight, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  viewBtnText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+  viewBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.sm },
+  viewBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });

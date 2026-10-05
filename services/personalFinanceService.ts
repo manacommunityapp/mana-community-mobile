@@ -1,3 +1,19 @@
+
+export interface PersonalReceiptDto {
+  id: string;
+  merchantName: string;
+  amount: number;
+  date: string;
+  category: string;
+  imageUrl: string;
+  ocrExtracted: boolean;
+  taxAmount?: number;
+  itemsCount?: number;
+  transactionId?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 import api from './apiClient';
 import { secureLog } from '@/security';
 
@@ -149,6 +165,7 @@ export interface PersonalBillDto {
   categoryIcon?: string;
   categoryColor?: string;
   isPaid: boolean;
+  isAutoPay?: boolean;
   reminderDaysBefore: number;
   isManaInvoice?: boolean;
   invoiceId?: string;
@@ -641,7 +658,73 @@ async function tryPaths<T>(paths: string[], fallback: () => T): Promise<T> {
   return fallback();
 }
 
+
+let MOCK_RECEIPTS: PersonalReceiptDto[] = [
+  {
+    id: 'rcpt-1',
+    merchantName: 'Nature Basket Supermarket',
+    amount: 3420,
+    date: '2026-10-02',
+    category: 'Groceries',
+    imageUrl: 'https://images.unsplash.com/photo-1554415707-9e4c29729ff7?w=600&auto=format&fit=crop&q=80',
+    ocrExtracted: true,
+    taxAmount: 171,
+    itemsCount: 14,
+    transactionId: 'txn-1',
+    notes: 'Monthly staples & organic veggies',
+    createdAt: '2026-10-02T16:30:00Z',
+  },
+  {
+    id: 'rcpt-2',
+    merchantName: 'BESCOM Electricity Bill',
+    amount: 2850,
+    date: '2026-09-28',
+    category: 'Utilities',
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+    ocrExtracted: true,
+    taxAmount: 0,
+    itemsCount: 1,
+    transactionId: 'txn-2',
+    notes: 'Meter #482910 September bill',
+    createdAt: '2026-09-28T10:15:00Z',
+  },
+  {
+    id: 'rcpt-3',
+    merchantName: 'Prestige Society Maintenance',
+    amount: 4500,
+    date: '2026-10-01',
+    category: 'Housing',
+    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
+    ocrExtracted: true,
+    taxAmount: 405,
+    itemsCount: 1,
+    transactionId: 'txn-3',
+    notes: 'Flat B-402 October Maintenance',
+    createdAt: '2026-10-01T09:00:00Z',
+  },
+];
+
 export const personalFinanceService = {
+
+  getReceipts: async (): Promise<PersonalReceiptDto[]> => {
+    return MOCK_RECEIPTS;
+  },
+
+  uploadReceipt: async (receipt: Omit<PersonalReceiptDto, 'id' | 'createdAt'>): Promise<PersonalReceiptDto> => {
+    const newReceipt: PersonalReceiptDto = {
+      ...receipt,
+      id: `rcpt-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    MOCK_RECEIPTS.unshift(newReceipt);
+    return newReceipt;
+  },
+
+  deleteReceipt: async (receiptId: string): Promise<{ success: boolean }> => {
+    MOCK_RECEIPTS = MOCK_RECEIPTS.filter(r => r.id !== receiptId);
+    return { success: true };
+  },
+
   // ── Dashboard ───────────────────────────────────────────────────────────────
   getDashboardSummary: async (month?: string): Promise<DashboardSummaryDto> => {
     const q = month ? `?month=${month}` : '';
@@ -991,6 +1074,19 @@ export const personalFinanceService = {
   },
 
   // ── Bills ───────────────────────────────────────────────────────────────────
+  createBill: async (bill: any): Promise<PersonalBillDto> => {
+    return {
+      id: 'bill-' + Date.now(),
+      name: bill.name || bill.billerName || bill.title || 'New Bill',
+      amount: bill.amount || 0,
+      dueDate: bill.dueDate || new Date().toISOString(),
+      categoryName: bill.category || bill.categoryName || 'Utilities',
+      categoryIcon: bill.categoryIcon || 'receipt-outline',
+      isPaid: false,
+      isAutoPay: bill.isAutoPay || false,
+      reminderDaysBefore: bill.reminderDaysBefore || 3,
+    };
+  },
   getBills: async (): Promise<PersonalBillDto[]> => {
     return tryPaths<PersonalBillDto[]>(
       ['/api/v1/personal-finance/bills', '/personal-finance/bills'],

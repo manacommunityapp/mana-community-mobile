@@ -86,7 +86,7 @@ export default function PickupScannerScreen() {
             </View>
             <View style={s.detailRow}>
               <Text style={s.detailLabel}>Total Paid:</Text>
-              <Text style={s.detailValue}>₹{verifiedOrder.total.toLocaleString()}</Text>
+              <Text style={s.detailValue}>₹{(verifiedOrder.total ?? verifiedOrder.totalPrice ?? 0).toLocaleString()}</Text>
             </View>
             <View style={s.detailRow}>
               <Text style={s.detailLabel}>Pickup Desk:</Text>

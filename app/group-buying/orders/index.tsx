@@ -56,7 +56,7 @@ export default function MyGroupOrders() {
         </View>
         <View style={s.detailRow}>
           <Text style={s.detail}>Qty: <Text style={s.detailBold}>{order.qty}</Text></Text>
-          <Text style={s.detail}>Total: <Text style={s.detailBold}>₹{order.total.toLocaleString()}</Text></Text>
+          <Text style={s.detail}>Total: <Text style={s.detailBold}>₹{(order.total ?? order.totalPrice ?? 0).toLocaleString()}</Text></Text>
           {order.savings ? <Text style={s.savings}>Saved ₹{order.savings}</Text> : null}
         </View>
         {order.pickupPoint ? (

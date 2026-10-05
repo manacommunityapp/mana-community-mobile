@@ -30,7 +30,7 @@ export default function MonthlyBasketCard({ basket, onJoin }: Props) {
       <View style={s.pricing}>
         <View>
           <Text style={s.groupPrice}>₹{basket.groupPrice.toLocaleString()}</Text>
-          <Text style={s.mrp}>MRP ₹{basket.mrpTotal.toLocaleString()}</Text>
+          <Text style={s.mrp}>MRP ₹{(basket.mrpTotal ?? basket.groupPrice ?? 0).toLocaleString()}</Text>
         </View>
         <View style={s.savingsBox}>
           <Text style={s.savingsLabel}>You Save</Text>

@@ -1,131 +1,230 @@
-// ── Group Buying Domain Types ──────────────────────────────────────────────
+export type DealCategory =
+  | 'GROCERIES'
+  | 'DAIRY_EGGS'
+  | 'HOME_KITCHEN'
+  | 'FRUITS_VEGETABLES'
+  | 'BAKERY'
+  | 'PERSONAL_CARE'
+  | 'BEVERAGES'
+  | 'SNACKS'
+  | string;
 
 export type DealStatus =
   | 'DRAFT'
-  | 'PENDING_APPROVAL'
-  | 'PUBLISHED'
-  | 'OPEN'
-  | 'TARGET_REACHED'
-  | 'PRICE_LOCKED'
-  | 'PAYMENT_OPEN'
-  | 'PAYMENT_COMPLETED'
-  | 'ORDER_PLACED'
-  | 'PROCESSING'
-  | 'READY_FOR_PICKUP'
+  | 'UPCOMING'
+  | 'ACTIVE'
+  | 'LOCKED'
+  | 'ORDERED'
+  | 'DELIVERED'
+  | 'CANCELLED'
   | 'PICKUP_IN_PROGRESS'
-  | 'COMPLETED'
-  | 'TARGET_NOT_REACHED'
-  | 'EXPIRED'
-  | 'REFUNDING'
-  | 'REFUNDED'
-  | 'CANCELLED';
+  | 'COMPLETED';
 
-export type PricingModel = 'GUARANTEED' | 'THRESHOLD' | 'TARGET_OR_CANCEL';
-export type PricingType = 'PARTICIPANT' | 'QUANTITY' | 'HYBRID';
-export type FulfillmentType = 'PICKUP' | 'DELIVERY' | 'BOTH';
-export type PaymentType = 'FULL' | 'ADVANCE' | 'PAY_AT_PICKUP';
+export type TierStatus = 'UNLOCKED' | 'NEXT' | 'LOCKED';
 
-export interface PriceTier {
-  id: string;
+export type PricingModel = 'THRESHOLD' | 'VOLUME' | 'FLAT' | 'GUARANTEED' | 'TARGET_OR_CANCEL';
+
+export interface DealTier {
+  id?: string;
+  minQuantity?: number;
   minQty: number;
-  maxQty: number | null;
+  maxQty?: number | null;
   price: number;
+  discountPercent?: number;
+  pricePerUnit?: number;
+  description?: string;
   label: string;
-  isCurrentTier: boolean;
-  isNextTier: boolean;
+  status?: TierStatus;
+  isCurrentTier?: boolean;
+  isNextTier?: boolean;
   unitsToUnlock?: number;
-  savingsVsMrp?: number;
 }
 
-export interface GroupDealDto {
+export type PriceTier = DealTier;
+
+export interface GroupDeal {
   id: string;
   title: string;
-  category: string;
-  subCategory?: string;
   description: string;
-  imageUrl?: string;
-  vendor: string;
-  vendorId: string;
-  vendorRating: number;
-  vendorVerified?: boolean;
-  // Pricing
-  pricingModel: PricingModel;
-  pricingType: PricingType;
+  category: DealCategory;
+  subCategory?: string;
+  imageUrl: string;
+  productName: string;
+  unit: string;
+  originalPrice: number;
   mrp: number;
   standardPrice: number;
-  currentPrice: number;
   currentTierPrice: number;
-  nextTierPrice?: number;
-  nextTierUnitsNeeded?: number;
-  priceTiers: PriceTier[];
-  // Progress
-  committedQty: number;
+  currentPrice: number;
+  lowestPrice: number;
+  targetQuantity: number;
   targetQty: number;
-  currentParticipants: number;
-  targetParticipants: number;
-  inventoryRemaining?: number;
-  moqLabel: string;
-  // Status & Timing
-  dealStatus: DealStatus;
-  daysLeft: number;
-  dealEndsAt: string;
-  priceLockedAt?: string;
-  // Fulfillment
-  pickupPoint: string;
+  currentQuantity: number;
+  committedQty: number;
+  minCommitmentQty?: number;
+  maxCommitmentQty?: number;
+  joinedCount: number;
+  savingsSoFar: number;
+  status: DealStatus;
+  startDate: string;
+  endDate: string;
+  deliveryDate: string;
   pickupDate?: string;
+  pickupLocation: string;
+  pickupPoint: string;
   pickupSlots?: string[];
-  fulfillmentType: FulfillmentType;
-  paymentType: PaymentType;
-  // Badges
+  vendorName: string;
+  vendor: string;
+  vendorRating: number;
+  vendorVerified: boolean;
+  vendorId?: string;
+  pricingModel: PricingModel;
+  priceTiers: PriceTier[];
+  tiers: DealTier[];
+  highlights?: string[];
+  termsAndConditions?: string[];
+  isLocked?: boolean;
+  priceLockedAt?: string;
+  nextTierUnitsNeeded: number;
+  daysLeft: number;
+  nextTierPrice: number;
   isTrending?: boolean;
-  isAlmostUnlocked?: boolean;
   isFestivalDeal?: boolean;
   isEndingSoon?: boolean;
+  dealEndsAt?: string;
+  isAlmostUnlocked?: boolean;
+  shortfallUnits?: number;
+  currentParticipants?: number;
+  fulfillmentType?: string;
+  moqLabel?: string;
+  paymentType?: string;
+  inventoryRemaining?: number;
 }
 
-export interface GroupOrderDto {
-  id: string;
-  dealId: string;
-  title: string;
-  category?: string;
-  qty: number;
-  unitPrice: number;
-  total: number;
-  savings?: number;
-  status: 'CONFIRMED' | 'PAYMENT_PENDING' | 'PICKED_UP' | 'CANCELLED' | 'REFUNDED';
-  qrCode: string;
-  pickupPoint?: string;
-  pickupDate?: string;
-  pickupSlot?: string;
-  authorizedCollectors?: AuthorizedCollector[];
-  createdAt: string;
-}
+export type GroupDealDto = GroupDeal;
+
+export type OrderStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'PREPARING'
+  | 'SHIPPED'
+  | 'DELIVERED'
+  | 'READY_FOR_PICKUP'
+  | 'PICKED_UP'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'REFUNDED';
 
 export interface AuthorizedCollector {
-  id: string;
+  id?: string;
   name: string;
-  relationship: string;
-  authPin: string;
-  expiresAt: string;
+  phone?: string;
+  relation?: string;
+  relationship?: string;
+  isAuthorized?: boolean;
+  authPin?: string;
+  expiresAt?: string;
 }
 
-export interface DemandRequest {
+export interface GroupOrder {
   id: string;
-  title: string;
-  category: string;
+  dealId: string;
+  dealTitle: string;
+  title?: string;
+  productName?: string;
+  userId?: string;
+  userName?: string;
+  userApartment?: string;
+  unitPrice: number;
+  quantity: number;
+  qty?: number;
+  totalPrice?: number;
+  total?: number;
+  savings?: number;
+  committedPrice?: number;
+  finalPrice?: number;
+  finalAmount?: number;
+  totalCommittedAmount?: number;
+  status: OrderStatus;
+  paymentStatus?: string;
+  placedAt?: string;
+  authorizedCollectors?: AuthorizedCollector[];
+  createdAt?: string;
+  joinedAt?: string;
+  paymentMethod: 'UPI' | 'CARD' | 'NETBANKING' | 'WALLET';
+  pickupToken?: string;
+  pickupSlot?: string;
+  deliverySlot?: string;
+  pickupLocation?: string;
+  pickupPoint?: string;
+  pickupDate?: string;
+  pickupOtp?: string;
+  pickupQrCode?: string;
+  qrCode?: string;
+  deliveredAt?: string;
+  imageUrl?: string;
+  unit?: string;
+  rating?: number;
+  reviewComment?: string;
+  disputeReason?: string;
+}
+
+export type GroupOrderDto = GroupOrder;
+
+export interface BuyingGroup {
+  id: string;
+  dealId?: string;
+  name?: string;
+  tower: string;
+  block?: string;
+  leaderName?: string;
+  leaderFlat?: string;
+  leaderId?: string;
+  membersCount?: number;
+  memberCount?: number;
+  activeDealsCount?: number;
+  totalQuantity?: number;
+  targetQuantity?: number;
+  totalSaved?: number;
+  totalSavings?: number;
   description?: string;
-  interestedResidents: number;
-  expectedQty: number;
-  upvotes: number;
-  targetUpvotes?: number;
-  hasUpvoted: boolean;
-  myCommittedQty?: number;
-  preferredPriceMin?: number;
-  preferredPriceMax?: number;
-  preferredBrand?: string;
-  preferredPackSize?: string;
-  vendorOffers: VendorOffer[];
-  status: 'OPEN' | 'VENDOR_OFFERED' | 'APPROVED' | 'LIVE' | 'FULFILLED';
+  status?: 'FORMING' | 'LOCKED' | 'ORDERED' | 'DELIVERED';
+  isMember?: boolean;
+  createdAt?: string;
+}
+
+export interface OrderDispute {
+  id: string;
+  orderId: string;
+  dealId?: string;
+  userId?: string;
+  reason: string;
+  claimAmount?: number;
+  description: string;
+  requestedResolution?: string;
+  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'REFUNDED' | 'OPEN' | 'RESOLVED';
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface VerifyPickupResponse {
+  success: boolean;
+  order?: GroupOrder;
+  message?: string;
+}
+
+export interface VendorOfferScoring {
+  priceScore: number;
+  vendorRatingScore: number;
+  fulfillmentRateScore: number;
+  onTimeRateScore: number;
+  lowCancellationScore: number;
+  lowDisputeScore: number;
+  qualityScore: number;
+  moqFeasibilityScore: number;
+  compositeScore: number;
+  isBestValue: boolean;
+  scoringHighlights: string[];
 }
 
 export interface VendorOffer {
@@ -134,132 +233,208 @@ export interface VendorOffer {
   vendorId: string;
   vendorName: string;
   vendorRating: number;
-  vendorVerified: boolean;
-  offeredPrice: number;
-  minimumQty: number;
-  maximumQty: number;
-  deliveryDate: string;
-  validUntil: string;
+  isVerified?: boolean;
+  vendorVerified?: boolean;
+  pricePerUnit: number;
+  offeredPrice?: number;
+  moq: number;
+  minimumQty?: number;
+  estimatedDeliveryDays?: number;
+  deliveryDate?: string;
+  notes?: string;
   terms?: string;
+  createdAt: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   isBestValue?: boolean;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'LIVE';
+  fulfillmentRate: number;
+  onTimeRate: number;
+  cancellationRate: number;
+  disputeRate: number;
+  qualityScore: number;
+  scoring?: VendorOfferScoring;
 }
 
-export interface MonthlyBasket {
+export interface DemandRequest {
   id: string;
-  name: string;
-  tagline?: string;
-  items: BasketItem[];
-  mrpTotal: number;
-  groupPrice: number;
-  savings: number;
-  savingsPct: number;
-  targetFamilies: number;
-  committedFamilies: number;
-  isRecurring: boolean;
-  nextDeliveryDate: string;
-  cutoffDate: string;
+  title: string;
+  productName?: string;
+  category: string;
+  description?: string;
+  interestedResidents: number;
+  expectedQty: number;
+  expectedQuantity?: number;
+  targetQuantity?: number;
+  targetUpvotes?: number;
+  upvotes: number;
+  hasUpvoted: boolean;
+  preferredPriceMin?: number;
+  preferredPriceMax?: number;
+  preferredBrand?: string;
+  preferredBrands?: string[];
+  suggestedBy?: string;
+  suggestedAt?: string;
+  status: 'OPEN' | 'VENDOR_OFFERED' | 'APPROVED' | 'LIVE' | 'FULFILLED' | 'GATHERING_DEMAND' | 'VENDOR_BIDDING' | 'DEAL_FORMED' | 'EXPIRED';
+  vendorOffers: VendorOffer[];
+  dealId?: string;
   imageUrl?: string;
 }
 
-export interface BasketItem {
-  name: string;
-  qty: string;
-  mrp: number;
-  groupPrice: number;
+export type DemandPool = DemandRequest;
+
+export interface TowerSavings {
+  tower: string;
+  orders: number;
+  totalSaved: number;
+}
+
+export interface MonthlyBuyingPower {
+  totalSaved: number;
+  totalOrders: number;
+  activeDeals: number;
+  totalKgBought: number;
+  avgSavingPerOrder: number;
+  topSavingCategory: string;
+  collectiveDiscountPercent: number;
+  heroMilestoneText: string;
 }
 
 export interface CommunitySavings {
+  totalSavedAllTime: number;
+  totalOrdersAllTime: number;
+  activeParticipants: number;
+  thisMonthSaved: number;
   totalSavedThisMonth: number;
   totalOrders: number;
   activeDeals: number;
   avgSavingPerOrder: number;
-  totalKgsBought?: number;
-  topCategory?: string;
-  totalSavedAllTime?: number;
+  totalKgsBought: number;
+  monthlyBuyingPower: MonthlyBuyingPower;
+  topDealsThisMonth: {
+    dealTitle: string;
+    savings: number;
+    participants: number;
+  }[];
+  towerLeaderboard: TowerSavings[];
 }
 
-export interface BuyAgainSuggestion {
+export interface DealFilterState {
+  category?: DealCategory | 'ALL';
+  status?: DealStatus | 'ALL';
+  sortBy?: 'endingSoon' | 'discount' | 'popularity' | 'priceLowToHigh';
+  search?: string;
+}
+
+export interface JoinDealPayload {
   dealId: string;
-  orderId: string;
-  title: string;
-  category: string;
+  quantity: number;
+  deliverySlot?: string;
+  paymentMethod: 'UPI' | 'CARD' | 'NETBANKING' | 'WALLET';
+}
+
+export interface CreateDemandPayload {
+  title?: string;
+  productName?: string;
+  category: DealCategory;
+  description?: string;
+  preferredPriceMin?: number;
+  preferredPriceMax?: number;
+  preferredBrand?: string;
+  preferredBrands?: string[];
+  expectedQty?: number;
+  expectedQuantity?: number;
+}
+
+export interface MonthlyCommunityBasket {
+  id: string;
+  name?: string;
+  title?: string;
+  month?: string;
+  category?: string;
+  tagline?: string;
+  description?: string;
+  imageUrl?: string;
+  items: {
+    id?: string;
+    name: string;
+    packSize?: string;
+    quantity: number;
+    unit?: string;
+    mrp?: number;
+    groupPrice: number;
+    estimatedPrice?: number;
+    savedAmount?: number;
+  }[];
+  mrpTotal?: number;
+  totalEstimated?: number;
+  totalSavings?: number;
+  groupPrice: number;
+  targetFamilies: number;
+  committedFamilies: number;
+  enrolledFamilies?: number;
+  status?: string;
+  deliveryDate?: string;
+  nextDeliveryDate?: string;
+  cutoffDate?: string;
+  isSubscribed?: boolean;
+  isRecurring?: boolean;
+  savingsPct?: number;
+  savings?: number;
+}
+
+export type MonthlyBasket = MonthlyCommunityBasket;
+
+export interface BuyAgainItem {
+  id: string;
+  title?: string;
+  dealId?: string;
+  productName: string;
+  category?: string;
+  imageUrl: string;
+  lastBoughtDaysAgo: number;
+  lastPurchasedAt?: string;
   lastPrice: number;
+  savings?: number;
+  lastPurchasedPrice?: number;
   currentPrice?: number;
-  lastPurchasedAt: string;
-  imageUrl?: string;
-  isAvailable: boolean;
+  currentDealPrice?: number;
+  lastOrderedDate?: string;
+  suggestedDealId?: string;
+  isAvailable?: boolean;
+  activeGroupBuyAvailable?: boolean;
+  groupBuyPrice?: number;
+  unit?: string;
 }
 
-export interface FestivalDealCategory {
+export type BuyAgainSuggestion = BuyAgainItem;
+
+export interface FestivalCategoryItem {
   id: string;
   name: string;
-  emoji: string;
-  description?: string;
-  dealsCount: number;
-  imageUrl?: string;
+  emoji?: string;
+  dealsCount?: number;
 }
 
-export interface BuyingGroup {
+export interface FestivalCampaign {
   id: string;
   name: string;
-  tower: string;
-  block: string;
-  leaderName: string;
-  leaderFlat: string;
-  memberCount: number;
-  totalSaved: number;
-  activeDealsCount: number;
-  description?: string;
-  isMember?: boolean;
+  tagline: string;
+  bannerImage: string;
+  festivalDate: string;
+  daysRemaining: number;
+  categories: (string | FestivalCategoryItem)[];
 }
 
 export interface CommunityAIQueryResponse {
-  query: string;
-  matchedDeals: GroupDealDto[];
-  matchedDemands: DemandRequest[];
-  suggestedAction: 'JOIN_DEAL' | 'UPVOTE_DEMAND' | 'CREATE_DEMAND';
+  query?: string;
+  suggestedAction?: string;
+  action?: string;
+  answer?: string;
+  dealMatches?: GroupDeal[];
+  matchedDeals?: GroupDeal[];
+  matchedDemands?: DemandRequest[];
+  explanation?: string;
+  confidenceScore?: number;
+  confidence?: number;
   suggestedPrice?: number;
   estimatedCommunitySavings?: number;
-  confidenceScore: number;
-  explanation: string;
-}
-
-export interface OrderReview {
-  id: string;
-  orderId: string;
-  dealId: string;
-  residentName: string;
-  productRating: number;
-  deliveryRating: number;
-  comment: string;
-  photos?: string[];
-  createdAt: string;
-}
-
-export interface OrderDispute {
-  id: string;
-  orderId: string;
-  dealId: string;
-  dealTitle: string;
-  residentName: string;
-  flat: string;
-  reason: 'DAMAGED_ITEMS' | 'MISSING_QUANTITY' | 'POOR_QUALITY' | 'WRONG_ITEM' | 'NOT_DELIVERED';
-  description: string;
-  requestedResolution: 'REFUND' | 'REPLACEMENT';
-  claimAmount: number;
-  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REPLACED' | 'REFUNDED' | 'REJECTED';
-  photoUrls?: string[];
-  createdAt: string;
-  resolvedAt?: string;
-  vendorResponse?: string;
-}
-
-export interface CheckoutPaymentDetails {
-  paymentMethod: 'UPI' | 'CREDIT_DEBIT_CARD' | 'NET_BANKING' | 'ADVANCE_DEPOSIT' | 'ESCROW_HOLD';
-  amountToPayNow: number;
-  escrowHoldAmount?: number;
-  advanceDepositAmount?: number;
-  deliveryAddressOrPickup: string;
-  specialNotes?: string;
 }

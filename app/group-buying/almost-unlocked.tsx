@@ -35,7 +35,7 @@ export default function AlmostUnlocked() {
             <View key={deal.id} style={s.dealWrap}>
               <AlmostUnlockedCard deal={deal} />
               <View style={s.timerRow}>
-                <Countdown endsAt={deal.dealEndsAt} />
+                <Countdown endsAt={deal.dealEndsAt || deal.endDate || new Date().toISOString()} />
               </View>
               {deal.nextTierUnitsNeeded && (
                 <View style={s.urgencyBox}>

@@ -187,7 +187,7 @@ export default function DealDetailScreen() {
         {/* Countdown Urgency */}
         <View style={s.countdownCard}>
           <Ionicons name="time-outline" size={18} color="#D97706" />
-          <Countdown endsAt={deal.dealEndsAt} label="Group deal closes in: " />
+          <Countdown endsAt={deal.dealEndsAt || deal.endDate || new Date().toISOString()} label="Group deal closes in: " />
         </View>
 
         {/* Quantity Progress */}
