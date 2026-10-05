@@ -14,8 +14,15 @@ export default function ParkingLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: '🚗 Smart Parking & EV Hub',
+          title: '🚗 Mana Parking OS',
           headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="marketplace"
+        options={{
+          title: '🅿️ Temporary Parking Marketplace',
+          headerShown: true,
         }}
       />
       <Stack.Screen
@@ -29,6 +36,20 @@ export default function ParkingLayout() {
         name="anpr"
         options={{
           title: '📷 ANPR Plate Recognition & Gates',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="violations"
+        options={{
+          title: '⚠️ Parking Violations & Fines',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="swaps-waitlist"
+        options={{
+          title: '🔄 Slot Swaps & Waitlist',
           headerShown: true,
         }}
       />

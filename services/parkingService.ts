@@ -12,6 +12,15 @@ import type {
   ANPRLogDto,
   VehicleWhitelistDto,
   ParkingOccupancySummaryDto,
+  ParkingMarketplaceListingDto,
+  CreateMarketplaceListingRequest,
+  ParkingMarketplaceBookingDto,
+  BookMarketplaceSlotRequest,
+  ParkingViolationReportDto,
+  ReportViolationRequest,
+  ParkingWaitlistEntryDto,
+  ParkingSlotSwapRequestDto,
+  ParkingAnalyticsSummaryDto,
 } from '@/types/parking';
 
 export * from '@/types/parking';
@@ -99,447 +108,317 @@ export const FALLBACK_ACTIVE_EV_SESSION: EVChargingSessionDto = {
   powerOutputKW: 21.4,
   voltageV: 415.2,
   currentA: 29.8,
-  energyConsumedKWh: 18.6,
-  currentCostINR: 158.1,
+  energyConsumedKWh: 14.8,
+  currentCostINR: 125.8,
   tariffRatePerKWh: 8.5,
-  temperatureCelsius: 36.2,
+  temperatureCelsius: 34.2,
   sessionStatus: 'ACTIVE',
 };
 
-export const FALLBACK_EV_HISTORY: EVChargingHistoryDto[] = [
+export const FALLBACK_MARKETPLACE_LISTINGS: ParkingMarketplaceListingDto[] = [
   {
-    id: 'ev-hist-01',
-    stationCode: 'B1-EV-FAST-01',
-    vehicleNumber: 'KA-01-EV-9821',
-    date: 'Yesterday, 6:30 PM',
-    durationFormatted: '1h 24m',
-    energyDeliveredKWh: 24.8,
-    totalCostINR: 210.8,
-    co2SavedKg: 18.4,
-    invoiceUrl: 'https://docs.manacommunity.org/invoices/EV_OCT_2025_01.pdf',
-    status: 'PAID',
+    id: 'mkt-01',
+    spotId: 5,
+    spotNumber: 'B1-P14',
+    level: 'Basement 1',
+    spotType: 'CAR',
+    hasEVCharger: false,
+    ownerName: 'Sunil Rao',
+    ownerFlat: 'Tower A2 - 104',
+    startDate: '2026-10-06',
+    endDate: '2026-10-20',
+    pricingType: 'DAILY_RATE',
+    rateINR: 80,
+    status: 'AVAILABLE',
+    notes: 'Traveling out of station for 2 weeks. Prime spot right near Tower A lift.',
+    createdAt: '2026-10-04T10:00:00Z',
   },
   {
-    id: 'ev-hist-02',
-    stationCode: 'B2-EV-DC-01',
-    vehicleNumber: 'KA-01-EV-9821',
-    date: 'Oct 12, 2025 · 8:15 AM',
-    durationFormatted: '42 mins',
-    energyDeliveredKWh: 32.5,
-    totalCostINR: 357.5,
-    co2SavedKg: 24.1,
-    invoiceUrl: 'https://docs.manacommunity.org/invoices/EV_OCT_2025_02.pdf',
-    status: 'PAID',
+    id: 'mkt-02',
+    spotId: 12,
+    spotNumber: 'B2-P30',
+    level: 'Basement 2',
+    spotType: 'CAR',
+    hasEVCharger: false,
+    ownerName: 'Vikram Joshi',
+    ownerFlat: 'Tower C1 - 501',
+    startDate: '2026-10-05',
+    endDate: '2026-10-12',
+    pricingType: 'FREE_GOOD_NEIGHBOR',
+    rateINR: 0,
+    status: 'AVAILABLE',
+    notes: 'Lending to any verified neighbor for free while we are on holiday! Please keep clean.',
+    createdAt: '2026-10-04T14:30:00Z',
   },
   {
-    id: 'ev-hist-03',
-    stationCode: 'B1-EV-FAST-02',
-    vehicleNumber: 'KA-01-EV-9821',
-    date: 'Oct 05, 2025 · 7:00 PM',
-    durationFormatted: '1h 45m',
-    energyDeliveredKWh: 28.2,
-    totalCostINR: 239.7,
-    co2SavedKg: 20.9,
-    status: 'PAID',
+    id: 'mkt-03',
+    spotId: 8,
+    spotNumber: 'B2-P08',
+    level: 'Basement 2',
+    spotType: 'CAR',
+    hasEVCharger: true,
+    ownerName: 'Ananya Sharma',
+    ownerFlat: 'Tower B1 - 802',
+    startDate: '2026-10-08',
+    endDate: '2026-10-30',
+    pricingType: 'DAILY_RATE',
+    rateINR: 120,
+    status: 'AVAILABLE',
+    notes: 'Covered spot with 15A socket for trickle charging. Spacious parking.',
+    createdAt: '2026-10-05T08:00:00Z',
   },
 ];
 
-export const FALLBACK_ANPR_LOGS: ANPRLogDto[] = [
+export const FALLBACK_MY_MARKETPLACE_BOOKINGS: ParkingMarketplaceBookingDto[] = [
+  {
+    id: 'bk-mkt-01',
+    listingId: 'mkt-00',
+    spotNumber: 'B1-P24',
+    level: 'Basement 1',
+    ownerFlat: 'Tower B2 - 304',
+    ownerName: 'Karthik N.',
+    borrowerFlat: 'Tower A1 - 302',
+    borrowerName: 'You',
+    vehicleNumber: 'KA-01-AB-1234',
+    startDate: '2026-10-01',
+    endDate: '2026-10-04',
+    totalDays: 3,
+    totalAmountINR: 240,
+    status: 'COMPLETED',
+    anprWhitelisted: true,
+    bookingCode: 'MKT-8921',
+    createdAt: '2026-09-30T18:00:00Z',
+  }
+];
+
+export const FALLBACK_VIOLATIONS: ParkingViolationReportDto[] = [
+  {
+    id: 'viol-01',
+    spotNumber: 'B1-P12',
+    level: 'Basement 1',
+    offendingVehicleNumber: 'KA-04-XX-4321',
+    offenderFlat: 'Tower C2 - 1102',
+    reporterFlat: 'Tower A1 - 302 (You)',
+    violationType: 'WRONG_SLOT',
+    severity: 'MINOR',
+    status: 'WARNED',
+    fineAmountINR: 250,
+    timestamp: 'Yesterday at 7:30 PM',
+    remarks: 'Parked in my deeded spot without permission. Guard notified.',
+  },
+  {
+    id: 'viol-02',
+    spotNumber: 'B1-EV1',
+    level: 'Basement 1',
+    offendingVehicleNumber: 'MH-02-CD-9988',
+    offenderFlat: 'Tower B1 - 404',
+    reporterFlat: 'Society Security',
+    violationType: 'NON_EV_ON_CHARGER',
+    severity: 'MAJOR',
+    status: 'FINED',
+    fineAmountINR: 500,
+    timestamp: '2 days ago',
+    remarks: 'Internal combustion car blocking EV charging station for 6+ hours.',
+  }
+];
+
+export const FALLBACK_WAITLIST: ParkingWaitlistEntryDto[] = [
+  {
+    id: 'wl-01',
+    residentName: 'You (Tower A1-302)',
+    residentFlat: 'A1-302',
+    vehicleType: 'CAR',
+    preferredLevel: 'Basement 1',
+    queuePosition: 2,
+    requestDate: '2026-08-15',
+    status: 'QUEUED',
+  },
+  {
+    id: 'wl-02',
+    residentName: 'Deepak Verma',
+    residentFlat: 'Tower B2-901',
+    vehicleType: 'CAR',
+    preferredLevel: 'Basement 1',
+    queuePosition: 1,
+    requestDate: '2026-07-20',
+    status: 'OFFERED',
+  }
+];
+
+export const FALLBACK_SWAP_REQUESTS: ParkingSlotSwapRequestDto[] = [
+  {
+    id: 'swap-01',
+    requesterName: 'Pooja Iyer',
+    requesterFlat: 'Tower A1-304',
+    currentSpotNumber: 'B2-P10',
+    currentLevel: 'Basement 2',
+    targetSpotNumber: 'B1-P12',
+    targetLevel: 'Basement 1',
+    targetOwnerFlat: 'Tower A1-302 (You)',
+    reason: 'Elderly parents visiting, requesting B1 level closer to lift.',
+    status: 'PENDING_NEIGHBOR',
+    createdAt: '2026-10-04T12:00:00Z',
+  }
+];
+
+export const FALLBACK_ANALYTICS: ParkingAnalyticsSummaryDto = {
+  peakHours: '8:00 AM - 10:30 AM & 6:30 PM - 9:00 PM',
+  averageOccupancyPercent: 88.4,
+  evEnergyDeliveredKWhMonth: 1420.5,
+  evRevenueINRMonth: 12074.25,
+  marketplaceBookingsMonth: 38,
+  marketplaceEarningsINRMonth: 18240,
+  totalViolationsMonth: 9,
+  topViolationType: 'Wrong Slot Parking (55%)',
+};
+
+let inMemorySpots = [...FALLBACK_PARKING_SPOTS];
+let inMemoryMarketplaceListings = [...FALLBACK_MARKETPLACE_LISTINGS];
+let inMemoryMarketplaceBookings = [...FALLBACK_MY_MARKETPLACE_BOOKINGS];
+let inMemoryViolations = [...FALLBACK_VIOLATIONS];
+let inMemoryWaitlist = [...FALLBACK_WAITLIST];
+let inMemorySwapRequests = [...FALLBACK_SWAP_REQUESTS];
+let inMemoryVisitorPasses: VisitorPassDto[] = [
+  {
+    id: 101,
+    passCode: 'VP-8821',
+    visitorName: 'Aditya Sharma',
+    visitorPhone: '+91 98877 66554',
+    vehicleNumber: 'KA-04-EZ-3321',
+    vehicleType: 'CAR',
+    spotId: 8,
+    spotNumber: 'B2-P06',
+    validFrom: '2026-10-05T09:00:00Z',
+    validUntil: '2026-10-05T19:00:00Z',
+    purpose: 'Family Lunch & Visit',
+    status: 'ACTIVE',
+  },
+];
+let inMemoryWhitelist: VehicleWhitelistDto[] = [
+  {
+    id: 'wl-01',
+    plateNumber: 'KA-01-AB-1234',
+    vehicleModel: 'Honda City (Pearl White)',
+    vehicleType: 'CAR',
+    ownerName: 'You',
+    ownerFlat: 'Tower A - 302',
+    fastagRfidId: 'TAG-88210-RFID',
+    isAutoGateEnabled: true,
+    registeredDate: '2025-01-10',
+  },
+  {
+    id: 'wl-02',
+    plateNumber: 'KA-01-CD-5678',
+    vehicleModel: 'Ather 450X (Space Grey)',
+    vehicleType: 'BIKE',
+    ownerName: 'You',
+    ownerFlat: 'Tower A - 302',
+    fastagRfidId: 'TAG-33291-RFID',
+    isAutoGateEnabled: true,
+    registeredDate: '2025-03-22',
+  },
+];
+let inMemoryANPRLogs: ANPRLogDto[] = [
   {
     id: 'anpr-01',
     plateNumber: 'KA-01-AB-1234',
     ocrConfidence: 99.8,
-    timestamp: '2 mins ago (11:28 AM)',
-    gateName: 'Main Entrance Gate 1',
+    timestamp: '10 mins ago',
+    gateName: 'Main Gate Barrier A',
     direction: 'ENTRY',
     category: 'RESIDENT',
-    ownerName: 'You (Suresh C.)',
+    ownerName: 'You',
     ownerFlat: 'Tower A - 302',
-    barrierLatencyMs: 140,
+    barrierLatencyMs: 120,
     status: 'CLEARED',
-    notes: 'FASTag RFID + ANPR dual-match verified. Automatic boom barrier raised.',
+    notes: 'Fastag verified & auto-lifted',
   },
   {
     id: 'anpr-02',
-    plateNumber: 'KA-05-EV-4421',
-    ocrConfidence: 99.4,
-    timestamp: '14 mins ago (11:16 AM)',
-    gateName: 'Tower B Ramp Barrier',
-    direction: 'ENTRY',
-    category: 'RESIDENT',
-    ownerName: 'Rahul K.',
-    ownerFlat: 'Tower B - 201',
-    barrierLatencyMs: 165,
-    status: 'CLEARED',
-    notes: 'Automated basement gate clearance.',
-  },
-  {
-    id: 'anpr-03',
-    plateNumber: 'KA-03-XY-9081',
-    ocrConfidence: 98.9,
-    timestamp: '28 mins ago (11:02 AM)',
-    gateName: 'Main Entrance Gate 1',
+    plateNumber: 'KA-04-EZ-3321',
+    ocrConfidence: 98.6,
+    timestamp: '45 mins ago',
+    gateName: 'Visitor Gate 2',
     direction: 'ENTRY',
     category: 'VISITOR',
-    ownerName: 'Rohan Sharma (Visitor Pass VP-8821)',
+    ownerName: 'Aditya Sharma (Pass VP-8821)',
     ownerFlat: 'Guest of Tower A - 302',
-    barrierLatencyMs: 220,
+    barrierLatencyMs: 210,
     status: 'CLEARED',
-    notes: 'Digital Visitor Pass verified at Security Kiosk.',
-  },
-  {
-    id: 'anpr-04',
-    plateNumber: 'KA-51-MB-7788',
-    ocrConfidence: 97.6,
-    timestamp: '45 mins ago (10:45 AM)',
-    gateName: 'Service Gate 3',
-    direction: 'EXIT',
-    category: 'DELIVERY',
-    ownerName: 'Blinkit Delivery Van',
-    barrierLatencyMs: 190,
-    status: 'CLEARED',
-    notes: 'Service exit logged with 18-minute estate turnaround.',
-  },
-  {
-    id: 'anpr-05',
-    plateNumber: 'KA-04-QQ-1122',
-    ocrConfidence: 95.2,
-    timestamp: '1 hour ago (10:30 AM)',
-    gateName: 'Main Entrance Gate 2',
-    direction: 'ENTRY',
-    category: 'UNREGISTERED',
-    barrierLatencyMs: 0,
-    status: 'MANUAL_INTERVENTION',
-    notes: 'Unregistered visitor vehicle. Guard verified flat OTP before manual barrier lift.',
-  },
+    notes: 'Pre-registered Visitor Pass validated',
+  }
 ];
-
-export const FALLBACK_WHITELIST_VEHICLES: VehicleWhitelistDto[] = [
-  {
-    id: 'wl-01',
-    plateNumber: 'KA-01-AB-1234',
-    vehicleModel: 'Honda City (White) - 4-Wheeler',
-    vehicleType: 'CAR',
-    ownerName: 'You',
-    ownerFlat: 'Tower A - 302',
-    fastagRfidId: 'TAG-8829-KA01',
-    isAutoGateEnabled: true,
-    registeredDate: 'Jan 15, 2024',
-  },
-  {
-    id: 'wl-02',
-    plateNumber: 'KA-01-EV-9821',
-    vehicleModel: 'Tata Nexon EV Max (Teal Blue)',
-    vehicleType: 'EV',
-    ownerName: 'You',
-    ownerFlat: 'Tower A - 302',
-    fastagRfidId: 'TAG-9012-EV98',
-    isAutoGateEnabled: true,
-    registeredDate: 'Mar 10, 2024',
-  },
-  {
-    id: 'wl-03',
-    plateNumber: 'KA-01-CD-5678',
-    vehicleModel: 'Ather 450X (Space Grey) - 2-Wheeler',
-    vehicleType: 'BIKE',
-    ownerName: 'You',
-    ownerFlat: 'Tower A - 302',
-    fastagRfidId: 'TAG-3341-ATH',
-    isAutoGateEnabled: true,
-    registeredDate: 'Jul 22, 2024',
-  },
-];
-
-export const FALLBACK_VISITOR_PASSES: VisitorPassDto[] = [
-  {
-    id: 101,
-    passCode: 'VP-8821',
-    visitorName: 'Rohan Sharma',
-    visitorPhone: '+91 98450 11223',
-    vehicleNumber: 'KA-03-XY-9081',
-    vehicleType: 'CAR',
-    spotNumber: 'B2-P05',
-    validFrom: new Date(Date.now() - 2 * 3600000).toISOString(),
-    validUntil: new Date(Date.now() + 6 * 3600000).toISOString(),
-    purpose: 'Family Visit',
-    status: 'ACTIVE',
-  },
-  {
-    id: 102,
-    passCode: 'VP-9042',
-    visitorName: 'Urban Company Pro (Rajesh)',
-    visitorPhone: '+91 91234 56789',
-    vehicleNumber: 'KA-05-ZZ-3341',
-    vehicleType: 'BIKE',
-    spotNumber: 'B1-P08',
-    validFrom: new Date(Date.now() - 1 * 3600000).toISOString(),
-    validUntil: new Date(Date.now() + 3 * 3600000).toISOString(),
-    purpose: 'AC Deep Cleaning Service',
-    status: 'ACTIVE',
-  },
-  {
-    id: 103,
-    passCode: 'VP-7120',
-    visitorName: 'Anil Gupta',
-    visitorPhone: '+91 99887 76655',
-    vehicleNumber: 'KA-01-HH-4455',
-    vehicleType: 'CAR',
-    spotNumber: 'B2-P22',
-    validFrom: new Date(Date.now() - 26 * 3600000).toISOString(),
-    validUntil: new Date(Date.now() - 18 * 3600000).toISOString(),
-    purpose: 'Business Meeting',
-    status: 'EXPIRED',
-  },
-];
-
-// In-memory mutation state
-let inMemorySpots: ParkingSpotDto[] = [...FALLBACK_PARKING_SPOTS];
-let inMemoryEVStations: EVChargerStationDto[] = [...FALLBACK_EV_STATIONS];
-let inMemoryActiveEVSession: EVChargingSessionDto | null = { ...FALLBACK_ACTIVE_EV_SESSION };
-let inMemoryEVHistory: EVChargingHistoryDto[] = [...FALLBACK_EV_HISTORY];
-let inMemoryANPRLogs: ANPRLogDto[] = [...FALLBACK_ANPR_LOGS];
-let inMemoryWhitelist: VehicleWhitelistDto[] = [...FALLBACK_WHITELIST_VEHICLES];
-let inMemoryVisitorPasses: VisitorPassDto[] = [...FALLBACK_VISITOR_PASSES];
 
 export const parkingService = {
-  // ── Occupancy & Spot Telemetry ─────────────────────────────────────
+  // ── 1. Slot Allocation & Registry ─────────────────────────────────
+  async getSpots(params?: { level?: string; type?: string; status?: string }): Promise<ParkingSpotDto[]> {
+    try {
+      const res = await api.get<ParkingSpotDto[]>('/parking/slots', { params });
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch (e) {
+      secureLog.warn('Parking API getSpots fallback', e);
+    }
+    return inMemorySpots.filter((s) => {
+      if (params?.level && s.level !== params.level) return false;
+      if (params?.type && s.type !== params.type) return false;
+      if (params?.status && s.status !== params.status) return false;
+      return true;
+    });
+  },
+
+  async reserveSpot(req: ReserveSpotRequest): Promise<ParkingSpotDto> {
+    try {
+      const res = await api.post<ParkingSpotDto>('/parking/slots/reserve', req);
+      return res.data;
+    } catch {
+      const spotIndex = inMemorySpots.findIndex((s) => s.id === req.spotId);
+      if (spotIndex !== -1) {
+        inMemorySpots[spotIndex] = {
+          ...inMemorySpots[spotIndex],
+          status: 'RESERVED',
+          vehicleNumber: req.vehicleNumber,
+          ownerName: 'You',
+          ownerFlat: 'A1-302',
+          notes: req.notes,
+        };
+        return inMemorySpots[spotIndex];
+      }
+      throw new Error('Spot not found');
+    }
+  },
+
   async getOccupancySummary(): Promise<ParkingOccupancySummaryDto> {
     try {
       const res = await api.get<ParkingOccupancySummaryDto>('/parking/occupancy');
-      return res.data;
-    } catch {
-      const total = inMemorySpots.length;
-      const occupied = inMemorySpots.filter((s) => s.status === 'OCCUPIED' || s.status === 'RESERVED').length;
-      const evTotal = inMemorySpots.filter((s) => s.type === 'EV').length;
-      const evAvail = inMemorySpots.filter((s) => s.type === 'EV' && s.status === 'AVAILABLE').length;
-      const b1 = inMemorySpots.filter((s) => s.level.includes('1'));
-      const b2 = inMemorySpots.filter((s) => s.level.includes('2'));
-
-      return {
-        totalSpots: 180,
-        occupiedSpots: 124,
-        availableSpots: 56,
-        totalEVSpots: 16,
-        availableEVSpots: 9,
-        b1Available: 28,
-        b1Total: 90,
-        b2Available: 28,
-        b2Total: 90,
-        activeVisitors: inMemoryVisitorPasses.filter((v) => v.status === 'ACTIVE').length,
-      };
-    }
-  },
-
-  async getSpots(params?: { type?: string; status?: string; level?: string }): Promise<ParkingSpotDto[]> {
-    try {
-      const res = await api.get<ParkingSpotDto[]>('/parking/spots', { params });
-      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch (err) {
-      secureLog.warn('ParkingService: Live /parking/spots unavailable, using fallback', err);
-    }
-
-    let result = [...inMemorySpots];
-    if (params?.type && params.type !== 'ALL') {
-      result = result.filter((s) => s.type === params.type);
-    }
-    if (params?.status && params.status !== 'ALL') {
-      result = result.filter((s) => s.status === params.status);
-    }
-    if (params?.level && params.level !== 'ALL') {
-      result = result.filter((s) => s.level.toLowerCase().includes(params.level!.toLowerCase()));
-    }
-    return result;
-  },
-
-  async getMySpots(): Promise<ParkingSpotDto[]> {
-    try {
-      const res = await api.get<ParkingSpotDto[]>('/parking/my-spots');
-      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {
-      // Fallback
-    }
-    return inMemorySpots.filter((s) => s.ownerName === 'You' || s.ownerFlat === 'A1-302');
-  },
-
-  async reserveSpot(data: ReserveSpotRequest): Promise<ParkingSpotDto> {
-    try {
-      const res = await api.post<ParkingSpotDto>('/parking/reserve', data);
       if (res.data) return res.data;
-    } catch {
-      // Fallback
-    }
-    const idx = inMemorySpots.findIndex((s) => s.id === data.spotId);
-    if (idx !== -1) {
-      const updated: ParkingSpotDto = {
-        ...inMemorySpots[idx],
-        status: 'RESERVED',
-        vehicleNumber: data.vehicleNumber,
-        ownerName: 'You',
-        ownerFlat: 'A1-302',
-        notes: data.notes,
-      };
-      inMemorySpots[idx] = updated;
-      return updated;
-    }
-    return inMemorySpots[0];
+    } catch {}
+    const total = inMemorySpots.length;
+    const occupied = inMemorySpots.filter((s) => s.status === 'OCCUPIED' || s.status === 'RESERVED').length;
+    const available = total - occupied;
+    const evSpots = inMemorySpots.filter((s) => s.hasEVCharger || s.type === 'EV');
+    const occupiedEv = evSpots.filter((s) => s.status === 'OCCUPIED' || s.status === 'RESERVED').length;
+    const marketplaceAvailable = inMemoryMarketplaceListings.filter((l) => l.status === 'AVAILABLE').length;
+
+    return {
+      totalSpots: total + 40,
+      occupiedSpots: occupied + 32,
+      availableSpots: available + 8,
+      totalEVSpots: 12,
+      occupiedEVSpots: 7,
+      totalVisitorSpots: 15,
+      availableVisitorSpots: 6,
+      marketplaceSpotsAvailable: marketplaceAvailable,
+      occupancyPercentage: Math.round(((occupied + 32) / (total + 40)) * 100),
+      lastUpdated: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
   },
 
-  // ── EV Charging Station & Power Metering Methods ───────────────────
-  async getEVStations(): Promise<EVChargerStationDto[]> {
-    try {
-      const res = await api.get<EVChargerStationDto[]>('/parking/ev/stations');
-      return res.data;
-    } catch {
-      return inMemoryEVStations;
-    }
-  },
-
-  async getActiveEVSession(): Promise<EVChargingSessionDto | null> {
-    try {
-      const res = await api.get<EVChargingSessionDto>('/parking/ev/active-session');
-      return res.data;
-    } catch {
-      return inMemoryActiveEVSession;
-    }
-  },
-
-  async bookEVStation(req: EVBookingRequest): Promise<{ success: boolean; message: string }> {
-    try {
-      const res = await api.post<{ success: boolean; message: string }>('/parking/ev/book', req);
-      return res.data;
-    } catch {
-      inMemoryEVStations = inMemoryEVStations.map((st) => {
-        if (st.id === req.stationId) {
-          return { ...st, status: 'BOOKED', notes: `Reserved for ${req.vehicleNumber} at ${req.startTime}` };
-        }
-        return st;
-      });
-      return { success: true, message: 'EV Charging Bay reserved successfully.' };
-    }
-  },
-
-  async startEVCharging(stationId: string, vehicleNumber: string): Promise<EVChargingSessionDto> {
-    try {
-      const res = await api.post<EVChargingSessionDto>('/parking/ev/start', { stationId, vehicleNumber });
-      return res.data;
-    } catch {
-      const newSession: EVChargingSessionDto = {
-        id: `sess-${Date.now().toString().slice(-4)}`,
-        stationId,
-        stationCode: 'B1-EV-FAST-01',
-        vehicleNumber,
-        userFlat: 'A1-302',
-        startTime: 'Just now',
-        estimatedEndTime: '45 mins from now',
-        currentSoCPercentage: 45,
-        targetSoCPercentage: 85,
-        powerOutputKW: 21.8,
-        voltageV: 416.0,
-        currentA: 30.2,
-        energyConsumedKWh: 0.8,
-        currentCostINR: 6.8,
-        tariffRatePerKWh: 8.5,
-        temperatureCelsius: 34.0,
-        sessionStatus: 'ACTIVE',
-      };
-      inMemoryActiveEVSession = newSession;
-      inMemoryEVStations = inMemoryEVStations.map((st) =>
-        st.id === stationId ? { ...st, status: 'CHARGING', activeVehicleNumber: vehicleNumber } : st
-      );
-      return newSession;
-    }
-  },
-
-  async stopEVCharging(sessionId: string): Promise<{ success: boolean; summary: EVChargingHistoryDto }> {
-    try {
-      const res = await api.post<{ success: boolean; summary: EVChargingHistoryDto }>(`/parking/ev/stop/${sessionId}`);
-      return res.data;
-    } catch {
-      const hist: EVChargingHistoryDto = {
-        id: `ev-hist-${Date.now().toString().slice(-4)}`,
-        stationCode: inMemoryActiveEVSession?.stationCode || 'B1-EV-FAST-01',
-        vehicleNumber: inMemoryActiveEVSession?.vehicleNumber || 'KA-01-EV-9821',
-        date: 'Today · Just now',
-        durationFormatted: '48 mins',
-        energyDeliveredKWh: inMemoryActiveEVSession?.energyConsumedKWh || 18.6,
-        totalCostINR: inMemoryActiveEVSession?.currentCostINR || 158.1,
-        co2SavedKg: 14.8,
-        status: 'PAID',
-      };
-      inMemoryEVHistory = [hist, ...inMemoryEVHistory];
-      inMemoryActiveEVSession = null;
-      inMemoryEVStations = inMemoryEVStations.map((st) =>
-        st.status === 'CHARGING' ? { ...st, status: 'AVAILABLE', activeVehicleNumber: undefined } : st
-      );
-      return { success: true, summary: hist };
-    }
-  },
-
-  async getEVChargingHistory(): Promise<EVChargingHistoryDto[]> {
-    try {
-      const res = await api.get<EVChargingHistoryDto[]>('/parking/ev/history');
-      return res.data;
-    } catch {
-      return inMemoryEVHistory;
-    }
-  },
-
-  // ── ANPR License Plate Recognition & Gate Methods ──────────────────
-  async getANPRLogs(search?: string, direction?: string): Promise<ANPRLogDto[]> {
-    try {
-      const res = await api.get<ANPRLogDto[]>('/parking/anpr/logs', { params: { search, direction } });
-      return res.data;
-    } catch {
-      let logs = inMemoryANPRLogs;
-      if (search && search.trim()) {
-        const q = search.toLowerCase();
-        logs = logs.filter((l) => l.plateNumber.toLowerCase().includes(q) || l.gateName.toLowerCase().includes(q));
-      }
-      if (direction && direction !== 'ALL') {
-        logs = logs.filter((l) => l.direction === direction);
-      }
-      return logs;
-    }
-  },
-
-  async getVehicleWhitelist(): Promise<VehicleWhitelistDto[]> {
-    try {
-      const res = await api.get<VehicleWhitelistDto[]>('/parking/whitelist');
-      return res.data;
-    } catch {
-      return inMemoryWhitelist;
-    }
-  },
-
-  async addVehicleToWhitelist(data: Partial<VehicleWhitelistDto>): Promise<VehicleWhitelistDto> {
-    try {
-      const res = await api.post<VehicleWhitelistDto>('/parking/whitelist', data);
-      return res.data;
-    } catch {
-      const newV: VehicleWhitelistDto = {
-        id: `wl-${Date.now().toString().slice(-4)}`,
-        plateNumber: data.plateNumber || 'KA-01-NEW-0000',
-        vehicleModel: data.vehicleModel || 'Resident Vehicle',
-        vehicleType: data.vehicleType || 'CAR',
-        ownerName: 'You',
-        ownerFlat: 'Tower A - 302',
-        fastagRfidId: `TAG-${Math.floor(1000 + Math.random() * 9000)}-RFID`,
-        isAutoGateEnabled: true,
-        registeredDate: 'Today',
-      };
-      inMemoryWhitelist = [...inMemoryWhitelist, newV];
-      return newV;
-    }
-  },
-
-  // ── Visitor Passes ────────────────────────────────────────────────
+  // ── 2. Visitor Parking ────────────────────────────────────────────
   async getVisitorPasses(): Promise<VisitorPassDto[]> {
     try {
       const res = await api.get<VisitorPassDto[]>('/parking/visitor-pass');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {
-      // Fallback
-    }
+    } catch {}
     return inMemoryVisitorPasses;
   },
 
@@ -547,11 +426,9 @@ export const parkingService = {
     try {
       const res = await api.post<VisitorPassDto>('/parking/visitor-pass', data);
       if (res.data) return res.data;
-    } catch {
-      // Fallback
-    }
+    } catch {}
 
-    const code = `VP-${Math.floor(1000 + Math.random() * 9000)}`;
+    const code = 'VP-' + Math.floor(1000 + Math.random() * 9000);
     const now = new Date();
     const validUntil = data.validUntil || new Date(now.getTime() + 8 * 3600000).toISOString();
     const newPass: VisitorPassDto = {
@@ -562,7 +439,7 @@ export const parkingService = {
       vehicleNumber: data.vehicleNumber,
       vehicleType: data.vehicleType || 'CAR',
       spotId: data.spotId,
-      spotNumber: data.spotId ? `B2-P${data.spotId}` : 'B2-Visitor',
+      spotNumber: data.spotId ? 'B2-P' + data.spotId : 'B2-Visitor',
       validFrom: data.validFrom || now.toISOString(),
       validUntil,
       purpose: data.purpose || 'Guest Visit',
@@ -570,16 +447,15 @@ export const parkingService = {
     };
     inMemoryVisitorPasses.unshift(newPass);
 
-    // Also add to simulated ANPR logs as an incoming cleared visitor
     inMemoryANPRLogs.unshift({
-      id: `anpr-v-${Date.now().toString().slice(-4)}`,
+      id: 'anpr-v-' + Date.now().toString().slice(-4),
       plateNumber: data.vehicleNumber,
       ocrConfidence: 99.1,
       timestamp: 'Just now',
       gateName: 'Main Entrance Gate 1',
       direction: 'ENTRY',
       category: 'VISITOR',
-      ownerName: `${data.visitorName} (Pass ${code})`,
+      ownerName: data.visitorName + ' (Pass ' + code + ')',
       ownerFlat: 'Guest of Tower A - 302',
       barrierLatencyMs: 175,
       status: 'CLEARED',
@@ -587,5 +463,297 @@ export const parkingService = {
     });
 
     return newPass;
+  },
+
+  // ── 3. Temporary Parking Marketplace ★ ─────────────────────────────
+  async getMarketplaceListings(): Promise<ParkingMarketplaceListingDto[]> {
+    try {
+      const res = await api.get<ParkingMarketplaceListingDto[]>('/parking/marketplace/listings');
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+    return inMemoryMarketplaceListings;
+  },
+
+  async createMarketplaceListing(data: CreateMarketplaceListingRequest): Promise<ParkingMarketplaceListingDto> {
+    try {
+      const res = await api.post<ParkingMarketplaceListingDto>('/parking/marketplace/listings', data);
+      if (res.data) return res.data;
+    } catch {}
+
+    const newListing: ParkingMarketplaceListingDto = {
+      id: 'mkt-' + Date.now().toString().slice(-4),
+      spotId: data.spotId,
+      spotNumber: data.spotNumber,
+      level: data.level,
+      spotType: data.spotType,
+      hasEVCharger: !!data.hasEVCharger,
+      ownerName: 'You',
+      ownerFlat: 'Tower A1 - 302',
+      startDate: data.startDate,
+      endDate: data.endDate,
+      pricingType: data.pricingType,
+      rateINR: data.rateINR,
+      status: 'AVAILABLE',
+      notes: data.notes,
+      createdAt: new Date().toISOString(),
+    };
+    inMemoryMarketplaceListings.unshift(newListing);
+    return newListing;
+  },
+
+  async bookMarketplaceSlot(req: BookMarketplaceSlotRequest): Promise<ParkingMarketplaceBookingDto> {
+    try {
+      const res = await api.post<ParkingMarketplaceBookingDto>('/parking/marketplace/book', req);
+      if (res.data) return res.data;
+    } catch {}
+
+    const listing = inMemoryMarketplaceListings.find((l) => l.id === req.listingId);
+    if (!listing) throw new Error('Listing not found');
+
+    const start = new Date(req.startDate);
+    const end = new Date(req.endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    const totalCost = listing.pricingType === 'FREE_GOOD_NEIGHBOR' ? 0 : listing.rateINR * diffDays;
+
+    listing.status = 'BOOKED';
+
+    const booking: ParkingMarketplaceBookingDto = {
+      id: 'bk-mkt-' + Date.now().toString().slice(-4),
+      listingId: listing.id,
+      spotNumber: listing.spotNumber,
+      level: listing.level,
+      ownerFlat: listing.ownerFlat,
+      ownerName: listing.ownerName,
+      borrowerFlat: 'Tower A1 - 302',
+      borrowerName: 'You',
+      vehicleNumber: req.vehicleNumber,
+      startDate: req.startDate,
+      endDate: req.endDate,
+      totalDays: diffDays,
+      totalAmountINR: totalCost,
+      status: 'CONFIRMED',
+      anprWhitelisted: true,
+      bookingCode: 'MKT-' + Math.floor(1000 + Math.random() * 9000),
+      createdAt: new Date().toISOString(),
+    };
+
+    inMemoryMarketplaceBookings.unshift(booking);
+
+    inMemoryANPRLogs.unshift({
+      id: 'anpr-mkt-' + Date.now().toString().slice(-4),
+      plateNumber: req.vehicleNumber,
+      ocrConfidence: 99.5,
+      timestamp: 'Scheduled for ' + req.startDate,
+      gateName: 'Basement Barrier 1',
+      direction: 'ENTRY',
+      category: 'MARKETPLACE_GUEST',
+      ownerName: 'Marketplace Borrower (Code: ' + booking.bookingCode + ')',
+      ownerFlat: 'Temporary allocated to ' + listing.spotNumber,
+      barrierLatencyMs: 140,
+      status: 'CLEARED',
+      notes: 'ANPR Auto-Whitelisted for slot ' + listing.spotNumber + ' (' + req.startDate + ' to ' + req.endDate + ')',
+    });
+
+    return booking;
+  },
+
+  async getMyMarketplaceBookings(): Promise<ParkingMarketplaceBookingDto[]> {
+    try {
+      const res = await api.get<ParkingMarketplaceBookingDto[]>('/parking/marketplace/my-bookings');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return inMemoryMarketplaceBookings;
+  },
+
+  // ── 4. Parking Violations & Enforcement ────────────────────────────
+  async getViolations(): Promise<ParkingViolationReportDto[]> {
+    try {
+      const res = await api.get<ParkingViolationReportDto[]>('/parking/violations');
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+    return inMemoryViolations;
+  },
+
+  async reportViolation(req: ReportViolationRequest): Promise<ParkingViolationReportDto> {
+    try {
+      const res = await api.post<ParkingViolationReportDto>('/parking/violations', req);
+      if (res.data) return res.data;
+    } catch {}
+
+    const fineAmount = req.violationType === 'NON_EV_ON_CHARGER' ? 500 : req.violationType === 'UNAUTHORIZED_OCCUPATION' ? 500 : 250;
+    const newReport: ParkingViolationReportDto = {
+      id: 'viol-' + Date.now().toString().slice(-4),
+      spotNumber: req.spotNumber,
+      level: req.level,
+      offendingVehicleNumber: req.offendingVehicleNumber,
+      reporterFlat: 'Tower A1 - 302 (You)',
+      violationType: req.violationType,
+      severity: req.violationType === 'NON_EV_ON_CHARGER' ? 'MAJOR' : 'MINOR',
+      status: 'REPORTED',
+      fineAmountINR: fineAmount,
+      photoUrl: req.photoUrl,
+      timestamp: 'Just now',
+      remarks: req.remarks,
+    };
+    inMemoryViolations.unshift(newReport);
+    return newReport;
+  },
+
+  // ── 5. ANPR & Gate Whitelist ──────────────────────────────────────
+  async getANPRLogs(search?: string, direction?: string): Promise<ANPRLogDto[]> {
+    try {
+      const res = await api.get<ANPRLogDto[]>('/parking/anpr/logs');
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+    return inMemoryANPRLogs;
+  },
+
+  async getVehicleWhitelist(): Promise<VehicleWhitelistDto[]> {
+    try {
+      const res = await api.get<VehicleWhitelistDto[]>('/parking/whitelist');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return inMemoryWhitelist;
+  },
+
+  async addVehicleToWhitelist(data: Partial<VehicleWhitelistDto>): Promise<VehicleWhitelistDto> {
+    try {
+      const res = await api.post<VehicleWhitelistDto>('/parking/whitelist', data);
+      return res.data;
+    } catch {
+      const newV: VehicleWhitelistDto = {
+        id: 'wl-' + Date.now().toString().slice(-4),
+        plateNumber: data.plateNumber || 'KA-01-NEW-0000',
+        vehicleModel: data.vehicleModel || 'Resident Vehicle',
+        vehicleType: data.vehicleType || 'CAR',
+        ownerName: 'You',
+        ownerFlat: 'Tower A - 302',
+        fastagRfidId: 'TAG-' + Math.floor(1000 + Math.random() * 9000) + '-RFID',
+        isAutoGateEnabled: true,
+        registeredDate: 'Today',
+      };
+      inMemoryWhitelist = [...inMemoryWhitelist, newV];
+      return newV;
+    }
+  },
+
+  // ── 6. EV Charging & Metering ─────────────────────────────────────
+  async getEVStations(): Promise<EVChargerStationDto[]> {
+    try {
+      const res = await api.get<EVChargerStationDto[]>('/parking/ev/stations');
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+    return FALLBACK_EV_STATIONS;
+  },
+
+  
+  async getEVChargingHistory(): Promise<EVChargingHistoryDto[]> {
+    try {
+      const res = await api.get<EVChargingHistoryDto[]>('/parking/ev/history');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return [
+      { id: 'evh-1', stationCode: 'EV-Fast-01', vehicleNumber: 'KA-01-AB-1234', date: 'Oct 02, 18:30', durationFormatted: '1h 45m', energyDeliveredKWh: 14.5, totalCostINR: 174, co2SavedKg: 11.2, status: 'PAID' },
+      { id: 'evh-2', stationCode: 'EV-Standard-03', vehicleNumber: 'KA-01-AB-1234', date: 'Sep 28, 21:00', durationFormatted: '9h 00m', energyDeliveredKWh: 32.0, totalCostINR: 320, co2SavedKg: 24.8, status: 'PAID' },
+    ];
+  },
+
+  async startEVCharging(stationId: string | number, vehicleNumber?: string): Promise<EVChargingSessionDto> {
+    try {
+      const res = await api.post<EVChargingSessionDto>('/parking/ev/start', { stationId, vehicleNumber });
+      return res.data;
+    } catch {
+      return FALLBACK_ACTIVE_EV_SESSION;
+    }
+  },
+
+  async stopEVCharging(sessionId?: string): Promise<{ success: boolean; message: string; summary: { energyDeliveredKWh: number; totalCostINR: number; co2SavedKg: number } }> {
+    try {
+      const res = await api.post('/parking/ev/stop', { sessionId });
+      return res.data;
+    } catch {
+      return {
+        success: true,
+        message: 'Charging session stopped successfully',
+        summary: { energyDeliveredKWh: 14.5, totalCostINR: 174, co2SavedKg: 11.2 },
+      };
+    }
+  },
+
+  async bookEVStation(req: EVBookingRequest): Promise<{ success: boolean; bookingCode: string }> {
+    try {
+      const res = await api.post('/parking/ev/book', req);
+      return res.data;
+    } catch {
+      return { success: true, bookingCode: 'EV-' + Math.floor(1000 + Math.random() * 9000) };
+    }
+  },
+
+  async getActiveEVSession(): Promise<EVChargingSessionDto | null> {
+    try {
+      const res = await api.get<EVChargingSessionDto>('/parking/ev/active-session');
+      return res.data;
+    } catch {
+      return FALLBACK_ACTIVE_EV_SESSION;
+    }
+  },
+
+  // ── 7. Waitlist & Swaps ───────────────────────────────────────────
+  async getWaitlist(): Promise<ParkingWaitlistEntryDto[]> {
+    try {
+      const res = await api.get<ParkingWaitlistEntryDto[]>('/parking/waitlist');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return inMemoryWaitlist;
+  },
+
+  async joinWaitlist(data: { vehicleType: 'CAR' | 'BIKE' | 'EV'; preferredLevel: string }): Promise<ParkingWaitlistEntryDto> {
+    const entry: ParkingWaitlistEntryDto = {
+      id: 'wl-' + Date.now().toString().slice(-4),
+      residentName: 'You (Tower A1-302)',
+      residentFlat: 'A1-302',
+      vehicleType: data.vehicleType,
+      preferredLevel: data.preferredLevel,
+      queuePosition: inMemoryWaitlist.length + 1,
+      requestDate: new Date().toISOString().slice(0, 10),
+      status: 'QUEUED',
+    };
+    inMemoryWaitlist.push(entry);
+    return entry;
+  },
+
+  async getSwapRequests(): Promise<ParkingSlotSwapRequestDto[]> {
+    try {
+      const res = await api.get<ParkingSlotSwapRequestDto[]>('/parking/swaps');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return inMemorySwapRequests;
+  },
+
+  async createSwapRequest(data: { targetSpotNumber: string; targetLevel: string; targetOwnerFlat: string; reason: string }): Promise<ParkingSlotSwapRequestDto> {
+    const swap: ParkingSlotSwapRequestDto = {
+      id: 'swap-' + Date.now().toString().slice(-4),
+      requesterName: 'You',
+      requesterFlat: 'Tower A1 - 302',
+      currentSpotNumber: 'B1-P12',
+      currentLevel: 'Basement 1',
+      targetSpotNumber: data.targetSpotNumber,
+      targetLevel: data.targetLevel,
+      targetOwnerFlat: data.targetOwnerFlat,
+      reason: data.reason,
+      status: 'PENDING_NEIGHBOR',
+      createdAt: new Date().toISOString(),
+    };
+    inMemorySwapRequests.unshift(swap);
+    return swap;
+  },
+
+  async getParkingAnalytics(): Promise<ParkingAnalyticsSummaryDto> {
+    try {
+      const res = await api.get<ParkingAnalyticsSummaryDto>('/parking/analytics');
+      if (res.data) return res.data;
+    } catch {}
+    return FALLBACK_ANALYTICS;
   },
 };

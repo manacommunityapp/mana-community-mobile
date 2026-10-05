@@ -1,5 +1,5 @@
 export type ParkingSpotType = 'CAR' | 'BIKE' | 'EV';
-export type ParkingSpotStatus = 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
+export type ParkingSpotStatus = 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'MAINTENANCE';
 
 export interface ParkingSpotDto {
   id: number;
@@ -113,12 +113,12 @@ export interface EVChargingHistoryDto {
 
 // ── ANPR License Plate Recognition & Gate IoT Types ───────────────
 export type ANPRDirection = 'ENTRY' | 'EXIT';
-export type ANPRVehicleCategory = 'RESIDENT' | 'VISITOR' | 'CAB' | 'DELIVERY' | 'UNREGISTERED';
+export type ANPRVehicleCategory = 'RESIDENT' | 'VISITOR' | 'CAB' | 'DELIVERY' | 'MARKETPLACE_GUEST' | 'UNREGISTERED';
 
 export interface ANPRLogDto {
   id: string;
   plateNumber: string;
-  ocrConfidence: number; // e.g. 99.4%
+  ocrConfidence: number;
   timestamp: string;
   gateName: string;
   direction: ANPRDirection;
@@ -148,10 +148,142 @@ export interface ParkingOccupancySummaryDto {
   occupiedSpots: number;
   availableSpots: number;
   totalEVSpots: number;
-  availableEVSpots: number;
-  b1Available: number;
-  b1Total: number;
-  b2Available: number;
-  b2Total: number;
-  activeVisitors: number;
+  occupiedEVSpots: number;
+  totalVisitorSpots: number;
+  availableVisitorSpots: number;
+  marketplaceSpotsAvailable: number;
+  occupancyPercentage: number;
+  lastUpdated: string;
+}
+
+// ── Temporary Parking Marketplace Types ────────────────────────────
+export type MarketplacePricingType = 'FREE_GOOD_NEIGHBOR' | 'DAILY_RATE' | 'HOURLY_RATE';
+export type MarketplaceListingStatus = 'AVAILABLE' | 'BOOKED' | 'EXPIRED' | 'CANCELLED';
+
+export interface ParkingMarketplaceListingDto {
+  id: string;
+  spotId: number;
+  spotNumber: string;
+  level: string;
+  spotType: ParkingSpotType;
+  hasEVCharger: boolean;
+  ownerName: string;
+  ownerFlat: string;
+  startDate: string;
+  endDate: string;
+  pricingType: MarketplacePricingType;
+  rateINR: number;
+  status: MarketplaceListingStatus;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreateMarketplaceListingRequest {
+  spotId: number;
+  spotNumber: string;
+  level: string;
+  spotType: ParkingSpotType;
+  hasEVCharger?: boolean;
+  startDate: string;
+  endDate: string;
+  pricingType: MarketplacePricingType;
+  rateINR: number;
+  notes?: string;
+}
+
+export interface ParkingMarketplaceBookingDto {
+  id: string;
+  listingId: string;
+  spotNumber: string;
+  level: string;
+  ownerFlat: string;
+  ownerName: string;
+  borrowerFlat: string;
+  borrowerName: string;
+  vehicleNumber: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  totalAmountINR: number;
+  status: 'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  anprWhitelisted: boolean;
+  bookingCode: string;
+  createdAt: string;
+}
+
+export interface BookMarketplaceSlotRequest {
+  listingId: string;
+  vehicleNumber: string;
+  startDate: string;
+  endDate: string;
+  notes?: string;
+}
+
+// ── Violations & Enforcement Types ──────────────────────────────────
+export type ViolationType = 'UNAUTHORIZED_OCCUPATION' | 'OVERSTAY' | 'WRONG_SLOT' | 'BLOCKING_DRIVEWAY' | 'NON_EV_ON_CHARGER';
+export type ViolationSeverity = 'WARNING' | 'MINOR' | 'MAJOR' | 'CRITICAL';
+export type ViolationStatus = 'REPORTED' | 'WARNED' | 'FINED' | 'PAID' | 'DISPUTED' | 'DISMISSED';
+
+export interface ParkingViolationReportDto {
+  id: string;
+  spotNumber: string;
+  level: string;
+  offendingVehicleNumber: string;
+  offenderFlat?: string;
+  reporterFlat: string;
+  violationType: ViolationType;
+  severity: ViolationSeverity;
+  status: ViolationStatus;
+  fineAmountINR: number;
+  photoUrl?: string;
+  timestamp: string;
+  remarks: string;
+  disputeReason?: string;
+}
+
+export interface ReportViolationRequest {
+  spotNumber: string;
+  level: string;
+  offendingVehicleNumber: string;
+  violationType: ViolationType;
+  photoUrl?: string;
+  remarks: string;
+}
+
+// ── Waitlist & Slot Swap Types ─────────────────────────────────────
+export interface ParkingWaitlistEntryDto {
+  id: string;
+  residentName: string;
+  residentFlat: string;
+  vehicleType: ParkingSpotType;
+  preferredLevel: string;
+  queuePosition: number;
+  requestDate: string;
+  status: 'QUEUED' | 'OFFERED' | 'ALLOCATED' | 'EXPIRED';
+}
+
+export interface ParkingSlotSwapRequestDto {
+  id: string;
+  requesterName: string;
+  requesterFlat: string;
+  currentSpotNumber: string;
+  currentLevel: string;
+  targetSpotNumber: string;
+  targetLevel: string;
+  targetOwnerFlat: string;
+  reason: string;
+  status: 'PENDING_NEIGHBOR' | 'PENDING_ADMIN' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
+}
+
+// ── Analytics & Heatmaps ───────────────────────────────────────────
+export interface ParkingAnalyticsSummaryDto {
+  peakHours: string;
+  averageOccupancyPercent: number;
+  evEnergyDeliveredKWhMonth: number;
+  evRevenueINRMonth: number;
+  marketplaceBookingsMonth: number;
+  marketplaceEarningsINRMonth: number;
+  totalViolationsMonth: number;
+  topViolationType: string;
 }
