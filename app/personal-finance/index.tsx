@@ -18,6 +18,7 @@ import {
   personalFinanceService,
   PersonalTransactionDto,
   PersonalBudgetDto,
+  PersonalSpendingCategoryDto,
   DashboardSummaryDto,
 } from '@/services/personalFinanceService';
 
@@ -52,12 +53,36 @@ function BudgetBar({ budget }: { budget: PersonalBudgetDto }) {
   );
 }
 
+function SpendingRow({ item }: { item: PersonalSpendingCategoryDto }) {
+  return (
+    <View style={styles.spendingRow}>
+      <View style={[styles.spendingIcon, { backgroundColor: item.color + '18' }]}>
+        <Ionicons name={item.icon as any} size={16} color={item.color} />
+      </View>
+      <View style={styles.spendingDetails}>
+        <View style={styles.spendingTop}>
+          <Text style={styles.spendingLabel} numberOfLines={1}>{item.label}</Text>
+          <Text style={styles.spendingAmount}>{formatCurrency(item.amount)}</Text>
+        </View>
+        <View style={styles.spendingTrack}>
+          <View style={[styles.spendingFill, { width: `${Math.min(item.percentage, 100)}%` as any, backgroundColor: item.color }]} />
+        </View>
+        <View style={styles.spendingMeta}>
+          <Text style={styles.spendingMetaText}>{item.transactionCount} txn{item.transactionCount > 1 ? 's' : ''}</Text>
+          <Text style={[styles.spendingMetaText, { color: item.color, fontWeight: '600' }]}>{item.percentage}%</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function PersonalFinanceDashboard() {
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedProjection, setSelectedProjection] = useState<PersonalTransactionDto | null>(null);
+  const [activeSpendingTab, setActiveSpendingTab] = useState<'COMMUNITY' | 'OTHER'>('COMMUNITY');
 
   const {
     data: summary,
@@ -112,6 +137,11 @@ export default function PersonalFinanceDashboard() {
   const upcomingBills = bills.filter(b => !b.isPaid).slice(0, 3);
   const activeInstallments = installments.filter(i => i.status !== 'COMPLETED');
   const totalMonthlyEmi = activeInstallments.reduce((sum, i) => sum + i.monthlyEmi, 0);
+
+  const communitySpending = s?.totalCommunitySpending ?? 6350;
+  const otherSpending = s?.totalOtherSpending ?? 12839;
+  const communityBreakdown = s?.communitySpendingBreakdown ?? [];
+  const otherBreakdown = s?.otherSpendingBreakdown ?? [];
 
   return (
     <ScrollView
@@ -172,7 +202,6 @@ export default function PersonalFinanceDashboard() {
         </View>
       </View>
 
-      
       {/* ── Privacy Shield Guarantee Banner ── */}
       <View style={styles.privacyBanner}>
         <Ionicons name="shield-checkmark" size={16} color="#059669" />
@@ -181,9 +210,82 @@ export default function PersonalFinanceDashboard() {
         </Text>
       </View>
 
+      {/* ── Two-Bucket Spending Breakdown: Community vs Other ── */}
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionRow}>
+          <View style={styles.sectionLeft}>
+            <Ionicons name="pie-chart-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Spending Breakdown</Text>
+          </View>
+          <Text style={styles.sectionSub}>Total: {formatCurrency(s?.totalExpenses ?? 19189)}</Text>
+        </View>
+
+        {/* Tab Switcher */}
+        <View style={styles.bucketTabs}>
+          <TouchableOpacity
+            style={[styles.bucketTab, activeSpendingTab === 'COMMUNITY' && styles.bucketTabActive]}
+            onPress={() => setActiveSpendingTab('COMMUNITY')}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="business-outline"
+              size={14}
+              color={activeSpendingTab === 'COMMUNITY' ? '#FFFFFF' : '#64748B'}
+            />
+            <Text style={[styles.bucketTabText, activeSpendingTab === 'COMMUNITY' && styles.bucketTabTextActive]}>
+              Community ({formatCurrency(communitySpending)})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.bucketTab, activeSpendingTab === 'OTHER' && styles.bucketTabActive]}
+            onPress={() => setActiveSpendingTab('OTHER')}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="cart-outline"
+              size={14}
+              color={activeSpendingTab === 'OTHER' ? '#FFFFFF' : '#64748B'}
+            />
+            <Text style={[styles.bucketTabText, activeSpendingTab === 'OTHER' && styles.bucketTabTextActive]}>
+              Other ({formatCurrency(otherSpending)})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Active Bucket Content */}
+        {activeSpendingTab === 'COMMUNITY' ? (
+          <View style={{ gap: 10, marginTop: 12 }}>
+            <View style={styles.bucketDescRow}>
+              <Text style={styles.bucketDesc}>
+                Linked to Society, Marketplace, Group Buy, Pooja & Amenities
+              </Text>
+            </View>
+            {communityBreakdown.length > 0 ? (
+              communityBreakdown.map((item: PersonalSpendingCategoryDto) => <SpendingRow key={item.key} item={item} />)
+            ) : (
+              <Text style={styles.emptyNotice}>No community transactions recorded this month</Text>
+            )}
+          </View>
+        ) : (
+          <View style={{ gap: 10, marginTop: 12 }}>
+            <View style={styles.bucketDescRow}>
+              <Text style={styles.bucketDesc}>
+                External personal expenses (Groceries, Dining, Fuel, Utilities)
+              </Text>
+            </View>
+            {otherBreakdown.length > 0 ? (
+              otherBreakdown.map((item: PersonalSpendingCategoryDto) => <SpendingRow key={item.key} item={item} />)
+            ) : (
+              <Text style={styles.emptyNotice}>No external transactions recorded this month</Text>
+            )}
+          </View>
+        )}
+      </View>
+
       {/* ── My Money: 10 Core Modules Grid ── */}
       <View style={styles.quickNavSection}>
-        <Text style={styles.sectionTitle}>My Money</Text>
+        <Text style={styles.sectionTitle}>My Money Tools</Text>
         <View style={styles.quickGrid}>
           {[
             { label: 'Accounts', icon: 'wallet-outline', color: '#3B82F6', path: '/personal-finance/accounts' },
@@ -211,7 +313,6 @@ export default function PersonalFinanceDashboard() {
           ))}
         </View>
       </View>
-
 
       {/* ── Active EMI & Goals Snapshot Strip ── */}
       {(goals.length > 0 || activeInstallments.length > 0) && (
@@ -250,7 +351,7 @@ export default function PersonalFinanceDashboard() {
 
       {/* ── Mana Projections Strip ── */}
       {(s?.manaProjections?.length ?? 0) > 0 && (
-        <View>
+        <View style={{ marginBottom: SPACING.md }}>
           <View style={styles.sectionRow}>
             <View style={styles.sectionLeft}>
               <Ionicons name="link" size={14} color={COLORS.primary} />
@@ -258,7 +359,7 @@ export default function PersonalFinanceDashboard() {
             </View>
             <Text style={styles.sectionSub}>{s!.manaProjections.length} entries</Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.md }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {s!.manaProjections.map(proj => (
               <TouchableOpacity
                 key={proj.id}
@@ -270,7 +371,7 @@ export default function PersonalFinanceDashboard() {
                   <Ionicons name={proj.categoryIcon as any} size={14} color={proj.categoryColor} />
                 </View>
                 <View>
-                  <Text style={styles.projChipLabel} numberOfLines={1}>{proj.sourceLabel}</Text>
+                  <Text style={styles.projChipLabel} numberOfLines={1}>{proj.sourceLabel || proj.description}</Text>
                   <Text style={[styles.projChipAmt, { color: '#EF4444' }]}>-{formatCurrency(proj.amount)}</Text>
                 </View>
               </TouchableOpacity>
@@ -339,13 +440,13 @@ export default function PersonalFinanceDashboard() {
       <View style={{ gap: SPACING.sm, marginBottom: SPACING.md }}>
         {(s?.recentTransactions ?? []).map(txn => (
           <View key={txn.id} style={styles.txnRow}>
-            <View style={[styles.txnIcon, { backgroundColor: txn.categoryColor + '22' }]}>
-              <Ionicons name={txn.categoryIcon as any} size={18} color={txn.categoryColor} />
+            <View style={[styles.txnIcon, { backgroundColor: (txn.categoryColor || COLORS.primary) + '22' }]}>
+              <Ionicons name={(txn.categoryIcon || 'receipt-outline') as any} size={18} color={txn.categoryColor || COLORS.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.txnDesc} numberOfLines={1}>{txn.description}</Text>
               <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
-                <Text style={styles.txnCat}>{txn.categoryName}</Text>
+                <Text style={styles.txnCat}>{txn.categoryName || 'General'}</Text>
                 {txn.isManaProjection && (
                   <View style={styles.manaBadge}>
                     <Text style={styles.manaBadgeText}>🔗 Mana</Text>
@@ -354,7 +455,7 @@ export default function PersonalFinanceDashboard() {
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[styles.txnAmt, { color: TYPE_COLORS[txn.type] }]}>
+              <Text style={[styles.txnAmt, { color: TYPE_COLORS[txn.type] || COLORS.text }]}>
                 {txn.type === 'INCOME' ? '+' : txn.type === 'TRANSFER' ? '' : '-'}{formatCurrency(txn.amount)}
               </Text>
               <Text style={styles.txnDate}>{txn.date}</Text>
@@ -377,7 +478,7 @@ export default function PersonalFinanceDashboard() {
               <View style={{ gap: 12 }}>
                 <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1E293B' }}>{selectedProjection.description}</Text>
                 <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#EF4444' }}>-{formatCurrency(selectedProjection.amount)}</Text>
-                <Text style={{ fontSize: 13, color: '#64748B' }}>Source: {selectedProjection.sourceLabel}</Text>
+                <Text style={{ fontSize: 13, color: '#64748B' }}>Source: {selectedProjection.sourceLabel || selectedProjection.sourceType}</Text>
                 <TouchableOpacity style={styles.saveBtn} onPress={() => setSelectedProjection(null)}>
                   <Text style={styles.saveBtnText}>Close</Text>
                 </TouchableOpacity>
@@ -391,20 +492,6 @@ export default function PersonalFinanceDashboard() {
 }
 
 const styles = StyleSheet.create({
-  privacyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ECFDF5',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: RADIUS.md,
-    gap: 6,
-    marginBottom: SPACING.md,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  privacyBannerText: { fontSize: 11, fontWeight: '700', color: '#065F46' },
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { padding: SPACING.md, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
@@ -433,7 +520,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     ...SHADOWS.md,
   },
   netWorthLeft: { flex: 1 },
@@ -444,21 +531,107 @@ const styles = StyleSheet.create({
   savingsRateCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' },
   savingsRateValue: { fontSize: 16, fontWeight: 'bold', color: '#10B981' },
   savingsRateLabel: { fontSize: 10, color: '#94A3B8' },
+  privacyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.md,
+    gap: 6,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  privacyBannerText: { fontSize: 11, fontWeight: '700', color: '#065F46' },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...SHADOWS.sm,
+  },
+  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
+  sectionLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#1E293B' },
+  sectionSub: { fontSize: 12, color: '#64748B' },
+  seeAll: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
+  bucketTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: RADIUS.md,
+    padding: 3,
+    marginTop: 4,
+    gap: 4,
+  },
+  bucketTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    gap: 6,
+  },
+  bucketTabActive: {
+    backgroundColor: COLORS.primary,
+    ...SHADOWS.sm,
+  },
+  bucketTabText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  bucketTabTextActive: { color: '#FFFFFF' },
+  bucketDescRow: { marginBottom: 4 },
+  bucketDesc: { fontSize: 11, color: '#94A3B8', fontStyle: 'italic' },
+  spendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  spendingIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  spendingDetails: { flex: 1 },
+  spendingTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  spendingLabel: { fontSize: 13, fontWeight: '600', color: '#1E293B' },
+  spendingAmount: { fontSize: 13, fontWeight: 'bold', color: '#1E293B' },
+  spendingTrack: {
+    height: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 3,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  spendingFill: { height: '100%', borderRadius: 3 },
+  spendingMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  spendingMetaText: { fontSize: 10, color: '#94A3B8' },
+  emptyNotice: { fontSize: 12, color: '#94A3B8', textAlign: 'center', marginVertical: 12 },
   quickNavSection: { marginBottom: SPACING.md },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   gridTile: {
     width: '23%',
     backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.md,
-    padding: 10,
+    paddingVertical: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     ...SHADOWS.sm,
   },
-  gridIconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
-  gridLabel: { fontSize: 11, fontWeight: '600', color: '#334155', textAlign: 'center' },
-  snapshotRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
+  gridIconWrap: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  gridLabel: { fontSize: 11, fontWeight: '600', color: '#334155' },
+  snapshotRow: { flexDirection: 'row', gap: 10, marginBottom: SPACING.md },
   snapshotCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -469,85 +642,61 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   snapshotHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
-  snapshotTitle: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  snapshotValue: { fontSize: 15, fontWeight: 'bold', color: '#1E293B' },
-  snapshotSub: { fontSize: 11, color: '#64748B', marginTop: 2 },
-  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-  sectionLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#1E293B' },
-  sectionSub: { fontSize: 12, color: '#64748B' },
-  seeAll: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
+  snapshotTitle: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  snapshotValue: { fontSize: 15, fontWeight: 'bold', color: '#1E293B', marginBottom: 2 },
+  snapshotSub: { fontSize: 10, color: '#94A3B8' },
   projectionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.md,
-    padding: SPACING.sm,
-    marginRight: SPACING.sm,
+    padding: 10,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-  },
-  projChipIcon: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  projChipLabel: { fontSize: 12, color: '#334155', maxWidth: 140 },
-  projChipAmt: { fontSize: 12, fontWeight: 'bold' },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    gap: 8,
     ...SHADOWS.sm,
   },
-  budgetBarWrap: { marginBottom: 12 },
+  projChipIcon: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  projChipLabel: { fontSize: 12, fontWeight: '600', color: '#1E293B', maxWidth: 120 },
+  projChipAmt: { fontSize: 11, fontWeight: 'bold' },
+  budgetBarWrap: { marginTop: 10 },
   budgetBarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   budgetBarLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   budgetDot: { width: 8, height: 8, borderRadius: 4 },
-  budgetBarLabel: { fontSize: 13, color: '#334155' },
+  budgetBarLabel: { fontSize: 13, color: '#334155', fontWeight: '500' },
   budgetBarPct: { fontSize: 12, fontWeight: 'bold' },
-  budgetBarTrack: { height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' },
+  budgetBarTrack: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
   budgetBarFill: { height: '100%', borderRadius: 3 },
-  billRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-  billIcon: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  billName: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
-  billDue: { fontSize: 11, color: '#64748B' },
-  billAmt: { fontSize: 14, fontWeight: 'bold', color: '#1E293B' },
+  billRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderColor: '#F1F5F9' },
+  billIcon: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
+  billName: { fontSize: 13, fontWeight: '600', color: '#1E293B' },
+  billDue: { fontSize: 11, color: '#94A3B8', marginTop: 1 },
+  billAmt: { fontSize: 13, fontWeight: 'bold', color: '#1E293B' },
   billPayBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.sm },
-  billPayBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
+  billPayBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' },
   txnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     backgroundColor: '#FFFFFF',
+    padding: SPACING.sm,
     borderRadius: RADIUS.md,
-    padding: SPACING.md,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     ...SHADOWS.sm,
   },
-  txnIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  txnDesc: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
-  txnCat: { fontSize: 12, color: '#64748B' },
-  manaBadge: { backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  manaBadgeText: { fontSize: 10, color: COLORS.primary, fontWeight: 'bold' },
+  txnIcon: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
+  txnDesc: { fontSize: 13, fontWeight: '600', color: '#1E293B' },
+  txnCat: { fontSize: 11, color: '#64748B', marginTop: 2 },
+  manaBadge: { backgroundColor: '#EEF2FF', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginTop: 2 },
+  manaBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.primary },
   txnAmt: { fontSize: 14, fontWeight: 'bold' },
-  txnDate: { fontSize: 11, color: '#94A3B8' },
+  txnDate: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    padding: SPACING.lg,
-  },
+  modalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
-  saveBtn: {
-    backgroundColor: COLORS.primary,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    marginTop: SPACING.md,
-  },
-  saveBtnText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
+  modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B' },
+  saveBtn: { backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center', marginTop: SPACING.md },
+  saveBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
 });

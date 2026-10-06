@@ -64,6 +64,17 @@ export interface CreateCategoryDto {
   parentId?: string;
 }
 
+
+export interface PersonalSpendingCategoryDto {
+  key: string;
+  label: string;
+  icon: string;
+  color: string;
+  amount: number;
+  percentage: number;
+  transactionCount: number;
+}
+
 export interface PersonalTransactionDto {
   id: string;
   type: TransactionType;
@@ -180,6 +191,10 @@ export interface DashboardSummaryDto {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
+  totalCommunitySpending?: number;
+  communitySpendingBreakdown?: PersonalSpendingCategoryDto[];
+  totalOtherSpending?: number;
+  otherSpendingBreakdown?: PersonalSpendingCategoryDto[];
   recentTransactions: PersonalTransactionDto[];
   manaProjections: PersonalTransactionDto[];
   budgetAlerts: PersonalBudgetDto[];
