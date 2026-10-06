@@ -1,30 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { VENDOR_COLORS } from '@/constants/vendorTheme';
 import { vendorService } from '@/services/vendorService';
 
 export default function CreateGroupDealScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    title?: string;
+    category?: string;
+    description?: string;
+    mrp?: string;
+    basePrice?: string;
+    moq?: string;
+    productId?: string;
+    variantId?: string;
+  }>();
   const queryClient = useQueryClient();
 
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Grocery');
-  const [description, setDescription] = useState('');
-  const [mrp, setMrp] = useState('');
-  const [basePrice, setBasePrice] = useState('');
-  const [moq, setMoq] = useState('');
+  const [title, setTitle] = useState(params.title || '');
+  const [category, setCategory] = useState(params.category || 'Grocery');
+  const [description, setDescription] = useState(params.description || '');
+  const [mrp, setMrp] = useState(params.mrp || '');
+  const [basePrice, setBasePrice] = useState(params.basePrice || '');
+  const [moq, setMoq] = useState(params.moq || '');
   const [pricingModel, setPricingModel] = useState<'THRESHOLD' | 'GUARANTEED' | 'TARGET_OR_CANCEL'>('THRESHOLD');
   const [pickupLocation, setPickupLocation] = useState('Clubhouse Ground Floor Desk');
   const [pickupDate, setPickupDate] = useState('2026-10-12');
   const [daysDuration, setDaysDuration] = useState('5');
+
+  useEffect(() => {
+    if (params.title) setTitle(params.title);
+    if (params.category) setCategory(params.category);
+    if (params.description) setDescription(params.description);
+    if (params.mrp) setMrp(params.mrp);
+    if (params.basePrice) setBasePrice(params.basePrice);
+    if (params.moq) setMoq(params.moq);
+  }, [params.title, params.category, params.description, params.mrp, params.basePrice, params.moq]);
 
   const createMutation = useMutation({
     mutationFn: (data: any) => vendorService.createGroupDeal(data),
@@ -68,7 +87,7 @@ export default function CreateGroupDealScreen() {
       fulfillmentType: 'BOTH',
       paymentType: 'FULL',
       priceTiers: [
-        { id: 't1', minQty: 1, maxQty: Math.floor(moqNum / 2), price: basePriceNum, label: `1?${Math.floor(moqNum / 2)} units`, isCurrentTier: true, isNextTier: false },
+        { id: 't1', minQty: 1, maxQty: Math.floor(moqNum / 2), price: basePriceNum, label: `1–${Math.floor(moqNum / 2)} units`, isCurrentTier: true, isNextTier: false },
         { id: 't2', minQty: Math.floor(moqNum / 2) + 1, maxQty: moqNum, price: Math.round(basePriceNum * 0.95), label: `${Math.floor(moqNum / 2) + 1}+ units`, isCurrentTier: false, isNextTier: true, unitsToUnlock: Math.floor(moqNum / 2) },
         { id: 't3', minQty: moqNum + 1, maxQty: null, price: Math.round(basePriceNum * 0.9), label: `${moqNum}+ units (Super Bulk)`, isCurrentTier: false, isNextTier: false, unitsToUnlock: moqNum },
       ],
@@ -89,6 +108,13 @@ export default function CreateGroupDealScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        {params.title && (
+          <View style={s.prefillBanner}>
+            <Ionicons name="checkmark-circle" size={18} color="#059669" />
+            <Text style={s.prefillBannerText}>Prefilled from My Store Catalog</Text>
+          </View>
+        )}
+
         {/* Basic Info */}
         <View style={s.card}>
           <Text style={s.sectionTitle}>Product & Category</Text>
@@ -133,7 +159,7 @@ export default function CreateGroupDealScreen() {
 
           <View style={s.formRow}>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>Retail MRP (?) *</Text>
+              <Text style={s.label}>Retail MRP (₹) *</Text>
               <TextInput
                 style={s.input}
                 placeholder="1000"
@@ -144,7 +170,7 @@ export default function CreateGroupDealScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>Starting Rate (?) *</Text>
+              <Text style={s.label}>Starting Rate (₹) *</Text>
               <TextInput
                 style={s.input}
                 placeholder="850"
@@ -156,86 +182,34 @@ export default function CreateGroupDealScreen() {
             </View>
           </View>
 
-          <View style={s.formRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.label}>Target MOQ (Units) *</Text>
-              <TextInput
-                style={s.input}
-                placeholder="50"
-                placeholderTextColor={COLORS.textMuted}
-                keyboardType="numeric"
-                value={moq}
-                onChangeText={setMoq}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.label}>Campaign Duration</Text>
-              <TextInput
-                style={s.input}
-                placeholder="5 days"
-                placeholderTextColor={COLORS.textMuted}
-                keyboardType="numeric"
-                value={daysDuration}
-                onChangeText={setDaysDuration}
-              />
-            </View>
-          </View>
-
-          <Text style={s.label}>Pricing Strategy</Text>
-          <View style={s.modelSelector}>
-            {[
-              { id: 'THRESHOLD', title: 'Threshold (Volume Tiers)', desc: 'Price drops as more units are locked' },
-              { id: 'GUARANTEED', title: 'Guaranteed Flat Rate', desc: 'Single fixed community price' },
-              { id: 'TARGET_OR_CANCEL', title: 'Target-or-Cancel', desc: 'Auto refund if MOQ not reached' },
-            ].map(m => (
-              <TouchableOpacity
-                key={m.id}
-                style={[s.modelCard, pricingModel === m.id && s.modelCardActive]}
-                onPress={() => setPricingModel(m.id as any)}
-              >
-                <View style={s.modelRadio}>
-                  {pricingModel === m.id && <View style={s.modelRadioInner} />}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.modelTitle}>{m.title}</Text>
-                  <Text style={s.modelDesc}>{m.desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Logistics */}
-        <View style={s.card}>
-          <Text style={s.sectionTitle}>Logistics & Pickup Handover</Text>
-
-          <Text style={s.label}>Community Pickup Point</Text>
+          <Text style={s.label}>Minimum Target Order Quantity (MOQ) *</Text>
           <TextInput
             style={s.input}
-            value={pickupLocation}
-            onChangeText={setPickupLocation}
-          />
-
-          <Text style={s.label}>Expected Dispatch Date</Text>
-          <TextInput
-            style={s.input}
-            value={pickupDate}
-            onChangeText={setPickupDate}
+            placeholder="e.g. 50 units"
+            placeholderTextColor={COLORS.textMuted}
+            keyboardType="numeric"
+            value={moq}
+            onChangeText={setMoq}
           />
         </View>
 
+        {/* Submit */}
         <TouchableOpacity
-          style={[s.submitBtn, createMutation.isPending && s.btnDisabled]}
+          style={[s.submitBtn, createMutation.isPending && { opacity: 0.6 }]}
           onPress={handleSubmit}
           disabled={createMutation.isPending}
-          activeOpacity={0.85}
         >
           {createMutation.isPending ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={s.submitBtnText}>?? Publish Group Deal</Text>
+            <>
+              <Ionicons name="rocket-outline" size={18} color="#fff" />
+              <Text style={s.submitBtnText}>Publish Group Deal</Text>
+            </>
           )}
         </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -243,85 +217,23 @@ export default function CreateGroupDealScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text },
-  content: { padding: 16, gap: 14, paddingBottom: 40 },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 10,
-    ...SHADOWS.sm,
-  },
-  sectionTitle: { fontSize: 14, fontWeight: '800', color: COLORS.text, textTransform: 'uppercase', letterSpacing: 0.5 },
-  label: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginTop: 4 },
-  input: {
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  textArea: { height: 72, textAlignVertical: 'top' },
-  formRow: { flexDirection: 'row', gap: 12 },
-  pillsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  pill: {
-    backgroundColor: COLORS.surfaceAlt,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  pillActive: { backgroundColor: VENDOR_COLORS.accent, borderColor: VENDOR_COLORS.accent },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: COLORS.surface },
+  backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  content: { padding: SPACING.md, gap: SPACING.md },
+  prefillBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0', padding: 12, borderRadius: RADIUS.lg },
+  prefillBannerText: { fontSize: 13, fontWeight: '700', color: '#059669' },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.md, gap: 10, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+  sectionTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text, marginBottom: 2 },
+  label: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, marginTop: 4 },
+  input: { backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: COLORS.text },
+  textArea: { minHeight: 70, textAlignVertical: 'top' },
+  formRow: { flexDirection: 'row', gap: 10 },
+  pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  pill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.full, backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border },
+  pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   pillText: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
-  pillTextActive: { color: '#FFFFFF', fontWeight: '700' },
-  modelSelector: { gap: 8 },
-  modelCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: COLORS.surfaceAlt,
-    padding: 12,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modelCardActive: { borderColor: VENDOR_COLORS.accent, backgroundColor: VENDOR_COLORS.accentLight },
-  modelRadio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: VENDOR_COLORS.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modelRadioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: VENDOR_COLORS.accent },
-  modelTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text },
-  modelDesc: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  submitBtn: {
-    backgroundColor: VENDOR_COLORS.accent,
-    borderRadius: RADIUS.lg,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  btnDisabled: { opacity: 0.6 },
-  submitBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
+  pillTextActive: { color: '#fff' },
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 14, marginTop: 4, ...SHADOWS.md },
+  submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
 });

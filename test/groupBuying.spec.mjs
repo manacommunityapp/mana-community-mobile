@@ -299,3 +299,68 @@ describe('Mana Group Buy - Vendor Settlement & Escrow Deductions', () => {
     assert.strictEqual(payoutStatus, 'ESCROW_HOLD');
   });
 });
+
+
+describe('Mana Vendor Commerce & 10-State Inventory Engine', () => {
+  const sampleVariant = {
+    sku: 'ATT-10KG-01',
+    mrp: 680,
+    vendorCost: 510,
+    defaultCommunityPrice: 560,
+    availableQty: 240,
+    reservedQty: 0,
+    committedQty: 0,
+    allocatedQty: 0,
+  };
+
+  function reserveInventory(variant, qty) {
+    if (variant.availableQty < qty) {
+      throw new Error('Insufficient available stock');
+    }
+    variant.availableQty -= qty;
+    variant.reservedQty += qty;
+    return { success: true, available: variant.availableQty, reserved: variant.reservedQty };
+  }
+
+  function commitInventory(variant, qty) {
+    if (variant.reservedQty < qty) {
+      throw new Error('Cannot commit unreserved stock');
+    }
+    variant.reservedQty -= qty;
+    variant.committedQty += qty;
+    return { success: true, reserved: variant.reservedQty, committed: variant.committedQty };
+  }
+
+  function allocateInventory(variant, qty) {
+    if (variant.committedQty < qty) {
+      throw new Error('Cannot allocate uncommitted stock');
+    }
+    variant.committedQty -= qty;
+    variant.allocatedQty += qty;
+    return { success: true, committed: variant.committedQty, allocated: variant.allocatedQty };
+  }
+
+  test('Should transition stock safely through AVAILABLE -> RESERVED -> COMMITTED -> ALLOCATED', () => {
+    const v = { ...sampleVariant };
+    
+    // 1. Resident initiates checkout for 20 units
+    const r1 = reserveInventory(v, 20);
+    assert.strictEqual(r1.available, 220);
+    assert.strictEqual(r1.reserved, 20);
+
+    // 2. Payment/Order confirmed -> Move to COMMITTED
+    const r2 = commitInventory(v, 20);
+    assert.strictEqual(r2.reserved, 0);
+    assert.strictEqual(r2.committed, 20);
+
+    // 3. Deal target met, batch packed -> Move to ALLOCATED for dispatch
+    const r3 = allocateInventory(v, 20);
+    assert.strictEqual(r3.committed, 0);
+    assert.strictEqual(r3.allocated, 20);
+  });
+
+  test('Should reject stock reservation exceeding available inventory', () => {
+    const v = { ...sampleVariant };
+    assert.throws(() => reserveInventory(v, 300), /Insufficient available stock/);
+  });
+});

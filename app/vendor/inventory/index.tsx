@@ -28,8 +28,8 @@ export default function VendorInventoryScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await refetch(); setRefreshing(false); }} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
       >
         <View style={s.heroCard}>
-          <Text style={s.heroTitle}>Multi-State Inventory Ledger</Text>
-          <Text style={s.heroSub}>Pessimistic locking prevents stock overselling during flash resident checkouts.</Text>
+          <Text style={s.heroTitle}>10-State Transactional Inventory</Text>
+          <Text style={s.heroSub}>Pessimistic locking reserves stock at checkout before group order finalization.</Text>
           {stats && (
             <View style={s.statsGrid}>
               <View style={s.statBox}><Text style={s.statNum}>{stats.totalInventoryUnits}</Text><Text style={s.statLabel}>Available</Text></View>
@@ -41,23 +41,48 @@ export default function VendorInventoryScreen() {
           )}
         </View>
 
-        <Text style={s.sectionTitle}>Variant Stock Levels</Text>
+        <Text style={s.sectionTitle}>Variant Stock Breakdown (10 Lifecycle States)</Text>
 
         {products.map(p => (
           <View key={p.id} style={s.card}>
             <Text style={s.prodName}>{p.name}</Text>
-            {p.variants.map(v => (
-              <View key={v.id} style={s.variantRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.vTitle}>{v.variantName} ({v.packSize})</Text>
-                  <Text style={s.sku}>SKU: {v.sku}</Text>
+            {p.variants.map(v => {
+              const b = v.inventoryBreakdown || {
+                available: v.availableQty,
+                reserved: v.reservedQty,
+                committed: v.committedQty,
+                allocated: 0,
+                ready: 0,
+                dispatched: 0,
+                delivered: 0,
+                damaged: 0,
+                expired: 0,
+                cancelled: 0,
+              };
+              return (
+                <View key={v.id} style={s.variantContainer}>
+                  <View style={s.variantHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.vTitle}>{v.variantName} ({v.packSize})</Text>
+                      <Text style={s.sku}>SKU: {v.sku}</Text>
+                    </View>
+                    <Text style={s.availText}>{v.availableQty} Avail</Text>
+                  </View>
+
+                  {/* 10-State Pills Matrix */}
+                  <View style={s.statesMatrix}>
+                    <View style={[s.stateChip, { backgroundColor: '#ECFDF5' }]}><Text style={[s.stateNum, { color: '#059669' }]}>{b.available}</Text><Text style={s.stateLbl}>AVAILABLE</Text></View>
+                    <View style={[s.stateChip, { backgroundColor: '#FEF3C7' }]}><Text style={[s.stateNum, { color: '#D97706' }]}>{b.reserved}</Text><Text style={s.stateLbl}>RESERVED</Text></View>
+                    <View style={[s.stateChip, { backgroundColor: '#EEF2FF' }]}><Text style={[s.stateNum, { color: '#4F46E5' }]}>{b.committed}</Text><Text style={s.stateLbl}>COMMITTED</Text></View>
+                    <View style={[s.stateChip, { backgroundColor: '#F0FDF4' }]}><Text style={[s.stateNum, { color: '#16A34A' }]}>{b.allocated}</Text><Text style={s.stateLbl}>ALLOCATED</Text></View>
+                    <View style={[s.stateChip, { backgroundColor: '#E0F2FE' }]}><Text style={[s.stateNum, { color: '#0284C7' }]}>{b.ready}</Text><Text style={s.stateLbl}>READY</Text></View>
+                    <View style={[s.stateChip, { backgroundColor: '#F3E8FF' }]}><Text style={[s.stateNum, { color: '#7C3AED' }]}>{b.dispatched}</Text><Text style={s.stateLbl}>DISPATCHED</Text></View>
+                    <View style={[s.stateChip, { backgroundColor: '#DCFCE7' }]}><Text style={[s.stateNum, { color: '#15803D' }]}>{b.delivered}</Text><Text style={s.stateLbl}>DELIVERED</Text></View>
+                    <View style={[s.stateChip, { backgroundColor: '#FEE2E2' }]}><Text style={[s.stateNum, { color: '#DC2626' }]}>{b.damaged}</Text><Text style={s.stateLbl}>DAMAGED</Text></View>
+                  </View>
                 </View>
-                <View style={s.stateCol}>
-                  <Text style={s.availText}>{v.availableQty} Avail</Text>
-                  <Text style={s.resText}>{v.reservedQty} Rsvd · {v.committedQty} Cmt</Text>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         ))}
 
@@ -79,12 +104,15 @@ const s = StyleSheet.create({
   statLabel: { fontSize: 11, color: COLORS.textMuted },
   statDiv: { width: 1, height: 28, backgroundColor: COLORS.border },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, gap: 10, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, gap: 12, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
   prodName: { fontSize: 15, fontWeight: '800', color: COLORS.text },
-  variantRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md, padding: 10 },
+  variantContainer: { backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg, padding: 12, gap: 10 },
+  variantHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   vTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text },
   sku: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  stateCol: { alignItems: 'flex-end' },
   availText: { fontSize: 14, fontWeight: '800', color: '#059669' },
-  resText: { fontSize: 11, color: '#D97706', marginTop: 2 },
+  statesMatrix: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  stateChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignItems: 'center', minWidth: 68 },
+  stateNum: { fontSize: 12, fontWeight: '800' },
+  stateLbl: { fontSize: 9, fontWeight: '700', color: COLORS.textMuted, marginTop: 1 },
 });

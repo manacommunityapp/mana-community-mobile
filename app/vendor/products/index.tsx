@@ -30,6 +30,23 @@ export default function VendorProductsScreen() {
 
   const filtered = products.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.brand && p.brand.toLowerCase().includes(search.toLowerCase())));
 
+  const handleCreateGroupBuy = (product: VendorProductDto, variantIndex = 0) => {
+    const variant = product.variants[variantIndex] || product.variants[0];
+    router.push({
+      pathname: '/vendor/deals/create',
+      params: {
+        title: `${product.name} (${variant.packSize})`,
+        category: product.category || 'Grocery',
+        description: product.description || '',
+        mrp: String(variant.mrp),
+        basePrice: String(variant.defaultCommunityPrice),
+        moq: String(Math.max(20, Math.min(variant.availableQty, 100))),
+        productId: product.id,
+        variantId: variant.id,
+      },
+    } as any);
+  };
+
   return (
     <>
       <Stack.Screen options={{ title: 'My Product Catalog', headerBackTitle: 'Back' }} />
@@ -83,7 +100,7 @@ export default function VendorProductsScreen() {
 
               <Text style={s.variantTitle}>Variants ({product.variants.length})</Text>
               <View style={s.variantList}>
-                {product.variants.map(v => (
+                {product.variants.map((v, vIdx) => (
                   <View key={v.id} style={s.variantRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.vName}>{v.variantName} <Text style={s.vSku}>({v.sku})</Text></Text>
@@ -100,11 +117,11 @@ export default function VendorProductsScreen() {
               <View style={s.cardActions}>
                 <TouchableOpacity
                   style={s.createDealBtn}
-                  onPress={() => router.push('/vendor/deals/create' as any)}
+                  onPress={() => handleCreateGroupBuy(product, 0)}
                   activeOpacity={0.85}
                 >
                   <Ionicons name="flame-outline" size={15} color="#fff" />
-                  <Text style={s.createDealText}>Create Group Deal</Text>
+                  <Text style={s.createDealText}>Create Group Buy</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={s.inventoryBtn}
