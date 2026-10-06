@@ -103,6 +103,23 @@ export default function ReportsScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ── Trend Insight Banner ── */}
+      {report?.trendInsightText ? (
+        <View style={styles.trendCard}>
+          <View style={[styles.trendIconWrap, { backgroundColor: (report.expenseChangePercentage ?? 0) > 0 ? '#FEE2E2' : '#DCFCE7' }]}>
+            <Ionicons
+              name={(report.expenseChangePercentage ?? 0) > 0 ? 'trending-up' : 'trending-down'}
+              size={18}
+              color={(report.expenseChangePercentage ?? 0) > 0 ? '#DC2626' : '#16A34A'}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.trendTitle}>Smart Spending Insight</Text>
+            <Text style={styles.trendText}>{report.trendInsightText}</Text>
+          </View>
+        </View>
+      ) : null}
+
       {/* ── Summary Card ── */}
       <View style={styles.summaryCard}>
         <Text style={styles.summaryPeriod}>{report?.label}</Text>
@@ -279,4 +296,20 @@ const styles = StyleSheet.create({
   topCatPct: { fontSize: 11, color: COLORS.textMuted, width: 30, textAlign: 'right', fontFamily: 'DMSans-Regular' },
   topCatBarTrack: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
   topCatBarFill: { height: 6, borderRadius: 3 },
+
+  trendCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...SHADOWS.sm,
+  },
+  trendIconWrap: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  trendTitle: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  trendText: { fontSize: 12, color: '#64748B', marginTop: 1 },
 });

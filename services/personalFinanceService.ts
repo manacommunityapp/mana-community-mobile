@@ -223,6 +223,10 @@ export interface ReportPeriodDto {
   totalIncome: number;
   totalExpenses: number;
   netSavings: number;
+  savingsRate?: number;
+  previousPeriodExpenses?: number;
+  expenseChangePercentage?: number;
+  trendInsightText?: string;
   topCategories: TopCategoryDto[];
   monthlyBreakdown: MonthlyBreakdownDto[];
 }
