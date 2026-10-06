@@ -25,6 +25,7 @@ import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
 import { setupGlobalFonts } from '@/utils/globalFonts';
 import { initSentry, setUser, clearUser } from '@/utils/sentry';
 import { offlineSyncService } from '@/services/offlineSyncService';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { getPortalForRole } from '@/hooks/useRoleSwitcher';
 
 SplashScreen.preventAutoHideAsync();
@@ -47,6 +48,7 @@ function AuthGuard() {
   usePushNotifications(isAuthenticated && !isPending);
   useIdleTimeout(isAuthenticated && !isPending, logout);
   useDeviceSecurity();
+  useRealtimeSync(isAuthenticated && !isPending);
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {

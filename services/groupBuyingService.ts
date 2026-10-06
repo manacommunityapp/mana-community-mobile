@@ -1,3 +1,4 @@
+import api from './apiClient';
 import {
   GroupDeal,
   GroupOrder,
@@ -391,6 +392,73 @@ let MOCK_BUY_AGAIN: BuyAgainSuggestion[] = [
 
 export const groupBuyingService = {
   getDeals: async (filters?: any): Promise<GroupDeal[]> => {
+    try {
+      const res = await api.get<any[]>('/commerce/products', { params: { channel: 'GROUP_BUYING' } });
+      if (res.data && res.data.length > 0) {
+        return res.data.map(p => ({
+          id: p.sku || String(p.id),
+          title: p.title,
+          description: p.description || '',
+          category: p.category || 'GROCERIES',
+          subCategory: p.category,
+          imageUrl: p.imageUrl || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80',
+          productName: p.title,
+          unit: 'Unit',
+          originalPrice: p.mrp || p.price * 1.2,
+          mrp: p.mrp || p.price * 1.2,
+          standardPrice: p.mrp || p.price * 1.2,
+          currentTierPrice: p.price,
+          currentPrice: p.price,
+          lowestPrice: p.price * 0.9,
+          targetQuantity: 100,
+          targetQty: 100,
+          currentQuantity: 50,
+          committedQty: 50,
+          minCommitmentQty: 1,
+          maxCommitmentQty: 10,
+          joinedCount: 25,
+          currentParticipants: 25,
+          savingsSoFar: 5000,
+          status: 'ACTIVE',
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+          deliveryDate: new Date(Date.now() + 9 * 86400000).toISOString(),
+          pickupLocation: 'Clubhouse Gate 2 Hub',
+          pickupPoint: 'Clubhouse Gate 2 Hub',
+          pickupDate: new Date(Date.now() + 9 * 86400000).toISOString().split('T')[0],
+          pickupSlots: ['Morning (9 AM - 12 PM)', 'Evening (4 PM - 7 PM)'],
+          vendorName: p.vendorName || 'Community Partner',
+          vendor: p.vendorName || 'Community Partner',
+          vendorRating: 4.8,
+          vendorVerified: true,
+          vendorId: p.vendorId || 'vendor-1',
+          pricingModel: 'THRESHOLD',
+          paymentType: 'ONLINE_ONLY',
+          fulfillmentType: 'GATE_PICKUP',
+          inventoryRemaining: 50,
+          moqLabel: 'Min 25 units for Tier 1',
+          nextTierUnitsNeeded: 25,
+          daysLeft: 7,
+          nextTierPrice: Math.round(p.price * 0.95),
+          dealEndsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+          isTrending: true,
+          isFestivalDeal: false,
+          isEndingSoon: false,
+          tiers: [
+            { id: 't1', minQuantity: 25, minQty: 25, discountPercent: 10, pricePerUnit: p.price, price: p.price, description: 'Base Tier', label: '25+ units', status: 'UNLOCKED' },
+            { id: 't2', minQuantity: 50, minQty: 50, discountPercent: 20, pricePerUnit: Math.round(p.price * 0.95), price: Math.round(p.price * 0.95), description: 'Bulk Tier', label: '50+ units', status: 'NEXT' }
+          ],
+          priceTiers: [
+            { id: 't1', minQuantity: 25, minQty: 25, discountPercent: 10, pricePerUnit: p.price, price: p.price, description: 'Base Tier', label: '25+ units', status: 'UNLOCKED' },
+            { id: 't2', minQuantity: 50, minQty: 50, discountPercent: 20, pricePerUnit: Math.round(p.price * 0.95), price: Math.round(p.price * 0.95), description: 'Bulk Tier', label: '50+ units', status: 'NEXT' }
+          ],
+          highlights: ['Direct Farm / Producer Sourcing', 'Verified Community Batch', 'Quality Assured'],
+          termsAndConditions: ['Community pickup at designated hub slot']
+        }));
+      }
+    } catch {
+      // fallback to mock
+    }
     let result = [...MOCK_DEALS];
     if (filters && typeof filters === 'object') {
       if (filters.category && filters.category !== 'ALL') {
@@ -473,11 +541,48 @@ export const groupBuyingService = {
   },
 
   getUserOrders: async (): Promise<GroupOrder[]> => {
+    try {
+      const res = await api.get<any[]>('/commerce/orders/my');
+      if (res.data && res.data.length > 0) {
+        return res.data.filter(o => o.channel === 'GROUP_BUYING').map(o => ({
+          id: o.orderNumber,
+          dealId: String(o.id),
+          dealTitle: o.items?.[0]?.title || 'Group Buy Item',
+          title: o.items?.[0]?.title || 'Group Buy Item',
+          productName: o.items?.[0]?.title || 'Group Buy Item',
+          imageUrl: o.items?.[0]?.imageUrl || o.items?.[0]?.thumbnailUrl || 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&auto=format&fit=crop&q=80',
+          quantity: o.items?.[0]?.quantity || 1,
+          qty: o.items?.[0]?.quantity || 1,
+          unit: 'Unit',
+          committedPrice: o.subtotalAmount || 850,
+          unitPrice: o.items?.[0]?.unitPrice || 850,
+          finalPrice: o.totalAmount || 850,
+          totalCommittedAmount: o.totalAmount || 850,
+          total: o.totalAmount || 850,
+          finalAmount: o.totalAmount || 850,
+          savings: o.discountAmount || 0,
+          status: o.status,
+          joinedAt: o.createdAt,
+          createdAt: o.createdAt,
+          pickupLocation: o.deliveryAddress || 'Clubhouse Gate 2 Hub',
+          pickupPoint: o.deliveryAddress || 'Clubhouse Gate 2 Hub',
+          pickupOtp: o.handoverOtp || '8421',
+          pickupQrCode: o.qrToken || `QR-${o.orderNumber}`,
+          qrCode: o.qrToken || `QR-${o.orderNumber}`,
+          pickupDate: o.pickupSlot || '2026-10-10',
+          pickupSlot: o.pickupSlot || 'Morning (9 AM - 12 PM)',
+          paymentMethod: o.paymentMethod || 'UPI',
+          paymentStatus: 'PAID',
+        }));
+      }
+    } catch {
+      // fallback
+    }
     return MOCK_ORDERS;
   },
 
   getMyOrders: async (): Promise<GroupOrder[]> => {
-    return MOCK_ORDERS;
+    return groupBuyingService.getUserOrders();
   },
 
   getOrderById: async (orderId: string): Promise<GroupOrder | null> => {
