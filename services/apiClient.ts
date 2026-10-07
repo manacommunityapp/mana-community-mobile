@@ -38,10 +38,40 @@ const api: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT on every request
+// ── Helper to normalize endpoint path and prevent double /api prefix ─
+export function normalizeApiPath(url?: string): string | undefined {
+  if (!url) return url;
+  let normalized = url.trim();
+  // Strip all redundant leading '/api/' or 'api/' prefixes
+  while (normalized.startsWith('/api/') || normalized.startsWith('api/')) {
+    if (normalized.startsWith('/api/')) {
+      normalized = normalized.substring(4);
+    } else if (normalized.startsWith('api/')) {
+      normalized = normalized.substring(3);
+    }
+  }
+  if (normalized === '/api' || normalized === 'api') {
+    return '';
+  }
+  if (normalized.length > 0 && !normalized.startsWith('/') && !normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+    normalized = '/' + normalized;
+  }
+  return normalized;
+}
+
+// Attach JWT on every request & normalize duplicate /api prefix
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await tokenStore.getAccess();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // Fix Double /api Prefix Bug:
+  // Since baseURL is configured as `${CONFIG.API_BASE_URL}/api`, any endpoint path passed with
+  // a leading '/api/' or 'api/' (e.g. '/api/v1/emergency/sos/trigger') results in '/api/api/...'.
+  // Strip the redundant leading '/api' from config.url so the resolved URL is always clean.
+  if (config.url) {
+    config.url = normalizeApiPath(config.url);
+  }
+
   return config;
 });
 

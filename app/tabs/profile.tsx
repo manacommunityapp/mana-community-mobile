@@ -639,6 +639,17 @@ export default function ProfileScreen() {
             iconColor="#0D9488"
             iconBg="#CCFBF1"
           />
+                    <MenuItem
+            icon="medkit-outline"
+            label="Mana Health"
+            sublabel="Doctors, appointments, records & emergency"
+            onPress={() => router.push('/health')}
+            iconColor="#0D9488"
+            iconBg="#CCFBF1"
+            badge="NEW"
+            badgeBg="#CCFBF1"
+            badgeColor="#0F766E"
+          />
           <MenuItem
             icon="construct-outline"
             label="Home Services & Techs"

@@ -6,11 +6,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS, SHADOWS, GRADIENTS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { tripsService, TripDto, TripBookingDto } from '@/services/tripsService';
 
 export default function TripsScreen() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -227,9 +229,21 @@ export default function TripsScreen() {
                   <Ionicons name="person-circle-outline" size={16} color={COLORS.textSecondary} />
                   <Text style={styles.passHostText}>Host: {b.host || 'Community Host'}</Text>
                 </View>
-                <View style={styles.passBtn}>
-                  <Ionicons name="qr-code" size={14} color="#FFFFFF" />
-                  <Text style={styles.passBtnText}>Digital Pass</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <TouchableOpacity
+                    style={styles.splitPassBtn}
+                    onPress={() => router.push({
+                      pathname: '/trips/split',
+                      params: { tripId: b.tripId, tripTitle: b.tripTitle || (b as any).title },
+                    })}
+                  >
+                    <Ionicons name="wallet-outline" size={13} color="#059669" />
+                    <Text style={styles.splitPassBtnText}>Split</Text>
+                  </TouchableOpacity>
+                  <View style={styles.passBtn}>
+                    <Ionicons name="qr-code" size={14} color="#FFFFFF" />
+                    <Text style={styles.passBtnText}>Digital Pass</Text>
+                  </View>
                 </View>
               </View>
             </TouchableOpacity>
@@ -333,17 +347,31 @@ export default function TripsScreen() {
                       <Text style={styles.priceNum}>₹{trip.pricePerPerson.toLocaleString()}</Text>
                     </View>
 
-                    <TouchableOpacity
-                      style={styles.bookNowBtn}
-                      onPress={() => {
-                        setSelectedTrip(trip);
-                        setPassengers(1);
-                      }}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.bookNowText}>Book Seats</Text>
-                      <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={styles.splitIconBtn}
+                        onPress={() => router.push({
+                          pathname: '/trips/split',
+                          params: { tripId: trip.id, tripTitle: trip.title },
+                        })}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="wallet-outline" size={14} color="#059669" />
+                        <Text style={styles.splitIconBtnText}>Split</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.bookNowBtn}
+                        onPress={() => {
+                          setSelectedTrip(trip);
+                          setPassengers(1);
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={styles.bookNowText}>Book Seats</Text>
+                        <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               );
@@ -1290,5 +1318,37 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Bold',
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  splitIconBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    backgroundColor: '#ECFDF5',
+  },
+  splitIconBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  splitPassBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    backgroundColor: '#ECFDF5',
+  },
+  splitPassBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
   },
 });

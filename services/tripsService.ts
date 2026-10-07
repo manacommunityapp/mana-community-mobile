@@ -64,6 +64,9 @@ export interface TripDto {
     phone: string;
     firstAidCertified: boolean;
   };
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyNotes?: string;
   includes?: string[];
   excludes?: string[];
   cancellationPolicy?: {
@@ -334,6 +337,9 @@ function normalizeTrip(t: any): TripDto {
     transportDetails: t.transportDetails,
     accommodationDetails: t.accommodationDetails,
     emergencyMarshal: t.emergencyMarshal,
+    emergencyContactName: t.emergencyContactName,
+    emergencyContactPhone: t.emergencyContactPhone,
+    emergencyNotes: t.emergencyNotes,
     includes: t.includes ?? [],
     excludes: t.excludes ?? [],
     cancellationPolicy: t.cancellationPolicy,
@@ -364,11 +370,11 @@ function normalizeBooking(b: any): TripBookingDto {
 
 export const tripsService = {
   /**
-   * GET /api/trips or /trips with hybrid fallback
+   * GET /trips or /trips with hybrid fallback
    */
   async getTrips(category?: string): Promise<TripDto[]> {
     try {
-      const res = await api.get('/api/trips', {
+      const res = await api.get('/trips', {
         params: category && category !== 'ALL' ? { category } : undefined,
       });
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
@@ -389,11 +395,11 @@ export const tripsService = {
   },
 
   /**
-   * GET /api/trips/{id}
+   * GET /trips/{id}
    */
   async getTrip(id: string): Promise<TripDto> {
     try {
-      const res = await api.get<TripDto>(`/api/trips/${id}`);
+      const res = await api.get<TripDto>(`/trips/${id}`);
       if (res.data) return normalizeTrip(res.data);
     } catch {}
 
@@ -410,7 +416,7 @@ export const tripsService = {
   },
 
   /**
-   * POST /api/trips/{id}/book
+   * POST /trips/{id}/book
    */
   async bookTrip(
     tripId: string,
@@ -422,7 +428,7 @@ export const tripsService = {
     },
   ): Promise<TripBookingDto> {
     try {
-      const res = await api.post<TripBookingDto>(`/api/trips/${tripId}/book`, bookingPayload);
+      const res = await api.post<TripBookingDto>(`/trips/${tripId}/book`, bookingPayload);
       return normalizeBooking(res.data);
     } catch {}
 
@@ -455,11 +461,11 @@ export const tripsService = {
   },
 
   /**
-   * GET /api/trips/my-bookings
+   * GET /trips/my-bookings
    */
   async getMyBookings(): Promise<TripBookingDto[]> {
     try {
-      const res = await api.get('/api/trips/my-bookings');
+      const res = await api.get('/trips/my-bookings');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       if (list.length > 0) return list.map(normalizeBooking);
     } catch {}
@@ -476,14 +482,14 @@ export const tripsService = {
   },
 
   /**
-   * POST /api/trips/bookings/{id}/cancel
+   * POST /trips/bookings/{id}/cancel
    */
   async cancelBooking(
     bookingId: string,
     reason?: string,
   ): Promise<{ refundAmount: number; penaltyDeducted: number }> {
     try {
-      const res = await api.post(`/api/trips/bookings/${bookingId}/cancel`, { reason });
+      const res = await api.post(`/trips/bookings/${bookingId}/cancel`, { reason });
       return res.data;
     } catch {}
 
@@ -499,11 +505,11 @@ export const tripsService = {
   },
 
   /**
-   * POST /api/trips
+   * POST /trips
    */
   async createTrip(payload: Partial<TripDto>): Promise<TripDto> {
     try {
-      const res = await api.post<TripDto>('/api/trips', payload);
+      const res = await api.post<TripDto>('/trips', payload);
       return normalizeTrip(res.data);
     } catch {}
 
@@ -521,6 +527,9 @@ export const tripsService = {
         totalSeats: payload.totalSeats || 20,
         bookedSeats: 1,
         pricePerPerson: payload.pricePerPerson || 1000,
+        emergencyContactName: payload.emergencyContactName,
+        emergencyContactPhone: payload.emergencyContactPhone,
+        emergencyNotes: payload.emergencyNotes,
         status: 'UPCOMING',
       };
       FALLBACK_TRIPS.unshift(newTrip);
@@ -529,11 +538,11 @@ export const tripsService = {
   },
 
   /**
-   * GET /api/trips/{id}/manifest
+   * GET /trips/{id}/manifest
    */
   async getManifest(tripId: string): Promise<TripBookingDto[]> {
     try {
-      const res = await api.get<TripBookingDto[]>(`/api/trips/${tripId}/manifest`);
+      const res = await api.get<TripBookingDto[]>(`/trips/${tripId}/manifest`);
       const list = Array.isArray(res.data) ? res.data : [];
       if (list.length > 0) return list.map(normalizeBooking);
     } catch {}
@@ -550,11 +559,11 @@ export const tripsService = {
   },
 
   /**
-   * POST /api/trips/bookings/{id}/check-in
+   * POST /trips/bookings/{id}/check-in
    */
   async checkInPassenger(bookingId: string): Promise<TripBookingDto> {
     try {
-      const res = await api.post<TripBookingDto>(`/api/trips/bookings/${bookingId}/check-in`);
+      const res = await api.post<TripBookingDto>(`/trips/bookings/${bookingId}/check-in`);
       return normalizeBooking(res.data);
     } catch {}
 
@@ -573,14 +582,14 @@ export const tripsService = {
   },
 
   /**
-   * POST /api/trips/{id}/reviews
+   * POST /trips/{id}/reviews
    */
   async submitReview(
     tripId: string,
     review: { rating: number; comment: string },
   ): Promise<void> {
     try {
-      await api.post(`/api/trips/${tripId}/reviews`, review);
+      await api.post(`/trips/${tripId}/reviews`, review);
       return;
     } catch {}
 

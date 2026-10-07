@@ -143,7 +143,7 @@ export const noticeService = {
     } catch {}
 
     try {
-      const res = await api.get('/api/notices', {
+      const res = await api.get('/notices', {
         params: category && category !== 'ALL' ? { category } : undefined,
       });
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
@@ -178,7 +178,7 @@ export const noticeService = {
     } catch {}
 
     try {
-      const res = await api.get(`/api/notices/${id}`);
+      const res = await api.get(`/notices/${id}`);
       if (res.data) {
         return normalizeNotice(res.data);
       }

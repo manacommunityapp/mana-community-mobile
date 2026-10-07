@@ -95,6 +95,8 @@ export interface GroupDeal {
   isAlmostUnlocked?: boolean;
   shortfallUnits?: number;
   currentParticipants?: number;
+  targetParticipants?: number;
+  dealStatus?: string;
   fulfillmentType?: string;
   moqLabel?: string;
   paymentType?: string;
@@ -113,7 +115,8 @@ export type OrderStatus =
   | 'PICKED_UP'
   | 'COMPLETED'
   | 'CANCELLED'
-  | 'REFUNDED';
+  | 'REFUNDED'
+  | 'DISPUTED';
 
 export interface AuthorizedCollector {
   id?: string;
@@ -155,18 +158,27 @@ export interface GroupOrder {
   pickupToken?: string;
   pickupSlot?: string;
   deliverySlot?: string;
+  deliveryAddress?: string;
+  deliveryPartnerName?: string;
+  deliveryPartnerPhone?: string;
+  trackingNumber?: string;
   pickupLocation?: string;
   pickupPoint?: string;
   pickupDate?: string;
   pickupOtp?: string;
+  deliveryOtp?: string;
   pickupQrCode?: string;
   qrCode?: string;
+  qrToken?: string;
   deliveredAt?: string;
   imageUrl?: string;
   unit?: string;
   rating?: number;
   reviewComment?: string;
   disputeReason?: string;
+  refundAmount?: number;
+  refundReason?: string;
+  tierPriceRefundAmount?: number;
 }
 
 export type GroupOrderDto = GroupOrder;

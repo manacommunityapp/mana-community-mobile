@@ -12,10 +12,11 @@ const STAGE_COLOR: Record<string, string> = {
   PROCUREMENT:'#e64a19',IN_PROGRESS:'#388e3c',QUALITY_CHECK:'#0097a7',COMPLETED:'#2e7d32',
 };
 
-function fmt(n: number) {
+function fmt(n?: number | null) {
+  if (n == null || isNaN(n)) return '₹0';
   if (n >= 1e7) return '₹' + (n / 1e7).toFixed(2) + 'Cr';
   if (n >= 1e5) return '₹' + (n / 1e5).toFixed(2) + 'L';
-  return '₹' + n.toLocaleString('en-IN');
+  return '₹' + (typeof n.toLocaleString === 'function' ? n.toLocaleString('en-IN') : String(n));
 }
 
 const TABS = ['Overview','Budget','Milestones','Vendor','Expenses','Documents','Approvals'];

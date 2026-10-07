@@ -37,11 +37,20 @@ export interface HomeServiceBookingDto {
   workerId?: string | number;
   providerName: string;
   category: string;
+  packageId?: string;
   date: string;
   timeSlot: string;
   status: 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   phone: string;
   issue: string;
+  slaHours?: number;
+  slaDueAt?: string;
+  slaBreached?: boolean;
+  completionOtp?: string;
+  completedAt?: string;
+  paymentStatus?: string;
+  paymentTransactionId?: string;
+  paidAt?: string;
   createdAt?: string;
 }
 
@@ -50,8 +59,10 @@ export interface HomeServiceBookingRequest {
   providerName?: string;
   phone?: string;
   category: string;
+  packageId?: string;
   slotDate: string;
   timeSlot: string;
+  slaHours?: number;
   requirementsNotes?: string;
 }
 
@@ -374,6 +385,7 @@ function mapBookingEntityToDto(b: any): HomeServiceBookingDto {
     workerId: b.workerId,
     providerName: b.providerName || b.workerName || 'Service Specialist',
     category: (b.categoryId || 'GENERAL').toUpperCase(),
+    packageId: b.packageId,
     date: b.startDate ? String(b.startDate) : 'Scheduled Date',
     timeSlot: b.startTime && b.endTime ? `${b.startTime} - ${b.endTime}` : 'Scheduled Time',
     status: (b.status === 'COMPLETED' || b.status === 'CANCELLED' || b.status === 'IN_PROGRESS')
@@ -381,6 +393,14 @@ function mapBookingEntityToDto(b: any): HomeServiceBookingDto {
       : 'CONFIRMED',
     phone: b.phone || '+919876543210',
     issue: b.notes || `${b.categoryId || 'Home'} Service Visit`,
+    slaHours: b.slaHours,
+    slaDueAt: b.slaDueAt,
+    slaBreached: b.slaBreached,
+    completionOtp: b.completionOtp,
+    completedAt: b.completedAt,
+    paymentStatus: b.paymentStatus || 'PENDING',
+    paymentTransactionId: b.paymentTransactionId,
+    paidAt: b.paidAt,
     createdAt: b.createdAt,
   };
 }
@@ -412,12 +432,18 @@ export const homeServicesService = {
    * POST /v1/home-services/bookings with hybrid fallback
    */
   async bookWorker(data: HomeServiceBookingRequest): Promise<{ bookingId: string; status: string }> {
+    const slaHours = data.slaHours || 24;
+    const slaDueAt = new Date(Date.now() + slaHours * 3600000).toISOString();
+    const completionOtp = String(Math.floor(1000 + Math.random() * 9000));
+
     try {
       const payload = {
         workerId: String(data.workerId),
         categoryId: data.category,
+        packageId: data.packageId,
         notes: data.requirementsNotes || `${data.category} request`,
         timeSlot: data.timeSlot,
+        slaHours,
       };
 
       const res = await api.post<{ id?: string; bookingId?: string; status?: string }>(
@@ -433,11 +459,17 @@ export const homeServicesService = {
         workerId: data.workerId,
         providerName: data.providerName || 'Service Provider',
         category: data.category,
+        packageId: data.packageId,
         date: data.slotDate || new Date().toISOString().split('T')[0],
         timeSlot: data.timeSlot,
         status: 'CONFIRMED',
         phone: data.phone || '+91 98451 23450',
         issue: data.requirementsNotes || `${data.category} Service Request`,
+        slaHours,
+        slaDueAt,
+        slaBreached: false,
+        completionOtp,
+        paymentStatus: 'PENDING',
         createdAt: new Date().toISOString(),
       });
 
@@ -452,11 +484,17 @@ export const homeServicesService = {
         workerId: data.workerId,
         providerName: data.providerName || worker?.name || 'Service Provider',
         category: data.category,
+        packageId: data.packageId,
         date: data.slotDate || new Date().toISOString().split('T')[0],
         timeSlot: data.timeSlot,
         status: 'CONFIRMED',
         phone: data.phone || worker?.phone || '+91 98451 23450',
         issue: data.requirementsNotes || `${data.category} Service Request`,
+        slaHours,
+        slaDueAt,
+        slaBreached: false,
+        completionOtp,
+        paymentStatus: 'PENDING',
         createdAt: new Date().toISOString(),
       });
 
@@ -606,5 +644,63 @@ export const homeServicesService = {
       found.status = 'CANCELLED';
     }
     return { success: true };
+  },
+
+  async completeBookingWithOtp(bookingId: string, otp: string): Promise<HomeServiceBookingDto> {
+    try {
+      const res = await api.post(`/v1/home-services/bookings/${bookingId}/complete-otp`, null, {
+        params: { otp },
+      });
+      if (res.data) return mapBookingEntityToDto(res.data);
+    } catch (err) {
+      secureLog.warn(`[homeServicesService] API complete-otp failed for ${bookingId}, updating local state`, err);
+    }
+
+    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
+    if (!found) throw new Error("Booking not found");
+    if (found.completionOtp && found.completionOtp.trim() !== otp.trim()) {
+      throw new Error("Invalid completion OTP");
+    }
+    found.status = 'COMPLETED';
+    found.completedAt = new Date().toISOString();
+    if (found.slaDueAt && new Date() > new Date(found.slaDueAt)) {
+      found.slaBreached = true;
+    }
+    return found;
+  },
+
+  async payBooking(bookingId: string, transactionId?: string): Promise<HomeServiceBookingDto> {
+    const txnId = transactionId || `TXN-${Date.now()}`;
+    try {
+      const res = await api.post(`/v1/home-services/bookings/${bookingId}/pay`, null, {
+        params: { transactionId: txnId },
+      });
+      if (res.data) return mapBookingEntityToDto(res.data);
+    } catch (err) {
+      secureLog.warn(`[homeServicesService] API pay failed for ${bookingId}, updating local state`, err);
+    }
+
+    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
+    if (!found) throw new Error("Booking not found");
+    found.paymentStatus = 'PAID';
+    found.paymentTransactionId = txnId;
+    found.paidAt = new Date().toISOString();
+    return found;
+  },
+
+  async updateWorkerVerification(workerId: string, verificationStatus: string): Promise<boolean> {
+    try {
+      await api.patch(`/v1/home-services/workers/${workerId}/verification`, null, {
+        params: { status: verificationStatus },
+      });
+      return true;
+    } catch (err) {
+      secureLog.warn(`[homeServicesService] API update verification failed for ${workerId}`, err);
+    }
+    const worker = FALLBACK_WORKERS.find(w => String(w.id) === String(workerId));
+    if (worker) {
+      worker.verified = verificationStatus === 'VERIFIED';
+    }
+    return true;
   },
 };

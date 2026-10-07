@@ -40,8 +40,13 @@ export default function DemandDetailScreen() {
   const handleUpvote = async () => {
     if (!demand) return;
     try {
-      const updated = await groupBuyingService.upvoteDemand(demand.id);
-      setDemand({ ...updated });
+      await groupBuyingService.upvoteDemand(demand.id);
+      setDemand(prev => prev ? {
+        ...prev,
+        upvotes: prev.hasUpvoted ? prev.upvotes - 1 : prev.upvotes + 1,
+        hasUpvoted: !prev.hasUpvoted,
+        interestedResidents: prev.hasUpvoted ? (prev.interestedResidents || 1) - 1 : (prev.interestedResidents || 0) + 1,
+      } : null);
     } catch (e) {
       Alert.alert('Error', 'Could not upvote demand');
     }

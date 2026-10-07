@@ -134,3 +134,59 @@ export interface FarmersMarketDay {
   highlights: string[];
   vendors: MarketVendor[];
 }
+
+export interface CommunityCoupon {
+  id: string;
+  code: string;
+  title: string;
+  description?: string;
+  businessId?: string;
+  businessName?: string;
+  discountType: 'PERCENTAGE' | 'FLAT_AMOUNT' | 'FREE_SERVICE';
+  discountValue: number;
+  minOrderAmount?: number;
+  maxDiscountAmount?: number;
+  validUntil?: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'EXHAUSTED' | 'DISABLED';
+}
+
+export interface CouponValidationResult {
+  valid: boolean;
+  couponId?: string;
+  code: string;
+  message: string;
+  discountValue?: number;
+  originalAmount: number;
+  calculatedDiscount: number;
+  finalPayableAmount: number;
+}
+
+export interface QrVerificationResult {
+  valid: boolean;
+  claimId?: string;
+  redemptionCode?: string;
+  counterPin?: string;
+  offerTitle?: string;
+  businessName?: string;
+  residentName?: string;
+  alreadyRedeemed: boolean;
+  isExpired: boolean;
+  message: string;
+}
+
+export interface SettlementBatch {
+  id: string;
+  settlementNumber: string;
+  businessId: string;
+  businessName: string;
+  periodStart: string;
+  periodEnd: string;
+  totalRedemptions: number;
+  grossSalesAmount: number;
+  totalCommissionAmount: number;
+  netPayoutAmount: number;
+  status: 'PENDING' | 'PROCESSING' | 'SETTLED' | 'FAILED';
+  payoutReference?: string;
+  settledAt?: string;
+}
+

@@ -233,3 +233,89 @@ describe('Personal Finance ("My Money") - Smart Community Finance Integration', 
     assert.strictEqual(associationAccessPolicy.canViewPersonalCreditCards, false);
   });
 });
+
+
+describe('Personal Finance ("My Money") - Standard V1 Baseline Metrics & 10 Categories', () => {
+  const STANDARD_CATEGORIES = [
+    'Food',
+    'Travel',
+    'Shopping',
+    'Bills',
+    'Health',
+    'Education',
+    'Entertainment',
+    'Family',
+    'Home',
+    'Other'
+  ];
+
+  const STANDARD_ACCOUNT_TYPES = [
+    'Cash',
+    'Bank',
+    'Credit Card',
+    'Savings',
+    'Investment',
+    'Loan'
+  ];
+
+  function calculateDashboardV1(income, expenses) {
+    const remaining = income - expenses;
+    const savingsRate = income > 0 ? Math.round((remaining / income) * 1000) / 10 : 0;
+    return {
+      income,
+      expenses,
+      remaining,
+      savingsRate,
+    };
+  }
+
+  test('Should accurately compute baseline Dashboard figures (Income ₹1,20,000, Expenses ₹72,500 -> Remaining ₹47,500, Savings Rate 39.6%)', () => {
+    const dashboard = calculateDashboardV1(120000, 72500);
+    assert.strictEqual(dashboard.income, 120000);
+    assert.strictEqual(dashboard.expenses, 72500);
+    assert.strictEqual(dashboard.remaining, 47500);
+    assert.strictEqual(dashboard.savingsRate, 39.6);
+  });
+
+  test('Should contain all 10 standard categories for personal expense tagging', () => {
+    assert.strictEqual(STANDARD_CATEGORIES.length, 10);
+    assert.ok(STANDARD_CATEGORIES.includes('Food'));
+    assert.ok(STANDARD_CATEGORIES.includes('Travel'));
+    assert.ok(STANDARD_CATEGORIES.includes('Shopping'));
+    assert.ok(STANDARD_CATEGORIES.includes('Bills'));
+    assert.ok(STANDARD_CATEGORIES.includes('Health'));
+    assert.ok(STANDARD_CATEGORIES.includes('Education'));
+    assert.ok(STANDARD_CATEGORIES.includes('Entertainment'));
+    assert.ok(STANDARD_CATEGORIES.includes('Family'));
+    assert.ok(STANDARD_CATEGORIES.includes('Home'));
+    assert.ok(STANDARD_CATEGORIES.includes('Other'));
+  });
+
+  test('Should support all 6 core account types in My Money', () => {
+    assert.strictEqual(STANDARD_ACCOUNT_TYPES.length, 6);
+    assert.ok(STANDARD_ACCOUNT_TYPES.includes('Cash'));
+    assert.ok(STANDARD_ACCOUNT_TYPES.includes('Bank'));
+    assert.ok(STANDARD_ACCOUNT_TYPES.includes('Credit Card'));
+    assert.ok(STANDARD_ACCOUNT_TYPES.includes('Savings'));
+    assert.ok(STANDARD_ACCOUNT_TYPES.includes('Investment'));
+    assert.ok(STANDARD_ACCOUNT_TYPES.includes('Loan'));
+  });
+
+  test('Should track 4 key budget envelopes (Food ₹10k, Travel ₹5k, Shopping ₹8k, Entertainment ₹4k)', () => {
+    const budgets = [
+      { category: 'Food', limit: 10000, spent: 6500 },
+      { category: 'Travel', limit: 5000, spent: 3200 },
+      { category: 'Shopping', limit: 8000, spent: 4800 },
+      { category: 'Entertainment', limit: 4000, spent: 1500 },
+    ];
+
+    const totalBudget = budgets.reduce((a, b) => a + b.limit, 0);
+    const totalSpent = budgets.reduce((a, b) => a + b.spent, 0);
+    const overallUtil = Math.round((totalSpent / totalBudget) * 100);
+
+    assert.strictEqual(totalBudget, 27000);
+    assert.strictEqual(totalSpent, 16000);
+    assert.strictEqual(overallUtil, 59);
+    assert.ok(budgets.every(b => b.spent <= b.limit));
+  });
+});

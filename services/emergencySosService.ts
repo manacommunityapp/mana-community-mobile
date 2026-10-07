@@ -8,10 +8,17 @@ export interface SosIncidentDto {
   residentName: string;
   residentPhone: string;
   emergencyType: 'MEDICAL' | 'FIRE' | 'INTRUDER' | 'LIFT_ENTRAPMENT' | 'GENERAL_PANIC';
-  status: 'ACTIVE' | 'RESPONDED' | 'DISPATCHED' | 'RESOLVED' | 'FALSE_ALARM';
+  status: 'ACTIVE' | 'RESPONDED' | 'DISPATCHED' | 'EN_ROUTE' | 'ON_SCENE' | 'RESOLVED' | 'FALSE_ALARM' | 'ESCALATED';
   slaExpiresAt: string;
   assignedGuardName?: string;
   assignedGuardPhone?: string;
+  etaMinutes?: number;
+  estimatedArrivalAt?: string;
+  enRouteAt?: string;
+  onSceneAt?: string;
+  resolvedAt?: string;
+  escalationLevel?: string;
+  slaBreached?: boolean;
   lockdownDirective?: 'LOCKDOWN_CLOSE_ALL' | 'EVACUATION_OPEN_ALL' | 'NORMAL_RESTORE';
   createdAt: string;
 }
@@ -44,6 +51,48 @@ export const emergencySosService = {
         lockdownDirective: emergencyType === 'FIRE' ? 'EVACUATION_OPEN_ALL' : 'LOCKDOWN_CLOSE_ALL',
         createdAt: new Date().toISOString(),
       };
+    }
+  },
+
+  async acknowledgeSos(incidentId: number, acknowledgedBy = 'Security Guard'): Promise<Partial<SosIncidentDto>> {
+    try {
+      const res = await api.post<SosIncidentDto>(`/api/v1/emergency/sos/${incidentId}/acknowledge`, { acknowledgedBy });
+      return res.data;
+    } catch {
+      return { id: incidentId, status: 'RESPONDED' };
+    }
+  },
+
+  async setResponderEta(incidentId: number, etaMinutes: number): Promise<Partial<SosIncidentDto>> {
+    try {
+      const res = await api.post<SosIncidentDto>(`/api/v1/emergency/sos/${incidentId}/eta`, { etaMinutes });
+      return res.data;
+    } catch {
+      return {
+        id: incidentId,
+        status: 'EN_ROUTE',
+        etaMinutes,
+        enRouteAt: new Date().toISOString(),
+        estimatedArrivalAt: new Date(Date.now() + etaMinutes * 60000).toISOString(),
+      };
+    }
+  },
+
+  async markOnScene(incidentId: number): Promise<Partial<SosIncidentDto>> {
+    try {
+      const res = await api.post<SosIncidentDto>(`/api/v1/emergency/sos/${incidentId}/on-scene`);
+      return res.data;
+    } catch {
+      return { id: incidentId, status: 'ON_SCENE', onSceneAt: new Date().toISOString() };
+    }
+  },
+
+  async escalateSos(incidentId: number, targetLevel: string, reason: string): Promise<Partial<SosIncidentDto>> {
+    try {
+      const res = await api.post<SosIncidentDto>(`/api/v1/emergency/sos/${incidentId}/escalate`, { targetLevel, reason });
+      return res.data;
+    } catch {
+      return { id: incidentId, status: 'ESCALATED', escalationLevel: targetLevel, slaBreached: true };
     }
   },
 

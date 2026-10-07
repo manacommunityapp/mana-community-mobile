@@ -7,6 +7,10 @@ import type {
   CommunityDemandPool,
   FarmersMarketDay,
   MarketVendor,
+  CommunityCoupon,
+  CouponValidationResult,
+  QrVerificationResult,
+  SettlementBatch,
 } from '@/types/offers';
 
 // ── Fallback Mock Datasets for High Reliability ─────────────────────────
@@ -705,5 +709,167 @@ export const offersService = {
       return;
     }
   },
+
+  // ── Coupons & Vouchers ──────────────────────────────────────────────
+  async getCoupons(_businessId?: string): Promise<CommunityCoupon[]> {
+    try {
+      const res = await api.get<CommunityCoupon[]>('/offers/coupons');
+      if (res.data && res.data.length) return res.data;
+    } catch {
+      // fallback
+    }
+    return [
+      {
+        id: 'coup-mob-1',
+        code: 'MANA20',
+        title: '20% Off Welcome Voucher',
+        discountType: 'PERCENTAGE',
+        discountValue: 20,
+        minOrderAmount: 300,
+        maxDiscountAmount: 150,
+        validUntil: 'Nov 30, 2026',
+        status: 'ACTIVE',
+      },
+      {
+        id: 'coup-mob-2',
+        code: 'FESTIVE100',
+        title: 'Flat ₹100 Off Festive Offer',
+        discountType: 'FLAT_AMOUNT',
+        discountValue: 100,
+        minOrderAmount: 500,
+        maxDiscountAmount: 100,
+        validUntil: 'Nov 15, 2026',
+        status: 'ACTIVE',
+      },
+    ];
+  },
+
+  async validateCoupon(code: string, orderAmount: number, residentUserId = 'user-sandeep'): Promise<CouponValidationResult> {
+    try {
+      const res = await api.post<CouponValidationResult>('/offers/coupons/validate', {
+        code,
+        orderAmount,
+        residentUserId,
+      });
+      return res.data;
+    } catch {
+      const clean = code.toUpperCase().trim();
+      if (clean === 'MANA20') {
+        if (orderAmount < 300) {
+          return {
+            valid: false,
+            code: clean,
+            message: 'Minimum order amount of ₹300 required',
+            originalAmount: orderAmount,
+            calculatedDiscount: 0,
+            finalPayableAmount: orderAmount,
+          };
+        }
+        const disc = Math.min(150, (orderAmount * 20) / 100);
+        return {
+          valid: true,
+          couponId: 'coup-mob-1',
+          code: clean,
+          message: 'Coupon applied successfully!',
+          discountValue: 20,
+          originalAmount: orderAmount,
+          calculatedDiscount: disc,
+          finalPayableAmount: orderAmount - disc,
+        };
+      }
+      if (clean === 'FESTIVE100') {
+        if (orderAmount < 500) {
+          return {
+            valid: false,
+            code: clean,
+            message: 'Minimum order amount of ₹500 required',
+            originalAmount: orderAmount,
+            calculatedDiscount: 0,
+            finalPayableAmount: orderAmount,
+          };
+        }
+        return {
+          valid: true,
+          couponId: 'coup-mob-2',
+          code: clean,
+          message: 'Flat ₹100 discount applied!',
+          discountValue: 100,
+          originalAmount: orderAmount,
+          calculatedDiscount: 100,
+          finalPayableAmount: orderAmount - 100,
+        };
+      }
+      return {
+        valid: false,
+        code: clean,
+        message: 'Invalid coupon code',
+        originalAmount: orderAmount,
+        calculatedDiscount: 0,
+        finalPayableAmount: orderAmount,
+      };
+    }
+  },
+
+  // ── QR Verification ──────────────────────────────────────────────────
+  async verifyQr(codeOrQr: string): Promise<QrVerificationResult> {
+    try {
+      const res = await api.post<QrVerificationResult>('/offers/deals/qr/verify', {
+        qrPayload: codeOrQr,
+        redemptionCode: codeOrQr,
+      });
+      return res.data;
+    } catch {
+      const clean = codeOrQr.toUpperCase().trim();
+      const claim = MOCK_CLAIMS.find((c) => c.voucherCode === clean || c.id === clean);
+      if (!claim) {
+        return {
+          valid: false,
+          message: 'Invalid QR code or redemption voucher',
+          alreadyRedeemed: false,
+          isExpired: false,
+        };
+      }
+      const alreadyRedeemed = claim.status === 'REDEEMED';
+      return {
+        valid: !alreadyRedeemed,
+        claimId: claim.id,
+        redemptionCode: claim.voucherCode,
+        counterPin: claim.counterPin,
+        offerTitle: claim.offerTitle,
+        businessName: claim.businessName,
+        alreadyRedeemed,
+        isExpired: false,
+        message: alreadyRedeemed ? 'Voucher already redeemed' : 'Valid resident voucher ready for redemption',
+      };
+    }
+  },
+
+  // ── Settlements ──────────────────────────────────────────────────────
+  async getSettlements(_businessId?: string): Promise<SettlementBatch[]> {
+    try {
+      const res = await api.get<SettlementBatch[]>('/offers/settlements');
+      if (res.data && res.data.length) return res.data;
+    } catch {
+      // fallback
+    }
+    return [
+      {
+        id: 'settle-mob-1',
+        settlementNumber: 'SETTLE-202610-001',
+        businessId: 'biz-1',
+        businessName: 'GreenFields Organic Hydroponics',
+        periodStart: '2026-09-01',
+        periodEnd: '2026-09-30',
+        totalRedemptions: 42,
+        grossSalesAmount: 25158,
+        totalCommissionAmount: 1258,
+        netPayoutAmount: 23900,
+        status: 'SETTLED',
+        payoutReference: 'UTR-HDFC-99120847',
+        settledAt: '2026-10-01T10:00:00Z',
+      },
+    ];
+  },
 };
+
 

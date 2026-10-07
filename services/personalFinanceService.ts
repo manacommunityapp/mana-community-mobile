@@ -231,6 +231,28 @@ export interface ReportPeriodDto {
   monthlyBreakdown: MonthlyBreakdownDto[];
 }
 
+
+export interface FinancialInsightDto {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  severity: 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
+  potentialSavings?: number;
+  category?: string;
+  actionLabel?: string;
+  actionRoute?: string;
+}
+
+export interface FinancialInsightsSummaryDto {
+  healthScore: number;
+  healthGrade: string;
+  summaryMessage: string;
+  monthlyProjectedSavings: number;
+  insights: FinancialInsightDto[];
+  metrics?: Record<string, any>;
+}
+
 // ─── P3 DTOs ─────────────────────────────────────────────────────────────────
 
 export interface PersonalInstallmentDto {
@@ -1332,4 +1354,49 @@ export const personalFinanceService = {
     if (live.length > 0) return live;
     return LOCAL_TRANSACTIONS.filter(t => t.isManaProjection);
   },
+
+  // ── Financial Insights ──────────────────────────────────────────────────────
+  getFinancialInsights: async (): Promise<FinancialInsightsSummaryDto> => {
+    return tryPaths<FinancialInsightsSummaryDto>(
+      ['/api/v1/personal-finance/insights', '/personal-finance/insights'],
+      () => ({
+        healthScore: 82,
+        healthGrade: 'A',
+        summaryMessage: 'Your financial health index is 82/100 (A). Solid savings habit maintained this month.',
+        monthlyProjectedSavings: 2400,
+        insights: [
+          {
+            id: 'ins-save-good',
+            type: 'HEALTH_SCORE',
+            title: 'High Savings Rate (42%)',
+            description: 'You are saving more than 30% of your income this month. Excellent financial cushion!',
+            severity: 'SUCCESS',
+            potentialSavings: 38000,
+            category: 'Savings',
+            actionLabel: 'View Goals',
+            actionRoute: '/personal-finance/goals',
+          },
+          {
+            id: 'ins-comm-group',
+            type: 'SAVINGS_OPPORTUNITY',
+            title: 'Save ~₹1,800 with Community Group Buying',
+            description: 'Your grocery spend is eligible for 20-30% volume discounts via Society Group Buying.',
+            severity: 'INFO',
+            potentialSavings: 1800,
+            category: 'Food & Groceries',
+            actionLabel: 'Explore Group Deals',
+            actionRoute: '/group-buying',
+          }
+        ],
+        metrics: {
+          savingsRate: 42,
+          monthlyIncome: 97000,
+          monthlyExpense: 19189,
+          netSavings: 77811,
+          activeBudgetsCount: 2,
+        }
+      })
+    );
+  },
+
 };
