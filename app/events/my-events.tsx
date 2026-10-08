@@ -6,13 +6,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { eventService } from '@/services/eventService';
-import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
+import { COLORS, GRADIENTS, SHADOWS, RADIUS, FONTS, SPACING } from '@/constants/config';
 import type { EventDto } from '@/types/api';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday, isPast } from 'date-fns';
 
 type Tab = 'registered' | 'created';
+
+const TYPE_COLORS: Record<string, string> = {
+  SPORTS: '#059669', SOCIAL: '#2563EB', CULTURAL: '#7C3AED',
+  WORKSHOP: '#4F46E5', RELIGIOUS: '#DC2626', MEETING: '#0891B2', COMMUNITY: '#4F46E5',
+};
 
 export default function MyEventsScreen() {
   const router = useRouter();
@@ -37,75 +43,122 @@ export default function MyEventsScreen() {
     try { return format(parseISO(dateStr), 'MMM d, yyyy'); } catch { return dateStr; }
   };
 
-  const renderEvent = ({ item }: { item: EventDto }) => (
-    <TouchableOpacity
-      style={s.card}
-      onPress={() => router.push(`/events/${item.id}`)}
-      activeOpacity={0.7}
-    >
-      <View style={s.cardLeft}>
-        <View style={[s.typeIcon, { backgroundColor: COLORS.primaryLight }]}>
-          <Ionicons name="calendar" size={20} color={COLORS.primary} />
+  const formatShortDate = (dateStr?: string) => {
+    if (!dateStr) return { day: '--', mon: '---' };
+    try {
+      const d = parseISO(dateStr);
+      return { day: format(d, 'dd'), mon: format(d, 'MMM').toUpperCase() };
+    } catch {
+      return { day: '--', mon: '---' };
+    }
+  };
+
+  const renderEvent = ({ item }: { item: EventDto }) => {
+    const color = TYPE_COLORS[item.type] ?? COLORS.primary;
+    const { day, mon } = formatShortDate(item.startDate);
+    const eventIsToday = item.startDate ? isToday(parseISO(item.startDate)) : false;
+    const eventIsPast = item.startDate ? isPast(parseISO(item.startDate)) : false;
+
+    return (
+      <TouchableOpacity
+        style={[s.card, eventIsPast && item.status !== 'CANCELLED' && s.cardPast]}
+        onPress={() => router.push(`/events/${item.id}`)}
+        activeOpacity={0.7}
+      >
+        {/* Mini date */}
+        <View style={[s.miniDate, { backgroundColor: color + '14' }]}>
+          <Text style={[s.miniDateDay, { color }]}>{day}</Text>
+          <Text style={[s.miniDateMon, { color: color + 'AA' }]}>{mon}</Text>
+          {eventIsToday && <View style={[s.miniTodayDot, { backgroundColor: color }]} />}
         </View>
-      </View>
-      <View style={s.cardContent}>
-        <Text style={s.cardTitle} numberOfLines={1}>{item.title}</Text>
-        <View style={s.cardMeta}>
-          <Ionicons name="time-outline" size={14} color={COLORS.textMuted} />
-          <Text style={s.cardMetaText}>{formatDate(item.startDate)}</Text>
-        </View>
-        {(item.venue || item.location) && (
-          <View style={s.cardMeta}>
-            <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
-            <Text style={s.cardMetaText} numberOfLines={1}>{item.venue || item.location}</Text>
-          </View>
-        )}
-      </View>
-      <View style={s.cardRight}>
-        {item.status && (
-          <View style={[s.statusBadge, item.status === 'CANCELLED' && { backgroundColor: COLORS.errorLight }]}>
-            <Text style={[s.statusText, item.status === 'CANCELLED' && { color: COLORS.error }]}>
-              {item.status === 'UPCOMING' ? 'Upcoming' : item.status === 'ONGOING' ? 'Live' : item.status === 'CANCELLED' ? 'Cancelled' : item.status}
+
+        {/* Content */}
+        <View style={s.cardContent}>
+          <View style={s.cardTopRow}>
+            <Text style={[s.cardTitle, eventIsPast && s.cardTitlePast]} numberOfLines={1}>
+              {item.title}
             </Text>
+            {item.status && (
+              <View style={[
+                s.statusBadge,
+                item.status === 'CANCELLED' && { backgroundColor: '#FEF2F2' },
+                item.status === 'ONGOING' && { backgroundColor: '#ECFDF5' },
+                item.status === 'COMPLETED' && { backgroundColor: COLORS.surfaceAlt },
+              ]}>
+                <Text style={[
+                  s.statusText,
+                  item.status === 'CANCELLED' && { color: COLORS.error },
+                  item.status === 'ONGOING' && { color: '#059669' },
+                  item.status === 'COMPLETED' && { color: COLORS.textMuted },
+                ]}>
+                  {item.status === 'UPCOMING' ? 'Upcoming' : item.status === 'ONGOING' ? 'Live' : item.status === 'CANCELLED' ? 'Cancelled' : item.status === 'COMPLETED' ? 'Done' : item.status}
+                </Text>
+              </View>
+            )}
           </View>
-        )}
-        <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-      </View>
-    </TouchableOpacity>
-  );
+          <View style={s.cardMetaRow}>
+            {(item.venue || item.location) && (
+              <>
+                <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
+                <Text style={s.cardMetaText} numberOfLines={1}>{item.venue || item.location}</Text>
+                <View style={s.metaDot} />
+              </>
+            )}
+            <Ionicons name="people-outline" size={12} color={COLORS.textMuted} />
+            <Text style={s.cardMetaText}>{item.registrationCount ?? item.attendees ?? 0} going</Text>
+          </View>
+        </View>
+
+        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={{ marginLeft: 4 }} />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
+      {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={8}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+        <TouchableOpacity onPress={() => router.back()} style={s.navBtn} hitSlop={8}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>My Events</Text>
-        <TouchableOpacity onPress={() => router.push('/events/create')} style={s.backBtn} hitSlop={8}>
-          <Ionicons name="add" size={22} color={COLORS.primary} />
+        <TouchableOpacity onPress={() => router.push('/events/create')} style={s.navBtn} hitSlop={8}>
+          <Ionicons name="add" size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Tabs */}
-      <View style={s.tabs}>
-        <TouchableOpacity
-          style={[s.tab, tab === 'registered' && s.tabActive]}
-          onPress={() => setTab('registered')}
-        >
-          <Ionicons name="checkmark-circle-outline" size={16} color={tab === 'registered' ? COLORS.primary : COLORS.textMuted} />
-          <Text style={[s.tabText, tab === 'registered' && s.tabTextActive]}>Registered</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.tab, tab === 'created' && s.tabActive]}
-          onPress={() => setTab('created')}
-        >
-          <Ionicons name="create-outline" size={16} color={tab === 'created' ? COLORS.primary : COLORS.textMuted} />
-          <Text style={[s.tabText, tab === 'created' && s.tabTextActive]}>Created by Me</Text>
-        </TouchableOpacity>
+      <View style={s.tabBar}>
+        {(['registered', 'created'] as Tab[]).map(t => {
+          const active = tab === t;
+          const count = t === 'registered' ? registeredEvents.length : createdEvents.length;
+          return (
+            <TouchableOpacity
+              key={t}
+              style={[s.tab, active && s.tabActive]}
+              onPress={() => setTab(t)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={t === 'registered' ? 'checkmark-circle-outline' : 'create-outline'}
+                size={16}
+                color={active ? COLORS.primary : COLORS.textMuted}
+              />
+              <Text style={[s.tabText, active && s.tabTextActive]}>
+                {t === 'registered' ? 'Registered' : 'Created'}
+              </Text>
+              <View style={[s.tabCount, active && s.tabCountActive]}>
+                <Text style={[s.tabCountText, active && s.tabCountTextActive]}>{count}</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 60 }} color={COLORS.primary} size="large" />
+        <View style={s.loadingWrap}>
+          <ActivityIndicator color={COLORS.primary} size="large" />
+        </View>
       ) : (
         <FlatList
           data={events}
@@ -116,15 +169,21 @@ export default function MyEventsScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Ionicons name="calendar-outline" size={48} color={COLORS.textMuted} />
+              <LinearGradient colors={[COLORS.primaryLight, '#fff']} style={s.emptyCircle}>
+                <Ionicons name={tab === 'registered' ? 'ticket-outline' : 'create-outline'} size={36} color={COLORS.primary} />
+              </LinearGradient>
               <Text style={s.emptyTitle}>No events yet</Text>
               <Text style={s.emptyDesc}>
-                {tab === 'registered' ? "You haven't registered for any events." : "You haven't created any events yet."}
+                {tab === 'registered'
+                  ? "Events you register for will show up here."
+                  : "Events you create will appear here."}
               </Text>
               {tab === 'created' && (
-                <TouchableOpacity style={s.emptyBtn} onPress={() => router.push('/events/create')}>
-                  <Ionicons name="add-circle" size={18} color="#fff" />
-                  <Text style={s.emptyBtnText}>Create Event</Text>
+                <TouchableOpacity style={s.emptyBtnWrap} onPress={() => router.push('/events/create')}>
+                  <LinearGradient colors={GRADIENTS.primary} style={s.emptyBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                    <Ionicons name="add-circle" size={18} color="#fff" />
+                    <Text style={s.emptyBtnText}>Create Event</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               )}
             </View>
@@ -142,40 +201,74 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
     backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Outfit-SemiBold', fontWeight: '600', color: COLORS.text },
-  tabs: {
+  navBtn: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  headerTitle: {
+    fontSize: 18, fontWeight: '700', color: COLORS.text,
+    fontFamily: FONTS.displayBold, letterSpacing: -0.3,
+  },
+
+  // Tabs
+  tabBar: {
     flexDirection: 'row', backgroundColor: COLORS.surface,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingHorizontal: 16,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.lg,
   },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent',
+    paddingVertical: 12, borderBottomWidth: 2.5, borderBottomColor: 'transparent',
   },
   tabActive: { borderBottomColor: COLORS.primary },
-  tabText: { fontSize: 14, fontWeight: '500', color: COLORS.textMuted },
-  tabTextActive: { color: COLORS.primary, fontWeight: '600' },
-  list: { padding: 16, gap: 10 },
+  tabText: { fontSize: 13, fontWeight: '500', color: COLORS.textMuted, fontFamily: FONTS.medium },
+  tabTextActive: { color: COLORS.primary, fontWeight: '600', fontFamily: FONTS.semiBold },
+  tabCount: {
+    backgroundColor: COLORS.surfaceAlt, borderRadius: 10,
+    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  tabCountActive: { backgroundColor: COLORS.primaryLight },
+  tabCountText: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, fontFamily: FONTS.bold },
+  tabCountTextActive: { color: COLORS.primary },
+
+  // List
+  list: { padding: SPACING.lg, gap: 10 },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Card
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 14,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 12,
     borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
   },
-  cardLeft: {},
-  typeIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  cardContent: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, marginBottom: 4 },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  cardMetaText: { fontSize: 13, color: COLORS.textMuted },
-  cardRight: { alignItems: 'flex-end', gap: 6 },
-  statusBadge: { backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.sm, paddingHorizontal: 8, paddingVertical: 2 },
-  statusText: { fontSize: 11, fontWeight: '600', color: COLORS.primary },
-  empty: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text, marginTop: 12 },
-  emptyDesc: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginTop: 4 },
-  emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: 20, paddingVertical: 10, marginTop: 16,
+  cardPast: { opacity: 0.6 },
+  miniDate: {
+    width: 48, height: 52, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
-  emptyBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  miniDateDay: { fontSize: 20, fontWeight: '800', lineHeight: 24, fontFamily: FONTS.displayEB },
+  miniDateMon: { fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
+  miniTodayDot: { width: 4, height: 4, borderRadius: 2, marginTop: 3 },
+
+  cardContent: { flex: 1, gap: 4 },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  cardTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, flex: 1, fontFamily: FONTS.displaySemi },
+  cardTitlePast: { color: COLORS.textMuted },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+  cardMetaText: { fontSize: 12, color: COLORS.textMuted, fontFamily: FONTS.regular },
+  metaDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: COLORS.border },
+
+  statusBadge: { backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.sm, paddingHorizontal: 8, paddingVertical: 2 },
+  statusText: { fontSize: 10, fontWeight: '700', color: COLORS.primary, fontFamily: FONTS.bold },
+
+  // Empty
+  empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
+  emptyCircle: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 6, fontFamily: FONTS.displayBold },
+  emptyDesc: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20, fontFamily: FONTS.regular },
+  emptyBtnWrap: { marginTop: 16, borderRadius: RADIUS.md, overflow: 'hidden', ...SHADOWS.primary },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 22, paddingVertical: 12 },
+  emptyBtnText: { color: '#fff', fontSize: 14, fontWeight: '700', fontFamily: FONTS.displayBold },
 });
