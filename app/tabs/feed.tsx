@@ -17,6 +17,7 @@ import { pollService } from '@/services/pollService';
 import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
+import { FlatGateActivityCard } from '@/components/common/FlatGateActivityCard';
 import { PostDto, EventDto } from '@/types/api';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
@@ -437,6 +438,7 @@ export default function FeedScreen() {
 
   const ListHeader = useMemo(() => (
     <View style={styles.headerStack}>
+      <FlatGateActivityCard />
       {FinanceBanner}
       {StatsRow}
       <QuickActions />

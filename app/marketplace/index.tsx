@@ -47,6 +47,7 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
   const [category,    setCategory]    = useState<MarketplaceCategory>('ALL');
   const [freeOnly,    setFreeOnly]    = useState(false);
   const [showAllCats, setShowAllCats] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const goHome = useCallback(() => {
     if (router.canGoBack()) {
@@ -211,14 +212,31 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
               )}
             </View>
           </View>
-          <TouchableOpacity
-            style={s.sellBtn}
-            onPress={() => router.push('/marketplace/create')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add-circle" size={16} color="#fff" />
-            <Text style={s.sellBtnText}>Sell</Text>
-          </TouchableOpacity>
+          <View style={s.headerRight}>
+            <TouchableOpacity
+              style={[s.headerIconBtn, isSearchOpen && s.headerIconBtnActive]}
+              onPress={() => {
+                setIsSearchOpen((prev) => !prev);
+                if (isSearchOpen) setSearch('');
+              }}
+              activeOpacity={0.7}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={isSearchOpen ? 'close-outline' : 'search-outline'}
+                size={20}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.sellBtn}
+              onPress={() => router.push('/marketplace/create')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle" size={16} color="#fff" />
+              <Text style={s.sellBtnText}>Sell</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats Strip */}
@@ -244,25 +262,28 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
           </View>
         </View>
 
-        {/* Search */}
-        <View style={s.searchWrap}>
-          <Ionicons name="search" size={16} color="#94A3B8" />
-          <TextInput
-            ref={searchRef}
-            style={s.search}
-            placeholder="Search furniture, electronics, books…"
-            placeholderTextColor="#94A3B8"
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-            clearButtonMode="while-editing"
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* Search in Header (Toggled via search icon) */}
+        {isSearchOpen && (
+          <View style={s.searchWrap}>
+            <Ionicons name="search" size={16} color="#94A3B8" />
+            <TextInput
+              ref={searchRef}
+              style={s.search}
+              placeholder="Search furniture, electronics, books…"
+              placeholderTextColor="#94A3B8"
+              value={search}
+              onChangeText={setSearch}
+              autoFocus
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </LinearGradient>
 
       {/* Listings grid */}
@@ -417,6 +438,25 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     marginTop: 1,
     fontFamily: FONTS.regular,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  headerIconBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    borderColor: '#FFFFFF',
   },
   sellBtn: {
     flexDirection: 'row',

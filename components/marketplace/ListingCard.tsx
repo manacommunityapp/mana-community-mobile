@@ -159,7 +159,7 @@ const s = StyleSheet.create({
     fontSize: 40,
   },
   soldOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Platform }
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { COLORS, RADIUS, SHADOWS, FONTS } from "@/constants/config";
-import { useHubUsage } from "@/hooks/useHubUsage";
+import { useHubUsage } from "../../hooks/useHubUsage";
 
 export interface QuickActionItem {
   id: string;

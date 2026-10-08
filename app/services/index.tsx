@@ -75,6 +75,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('ALL');
   const [selectedRole, setSelectedRole] = useState<StaffRole | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
@@ -256,10 +257,27 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             <Text style={s.headerTitle}>🏠 Home Services</Text>
             <Text style={s.headerSub}>Staff · Attendance · Bookings</Text>
           </View>
-          <TouchableOpacity style={s.headerActionBtn} onPress={() => setJobModalVisible(true)} activeOpacity={0.7}>
-            <Ionicons name="add-circle" size={15} color="#fff" />
-            <Text style={s.headerActionText}>Post Job</Text>
-          </TouchableOpacity>
+          <View style={s.headerRight}>
+            <TouchableOpacity
+              style={[s.headerIconBtn, isSearchOpen && s.headerIconBtnActive]}
+              onPress={() => {
+                setIsSearchOpen((prev) => !prev);
+                if (isSearchOpen) setSearchQuery('');
+              }}
+              activeOpacity={0.7}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={isSearchOpen ? 'close-outline' : 'search-outline'}
+                size={19}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.headerActionBtn} onPress={() => setJobModalVisible(true)} activeOpacity={0.7}>
+              <Ionicons name="add-circle" size={15} color="#fff" />
+              <Text style={s.headerActionText}>Post Job</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats Strip */}
@@ -280,6 +298,27 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             </View>
           ))}
         </View>
+
+        {/* Search in Header (Toggled via header search icon) */}
+        {isSearchOpen && (
+          <View style={s.headerSearchWrap}>
+            <Ionicons name="search" size={16} color="#94A3B8" />
+            <TextInput
+              style={s.headerSearchInput}
+              placeholder="Search plumber, electrician, maid, staff…"
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </LinearGradient>
 
       {/* ── Tab Bar ── */}
@@ -317,22 +356,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
           ListHeaderComponent={
             <>
-              {/* Search */}
-              <View style={s.searchWrap}>
-                <Ionicons name="search" size={16} color="#94A3B8" />
-                <TextInput
-                  style={s.searchInput}
-                  placeholder="Search plumber, electrician, maid…"
-                  placeholderTextColor="#94A3B8"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-                    <Ionicons name="close-circle" size={18} color="#94A3B8" />
-                  </TouchableOpacity>
-                )}
-              </View>
+
 
               {/* Category Icon Grid */}
               <View style={s.catSection}>
@@ -1103,6 +1127,43 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(255,255,255,0.65)',
     marginTop: 2,
+    fontFamily: FONTS.regular,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  headerIconBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    borderColor: '#FFFFFF',
+  },
+  headerSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    gap: 8,
+    ...SHADOWS.sm,
+  },
+  headerSearchInput: {
+    flex: 1,
+    paddingVertical: 9,
+    fontSize: 13,
+    color: COLORS.text,
     fontFamily: FONTS.regular,
   },
   headerActionBtn: {
