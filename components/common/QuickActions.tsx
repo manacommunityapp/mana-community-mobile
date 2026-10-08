@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { COLORS, RADIUS, SHADOWS, FONTS } from "@/constants/config";
+import { useHubUsage } from "@/hooks/useHubUsage";
 
 export interface QuickActionItem {
   id: string;
@@ -49,8 +50,17 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
 export function QuickActions() {
   const router = useRouter();
   const [showAllModal, setShowAllModal] = useState(false);
+  const { topHubIds, trackClick } = useHubUsage();
 
-  const highlightedServices = ALL_COMMUNITY_SERVICES.slice(0, 5);
+  const highlightedServices = useMemo(() => {
+    if (topHubIds.length === 0) return ALL_COMMUNITY_SERVICES.slice(0, 5);
+    const personalized = topHubIds
+      .map(id => ALL_COMMUNITY_SERVICES.find(s => s.id === id))
+      .filter(Boolean) as QuickActionItem[];
+    if (personalized.length >= 5) return personalized.slice(0, 5);
+    const remaining = ALL_COMMUNITY_SERVICES.filter(s => !topHubIds.includes(s.id));
+    return [...personalized, ...remaining].slice(0, 5);
+  }, [topHubIds]);
 
   const categories: Array<QuickActionItem["category"]> = [
     "Safety & Help",
@@ -79,7 +89,10 @@ export function QuickActions() {
           <TouchableOpacity
             key={action.id}
             style={s.card}
-            onPress={() => router.push(action.route as any)}
+            onPress={() => {
+              trackClick(action.id, action.label);
+              router.push(action.route as any);
+            }}
             activeOpacity={0.8}
           >
             {action.badge && (
@@ -131,6 +144,7 @@ export function QuickActions() {
                         key={action.id}
                         style={s.gridCard}
                         onPress={() => {
+                          trackClick(action.id, action.label);
                           setShowAllModal(false);
                           setTimeout(() => router.push(action.route as any), 200);
                         }}

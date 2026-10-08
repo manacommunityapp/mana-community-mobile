@@ -1,10 +1,11 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 import type { MarketplaceListingDto } from '@/types/api';
-import { COLORS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 
-const CARD_WIDTH = (Dimensions.get('window').width - 36) / 2; // 2 cols, 12px padding + 12px gap
+const CARD_WIDTH = (Dimensions.get('window').width - 36) / 2;
 
 const CONDITION_LABEL: Record<string, string> = {
   NEW:      'New',
@@ -14,12 +15,12 @@ const CONDITION_LABEL: Record<string, string> = {
   POOR:     'Poor',
 };
 
-const CONDITION_COLOR: Record<string, string> = {
-  NEW:      '#10B981',
-  LIKE_NEW: '#3B82F6',
-  GOOD:     '#6366F1',
-  FAIR:     '#D97706',
-  POOR:     '#6B7280',
+const CONDITION_CONFIG: Record<string, { color: string; bg: string; icon: string }> = {
+  NEW:      { color: '#059669', bg: '#DCFCE7', icon: '✨' },
+  LIKE_NEW: { color: '#0284C7', bg: '#E0F2FE', icon: '👌' },
+  GOOD:     { color: '#6366F1', bg: '#EEF2FF', icon: '👍' },
+  FAIR:     { color: '#D97706', bg: '#FEF3C7', icon: '🔸' },
+  POOR:     { color: '#6B7280', bg: '#F1F5F9', icon: '🔹' },
 };
 
 interface ListingCardProps {
@@ -31,6 +32,7 @@ interface ListingCardProps {
 export function ListingCard({ listing, onSave, isSaving }: ListingCardProps) {
   const router = useRouter();
   const thumb  = listing.imageUrls?.[0];
+  const cond   = CONDITION_CONFIG[listing.condition] ?? CONDITION_CONFIG.GOOD;
 
   return (
     <TouchableOpacity
@@ -48,21 +50,34 @@ export function ListingCard({ listing, onSave, isSaving }: ListingCardProps) {
           </View>
         )}
 
-        {/* Overlay badges */}
+        {/* Overlay: SOLD */}
         {listing.status === 'SOLD' && (
           <View style={s.soldOverlay}>
-            <Text style={s.soldText}>SOLD</Text>
-          </View>
-        )}
-        {listing.isFree && listing.status !== 'SOLD' && (
-          <View style={s.freeBadge}>
-            <Text style={s.freeBadgeText}>FREE</Text>
+            <View style={s.soldPill}>
+              <Ionicons name="checkmark-circle" size={14} color="#fff" />
+              <Text style={s.soldText}>SOLD</Text>
+            </View>
           </View>
         )}
 
-        {/* Heart / Save */}
+        {/* FREE badge */}
+        {listing.isFree && listing.status !== 'SOLD' && (
+          <View style={s.freeBadge}>
+            <Text style={s.freeBadgeText}>🎁 FREE</Text>
+          </View>
+        )}
+
+        {/* Image count */}
+        {listing.imageUrls && listing.imageUrls.length > 1 && listing.status !== 'SOLD' && (
+          <View style={s.imgCount}>
+            <Ionicons name="images-outline" size={10} color="#fff" />
+            <Text style={s.imgCountText}>{listing.imageUrls.length}</Text>
+          </View>
+        )}
+
+        {/* Heart */}
         <TouchableOpacity
-          style={s.heartBtn}
+          style={[s.heartBtn, listing.isSaved && s.heartBtnActive]}
           onPress={(e) => { e.stopPropagation?.(); onSave?.(listing); }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           disabled={isSaving}
@@ -75,27 +90,36 @@ export function ListingCard({ listing, onSave, isSaving }: ListingCardProps) {
       <View style={s.info}>
         <Text style={s.title} numberOfLines={2}>{listing.title}</Text>
 
-        <View style={s.row}>
+        {/* Price Row */}
+        <View style={s.priceRow}>
           <Text style={s.price}>
             {listing.isFree ? 'Free' : `₹${listing.price.toLocaleString('en-IN')}`}
           </Text>
           {listing.isNegotiable && !listing.isFree && (
-            <Text style={s.neg}> · Nego</Text>
+            <View style={s.negoPill}>
+              <Text style={s.negoText}>Nego</Text>
+            </View>
           )}
         </View>
 
-        <View style={s.meta}>
-          <View style={[s.condBadge, { backgroundColor: CONDITION_COLOR[listing.condition] + '22' }]}>
-            <Text style={[s.condText, { color: CONDITION_COLOR[listing.condition] }]}>
+        {/* Condition + Time */}
+        <View style={s.metaRow}>
+          <View style={[s.condBadge, { backgroundColor: cond.bg }]}>
+            <Text style={s.condIcon}>{cond.icon}</Text>
+            <Text style={[s.condText, { color: cond.color }]}>
               {CONDITION_LABEL[listing.condition]}
             </Text>
           </View>
         </View>
 
+        {/* Footer */}
         <View style={s.footer}>
-          {listing.sellerFlat && (
-            <Text style={s.flat} numberOfLines={1}>🏠 {listing.sellerFlat}</Text>
-          )}
+          {listing.sellerFlat ? (
+            <View style={s.flatRow}>
+              <Ionicons name="home-outline" size={10} color={COLORS.textMuted} />
+              <Text style={s.flat} numberOfLines={1}>{listing.sellerFlat}</Text>
+            </View>
+          ) : <View />}
           <Text style={s.time}>
             {formatDistanceToNow(new Date(listing.createdAt), { addSuffix: false })}
           </Text>
@@ -106,26 +130,182 @@ export function ListingCard({ listing, onSave, isSaving }: ListingCardProps) {
 }
 
 const s = StyleSheet.create({
-  card:                 { width: CARD_WIDTH, backgroundColor: COLORS.surface, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  imageWrap:            { width: '100%', aspectRatio: 1, position: 'relative', backgroundColor: '#F3F4F6' },
-  image:                { width: '100%', height: '100%' },
-  imagePlaceholder:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  imagePlaceholderEmoji:{ fontSize: 40 },
-  soldOverlay:          { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  soldText:             { color: '#fff', fontFamily: 'DMSans-Bold', fontWeight: '900', fontSize: 18, letterSpacing: 2 },
-  freeBadge:            { position: 'absolute', top: 8, left: 8, backgroundColor: COLORS.success, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  freeBadgeText:        { color: '#fff', fontWeight: '800', fontSize: 11 },
-  heartBtn:             { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 14, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  heart:                { fontSize: 15 },
-  info:                 { padding: 10, gap: 4 },
-  title:                { fontSize: 13, fontWeight: '600', color: COLORS.text, lineHeight: 18 },
-  row:                  { flexDirection: 'row', alignItems: 'baseline' },
-  price:                { fontSize: 15, fontWeight: '800', color: COLORS.primary },
-  neg:                  { fontSize: 11, color: COLORS.textMuted },
-  meta:                 { flexDirection: 'row', gap: 5 },
-  condBadge:            { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 },
-  condText:             { fontSize: 10, fontWeight: '700' },
-  footer:               { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
-  flat:                 { fontSize: 11, color: COLORS.textMuted, flex: 1 },
-  time:                 { fontSize: 10, color: COLORS.textMuted },
+  card: {
+    width: CARD_WIDTH,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    ...SHADOWS.sm,
+  },
+  imageWrap: {
+    width: '100%',
+    aspectRatio: 1,
+    position: 'relative',
+    backgroundColor: '#F1F5F9',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  imagePlaceholderEmoji: {
+    fontSize: 40,
+  },
+  soldOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soldPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  soldText: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 14,
+    letterSpacing: 2,
+    fontFamily: FONTS.displayBold,
+  },
+  freeBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#059669',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  freeBadgeText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 10,
+    fontFamily: FONTS.semiBold,
+  },
+  imgCount: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  imgCountText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  heartBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 14,
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.sm,
+  },
+  heartBtnActive: {
+    backgroundColor: '#FEE2E2',
+  },
+  heart: {
+    fontSize: 14,
+  },
+  info: {
+    padding: 10,
+    gap: 5,
+  },
+  title: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.text,
+    lineHeight: 18,
+    fontFamily: FONTS.semiBold,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#312E81',
+    fontFamily: FONTS.displayBold,
+  },
+  negoPill: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  negoText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#B45309',
+    fontFamily: FONTS.semiBold,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  condBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  condIcon: {
+    fontSize: 9,
+  },
+  condText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: FONTS.semiBold,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  flatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    flex: 1,
+  },
+  flat: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+  },
+  time: {
+    fontSize: 9.5,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+  },
 });

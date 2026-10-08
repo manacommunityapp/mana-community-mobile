@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -12,26 +13,28 @@ import { eventService } from '@/services/eventService';
 import { COLORS, GRADIENTS, SHADOWS, RADIUS, FONTS, SPACING } from '@/constants/config';
 import type { CreateEventRequest, EventType, EventLocationType, EventPriceType } from '@/types/api';
 
-const EVENT_TYPES: { value: EventType; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { value: 'SOCIAL', label: 'Social', icon: 'people', color: '#2563EB' },
-  { value: 'SPORTS', label: 'Sports', icon: 'football', color: '#059669' },
-  { value: 'CULTURAL', label: 'Cultural', icon: 'color-palette', color: '#7C3AED' },
-  { value: 'WORKSHOP', label: 'Workshop', icon: 'school', color: '#4F46E5' },
-  { value: 'RELIGIOUS', label: 'Religious', icon: 'heart', color: '#DC2626' },
-  { value: 'MEETING', label: 'Meeting', icon: 'briefcase', color: '#0891B2' },
-  { value: 'COMMUNITY', label: 'Community', icon: 'home', color: '#4F46E5' },
-  { value: 'OTHER', label: 'Other', icon: 'ellipsis-horizontal', color: '#6B7280' },
+const { width: SCREEN_W } = Dimensions.get('window');
+
+const EVENT_TYPES: { value: EventType; label: string; emoji: string; color: string; bg: string }[] = [
+  { value: 'SOCIAL',    label: 'Social',    emoji: '🎉', color: '#2563EB', bg: '#EFF6FF' },
+  { value: 'SPORTS',    label: 'Sports',    emoji: '⚽', color: '#059669', bg: '#ECFDF5' },
+  { value: 'CULTURAL',  label: 'Cultural',  emoji: '🎨', color: '#7C3AED', bg: '#F5F3FF' },
+  { value: 'WORKSHOP',  label: 'Workshop',  emoji: '🎓', color: '#4F46E5', bg: '#EEF2FF' },
+  { value: 'RELIGIOUS', label: 'Religious', emoji: '🙏', color: '#DC2626', bg: '#FEF2F2' },
+  { value: 'MEETING',   label: 'Meeting',   emoji: '💼', color: '#0891B2', bg: '#ECFEFF' },
+  { value: 'COMMUNITY', label: 'Community', emoji: '🏠', color: '#4F46E5', bg: '#EEF2FF' },
+  { value: 'OTHER',     label: 'Other',     emoji: '📌', color: '#6B7280', bg: '#F1F5F9' },
 ];
 
-const LOCATION_TYPES: { value: EventLocationType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'PHYSICAL', label: 'In Person', icon: 'location' },
-  { value: 'ONLINE', label: 'Online', icon: 'videocam' },
-  { value: 'HYBRID', label: 'Hybrid', icon: 'git-merge' },
+const LOCATION_TYPES: { value: EventLocationType; label: string; emoji: string }[] = [
+  { value: 'PHYSICAL', label: 'In Person', emoji: '📍' },
+  { value: 'ONLINE',   label: 'Online',    emoji: '💻' },
+  { value: 'HYBRID',   label: 'Hybrid',    emoji: '🔗' },
 ];
 
-const PRICE_TYPES: { value: EventPriceType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'FREE', label: 'Free', icon: 'gift-outline' },
-  { value: 'PAID', label: 'Paid', icon: 'cash-outline' },
+const PRICE_TYPES: { value: EventPriceType; label: string; emoji: string }[] = [
+  { value: 'FREE', label: 'Free',  emoji: '🎁' },
+  { value: 'PAID', label: 'Paid',  emoji: '💳' },
 ];
 
 export default function CreateEventScreen() {
@@ -94,13 +97,16 @@ export default function CreateEventScreen() {
   const selectedType = EVENT_TYPES.find(t => t.value === type);
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['top']}>
       {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.navBtn} hitSlop={8}>
+      <View style={st.header}>
+        <TouchableOpacity onPress={() => router.back()} style={st.navBtn} hitSlop={8}>
           <Ionicons name="close" size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Create Event</Text>
+        <View style={st.headerCenter}>
+          <Text style={st.headerEmoji}>✍️</Text>
+          <Text style={st.headerTitle}>Create Event</Text>
+        </View>
         <View style={{ width: 38 }} />
       </View>
 
@@ -109,64 +115,83 @@ export default function CreateEventScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={st.scroll} showsVerticalScrollIndicator={false}>
           {/* Step 1: Basic info */}
-          <View style={s.sectionCard}>
-            <View style={s.sectionHeader}>
-              <View style={[s.stepBadge, { backgroundColor: COLORS.primaryLight }]}>
-                <Text style={[s.stepNum, { color: COLORS.primary }]}>1</Text>
+          <View style={st.sectionCard}>
+            <View style={st.sectionHeader}>
+              <LinearGradient
+                colors={GRADIENTS.primary}
+                style={st.stepBadge}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={st.stepNum}>1</Text>
+              </LinearGradient>
+              <Text style={st.sectionTitle}>Basic Information</Text>
+            </View>
+
+            <View style={st.field}>
+              <Text style={st.label}>Event Title <Text style={st.required}>*</Text></Text>
+              <View style={st.inputWithIcon}>
+                <Text style={st.inputEmoji}>📝</Text>
+                <TextInput
+                  style={st.inputInner}
+                  placeholder="What's your event called?"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={title}
+                  onChangeText={setTitle}
+                />
               </View>
-              <Text style={s.sectionTitle}>Basic Information</Text>
             </View>
 
-            <View style={s.field}>
-              <Text style={s.label}>Event Title <Text style={s.required}>*</Text></Text>
-              <TextInput
-                style={s.input}
-                placeholder="What's your event called?"
-                placeholderTextColor={COLORS.textMuted}
-                value={title}
-                onChangeText={setTitle}
-              />
-            </View>
-
-            <View style={s.field}>
-              <Text style={s.label}>Event Type</Text>
-              <View style={s.typeGrid}>
+            <View style={st.field}>
+              <Text style={st.label}>Event Type</Text>
+              <View style={st.typeGrid}>
                 {EVENT_TYPES.map(t => {
                   const active = type === t.value;
                   return (
                     <TouchableOpacity
                       key={t.value}
-                      style={[s.typeCard, active && { borderColor: t.color, backgroundColor: t.color + '0A' }]}
+                      style={[
+                        st.typeCard,
+                        active && { borderColor: t.color, backgroundColor: t.bg },
+                      ]}
                       onPress={() => setType(t.value)}
                       activeOpacity={0.7}
                     >
-                      <View style={[s.typeIconWrap, { backgroundColor: active ? t.color + '18' : COLORS.surfaceAlt }]}>
-                        <Ionicons name={t.icon} size={18} color={active ? t.color : COLORS.textMuted} />
+                      <View style={[
+                        st.typeIconWrap,
+                        { backgroundColor: active ? t.color + '18' : '#F1F5F9' },
+                      ]}>
+                        <Text style={st.typeEmoji}>{t.emoji}</Text>
                       </View>
-                      <Text style={[s.typeLabel, active && { color: t.color, fontWeight: '700' }]}>{t.label}</Text>
+                      <Text style={[st.typeLabel, active && { color: t.color, fontWeight: '700' }]}>
+                        {t.label}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
 
-            <View style={s.field}>
-              <Text style={s.label}>Category <Text style={s.optional}>(optional)</Text></Text>
-              <TextInput
-                style={s.input}
-                placeholder="e.g. Cricket, Workshop, Festival"
-                placeholderTextColor={COLORS.textMuted}
-                value={category}
-                onChangeText={setCategory}
-              />
+            <View style={st.field}>
+              <Text style={st.label}>Category <Text style={st.optional}>(optional)</Text></Text>
+              <View style={st.inputWithIcon}>
+                <Text style={st.inputEmoji}>🏷️</Text>
+                <TextInput
+                  style={st.inputInner}
+                  placeholder="e.g. Cricket, Workshop, Festival"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={category}
+                  onChangeText={setCategory}
+                />
+              </View>
             </View>
 
-            <View style={s.field}>
-              <Text style={s.label}>Description</Text>
+            <View style={st.field}>
+              <Text style={st.label}>Description</Text>
               <TextInput
-                style={[s.input, s.textArea]}
+                style={[st.input, st.textArea]}
                 placeholder="Tell people what this event is about..."
                 placeholderTextColor={COLORS.textMuted}
                 value={description}
@@ -179,21 +204,26 @@ export default function CreateEventScreen() {
           </View>
 
           {/* Step 2: Date & Time */}
-          <View style={s.sectionCard}>
-            <View style={s.sectionHeader}>
-              <View style={[s.stepBadge, { backgroundColor: '#ECFDF5' }]}>
-                <Text style={[s.stepNum, { color: '#059669' }]}>2</Text>
-              </View>
-              <Text style={s.sectionTitle}>Date & Time</Text>
+          <View style={st.sectionCard}>
+            <View style={st.sectionHeader}>
+              <LinearGradient
+                colors={['#059669', '#10B981']}
+                style={st.stepBadge}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={st.stepNum}>2</Text>
+              </LinearGradient>
+              <Text style={st.sectionTitle}>Date & Time</Text>
             </View>
 
-            <View style={s.row}>
-              <View style={s.halfField}>
-                <Text style={s.subLabel}>Start Date <Text style={s.required}>*</Text></Text>
-                <View style={s.inputWithIcon}>
-                  <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
+            <View style={st.row}>
+              <View style={st.halfField}>
+                <Text style={st.subLabel}>Start Date <Text style={st.required}>*</Text></Text>
+                <View style={st.inputWithIcon}>
+                  <Text style={st.inputEmoji}>📅</Text>
                   <TextInput
-                    style={s.inputInner}
+                    style={st.inputInner}
                     placeholder="YYYY-MM-DD"
                     placeholderTextColor={COLORS.textMuted}
                     value={startDate}
@@ -201,12 +231,12 @@ export default function CreateEventScreen() {
                   />
                 </View>
               </View>
-              <View style={s.halfField}>
-                <Text style={s.subLabel}>Start Time <Text style={s.required}>*</Text></Text>
-                <View style={s.inputWithIcon}>
-                  <Ionicons name="time-outline" size={16} color={COLORS.textMuted} />
+              <View style={st.halfField}>
+                <Text style={st.subLabel}>Start Time <Text style={st.required}>*</Text></Text>
+                <View style={st.inputWithIcon}>
+                  <Text style={st.inputEmoji}>🕐</Text>
                   <TextInput
-                    style={s.inputInner}
+                    style={st.inputInner}
                     placeholder="HH:MM"
                     placeholderTextColor={COLORS.textMuted}
                     value={startTime}
@@ -215,13 +245,13 @@ export default function CreateEventScreen() {
                 </View>
               </View>
             </View>
-            <View style={s.row}>
-              <View style={s.halfField}>
-                <Text style={s.subLabel}>End Date</Text>
-                <View style={s.inputWithIcon}>
-                  <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
+            <View style={st.row}>
+              <View style={st.halfField}>
+                <Text style={st.subLabel}>End Date</Text>
+                <View style={st.inputWithIcon}>
+                  <Text style={st.inputEmoji}>📅</Text>
                   <TextInput
-                    style={s.inputInner}
+                    style={st.inputInner}
                     placeholder="YYYY-MM-DD"
                     placeholderTextColor={COLORS.textMuted}
                     value={endDate}
@@ -229,12 +259,12 @@ export default function CreateEventScreen() {
                   />
                 </View>
               </View>
-              <View style={s.halfField}>
-                <Text style={s.subLabel}>End Time</Text>
-                <View style={s.inputWithIcon}>
-                  <Ionicons name="time-outline" size={16} color={COLORS.textMuted} />
+              <View style={st.halfField}>
+                <Text style={st.subLabel}>End Time</Text>
+                <View style={st.inputWithIcon}>
+                  <Text style={st.inputEmoji}>🕐</Text>
                   <TextInput
-                    style={s.inputInner}
+                    style={st.inputInner}
                     placeholder="HH:MM"
                     placeholderTextColor={COLORS.textMuted}
                     value={endTime}
@@ -246,88 +276,104 @@ export default function CreateEventScreen() {
           </View>
 
           {/* Step 3: Location */}
-          <View style={s.sectionCard}>
-            <View style={s.sectionHeader}>
-              <View style={[s.stepBadge, { backgroundColor: '#FEF2F2' }]}>
-                <Text style={[s.stepNum, { color: '#DC2626' }]}>3</Text>
-              </View>
-              <Text style={s.sectionTitle}>Location</Text>
+          <View style={st.sectionCard}>
+            <View style={st.sectionHeader}>
+              <LinearGradient
+                colors={['#DC2626', '#EF4444']}
+                style={st.stepBadge}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={st.stepNum}>3</Text>
+              </LinearGradient>
+              <Text style={st.sectionTitle}>Location</Text>
             </View>
 
-            <View style={s.field}>
-              <View style={s.segmentRow}>
+            <View style={st.field}>
+              <View style={st.segmentRow}>
                 {LOCATION_TYPES.map(l => {
                   const active = locationType === l.value;
                   return (
                     <TouchableOpacity
                       key={l.value}
-                      style={[s.segment, active && s.segmentActive]}
+                      style={[st.segment, active && st.segmentActive]}
                       onPress={() => setLocationType(l.value)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name={l.icon} size={15} color={active ? '#fff' : COLORS.textMuted} />
-                      <Text style={[s.segmentText, active && s.segmentTextActive]}>{l.label}</Text>
+                      <Text style={st.segmentEmoji}>{l.emoji}</Text>
+                      <Text style={[st.segmentText, active && st.segmentTextActive]}>{l.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
 
-            <View style={s.field}>
-              <Text style={s.label}>Venue</Text>
-              <TextInput
-                style={s.input}
-                placeholder={locationType === 'ONLINE' ? 'Meeting link' : 'Enter venue name'}
-                placeholderTextColor={COLORS.textMuted}
-                value={venue}
-                onChangeText={setVenue}
-              />
+            <View style={st.field}>
+              <Text style={st.label}>Venue</Text>
+              <View style={st.inputWithIcon}>
+                <Text style={st.inputEmoji}>{locationType === 'ONLINE' ? '💻' : '🏢'}</Text>
+                <TextInput
+                  style={st.inputInner}
+                  placeholder={locationType === 'ONLINE' ? 'Meeting link' : 'Enter venue name'}
+                  placeholderTextColor={COLORS.textMuted}
+                  value={venue}
+                  onChangeText={setVenue}
+                />
+              </View>
             </View>
             {locationType !== 'ONLINE' && (
-              <View style={s.field}>
-                <Text style={s.label}>City</Text>
-                <TextInput
-                  style={s.input}
-                  placeholder="City"
-                  placeholderTextColor={COLORS.textMuted}
-                  value={city}
-                  onChangeText={setCity}
-                />
+              <View style={st.field}>
+                <Text style={st.label}>City</Text>
+                <View style={st.inputWithIcon}>
+                  <Text style={st.inputEmoji}>🌆</Text>
+                  <TextInput
+                    style={st.inputInner}
+                    placeholder="City"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={city}
+                    onChangeText={setCity}
+                  />
+                </View>
               </View>
             )}
           </View>
 
           {/* Step 4: Pricing & Capacity */}
-          <View style={s.sectionCard}>
-            <View style={s.sectionHeader}>
-              <View style={[s.stepBadge, { backgroundColor: '#F5F3FF' }]}>
-                <Text style={[s.stepNum, { color: '#7C3AED' }]}>4</Text>
-              </View>
-              <Text style={s.sectionTitle}>Pricing & Capacity</Text>
+          <View style={st.sectionCard}>
+            <View style={st.sectionHeader}>
+              <LinearGradient
+                colors={['#7C3AED', '#8B5CF6']}
+                style={st.stepBadge}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={st.stepNum}>4</Text>
+              </LinearGradient>
+              <Text style={st.sectionTitle}>Pricing & Capacity</Text>
             </View>
 
-            <View style={s.field}>
-              <View style={s.segmentRow}>
+            <View style={st.field}>
+              <View style={st.segmentRow}>
                 {PRICE_TYPES.map(p => {
                   const active = priceType === p.value;
                   return (
                     <TouchableOpacity
                       key={p.value}
-                      style={[s.segment, active && s.segmentActive]}
+                      style={[st.segment, active && st.segmentActive]}
                       onPress={() => setPriceType(p.value)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name={p.icon} size={15} color={active ? '#fff' : COLORS.textMuted} />
-                      <Text style={[s.segmentText, active && s.segmentTextActive]}>{p.label}</Text>
+                      <Text style={st.segmentEmoji}>{p.emoji}</Text>
+                      <Text style={[st.segmentText, active && st.segmentTextActive]}>{p.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
               {priceType === 'PAID' && (
-                <View style={[s.inputWithIcon, { marginTop: 10 }]}>
-                  <Text style={{ fontSize: 16, color: COLORS.textMuted, fontWeight: '600' }}>₹</Text>
+                <View style={[st.inputWithIcon, { marginTop: 10 }]}>
+                  <Text style={st.inputEmoji}>💰</Text>
                   <TextInput
-                    style={s.inputInner}
+                    style={st.inputInner}
                     placeholder="Price per person"
                     placeholderTextColor={COLORS.textMuted}
                     value={price}
@@ -338,12 +384,12 @@ export default function CreateEventScreen() {
               )}
             </View>
 
-            <View style={s.field}>
-              <Text style={s.label}>Max Attendees <Text style={s.optional}>(optional)</Text></Text>
-              <View style={s.inputWithIcon}>
-                <Ionicons name="people-outline" size={16} color={COLORS.textMuted} />
+            <View style={st.field}>
+              <Text style={st.label}>Max Attendees <Text style={st.optional}>(optional)</Text></Text>
+              <View style={st.inputWithIcon}>
+                <Text style={st.inputEmoji}>👥</Text>
                 <TextInput
-                  style={s.inputInner}
+                  style={st.inputInner}
                   placeholder="Leave empty for unlimited"
                   placeholderTextColor={COLORS.textMuted}
                   value={maxAttendees}
@@ -355,11 +401,11 @@ export default function CreateEventScreen() {
           </View>
 
           {/* Notes */}
-          <View style={s.sectionCard}>
-            <View style={s.field}>
-              <Text style={s.label}>Additional Notes <Text style={s.optional}>(optional)</Text></Text>
+          <View style={st.sectionCard}>
+            <View style={st.field}>
+              <Text style={st.label}>📝 Additional Notes <Text style={st.optional}>(optional)</Text></Text>
               <TextInput
-                style={[s.input, s.textArea]}
+                style={[st.input, st.textArea]}
                 placeholder="Any additional information..."
                 placeholderTextColor={COLORS.textMuted}
                 value={notes}
@@ -373,14 +419,14 @@ export default function CreateEventScreen() {
 
           {/* Submit */}
           <TouchableOpacity
-            style={s.submitWrap}
+            style={st.submitWrap}
             onPress={handleCreate}
             disabled={createMutation.isPending}
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={createMutation.isPending ? ['#9CA3AF', '#9CA3AF'] : GRADIENTS.primary}
-              style={s.submitBtn}
+              colors={createMutation.isPending ? ['#9CA3AF', '#9CA3AF'] : ['#312E81', '#4F46E5']}
+              style={st.submitBtn}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
@@ -388,8 +434,8 @@ export default function CreateEventScreen() {
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <>
-                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                  <Text style={s.submitBtnText}>Create Event</Text>
+                  <Text style={st.submitEmoji}>🚀</Text>
+                  <Text style={st.submitBtnText}>Create Event</Text>
                 </>
               )}
             </LinearGradient>
@@ -402,31 +448,37 @@ export default function CreateEventScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const st = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 12, paddingVertical: 10,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E8E8F0',
   },
   navBtn: {
     width: 38, height: 38, borderRadius: 12,
-    backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#E8E8F0',
   },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerEmoji: { fontSize: 18 },
   headerTitle: {
     fontSize: 18, fontWeight: '700', color: COLORS.text,
     fontFamily: FONTS.displayBold, letterSpacing: -0.3,
   },
   scroll: { padding: SPACING.lg, gap: 12 },
 
-  // Section cards
+  // ── Section cards ──
   sectionCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     borderRadius: RADIUS.xl,
     padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     ...SHADOWS.sm,
   },
   sectionHeader: {
@@ -436,28 +488,29 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   stepBadge: {
-    width: 26, height: 26, borderRadius: 13,
+    width: 28, height: 28, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
-  stepNum: { fontSize: 13, fontWeight: '800', fontFamily: FONTS.displayEB },
+  stepNum: { fontSize: 14, fontWeight: '800', color: '#fff', fontFamily: FONTS.displayEB },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, fontFamily: FONTS.displayBold },
 
-  // Fields
+  // ── Fields ──
   field: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 6, fontFamily: FONTS.semiBold },
   subLabel: { fontSize: 12, color: COLORS.textMuted, marginBottom: 4, fontWeight: '500', fontFamily: FONTS.medium },
   required: { color: COLORS.error, fontWeight: '600' },
   optional: { color: COLORS.textMuted, fontWeight: '400', fontSize: 12 },
   input: {
-    backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E8E8F0',
     borderRadius: RADIUS.md, padding: 12, fontSize: 15, color: COLORS.text,
     fontFamily: FONTS.regular,
   },
   inputWithIcon: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E8E8F0',
     borderRadius: RADIUS.md, paddingHorizontal: 12,
   },
+  inputEmoji: { fontSize: 16 },
   inputInner: {
     flex: 1, paddingVertical: 12, fontSize: 15, color: COLORS.text, fontFamily: FONTS.regular,
   },
@@ -465,55 +518,57 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   halfField: { flex: 1 },
 
-  // Type grid
+  // ── Type grid ──
   typeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
   typeCard: {
-    width: '23%',
-    minWidth: 70,
+    width: (SCREEN_W - 32 - 24) / 4,
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     paddingVertical: 10,
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+    borderColor: '#E8E8F0',
+    backgroundColor: '#fff',
   },
   typeIconWrap: {
-    width: 36, height: 36, borderRadius: 12,
+    width: 38, height: 38, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
   },
+  typeEmoji: { fontSize: 18 },
   typeLabel: { fontSize: 11, fontWeight: '500', color: COLORS.textMuted, fontFamily: FONTS.medium },
 
-  // Segments
+  // ── Segments ──
   segmentRow: {
     flexDirection: 'row', gap: 0,
-    backgroundColor: COLORS.surfaceAlt,
+    backgroundColor: '#F1F5F9',
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     padding: 3,
   },
   segment: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
     paddingVertical: 9, borderRadius: RADIUS.sm,
   },
-  segmentActive: { backgroundColor: COLORS.primary, ...SHADOWS.primary },
+  segmentActive: { backgroundColor: '#312E81', ...SHADOWS.sm },
+  segmentEmoji: { fontSize: 14 },
   segmentText: { fontSize: 13, fontWeight: '500', color: COLORS.textMuted, fontFamily: FONTS.medium },
   segmentTextActive: { color: '#fff', fontWeight: '600' },
 
-  // Submit
+  // ── Submit ──
   submitWrap: {
     borderRadius: RADIUS.md,
     overflow: 'hidden',
-    ...SHADOWS.primary,
+    ...SHADOWS.md,
   },
   submitBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 16,
   },
+  submitEmoji: { fontSize: 18 },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', fontFamily: FONTS.displayBold },
 });

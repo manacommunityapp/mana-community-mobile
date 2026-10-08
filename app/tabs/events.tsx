@@ -16,26 +16,33 @@ import { format, parseISO, isToday, isTomorrow, differenceInDays } from 'date-fn
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-const CATEGORIES: { value: EventType | 'ALL'; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'ALL',       label: 'All',       icon: 'grid-outline' },
-  { value: 'SOCIAL',    label: 'Social',    icon: 'people-outline' },
-  { value: 'SPORTS',    label: 'Sports',    icon: 'football-outline' },
-  { value: 'CULTURAL',  label: 'Cultural',  icon: 'color-palette-outline' },
-  { value: 'WORKSHOP',  label: 'Workshop',  icon: 'school-outline' },
-  { value: 'RELIGIOUS', label: 'Religious', icon: 'heart-outline' },
-  { value: 'MEETING',   label: 'Meeting',   icon: 'briefcase-outline' },
-  { value: 'COMMUNITY', label: 'Community', icon: 'home-outline' },
+const CATEGORIES: { value: EventType | 'ALL'; label: string; emoji: string }[] = [
+  { value: 'ALL',       label: 'All',       emoji: '🎯' },
+  { value: 'SOCIAL',    label: 'Social',    emoji: '🎉' },
+  { value: 'SPORTS',    label: 'Sports',    emoji: '⚽' },
+  { value: 'CULTURAL',  label: 'Cultural',  emoji: '🎨' },
+  { value: 'WORKSHOP',  label: 'Workshop',  emoji: '🎓' },
+  { value: 'RELIGIOUS', label: 'Religious', emoji: '🙏' },
+  { value: 'MEETING',   label: 'Meeting',   emoji: '💼' },
+  { value: 'COMMUNITY', label: 'Community', emoji: '🏠' },
 ];
 
-const TYPE_THEME: Record<string, { color: string; bg: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  SPORTS:    { color: '#059669', bg: '#ECFDF5', icon: 'football-outline' },
-  SOCIAL:    { color: '#2563EB', bg: '#EFF6FF', icon: 'people-outline' },
-  CULTURAL:  { color: '#7C3AED', bg: '#F5F3FF', icon: 'color-palette-outline' },
-  WORKSHOP:  { color: '#4F46E5', bg: '#EEF2FF', icon: 'school-outline' },
-  RELIGIOUS: { color: '#DC2626', bg: '#FEF2F2', icon: 'heart-outline' },
-  MEETING:   { color: '#0891B2', bg: '#ECFEFF', icon: 'briefcase-outline' },
-  COMMUNITY: { color: '#4F46E5', bg: '#EEF2FF', icon: 'home-outline' },
+const TYPE_THEME: Record<string, { color: string; bg: string; emoji: string; gradient: [string, string] }> = {
+  SPORTS:    { color: '#059669', bg: '#ECFDF5', emoji: '⚽', gradient: ['#059669', '#10B981'] },
+  SOCIAL:    { color: '#2563EB', bg: '#EFF6FF', emoji: '🎉', gradient: ['#2563EB', '#3B82F6'] },
+  CULTURAL:  { color: '#7C3AED', bg: '#F5F3FF', emoji: '🎨', gradient: ['#7C3AED', '#8B5CF6'] },
+  WORKSHOP:  { color: '#4F46E5', bg: '#EEF2FF', emoji: '🎓', gradient: ['#4F46E5', '#6366F1'] },
+  RELIGIOUS: { color: '#DC2626', bg: '#FEF2F2', emoji: '🙏', gradient: ['#DC2626', '#EF4444'] },
+  MEETING:   { color: '#0891B2', bg: '#ECFEFF', emoji: '💼', gradient: ['#0891B2', '#06B6D4'] },
+  COMMUNITY: { color: '#4F46E5', bg: '#EEF2FF', emoji: '🏠', gradient: ['#4F46E5', '#6366F1'] },
 };
+
+const QUICK_ACTIONS = [
+  { label: 'Create',     emoji: '✍️', bg: '#EEF2FF', color: '#4F46E5', route: '/events/create' },
+  { label: 'My Events',  emoji: '📋', bg: '#ECFDF5', color: '#059669', route: '/events/my-events' },
+  { label: 'Calendar',   emoji: '🗓️', bg: '#FEF3C7', color: '#D97706', route: '/events/calendar' },
+  { label: 'Passes',     emoji: '🎟️', bg: '#FCE7F3', color: '#DB2777', route: '/events/passes' },
+];
 
 function EventCard({ event, onPress }: { event: EventDto; onPress: () => void }) {
   const qc = useQueryClient();
@@ -49,17 +56,16 @@ function EventCard({ event, onPress }: { event: EventDto; onPress: () => void })
   });
 
   const formatDate = useCallback((dateStr?: string) => {
-    if (!dateStr) return { day: '--', mon: '---', weekday: '', daysAway: -1 };
+    if (!dateStr) return { day: '--', mon: '---', weekday: '' };
     try {
       const d = parseISO(dateStr);
       return {
         day: format(d, 'dd'),
         mon: format(d, 'MMM').toUpperCase(),
         weekday: format(d, 'EEE'),
-        daysAway: differenceInDays(d, new Date()),
       };
     } catch {
-      return { day: '--', mon: '---', weekday: '', daysAway: -1 };
+      return { day: '--', mon: '---', weekday: '' };
     }
   }, []);
 
@@ -75,65 +81,66 @@ function EventCard({ event, onPress }: { event: EventDto; onPress: () => void })
     }
   }, []);
 
-  const { day, mon, weekday, daysAway } = formatDate(event.startDate);
-  const theme = TYPE_THEME[event.type] ?? { color: COLORS.primary, bg: COLORS.primaryLight, icon: 'calendar-outline' as const };
+  const { day, mon, weekday } = formatDate(event.startDate);
+  const theme = TYPE_THEME[event.type] ?? { color: COLORS.primary, bg: COLORS.primaryLight, emoji: '📅', gradient: GRADIENTS.primary as unknown as [string, string] };
   const isRegistered = event.isRegistered || event.rsvped;
-  const dateIsToday = isToday(event.startDate ? parseISO(event.startDate) : new Date(0));
-  const dateIsTomorrow = isTomorrow(event.startDate ? parseISO(event.startDate) : new Date(0));
+  const dateIsToday = event.startDate ? isToday(parseISO(event.startDate)) : false;
+  const dateIsTomorrow = event.startDate ? isTomorrow(parseISO(event.startDate)) : false;
+  const daysAway = event.startDate ? differenceInDays(parseISO(event.startDate), new Date()) : -1;
   const attendees = event.registrationCount ?? event.rsvpCount ?? event.attendees ?? 0;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       {/* Left date strip */}
       <LinearGradient
-        colors={[theme.color, theme.color + 'CC']}
+        colors={theme.gradient}
         style={styles.dateStrip}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
+        <Text style={styles.dateStripEmoji}>{theme.emoji}</Text>
         <Text style={styles.dateDay}>{day}</Text>
         <Text style={styles.dateMon}>{mon}</Text>
-        {dateIsToday && (
-          <View style={styles.todayDot} />
-        )}
+        {dateIsToday && <View style={styles.todayDot} />}
       </LinearGradient>
 
       {/* Card body */}
       <View style={styles.cardBody}>
-        <View style={styles.cardTop}>
-          {/* Type + urgency */}
-          <View style={styles.chipRow}>
-            <View style={[styles.typeChip, { backgroundColor: theme.bg }]}>
-              <Ionicons name={theme.icon} size={10} color={theme.color} />
-              <Text style={[styles.typeChipText, { color: theme.color }]}>{event.type}</Text>
-            </View>
-            {(dateIsToday || dateIsTomorrow) && (
-              <View style={[styles.urgencyChip, { backgroundColor: dateIsToday ? '#FEF2F2' : '#FFFBEB' }]}>
-                <View style={[styles.urgencyDot, { backgroundColor: dateIsToday ? COLORS.error : COLORS.warning }]} />
-                <Text style={[styles.urgencyText, { color: dateIsToday ? COLORS.error : '#92400E' }]}>
-                  {dateIsToday ? 'Today' : 'Tomorrow'}
-                </Text>
-              </View>
-            )}
-            {!dateIsToday && !dateIsTomorrow && daysAway >= 0 && daysAway <= 7 && (
-              <Text style={styles.daysAway}>{weekday}</Text>
-            )}
+        {/* Top row: chips */}
+        <View style={styles.chipRow}>
+          <View style={[styles.typeChip, { backgroundColor: theme.bg }]}>
+            <Text style={styles.typeChipEmoji}>{theme.emoji}</Text>
+            <Text style={[styles.typeChipText, { color: theme.color }]}>{event.type}</Text>
           </View>
-
-          <Text style={styles.cardTitle} numberOfLines={2}>{event.title}</Text>
+          {dateIsToday && (
+            <View style={styles.urgencyChipToday}>
+              <View style={styles.livePulse} />
+              <Text style={styles.urgencyTextToday}>Today</Text>
+            </View>
+          )}
+          {dateIsTomorrow && (
+            <View style={styles.urgencyChipTomorrow}>
+              <Text style={styles.urgencyTextTomorrow}>Tomorrow</Text>
+            </View>
+          )}
+          {!dateIsToday && !dateIsTomorrow && daysAway >= 0 && daysAway <= 7 && (
+            <Text style={styles.daysAway}>{weekday} · {daysAway}d</Text>
+          )}
         </View>
+
+        <Text style={styles.cardTitle} numberOfLines={2}>{event.title}</Text>
 
         {/* Meta */}
         <View style={styles.metaSection}>
           <View style={styles.metaRow}>
-            <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
+            <Text style={styles.metaEmoji}>📍</Text>
             <Text style={styles.cardMeta} numberOfLines={1}>
               {event.venue || event.location || 'TBD'}
             </Text>
           </View>
           <View style={styles.metaDivider} />
           <View style={styles.metaRow}>
-            <Ionicons name="time-outline" size={12} color={COLORS.textMuted} />
+            <Text style={styles.metaEmoji}>🕐</Text>
             <Text style={styles.cardMeta}>{formatTime(event.startTime)}</Text>
           </View>
         </View>
@@ -141,45 +148,31 @@ function EventCard({ event, onPress }: { event: EventDto; onPress: () => void })
         {/* Footer */}
         <View style={styles.cardFooter}>
           <View style={styles.attendeeRow}>
-            <View style={styles.attendeeAvatars}>
-              {[0, 1, 2].map(i => (
-                <View
-                  key={i}
-                  style={[
-                    styles.miniAvatar,
-                    { marginLeft: i > 0 ? -6 : 0, backgroundColor: [theme.color, theme.color + '99', theme.color + '66'][i] },
-                  ]}
-                >
-                  <Ionicons name="person" size={8} color="#fff" />
-                </View>
-              ))}
+            <View style={styles.attendeeBubble}>
+              <Text style={styles.attendeeBubbleText}>👥 {attendees}</Text>
             </View>
-            <Text style={styles.attendeeText}>
-              {attendees} {attendees === 1 ? 'person' : 'people'} going
-            </Text>
+            <Text style={styles.attendeeLabel}>going</Text>
           </View>
 
           <TouchableOpacity
             style={[
               styles.rsvpBtn,
-              isRegistered ? styles.rsvpBtnRegistered : { borderColor: theme.color },
+              isRegistered
+                ? styles.rsvpBtnRegistered
+                : { backgroundColor: theme.color },
             ]}
             onPress={(e) => { e.stopPropagation?.(); registerMutation.mutate(); }}
             disabled={registerMutation.isPending}
             activeOpacity={0.7}
           >
             {registerMutation.isPending ? (
-              <ActivityIndicator size={12} color={isRegistered ? '#065F46' : theme.color} />
-            ) : (
+              <ActivityIndicator size={12} color={isRegistered ? '#065F46' : '#fff'} />
+            ) : isRegistered ? (
               <>
-                {isRegistered && <Ionicons name="checkmark" size={12} color="#065F46" />}
-                <Text style={[
-                  styles.rsvpBtnText,
-                  isRegistered ? styles.rsvpTextRegistered : { color: theme.color },
-                ]}>
-                  {isRegistered ? 'Going' : 'RSVP'}
-                </Text>
+                <Text style={styles.rsvpTextRegistered}>✓ Going</Text>
               </>
+            ) : (
+              <Text style={styles.rsvpBtnText}>RSVP</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -199,25 +192,30 @@ export default function EventsScreen() {
 
   const filtered = filter === 'ALL' ? events : events.filter(e => e.type === filter);
 
+  const todayCount = events.filter(e => e.startDate && isToday(parseISO(e.startDate))).length;
+  const thisWeekCount = events.filter(e => {
+    if (!e.startDate) return false;
+    const d = differenceInDays(parseISO(e.startDate), new Date());
+    return d >= 0 && d <= 7;
+  }).length;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Hero header */}
+      {/* Gradient Header */}
       <LinearGradient
-        colors={GRADIENTS.hero}
+        colors={['#312E81', '#4F46E5', '#6366F1']}
         style={styles.heroHeader}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={styles.heroContent}>
+        <View style={styles.heroTopRow}>
           <View style={styles.heroLeft}>
             <View style={styles.heroIconWrap}>
-              <Ionicons name="calendar" size={20} color="#fff" />
+              <Text style={styles.heroEmoji}>📅</Text>
             </View>
             <View>
               <Text style={styles.heroTitle}>Events</Text>
-              <Text style={styles.heroSub}>
-                {events.length} upcoming
-              </Text>
+              <Text style={styles.heroSub}>{events.length} upcoming</Text>
             </View>
           </View>
           <View style={styles.heroActions}>
@@ -233,11 +231,49 @@ export default function EventsScreen() {
               onPress={() => router.push('/events/create')}
               hitSlop={8}
             >
-              <Ionicons name="add" size={20} color={COLORS.primary} />
+              <Ionicons name="add" size={20} color="#4F46E5" />
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Stats strip */}
+        <View style={styles.statsStrip}>
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>🔴</Text>
+            <Text style={styles.statValue}>{todayCount}</Text>
+            <Text style={styles.statLabel}>Today</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>📆</Text>
+            <Text style={styles.statValue}>{thisWeekCount}</Text>
+            <Text style={styles.statLabel}>This Week</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>🎫</Text>
+            <Text style={styles.statValue}>{events.length}</Text>
+            <Text style={styles.statLabel}>Total</Text>
+          </View>
+        </View>
       </LinearGradient>
+
+      {/* Quick Actions */}
+      <View style={styles.quickRow}>
+        {QUICK_ACTIONS.map((a) => (
+          <TouchableOpacity
+            key={a.label}
+            style={styles.quickCard}
+            onPress={() => router.push(a.route as any)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.quickIcon, { backgroundColor: a.bg }]}>
+              <Text style={styles.quickEmoji}>{a.emoji}</Text>
+            </View>
+            <Text style={styles.quickLabel}>{a.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       {/* Category pills */}
       <ScrollView
@@ -255,11 +291,7 @@ export default function EventsScreen() {
               onPress={() => setFilter(c.value)}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name={c.icon}
-                size={14}
-                color={active ? '#fff' : COLORS.textMuted}
-              />
+              <Text style={styles.filterEmoji}>{c.emoji}</Text>
               <Text style={[styles.filterText, active && styles.filterTextActive]}>
                 {c.label}
               </Text>
@@ -287,12 +319,9 @@ export default function EventsScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <LinearGradient
-                colors={[COLORS.primaryLight, '#fff']}
-                style={styles.emptyIconCircle}
-              >
-                <Ionicons name="calendar-outline" size={40} color={COLORS.primary} />
-              </LinearGradient>
+              <View style={styles.emptyIconCircle}>
+                <Text style={styles.emptyEmoji}>📅</Text>
+              </View>
               <Text style={styles.emptyTitle}>No events found</Text>
               <Text style={styles.emptyText}>
                 {filter !== 'ALL'
@@ -310,7 +339,7 @@ export default function EventsScreen() {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
-                  <Ionicons name="add-circle" size={18} color="#fff" />
+                  <Text style={styles.createBtnEmoji}>✍️</Text>
                   <Text style={styles.createBtnText}>Create Event</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -323,18 +352,21 @@ export default function EventsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
 
-  // Hero
+  // ── Hero Header ──
   heroHeader: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-  heroContent: {
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 14,
   },
   heroLeft: {
     flexDirection: 'row',
@@ -345,10 +377,11 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  heroEmoji: { fontSize: 20 },
   heroTitle: {
     fontSize: 22,
     fontWeight: '800',
@@ -358,9 +391,10 @@ const styles = StyleSheet.create({
   },
   heroSub: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
     marginTop: 1,
+    fontFamily: FONTS.medium,
   },
   heroActions: {
     flexDirection: 'row',
@@ -382,37 +416,105 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+    ...SHADOWS.sm,
   },
 
-  // Filters
+  // ── Stats Strip ──
+  statsStrip: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  statItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  statEmoji: { fontSize: 13 },
+  statValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
+    fontFamily: FONTS.displayEB,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.65)',
+    fontWeight: '500',
+    fontFamily: FONTS.medium,
+  },
+  statDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+
+  // ── Quick Actions ──
+  quickRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 6,
+    gap: 8,
+  },
+  quickCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.lg,
+    paddingVertical: 10,
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    ...SHADOWS.sm,
+  },
+  quickIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickEmoji: { fontSize: 16 },
+  quickLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.text,
+    fontFamily: FONTS.medium,
+  },
+
+  // ── Filter Pills ──
   filterScroll: {
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    maxHeight: 56,
+    maxHeight: 50,
   },
   filterRow: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 7,
     alignItems: 'center',
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.surfaceAlt,
+    gap: 5,
+    backgroundColor: '#fff',
     borderRadius: RADIUS.full,
-    paddingHorizontal: 14,
+    paddingHorizontal: 13,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
   },
   filterChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primaryDark,
-    ...SHADOWS.primary,
+    backgroundColor: '#312E81',
+    borderColor: '#312E81',
+    ...SHADOWS.sm,
   },
+  filterEmoji: { fontSize: 13 },
   filterText: {
     fontSize: 12,
     fontFamily: FONTS.semiBold,
@@ -421,25 +523,27 @@ const styles = StyleSheet.create({
   },
   filterTextActive: { color: '#fff' },
 
-  // List
-  list: { padding: SPACING.md, gap: 12 },
+  // ── List ──
+  list: { padding: 14, gap: 12, paddingBottom: 20 },
 
-  // Card
+  // ── Event Card ──
   card: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.md,
+    borderColor: '#E8E8F0',
+    ...SHADOWS.card,
   },
   dateStrip: {
-    width: 54,
+    width: 58,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
+    gap: 2,
   },
+  dateStripEmoji: { fontSize: 16, marginBottom: 2 },
   dateDay: {
     fontSize: 24,
     fontWeight: '800',
@@ -452,19 +556,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: 'rgba(255,255,255,0.85)',
     letterSpacing: 0.5,
-    marginTop: 1,
   },
   todayDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#fff',
-    marginTop: 6,
+    marginTop: 4,
   },
 
-  // Card body
+  // ── Card Body ──
   cardBody: { flex: 1, padding: 12, gap: 6 },
-  cardTop: { gap: 4 },
   chipRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -479,6 +581,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
+  typeChipEmoji: { fontSize: 10 },
   typeChipText: {
     fontSize: 9,
     fontWeight: '700',
@@ -486,29 +589,44 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     fontFamily: FONTS.bold,
   },
-  urgencyChip: {
+  urgencyChipToday: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: '#FEF2F2',
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  urgencyDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+  livePulse: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#DC2626',
   },
-  urgencyText: {
+  urgencyTextToday: {
     fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    color: '#DC2626',
+    fontFamily: FONTS.bold,
+  },
+  urgencyChipTomorrow: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  urgencyTextTomorrow: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#92400E',
     fontFamily: FONTS.bold,
   },
   daysAway: {
     fontSize: 10,
     color: COLORS.textMuted,
     fontWeight: '500',
+    fontFamily: FONTS.medium,
   },
   cardTitle: {
     fontSize: 15,
@@ -518,7 +636,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.displayBold,
   },
 
-  // Meta
+  // ── Meta ──
   metaSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -527,13 +645,14 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
+  metaEmoji: { fontSize: 10 },
   metaDivider: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: COLORS.border,
+    backgroundColor: '#E8E8F0',
   },
   cardMeta: {
     fontSize: 11,
@@ -541,7 +660,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
   },
 
-  // Footer
+  // ── Card Footer ──
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -551,49 +670,53 @@ const styles = StyleSheet.create({
   attendeeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
-  attendeeAvatars: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  attendeeBubble: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
-  miniAvatar: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.surface,
+  attendeeBubbleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.text,
+    fontFamily: FONTS.bold,
   },
-  attendeeText: {
+  attendeeLabel: {
     fontSize: 11,
     color: COLORS.textMuted,
-    fontWeight: '500',
     fontFamily: FONTS.medium,
   },
   rsvpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    borderWidth: 1.5,
     borderRadius: RADIUS.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   rsvpBtnRegistered: {
     backgroundColor: '#ECFDF5',
-    borderColor: '#059669',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
   rsvpBtnText: {
     fontSize: 11,
     fontWeight: '700',
+    color: '#fff',
     letterSpacing: 0.3,
     fontFamily: FONTS.bold,
   },
-  rsvpTextRegistered: { color: '#065F46' },
+  rsvpTextRegistered: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065F46',
+    fontFamily: FONTS.bold,
+  },
 
-  // Loading
+  // ── Loading ──
   loadingWrap: {
     flex: 1,
     alignItems: 'center',
@@ -606,10 +729,10 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
   },
 
-  // Empty
+  // ── Empty ──
   empty: {
     alignItems: 'center',
-    paddingTop: 80,
+    paddingTop: 60,
     gap: 12,
     paddingHorizontal: 32,
   },
@@ -617,10 +740,12 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
+  emptyEmoji: { fontSize: 36 },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -638,7 +763,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: RADIUS.md,
     overflow: 'hidden',
-    ...SHADOWS.primary,
+    ...SHADOWS.md,
   },
   createBtnGradient: {
     flexDirection: 'row',
@@ -647,6 +772,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 12,
   },
+  createBtnEmoji: { fontSize: 16 },
   createBtnText: {
     color: '#fff',
     fontSize: 14,

@@ -7,11 +7,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { format } from 'date-fns';
 import { aiChatService, AI_TOOL_DOMAINS, type ActionPill } from '@/services/aiChatService';
 import { useAuth } from '@/hooks/useAuth';
 import { useWebSocket } from '@/hooks/useWebSocket';
-import { COLORS, SHADOWS, RADIUS, getAvatarColor, getInitials } from '@/constants/config';
+import {
+  COLORS, SHADOWS, RADIUS, SPACING, FONTS, GRADIENTS,
+  getAvatarColor, getInitials,
+} from '@/constants/config';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -42,13 +46,13 @@ interface QuickPrompt {
   text: string;
 }
 
-const CATEGORY_TABS: { key: PromptCategory; label: string; icon: IoniconsName }[] = [
-  { key: 'ALL', label: 'All', icon: 'sparkles' },
-  { key: 'BILLS', label: 'Dues & Bills', icon: 'card-outline' },
-  { key: 'AMENITIES', label: 'Amenities', icon: 'fitness-outline' },
-  { key: 'GATE', label: 'Gate & Passes', icon: 'shield-checkmark-outline' },
-  { key: 'SPORTS', label: 'Sports & Auction', icon: 'trophy-outline' },
-  { key: 'BYLAWS', label: 'Rules & Bylaws', icon: 'document-text-outline' },
+const CATEGORY_TABS: { key: PromptCategory; label: string; emoji: string }[] = [
+  { key: 'ALL',       label: 'All',            emoji: '✨' },
+  { key: 'BILLS',     label: 'Dues & Bills',   emoji: '💳' },
+  { key: 'AMENITIES', label: 'Amenities',      emoji: '🏊' },
+  { key: 'GATE',      label: 'Gate & Passes',  emoji: '🛡️' },
+  { key: 'SPORTS',    label: 'Sports',         emoji: '🏆' },
+  { key: 'BYLAWS',    label: 'Rules & Bylaws', emoji: '📜' },
 ];
 
 const QUICK_PROMPTS: QuickPrompt[] = [
@@ -78,7 +82,6 @@ export default function AiChatScreen() {
 
   const userAvatarColor = getAvatarColor(user?.fullName || user?.name || 'Resident');
 
-  // Initial greeting
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -92,7 +95,6 @@ export default function AiChatScreen() {
     },
   ]);
 
-  // STOMP / WebSocket listener for live AI Push events
   const handleWebSocketMessage = useCallback((topic: string, body: unknown) => {
     if (body && typeof body === 'object') {
       const evt = body as any;
@@ -154,7 +156,6 @@ export default function AiChatScreen() {
 
       setMessages((prev) => [...prev, assistantMsg]);
     } catch {
-      // Fallback response with helpful guide
       const fallbackReply: ChatMessage = {
         id: `ai-err-${Date.now()}`,
         sender: 'assistant',
@@ -216,7 +217,7 @@ export default function AiChatScreen() {
     const lines = text.split('\n');
 
     return (
-      <View style={styles.markdownWrap}>
+      <View style={s.markdownWrap}>
         {lines.map((line, lIdx) => {
           if (!line.trim()) {
             return <View key={lIdx} style={{ height: 6 }} />;
@@ -227,20 +228,20 @@ export default function AiChatScreen() {
           const parts = cleanLine.split(/(\*\*[^*]+\*\*)/g);
 
           return (
-            <View key={lIdx} style={[styles.textLineRow, isBullet && styles.bulletRow]}>
+            <View key={lIdx} style={[s.textLineRow, isBullet && s.bulletRow]}>
               {isBullet && (
-                <Text style={[styles.bulletDot, isUser ? styles.bulletUser : styles.bulletAssistant]}>
+                <Text style={[s.bulletDot, isUser ? s.bulletUser : s.bulletAssistant]}>
                   •
                 </Text>
               )}
-              <Text style={[styles.messageText, isUser ? styles.textUser : styles.textAssistant]}>
+              <Text style={[s.messageText, isUser ? s.textUser : s.textAssistant]}>
                 {parts.map((part, pIdx) => {
                   if (part.startsWith('**') && part.endsWith('**')) {
                     const boldText = part.slice(2, -2);
                     return (
                       <Text
                         key={pIdx}
-                        style={[styles.boldText, isUser ? styles.textUserBold : styles.textAssistantBold]}
+                        style={[s.boldText, isUser ? s.textUserBold : s.textAssistantBold]}
                       >
                         {boldText}
                       </Text>
@@ -257,72 +258,72 @@ export default function AiChatScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} hitSlop={8}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+    <SafeAreaView style={s.container} edges={['top']}>
+      {/* ── Gradient Header ──────────────────────────── */}
+      <LinearGradient
+        colors={['#312E81', '#4F46E5', '#6366F1']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.header}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={s.headerNavBtn} hitSlop={8}>
+          <Ionicons name="arrow-back" size={18} color="#fff" />
         </TouchableOpacity>
 
-        <View style={styles.avatarGlow}>
-          <View style={styles.botAvatar}>
-            <Ionicons name="sparkles" size={17} color="#fff" />
-          </View>
-          <View style={styles.onlinePill} />
+        <View style={s.headerAvatarWrap}>
+          <Text style={s.headerAvatarEmoji}>✨</Text>
+          <View style={s.headerOnlinePill} />
         </View>
 
-        <View style={styles.headerInfo}>
-          <View style={styles.headerTitleRow}>
-            <Text style={styles.headerTitle}>Mana AI</Text>
-            <View style={styles.toolsBadge}>
-              <Text style={styles.toolsBadgeText}>66 TOOLS</Text>
+        <View style={s.headerInfo}>
+          <View style={s.headerTitleRow}>
+            <Text style={s.headerTitle}>Mana AI</Text>
+            <View style={s.toolsBadge}>
+              <Text style={s.toolsBadgeText}>66 TOOLS</Text>
             </View>
           </View>
-          <Text style={styles.headerSubtitle}>Spring AI • Community Assistant</Text>
+          <Text style={s.headerSubtitle}>Spring AI • Community Assistant</Text>
         </View>
 
-        <View style={styles.headerActions}>
+        <View style={s.headerActions}>
           <TouchableOpacity
             onPress={() => setShowToolsModal(true)}
-            style={styles.headerBtn}
+            style={s.headerActionBtn}
             hitSlop={8}
           >
-            <Ionicons name="information-circle-outline" size={22} color={COLORS.primary} />
+            <Text style={s.headerActionEmoji}>ℹ️</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             onPress={handleResetChat}
-            style={styles.headerBtn}
+            style={s.headerActionBtn}
             hitSlop={8}
           >
-            <Ionicons name="refresh-outline" size={20} color={COLORS.textMuted} />
+            <Text style={s.headerActionEmoji}>🔄</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
-      {/* Live STOMP WebSocket Push Banner */}
+      {/* Live STOMP Push Banner */}
       {livePushEvent && (
-        <View style={styles.pushBanner}>
-          <View style={styles.pushBannerLeft}>
-            <View style={styles.pushIconWrap}>
-              <Ionicons name="flash" size={15} color="#F59E0B" />
-            </View>
-            <View style={styles.pushTextWrap}>
-              <Text style={styles.pushTitle} numberOfLines={1}>{livePushEvent.title}</Text>
-              <Text style={styles.pushBody} numberOfLines={1}>{livePushEvent.body}</Text>
+        <View style={s.pushBanner}>
+          <View style={s.pushBannerLeft}>
+            <Text style={s.pushEmoji}>⚡</Text>
+            <View style={s.pushTextWrap}>
+              <Text style={s.pushTitle} numberOfLines={1}>{livePushEvent.title}</Text>
+              <Text style={s.pushBody} numberOfLines={1}>{livePushEvent.body}</Text>
             </View>
           </View>
-          <View style={styles.pushActions}>
+          <View style={s.pushActions}>
             {livePushEvent.actionUrl && (
               <TouchableOpacity
-                style={styles.pushActionBtn}
+                style={s.pushActionBtn}
                 onPress={() => {
                   const url = livePushEvent.actionUrl!;
                   setLivePushEvent(null);
                   router.push(url as any);
                 }}
               >
-                <Text style={styles.pushActionText}>View</Text>
+                <Text style={s.pushActionText}>View</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={() => setLivePushEvent(null)} hitSlop={8}>
@@ -332,25 +333,20 @@ export default function AiChatScreen() {
         </View>
       )}
 
-      {/* Category Filter Chips */}
-      <View style={styles.categoryBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+      {/* ── Category Filter Pills ──────────────────── */}
+      <View style={s.categoryBar}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.categoryScroll}>
           {CATEGORY_TABS.map((cat) => {
             const active = selectedCategory === cat.key;
             return (
               <TouchableOpacity
                 key={cat.key}
-                style={[styles.categoryChip, active && styles.categoryChipActive]}
+                style={[s.categoryChip, active && s.categoryChipActive]}
                 onPress={() => setSelectedCategory(cat.key)}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={cat.icon}
-                  size={12}
-                  color={active ? '#fff' : COLORS.textMuted}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={[styles.categoryText, active && styles.categoryTextActive]}>
+                <Text style={s.categoryEmoji}>{cat.emoji}</Text>
+                <Text style={[s.categoryText, active && s.categoryTextActive]}>
                   {cat.label}
                 </Text>
               </TouchableOpacity>
@@ -359,83 +355,82 @@ export default function AiChatScreen() {
         </ScrollView>
       </View>
 
-      {/* Quick Prompts Bar */}
-      <View style={styles.quickPromptsBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.promptsScroll}>
+      {/* ── Quick Prompts ──────────────────────────── */}
+      <View style={s.quickPromptsBar}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.promptsScroll}>
           {filteredPrompts.map((p) => (
             <TouchableOpacity
               key={p.id}
-              style={styles.promptChip}
+              style={s.promptChip}
               onPress={() => handleSend(p.text)}
               activeOpacity={0.7}
             >
-              <Text style={styles.promptEmoji}>{p.emoji}</Text>
-              <Text style={styles.promptLabel}>{p.label}</Text>
+              <Text style={s.promptEmoji}>{p.emoji}</Text>
+              <Text style={s.promptLabel}>{p.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* Messages FlatList */}
+      {/* ── Messages ──────────────────────────────── */}
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <FlatList
           ref={listRef}
           data={messages}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
             const isUser = item.sender === 'user';
             return (
-              <View style={[styles.messageRow, isUser ? styles.rowUser : styles.rowAssistant]}>
+              <View style={[s.messageRow, isUser ? s.rowUser : s.rowAssistant]}>
                 {!isUser ? (
-                  <View style={styles.botAvatarSmall}>
-                    <Ionicons name="sparkles" size={13} color="#fff" />
+                  <View style={s.botAvatarSmall}>
+                    <Text style={s.botAvatarEmoji}>✨</Text>
                   </View>
                 ) : (
-                  <View style={[styles.userAvatarSmall, { backgroundColor: userAvatarColor.bg }]}>
-                    <Text style={[styles.userAvatarInitials, { color: userAvatarColor.text }]}>
+                  <View style={[s.userAvatarSmall, { backgroundColor: userAvatarColor.bg }]}>
+                    <Text style={[s.userAvatarInitials, { color: userAvatarColor.text }]}>
                       {getInitials(user?.fullName || user?.name || 'U')}
                     </Text>
                   </View>
                 )}
 
-                <View style={[styles.bubbleWrap, isUser && styles.bubbleWrapUser]}>
-                  <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
+                <View style={[s.bubbleWrap, isUser && s.bubbleWrapUser]}>
+                  <View style={[s.bubble, isUser ? s.bubbleUser : s.bubbleAssistant]}>
                     {renderMessageContent(item.text, isUser)}
 
-                    {/* Contextual Action Pills */}
                     {!isUser && item.actions && item.actions.length > 0 && (
-                      <View style={styles.actionsWrap}>
+                      <View style={s.actionsWrap}>
                         {item.actions.map((act, actIdx) => (
                           <TouchableOpacity
                             key={actIdx}
-                            style={[styles.actionPill, { backgroundColor: act.bg, borderColor: act.color }]}
+                            style={[s.actionPill, { backgroundColor: act.bg, borderColor: act.color }]}
                             onPress={() => router.push(act.route as any)}
                             activeOpacity={0.7}
                           >
                             <Ionicons name={act.icon as IoniconsName} size={13} color={act.color} />
-                            <Text style={[styles.actionPillText, { color: act.color }]}>{act.label}</Text>
+                            <Text style={[s.actionPillText, { color: act.color }]}>{act.label}</Text>
                             <Ionicons name="arrow-forward" size={11} color={act.color} />
                           </TouchableOpacity>
                         ))}
                       </View>
                     )}
 
-                    <View style={styles.bubbleFooter}>
-                      <Text style={[styles.timestamp, isUser ? styles.timeUser : styles.timeAssistant]}>
+                    <View style={s.bubbleFooter}>
+                      <Text style={[s.timestamp, isUser ? s.timeUser : s.timeAssistant]}>
                         {format(item.timestamp, 'h:mm a')}
                       </Text>
 
                       {!isUser && item.id !== 'welcome' && (
-                        <View style={styles.feedbackRow}>
+                        <View style={s.feedbackRow}>
                           <TouchableOpacity
                             onPress={() => handleFeedback(item.id, 'like')}
                             hitSlop={6}
-                            style={styles.feedbackBtn}
+                            style={s.feedbackBtn}
                           >
                             <Ionicons
                               name={item.feedback === 'like' ? 'thumbs-up' : 'thumbs-up-outline'}
@@ -446,7 +441,7 @@ export default function AiChatScreen() {
                           <TouchableOpacity
                             onPress={() => handleFeedback(item.id, 'dislike')}
                             hitSlop={6}
-                            style={styles.feedbackBtn}
+                            style={s.feedbackBtn}
                           >
                             <Ionicons
                               name={item.feedback === 'dislike' ? 'thumbs-down' : 'thumbs-down-outline'}
@@ -464,13 +459,13 @@ export default function AiChatScreen() {
           }}
           ListFooterComponent={
             isThinking ? (
-              <View style={styles.thinkingContainer}>
-                <View style={styles.botAvatarSmall}>
-                  <Ionicons name="sparkles" size={13} color="#fff" />
+              <View style={s.thinkingContainer}>
+                <View style={s.botAvatarSmall}>
+                  <Text style={s.botAvatarEmoji}>✨</Text>
                 </View>
-                <View style={styles.thinkingBubble}>
+                <View style={s.thinkingBubble}>
                   <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 8 }} />
-                  <Text style={styles.thinkingText}>Consulting 66 society tools...</Text>
+                  <Text style={s.thinkingText}>Consulting 66 society tools...</Text>
                 </View>
               </View>
             ) : null
@@ -478,10 +473,10 @@ export default function AiChatScreen() {
         />
 
         {/* Input Bar */}
-        <View style={styles.inputBar}>
-          <View style={styles.inputWrap}>
+        <View style={s.inputBar}>
+          <View style={s.inputWrap}>
             <TextInput
-              style={styles.input}
+              style={s.input}
               placeholder="Ask anything about the community..."
               placeholderTextColor={COLORS.textMuted}
               value={inputText}
@@ -490,88 +485,93 @@ export default function AiChatScreen() {
               maxLength={1000}
             />
             {inputText.length > 0 && (
-              <TouchableOpacity onPress={() => setInputText('')} hitSlop={8} style={styles.clearBtn}>
+              <TouchableOpacity onPress={() => setInputText('')} hitSlop={8} style={s.clearBtn}>
                 <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
               </TouchableOpacity>
             )}
           </View>
 
           <TouchableOpacity
-            style={[
-              styles.sendBtn,
-              (!inputText.trim() || isThinking) && styles.sendBtnDisabled,
-            ]}
+            style={s.sendBtnWrap}
             onPress={() => handleSend()}
             disabled={!inputText.trim() || isThinking}
-            hitSlop={6}
             activeOpacity={0.8}
           >
-            <Ionicons name="send" size={16} color="#fff" />
+            <LinearGradient
+              colors={
+                (!inputText.trim() || isThinking)
+                  ? ['#A5B4FC', '#A5B4FC']
+                  : ['#312E81', '#4F46E5']
+              }
+              style={s.sendBtn}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Ionicons name="send" size={16} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
 
-      {/* 66 Tools & Capabilities Modal */}
+      {/* ── 66 Tools Modal ─────────────────────────── */}
       <Modal
         visible={showToolsModal}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setShowToolsModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleRow}>
-                <View style={styles.modalBadge}>
-                  <Ionicons name="hardware-chip-outline" size={16} color={COLORS.primary} />
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <View style={s.modalTitleRow}>
+                <View style={s.modalBadge}>
+                  <Text style={s.modalBadgeEmoji}>🤖</Text>
                 </View>
                 <View>
-                  <Text style={styles.modalTitle}>Spring AI Capabilities</Text>
-                  <Text style={styles.modalSubtitle}>66 Tools Active in Mana Community</Text>
+                  <Text style={s.modalTitle}>Spring AI Capabilities</Text>
+                  <Text style={s.modalSubtitle}>66 Tools Active in Mana Community</Text>
                 </View>
               </View>
               <TouchableOpacity
                 onPress={() => setShowToolsModal(false)}
                 hitSlop={8}
-                style={styles.modalCloseBtn}
+                style={s.modalCloseBtn}
               >
                 <Ionicons name="close" size={20} color={COLORS.text} />
               </TouchableOpacity>
             </View>
 
-            {/* Modal Domains List */}
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.modalExplainer}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.modalScroll}>
+              <Text style={s.modalExplainer}>
                 The AI assistant uses Spring AI & Ollama with deep tool execution to query your live community database and trigger instant member actions.
               </Text>
 
               {AI_TOOL_DOMAINS.map((domain, dIdx) => (
-                <View key={dIdx} style={styles.domainCard}>
-                  <View style={styles.domainHead}>
-                    <View style={styles.domainIconWrap}>
-                      <Ionicons name={domain.icon as IoniconsName} size={18} color={COLORS.primary} />
+                <View key={dIdx} style={s.domainCard}>
+                  <View style={s.domainHead}>
+                    <View style={s.domainIconWrap}>
+                      <Ionicons name={domain.icon as IoniconsName} size={18} color="#4F46E5" />
                     </View>
-                    <View style={styles.domainTitleWrap}>
-                      <Text style={styles.domainName}>{domain.name}</Text>
-                      <Text style={styles.domainCount}>{domain.count} Tools Connected</Text>
+                    <View style={s.domainTitleWrap}>
+                      <Text style={s.domainName}>{domain.name}</Text>
+                      <Text style={s.domainCount}>{domain.count} Tools Connected</Text>
                     </View>
                   </View>
-                  <Text style={styles.domainDesc}>{domain.description}</Text>
+                  <Text style={s.domainDesc}>{domain.description}</Text>
 
-                  <View style={styles.sampleQuestionsWrap}>
-                    <Text style={styles.sampleQuestionsHead}>Sample Prompts:</Text>
+                  <View style={s.sampleQuestionsWrap}>
+                    <Text style={s.sampleQuestionsHead}>💡 Sample Prompts</Text>
                     {domain.sampleQuestions.map((sq, sqIdx) => (
                       <TouchableOpacity
                         key={sqIdx}
-                        style={styles.sampleQuestionBtn}
+                        style={s.sampleQuestionBtn}
                         onPress={() => {
                           setShowToolsModal(false);
                           handleSend(sq);
                         }}
                       >
-                        <Ionicons name="chatbubble-ellipses-outline" size={12} color={COLORS.primary} />
-                        <Text style={styles.sampleQuestionText}>{sq}</Text>
+                        <Text style={s.sampleQuestionEmoji}>💬</Text>
+                        <Text style={s.sampleQuestionText}>{sq}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -586,42 +586,43 @@ export default function AiChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
   flex: { flex: 1 },
 
-  // Header
+  // ── Gradient Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 12,
     gap: 10,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  avatarGlow: {
-    position: 'relative',
-  },
-  botAvatar: {
+  headerNavBtn: {
     width: 38,
     height: 38,
-    borderRadius: 13,
-    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  onlinePill: {
+  headerAvatarWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    position: 'relative',
+  },
+  headerAvatarEmoji: { fontSize: 20 },
+  headerOnlinePill: {
     position: 'absolute',
     bottom: -1,
     right: -1,
@@ -630,24 +631,49 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#10B981',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: '#4F46E5',
   },
   headerInfo: { flex: 1 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#fff',
+    fontFamily: FONTS.displayEB,
+    letterSpacing: -0.3,
+  },
   toolsBadge: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: RADIUS.xs,
     paddingHorizontal: 6,
     paddingVertical: 1.5,
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
   },
-  toolsBadgeText: { fontSize: 8, fontWeight: '800', color: COLORS.primary },
-  headerSubtitle: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  toolsBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#fff',
+    fontFamily: FONTS.bold,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 1,
+    fontFamily: FONTS.regular,
+  },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  headerActionEmoji: { fontSize: 15 },
 
-  // Push Banner
+  // ── Push Banner ──
   pushBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -655,21 +681,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1B4B',
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderBottomWidth: 1,
-    borderBottomColor: '#4338CA',
   },
   pushBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  pushIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  pushEmoji: { fontSize: 16 },
   pushTextWrap: { flex: 1 },
-  pushTitle: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  pushBody: { fontSize: 11, color: '#C7D2FE', marginTop: 1 },
+  pushTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+    fontFamily: FONTS.bold,
+  },
+  pushBody: {
+    fontSize: 11,
+    color: '#C7D2FE',
+    marginTop: 1,
+    fontFamily: FONTS.regular,
+  },
   pushActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   pushActionBtn: {
     backgroundColor: '#4F46E5',
@@ -677,38 +704,51 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: RADIUS.xs,
   },
-  pushActionText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  pushActionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+    fontFamily: FONTS.bold,
+  },
 
-  // Category Bar
+  // ── Category Pills ──
   categoryBar: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingVertical: 6,
+    borderBottomColor: '#E8E8F0',
+    paddingVertical: 8,
   },
   categoryScroll: { paddingHorizontal: 12, gap: 6 },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: '#E8E8F0',
   },
   categoryChipActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
   },
-  categoryText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
-  categoryTextActive: { color: '#fff' },
+  categoryEmoji: { fontSize: 12 },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    fontFamily: FONTS.semiBold,
+  },
+  categoryTextActive: { color: '#312E81', fontWeight: '700', fontFamily: FONTS.bold },
 
-  // Quick Prompts
+  // ── Quick Prompts ──
   quickPromptsBar: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#E8E8F0',
   },
   promptsScroll: { paddingHorizontal: 12, gap: 6 },
   promptChip: {
@@ -723,50 +763,62 @@ const styles = StyleSheet.create({
     borderColor: '#E0E7FF',
   },
   promptEmoji: { fontSize: 13 },
-  promptLabel: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
+  promptLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#312E81',
+    fontFamily: FONTS.semiBold,
+  },
 
-  // List & Messages
+  // ── Messages ──
   listContent: { paddingHorizontal: 14, paddingVertical: 14, gap: 14 },
   messageRow: { flexDirection: 'row', gap: 8, maxWidth: '88%' },
   rowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   rowAssistant: { alignSelf: 'flex-start' },
 
   botAvatarSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: COLORS.primary,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
   },
+  botAvatarEmoji: { fontSize: 14 },
   userAvatarSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
-  userAvatarInitials: { fontSize: 11, fontWeight: '800' },
+  userAvatarInitials: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: FONTS.bold,
+  },
 
   bubbleWrap: { flex: 1 },
   bubbleWrapUser: { alignItems: 'flex-end' },
   bubble: {
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     paddingHorizontal: 14,
     paddingVertical: 10,
     ...SHADOWS.sm,
   },
   bubbleUser: {
-    backgroundColor: COLORS.primary,
-    borderBottomRightRadius: 3,
+    backgroundColor: '#4F46E5',
+    borderBottomRightRadius: 4,
   },
   bubbleAssistant: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderBottomLeftRadius: 3,
+    borderColor: '#E8E8F0',
+    borderBottomLeftRadius: 4,
   },
 
   markdownWrap: { gap: 4 },
@@ -774,16 +826,15 @@ const styles = StyleSheet.create({
   bulletRow: { paddingLeft: 2 },
   bulletDot: { fontSize: 14, marginRight: 6, lineHeight: 20 },
   bulletUser: { color: 'rgba(255,255,255,0.8)' },
-  bulletAssistant: { color: COLORS.primary },
+  bulletAssistant: { color: '#4F46E5' },
 
-  messageText: { fontSize: 14, lineHeight: 21 },
+  messageText: { fontSize: 14, lineHeight: 21, fontFamily: FONTS.regular },
   textUser: { color: '#fff' },
   textAssistant: { color: COLORS.text },
-  boldText: { fontWeight: '700' },
+  boldText: { fontWeight: '700', fontFamily: FONTS.bold },
   textUserBold: { color: '#fff' },
   textAssistantBold: { color: '#1E1B4B' },
 
-  // Action Pills
   actionsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -791,7 +842,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: '#E8E8F0',
   },
   actionPill: {
     flexDirection: 'row',
@@ -802,7 +853,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     borderWidth: 1,
   },
-  actionPillText: { fontSize: 11, fontWeight: '700' },
+  actionPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: FONTS.bold,
+  },
 
   bubbleFooter: {
     flexDirection: 'row',
@@ -810,13 +865,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 6,
   },
-  timestamp: { fontSize: 10 },
+  timestamp: {
+    fontSize: 10,
+    fontFamily: FONTS.regular,
+  },
   timeUser: { color: 'rgba(255,255,255,0.7)' },
   timeAssistant: { color: COLORS.textMuted },
   feedbackRow: { flexDirection: 'row', gap: 8, marginLeft: 12 },
   feedbackBtn: { padding: 2 },
 
-  // Thinking state
+  // ── Thinking ──
   thinkingContainer: {
     flexDirection: 'row',
     gap: 8,
@@ -827,35 +885,40 @@ const styles = StyleSheet.create({
   thinkingBubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.lg,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     ...SHADOWS.sm,
   },
-  thinkingText: { fontSize: 13, color: COLORS.textMuted, fontStyle: 'italic' },
+  thinkingText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontStyle: 'italic',
+    fontFamily: FONTS.regular,
+  },
 
-  // Input Bar
+  // ── Input Bar ──
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: '#E8E8F0',
     gap: 8,
   },
   inputWrap: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     paddingHorizontal: 12,
   },
   input: {
@@ -864,27 +927,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     maxHeight: 90,
     color: COLORS.text,
+    fontFamily: FONTS.regular,
   },
   clearBtn: { padding: 4 },
+  sendBtnWrap: { borderRadius: 20, overflow: 'hidden' },
   sendBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.sm,
   },
-  sendBtnDisabled: { backgroundColor: '#A5B4FC' },
 
-  // Modal
+  // ── Modal ──
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
@@ -896,71 +958,118 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 18,
     paddingVertical: 16,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#E8E8F0',
   },
   modalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   modalBadge: {
     width: 36,
     height: 36,
-    borderRadius: 11,
+    borderRadius: 12,
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  modalSubtitle: { fontSize: 12, color: COLORS.textMuted },
+  modalBadgeEmoji: { fontSize: 18 },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+    fontFamily: FONTS.displayBold,
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+  },
   modalCloseBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
   },
-  modalScroll: { paddingHorizontal: 16, paddingTop: 14, gap: 12 },
-  modalExplainer: { fontSize: 13, color: COLORS.textMuted, lineHeight: 18, marginBottom: 4 },
+  modalScroll: { paddingHorizontal: SPACING.lg, paddingTop: 14, gap: 12 },
+  modalExplainer: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    lineHeight: 18,
+    marginBottom: 4,
+    fontFamily: FONTS.regular,
+  },
   domainCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.xl,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     ...SHADOWS.sm,
   },
   domainHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   domainIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   domainTitleWrap: { flex: 1 },
-  domainName: { fontSize: 14, fontWeight: '700', color: COLORS.text },
-  domainCount: { fontSize: 11, fontWeight: '600', color: COLORS.primary },
-  domainDesc: { fontSize: 12, color: COLORS.textMuted, lineHeight: 17, marginBottom: 10 },
+  domainName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    fontFamily: FONTS.displayBold,
+  },
+  domainCount: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4F46E5',
+    fontFamily: FONTS.semiBold,
+  },
+  domainDesc: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    lineHeight: 17,
+    marginBottom: 10,
+    fontFamily: FONTS.regular,
+  },
   sampleQuestionsWrap: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     borderRadius: RADIUS.md,
     padding: 10,
     gap: 6,
   },
-  sampleQuestionsHead: { fontSize: 11, fontWeight: '700', color: COLORS.text, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sampleQuestionsHead: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: FONTS.bold,
+  },
   sampleQuestionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
   },
-  sampleQuestionText: { fontSize: 12, color: COLORS.text, flex: 1 },
+  sampleQuestionEmoji: { fontSize: 12 },
+  sampleQuestionText: {
+    fontSize: 12,
+    color: COLORS.text,
+    flex: 1,
+    fontFamily: FONTS.regular,
+  },
 });

@@ -5,15 +5,27 @@ import {
   Modal, ActivityIndicator, Alert, RefreshControl, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { COLORS, SPACING, RADIUS, SHADOWS, FONTS } from '@/constants/config';
+import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import {
   maintenanceDuesService,
   MaintenanceBillDto,
   PaymentVerificationRequest,
 } from '@/services/maintenanceDuesService';
+
+const FINANCE_HUBS = [
+  { emoji: '🏦', label: 'Treasury',   color: '#4F46E5', bg: '#EEF2FF', route: '/finance/society-dashboard' },
+  { emoji: '💳', label: 'Pay Dues',   color: '#059669', bg: '#ECFDF5', route: '/finance' },
+  { emoji: '📊', label: 'Reports',    color: '#D97706', bg: '#FFFBEB', route: '/finance/reports' },
+  { emoji: '📋', label: 'Invoices',   color: '#0284C7', bg: '#E0F2FE', route: '/finance/invoices' },
+  { emoji: '👥', label: 'Vendors',    color: '#7C3AED', bg: '#F5F3FF', route: '/finance/vendors' },
+  { emoji: '✅', label: 'Approvals',  color: '#DC2626', bg: '#FEF2F2', route: '/finance/approvals' },
+  { emoji: '📑', label: 'Budget',     color: '#EA580C', bg: '#FFF7ED', route: '/finance/budget' },
+  { emoji: '💰', label: 'My Money',   color: '#16A34A', bg: '#DCFCE7', route: '/personal-finance' },
+] as const;
 
 export default function MaintenanceDuesScreen() {
   const router = useRouter();
@@ -26,7 +38,6 @@ export default function MaintenanceDuesScreen() {
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
   const [receiptModalBill, setReceiptModalBill] = useState<MaintenanceBillDto | null>(null);
 
-  // ── 1. Live Pending Bills Query ──────────────────────────────────────────
   const {
     data: pendingBills = [],
     isLoading: loadingPending,
@@ -36,7 +47,6 @@ export default function MaintenanceDuesScreen() {
     queryFn: maintenanceDuesService.getPendingBills,
   });
 
-  // ── 2. Live Payment History Query ────────────────────────────────────────
   const {
     data: historyBills = [],
     isLoading: loadingHistory,
@@ -46,7 +56,6 @@ export default function MaintenanceDuesScreen() {
     queryFn: maintenanceDuesService.getPaymentHistory,
   });
 
-  // ── 3. Live Wallet Balance Query ─────────────────────────────────────────
   const {
     data: walletData,
     isLoading: loadingWallet,
@@ -58,27 +67,19 @@ export default function MaintenanceDuesScreen() {
 
   const walletBalance = walletData?.balance ?? 0;
 
-  // Active bill to display in statement card
   const activeBill = useMemo(() => {
     if (selectedBillId) {
       const match = pendingBills.find(b => b.id === selectedBillId);
       if (match) return match;
     }
-    if (pendingBills.length > 0) {
-      return pendingBills[0];
-    }
-    if (historyBills.length > 0) {
-      return historyBills[0];
-    }
+    if (pendingBills.length > 0) return pendingBills[0];
+    if (historyBills.length > 0) return historyBills[0];
     return null;
   }, [pendingBills, historyBills, selectedBillId]);
 
-  // Breakdown charges (dynamic line items)
   const chargesList = useMemo(() => {
     if (!activeBill) return [];
-    if (activeBill.charges && activeBill.charges.length > 0) {
-      return activeBill.charges;
-    }
+    if (activeBill.charges && activeBill.charges.length > 0) return activeBill.charges;
     const list: { item: string; amount: number }[] = [];
     if (activeBill.maintenanceAmount) list.push({ item: 'Society Maintenance Fee', amount: activeBill.maintenanceAmount });
     if (activeBill.waterCharges) list.push({ item: 'Water Consumption Charges', amount: activeBill.waterCharges });
@@ -90,7 +91,6 @@ export default function MaintenanceDuesScreen() {
     return list;
   }, [activeBill]);
 
-  // ── Pull-to-Refresh ───────────────────────────────────────────────────────
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -100,24 +100,17 @@ export default function MaintenanceDuesScreen() {
     }
   }, [refetchPending, refetchHistory, refetchWallet]);
 
-  // ── Payment Mutation ──────────────────────────────────────────────────────
   const payMutation = useMutation({
     mutationFn: async () => {
       if (!activeBill) throw new Error('No active bill selected.');
-
       const due = activeBill.dueAmount ?? activeBill.totalAmount;
-
       if (selectedMethod === 'WALLET') {
         if (walletBalance < due) {
           throw new Error(`Insufficient wallet balance (₹${walletBalance.toLocaleString()}). Please choose UPI or Card.`);
         }
         return await maintenanceDuesService.payWithWallet(activeBill.id, due);
       }
-
-      // Step 1: Initiate payment order with payment gateway
       const order = await maintenanceDuesService.initiatePayment(activeBill.id);
-
-      // Step 2: Verification callback with gateway payment reference
       const verificationPayload: PaymentVerificationRequest = {
         billId: activeBill.id,
         orderId: order.orderId,
@@ -125,7 +118,6 @@ export default function MaintenanceDuesScreen() {
         signature: 'sig_mock_gateway_verified',
         method: selectedMethod,
       };
-
       return await maintenanceDuesService.verifyPayment(verificationPayload);
     },
     onSuccess: (data) => {
@@ -133,7 +125,6 @@ export default function MaintenanceDuesScreen() {
       queryClient.invalidateQueries({ queryKey: ['maintenance-bills-pending'] });
       queryClient.invalidateQueries({ queryKey: ['maintenance-bills-history'] });
       queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
-
       Alert.alert(
         '✅ Payment Cleared',
         `Your maintenance payment has been successfully recorded.\nReceipt No: ${data.receiptNumber || 'N/A'}\nDigital receipt is now available under recent invoices.`,
@@ -146,9 +137,7 @@ export default function MaintenanceDuesScreen() {
 
   const handleReceiptAction = (b: MaintenanceBillDto) => {
     if (b.receiptUrl && !b.receiptUrl.includes('example') && !b.receiptUrl.includes('mock')) {
-      Linking.openURL(b.receiptUrl).catch(() => {
-        setReceiptModalBill(b);
-      });
+      Linking.openURL(b.receiptUrl).catch(() => setReceiptModalBill(b));
     } else {
       setReceiptModalBill(b);
     }
@@ -158,140 +147,217 @@ export default function MaintenanceDuesScreen() {
 
   if (isInitialLoading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading maintenance accounts & dues...</Text>
+      <View style={s.centerBox}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={s.loadingText}>Loading maintenance accounts...</Text>
       </View>
     );
   }
 
   const outstandingDue = activeBill ? (activeBill.dueAmount ?? (activeBill.status === 'PAID' ? 0 : activeBill.totalAmount)) : 0;
   const isSettled = !activeBill || activeBill.status === 'PAID' || outstandingDue === 0;
+  const paidCount = historyBills.filter(b => b.status === 'PAID').length;
+  const overdueCount = pendingBills.filter(b => b.status === 'OVERDUE').length;
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+      style={s.container}
+      contentContainerStyle={s.content}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />
+      }
     >
-      {/* ── Finance Domain Switcher ── */}
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: SPACING.md }}>
-        <View style={{ flex: 1, backgroundColor: COLORS.primary, paddingVertical: 10, paddingHorizontal: 12, borderRadius: RADIUS.md, alignItems: 'center' }}>
-          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>Community Finance</Text>
+      {/* ── Gradient Header ── */}
+      <LinearGradient
+        colors={['#312E81', '#4F46E5', '#6366F1']}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={s.header}
+      >
+        <View style={s.headerTopRow}>
+          <TouchableOpacity
+            style={s.headerBtn}
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/tabs/feed')}
+            hitSlop={8}
+          >
+            <Ionicons name="arrow-back" size={20} color="#fff" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerTitle}>💳  Community Finance</Text>
+            <Text style={s.headerSub}>
+              Tower {user?.tower || 'A'} · Flat {user?.flatNumber || '1204'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={s.headerBtn}
+            onPress={() => router.push('/personal-finance' as any)}
+          >
+            <Ionicons name="wallet-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Stats strip */}
+        <View style={s.headerStats}>
+          {[
+            { label: 'Wallet', value: `₹${walletBalance.toLocaleString()}`, icon: 'wallet' as const, color: '#34D399' },
+            { label: 'Pending', value: String(pendingBills.length), icon: 'time' as const, color: '#FBBF24' },
+            { label: 'Paid', value: String(paidCount), icon: 'checkmark-circle' as const, color: '#34D399' },
+            { label: 'Overdue', value: String(overdueCount), icon: 'alert-circle' as const, color: '#F87171' },
+          ].map((st) => (
+            <View key={st.label} style={s.headerStat}>
+              <Ionicons name={st.icon} size={14} color={st.color} />
+              <Text style={s.headerStatValue}>{st.value}</Text>
+              <Text style={s.headerStatLabel}>{st.label}</Text>
+            </View>
+          ))}
+        </View>
+      </LinearGradient>
+
+      {/* ── Finance Hub Grid ── */}
+      <View style={s.hubGrid}>
+        {FINANCE_HUBS.map((item) => (
+          <TouchableOpacity
+            key={item.label}
+            style={s.hubItem}
+            onPress={() => router.push(item.route as any)}
+            activeOpacity={0.8}
+          >
+            <View style={[s.hubIcon, { backgroundColor: item.bg }]}>
+              <Text style={s.hubEmoji}>{item.emoji}</Text>
+            </View>
+            <Text style={s.hubLabel} numberOfLines={1}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* ── Domain Switcher ── */}
+      <View style={s.switcherRow}>
+        <View style={s.switcherActive}>
+          <Ionicons name="business" size={14} color="#fff" />
+          <Text style={s.switcherActiveText}>Community Finance</Text>
         </View>
         <TouchableOpacity
-          style={{ flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', paddingVertical: 10, paddingHorizontal: 12, borderRadius: RADIUS.md, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+          style={s.switcherInactive}
           onPress={() => router.push('/personal-finance' as any)}
         >
-          <Ionicons name="wallet-outline" size={16} color={COLORS.primary} />
-          <Text style={{ color: COLORS.text, fontWeight: '700', fontSize: 13 }}>My Money</Text>
+          <Ionicons name="wallet-outline" size={14} color="#4F46E5" />
+          <Text style={s.switcherInactiveText}>My Money</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Society Accounting ERP Hub Switcher ── */}
+      {/* ── Society ERP Banner ── */}
       <TouchableOpacity
-        style={styles.societyHubBanner}
+        style={s.erpBanner}
         onPress={() => router.push('/finance/society-dashboard' as any)}
         activeOpacity={0.8}
       >
-        <View style={styles.societyHubLeft}>
-          <View style={styles.societyHubIcon}>
-            <Ionicons name="business" size={18} color="#FFFFFF" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.societyHubTitle}>Society Treasury & ERP</Text>
-            <Text style={styles.societyHubSub}>Invoices, Vendors, 3-Tier Approvals & Balance Sheet</Text>
-          </View>
+        <View style={s.erpIconBox}>
+          <Ionicons name="business" size={20} color="#fff" />
         </View>
-        <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+        <View style={{ flex: 1 }}>
+          <Text style={s.erpTitle}>Society Treasury & ERP</Text>
+          <Text style={s.erpSub}>Invoices, Vendors, 3-Tier Approvals & Balance Sheet</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#A5B4FC" />
       </TouchableOpacity>
 
-      {/* ── Advance Wallet Card ── */}
-      <View style={styles.walletCard}>
-        <View style={styles.walletHeader}>
-          <View style={styles.walletIcon}>
-            <Ionicons name="wallet-outline" size={24} color={COLORS.primary} />
+      {/* ── Wallet Card ── */}
+      <View style={s.walletCard}>
+        <View style={s.walletRow}>
+          <View style={s.walletIconBox}>
+            <Ionicons name="wallet" size={22} color="#4F46E5" />
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.walletTitle}>Advance Wallet Balance</Text>
-              <View style={styles.walletBadge}>
-                <Text style={styles.walletBadgeText}>Active</Text>
+              <Text style={s.walletTitle}>Advance Wallet</Text>
+              <View style={s.activeBadge}>
+                <View style={s.activeDot} />
+                <Text style={s.activeBadgeText}>Active</Text>
               </View>
             </View>
-            <Text style={styles.walletSubtitle}>
-              Tower {user?.tower || 'A'} &bull; Flat {user?.flatNumber || '1204'}
+            <Text style={s.walletFlat}>
+              Tower {user?.tower || 'A'} · Flat {user?.flatNumber || '1204'}
             </Text>
           </View>
-          <Text style={styles.walletAmount}>₹{walletBalance.toLocaleString()}</Text>
+          <Text style={s.walletAmount}>₹{walletBalance.toLocaleString()}</Text>
         </View>
       </View>
 
       {/* ── Active Statement Card ── */}
       {activeBill && (
-        <View style={styles.billCard}>
-          <View style={styles.billHeader}>
+        <View style={s.billCard}>
+          <View style={s.billHeader}>
             <View>
-              <Text style={styles.billPeriod}>{activeBill.monthYear} Statement</Text>
-              <Text style={styles.billNumber}>{activeBill.billNumber}</Text>
+              <Text style={s.billPeriod}>{activeBill.monthYear} Statement</Text>
+              <Text style={s.billNumber}>{activeBill.billNumber}</Text>
             </View>
             <View style={[
-              styles.statusBadge,
-              activeBill.status === 'PAID' ? styles.statusPaid : (activeBill.status === 'OVERDUE' ? styles.statusOverdue : styles.statusPending)
+              s.statusBadge,
+              activeBill.status === 'PAID' ? s.statusPaid
+                : activeBill.status === 'OVERDUE' ? s.statusOverdue
+                : s.statusPending,
             ]}>
+              <Ionicons
+                name={activeBill.status === 'PAID' ? 'checkmark-circle' : activeBill.status === 'OVERDUE' ? 'alert-circle' : 'time'}
+                size={11}
+                color={activeBill.status === 'PAID' ? '#059669' : activeBill.status === 'OVERDUE' ? '#DC2626' : '#4F46E5'}
+              />
               <Text style={[
-                styles.statusText,
-                activeBill.status === 'PAID' ? styles.textPaid : (activeBill.status === 'OVERDUE' ? styles.textOverdue : styles.textPending)
+                s.statusText,
+                activeBill.status === 'PAID' ? s.textPaid
+                  : activeBill.status === 'OVERDUE' ? s.textOverdue
+                  : s.textPending,
               ]}>
                 {activeBill.status}
               </Text>
             </View>
           </View>
 
-          {/* Breakdown Items */}
-          <View style={styles.chargeList}>
+          {/* Breakdown */}
+          <View style={s.chargeList}>
             {chargesList.map((c, i) => (
-              <View key={i} style={styles.chargeRow}>
-                <Text style={styles.chargeItem}>{c.item}</Text>
-                <Text style={styles.chargeAmount}>₹{c.amount.toLocaleString()}</Text>
+              <View key={i} style={s.chargeRow}>
+                <Text style={s.chargeItem}>{c.item}</Text>
+                <Text style={s.chargeAmt}>₹{c.amount.toLocaleString()}</Text>
               </View>
             ))}
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Payable Demand</Text>
-              <Text style={styles.totalAmount}>₹{activeBill.totalAmount.toLocaleString()}</Text>
+            <View style={s.totalRow}>
+              <Text style={s.totalLabel}>Total Payable</Text>
+              <Text style={s.totalAmount}>₹{activeBill.totalAmount.toLocaleString()}</Text>
             </View>
           </View>
 
-          <View style={styles.dueRow}>
-            <Text style={styles.dueLabel}>
-              Due Date: <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '700', color: COLORS.text }}>{activeBill.dueDate}</Text>
-            </Text>
-            <Text style={styles.outstandingLabel}>
-              Outstanding: <Text style={outstandingDue > 0 ? styles.outstandingValue : styles.clearedValue}>₹{outstandingDue.toLocaleString()}</Text>
-            </Text>
+          {/* Due info */}
+          <View style={s.dueRow}>
+            <View style={s.dueItem}>
+              <Ionicons name="calendar-outline" size={13} color={COLORS.textMuted} />
+              <Text style={s.dueText}>Due: <Text style={{ fontWeight: '700', color: COLORS.text }}>{activeBill.dueDate}</Text></Text>
+            </View>
+            <View style={s.dueItem}>
+              <Ionicons name="cash-outline" size={13} color={outstandingDue > 0 ? '#DC2626' : '#059669'} />
+              <Text style={s.dueText}>
+                Outstanding: <Text style={{ fontWeight: '800', color: outstandingDue > 0 ? '#DC2626' : '#059669' }}>
+                  ₹{outstandingDue.toLocaleString()}
+                </Text>
+              </Text>
+            </View>
           </View>
 
+          {/* Pay / Settled */}
           {!isSettled ? (
-            <TouchableOpacity
-              style={styles.payBtn}
-              onPress={() => setIsPayModal(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="card-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.payBtnText}>Pay ₹{outstandingDue.toLocaleString()} Now</Text>
+            <TouchableOpacity style={s.payBtn} onPress={() => setIsPayModal(true)} activeOpacity={0.8}>
+              <Ionicons name="card-outline" size={16} color="#fff" />
+              <Text style={s.payBtnText}>Pay ₹{outstandingDue.toLocaleString()} Now</Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.clearedBannerWrap}>
-              <View style={styles.clearedBanner}>
-                <Ionicons name="checkmark-circle" size={20} color="#059669" />
-                <Text style={styles.clearedText}>Bill is fully settled. Thank you!</Text>
+            <View style={s.settledWrap}>
+              <View style={s.settledBanner}>
+                <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                <Text style={s.settledText}>Fully settled. Thank you!</Text>
               </View>
-              <TouchableOpacity
-                style={styles.viewReceiptLink}
-                onPress={() => handleReceiptAction(activeBill)}
-              >
-                <Ionicons name="receipt-outline" size={15} color={COLORS.primary} />
-                <Text style={styles.viewReceiptLinkText}>View Digital Receipt</Text>
+              <TouchableOpacity style={s.receiptLink} onPress={() => handleReceiptAction(activeBill)}>
+                <Ionicons name="receipt-outline" size={13} color="#4F46E5" />
+                <Text style={s.receiptLinkText}>View Digital Receipt</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -299,140 +365,115 @@ export default function MaintenanceDuesScreen() {
       )}
 
       {/* ── Receipts History ── */}
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>Recent Invoices & Receipts</Text>
-        <Text style={styles.sectionSubCount}>{historyBills.length} records</Text>
+      <View style={s.sectionHeader}>
+        <View style={s.sectionTitleRow}>
+          <View style={[s.sectionDot, { backgroundColor: '#4F46E5' }]} />
+          <Text style={s.sectionTitle}>Recent Invoices</Text>
+        </View>
+        <View style={s.countBadge}>
+          <Text style={s.countBadgeText}>{historyBills.length}</Text>
+        </View>
       </View>
 
-      <View style={{ gap: SPACING.sm }}>
-        {historyBills.length === 0 ? (
-          <View style={styles.emptyHistory}>
-            <Ionicons name="receipt-outline" size={32} color={COLORS.textMuted} />
-            <Text style={styles.emptyHistoryText}>No past maintenance invoices found</Text>
+      {historyBills.length === 0 ? (
+        <View style={s.emptyBox}>
+          <View style={s.emptyIconBox}>
+            <Ionicons name="receipt-outline" size={32} color="#A5B4FC" />
           </View>
-        ) : (
-          historyBills.map((item) => (
+          <Text style={s.emptyTitle}>No invoices yet</Text>
+          <Text style={s.emptySub}>Past maintenance invoices will appear here</Text>
+        </View>
+      ) : (
+        <View style={{ gap: 8 }}>
+          {historyBills.map((item) => (
             <TouchableOpacity
               key={item.id}
-              style={styles.historyCard}
+              style={s.historyCard}
               onPress={() => handleReceiptAction(item)}
               activeOpacity={0.7}
             >
-              <View style={styles.historyIconWrap}>
-                <Ionicons name="document-text-outline" size={20} color={COLORS.primary} />
+              <View style={s.historyIcon}>
+                <Ionicons name="document-text" size={18} color="#4F46E5" />
               </View>
-              <View style={{ flex: 1, marginLeft: SPACING.sm }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.historyPeriod}>{item.monthYear}</Text>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Text style={s.historyPeriod}>{item.monthYear}</Text>
                   {item.paymentMethod && (
-                    <View style={styles.methodBadge}>
-                      <Text style={styles.methodBadgeText}>{item.paymentMethod}</Text>
+                    <View style={s.methodPill}>
+                      <Text style={s.methodPillText}>{item.paymentMethod}</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.historyNum}>{item.billNumber}</Text>
+                <Text style={s.historyNum}>{item.billNumber}</Text>
               </View>
-              <Text style={styles.historyAmount}>₹{item.totalAmount.toLocaleString()}</Text>
-              <TouchableOpacity
-                style={styles.receiptBtn}
-                onPress={() => handleReceiptAction(item)}
-              >
-                <Ionicons name="download-outline" size={16} color={COLORS.primary} />
-              </TouchableOpacity>
+              <Text style={s.historyAmount}>₹{item.totalAmount.toLocaleString()}</Text>
+              <View style={s.dlBtn}>
+                <Ionicons name="download-outline" size={14} color="#4F46E5" />
+              </View>
             </TouchableOpacity>
-          ))
-        )}
-      </View>
+          ))}
+        </View>
+      )}
 
       {/* ── Payment Modal ── */}
       <Modal visible={isPayModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeaderRow}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={s.modalHeaderRow}>
               <View>
-                <Text style={styles.modalTitle}>Clear Maintenance Dues</Text>
-                <Text style={styles.modalSubtitle}>Select your preferred payment method:</Text>
+                <Text style={s.modalTitle}>Clear Maintenance Dues</Text>
+                <Text style={s.modalSub}>Select your preferred payment method</Text>
               </View>
               <TouchableOpacity onPress={() => setIsPayModal(false)} disabled={payMutation.isPending}>
                 <Ionicons name="close-circle-outline" size={24} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <View style={{ gap: SPACING.sm, marginVertical: SPACING.md }}>
+            <View style={{ gap: 8, marginVertical: 14 }}>
               {[
-                {
-                  id: 'UPI',
-                  label: 'UPI (GPay / PhonePe / Paytm)',
-                  sub: 'Instant settlement via UPI apps',
-                  icon: 'phone-portrait-outline',
-                  available: true,
-                },
-                {
-                  id: 'WALLET',
-                  label: `Advance Wallet (₹${walletBalance.toLocaleString()})`,
-                  sub: walletBalance >= outstandingDue ? 'Sufficient balance available' : 'Insufficient balance',
-                  icon: 'wallet-outline',
-                  available: walletBalance >= outstandingDue,
-                },
-                {
-                  id: 'CARD',
-                  label: 'Debit / Credit Card / NetBanking',
-                  sub: 'Visa, MasterCard, RuPay & NetBanking',
-                  icon: 'card-outline',
-                  available: true,
-                },
+                { id: 'UPI', label: 'UPI (GPay / PhonePe / Paytm)', sub: 'Instant settlement via UPI apps', icon: 'phone-portrait-outline' as const, available: true },
+                { id: 'WALLET', label: `Advance Wallet (₹${walletBalance.toLocaleString()})`, sub: walletBalance >= outstandingDue ? 'Sufficient balance available' : 'Insufficient balance', icon: 'wallet-outline' as const, available: walletBalance >= outstandingDue },
+                { id: 'CARD', label: 'Debit / Credit Card / NetBanking', sub: 'Visa, MasterCard, RuPay & NetBanking', icon: 'card-outline' as const, available: true },
               ].map((m) => (
                 <TouchableOpacity
                   key={m.id}
                   style={[
-                    styles.methodCard,
-                    selectedMethod === m.id && styles.methodCardActive,
-                    !m.available && styles.methodCardDisabled,
+                    s.mCard,
+                    selectedMethod === m.id && s.mCardActive,
+                    !m.available && s.mCardDisabled,
                   ]}
-                  onPress={() => setSelectedMethod(m.id as any)}
+                  onPress={() => m.available && setSelectedMethod(m.id as any)}
                 >
-                  <Ionicons
-                    name={m.icon as any}
-                    size={22}
-                    color={selectedMethod === m.id ? COLORS.primary : (m.available ? COLORS.textSecondary : COLORS.textMuted)}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.methodText, selectedMethod === m.id && styles.methodTextActive]}>
-                      {m.label}
-                    </Text>
-                    <Text style={[styles.methodSub, !m.available && { color: '#DC2626' }]}>
-                      {m.sub}
-                    </Text>
+                  <View style={[s.mIconBox, { backgroundColor: selectedMethod === m.id ? '#EEF2FF' : '#F8FAFC' }]}>
+                    <Ionicons name={m.icon} size={20} color={selectedMethod === m.id ? '#4F46E5' : COLORS.textMuted} />
                   </View>
-                  {selectedMethod === m.id && (
-                    <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
-                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.mText, selectedMethod === m.id && s.mTextActive]}>{m.label}</Text>
+                    <Text style={[s.mSub, !m.available && { color: '#DC2626' }]}>{m.sub}</Text>
+                  </View>
+                  {selectedMethod === m.id && <Ionicons name="checkmark-circle" size={20} color="#4F46E5" />}
                 </TouchableOpacity>
               ))}
             </View>
 
-            <View style={styles.modalSummaryBox}>
-              <Text style={styles.modalSummaryLabel}>Payable Amount</Text>
-              <Text style={styles.modalSummaryValue}>₹{outstandingDue.toLocaleString()}</Text>
+            <View style={s.summaryBox}>
+              <Text style={s.summaryLabel}>Payable Amount</Text>
+              <Text style={s.summaryValue}>₹{outstandingDue.toLocaleString()}</Text>
             </View>
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setIsPayModal(false)}
-                disabled={payMutation.isPending}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+            <View style={s.modalActions}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setIsPayModal(false)} disabled={payMutation.isPending}>
+                <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.confirmPayBtn, payMutation.isPending && { opacity: 0.7 }]}
+                style={[s.confirmBtn, payMutation.isPending && { opacity: 0.7 }]}
                 onPress={() => payMutation.mutate()}
                 disabled={payMutation.isPending}
               >
                 {payMutation.isPending ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.confirmPayText}>Pay ₹{outstandingDue.toLocaleString()}</Text>
+                  <Text style={s.confirmBtnText}>Pay ₹{outstandingDue.toLocaleString()}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -440,14 +481,14 @@ export default function MaintenanceDuesScreen() {
         </View>
       </Modal>
 
-      {/* ── Digital Tax Receipt Viewer Modal ── */}
+      {/* ── Receipt Modal ── */}
       <Modal visible={!!receiptModalBill} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.receiptModalCard}>
-            <View style={styles.receiptModalHeader}>
-              <View style={styles.receiptBadge}>
-                <Ionicons name="checkmark-done" size={16} color="#059669" />
-                <Text style={styles.receiptBadgeText}>Official Maintenance Receipt</Text>
+        <View style={s.modalOverlay}>
+          <View style={s.receiptCard}>
+            <View style={s.receiptHeader}>
+              <View style={s.receiptBadge}>
+                <Ionicons name="checkmark-done" size={14} color="#059669" />
+                <Text style={s.receiptBadgeText}>Official Receipt</Text>
               </View>
               <TouchableOpacity onPress={() => setReceiptModalBill(null)}>
                 <Ionicons name="close" size={22} color={COLORS.textMuted} />
@@ -455,262 +496,286 @@ export default function MaintenanceDuesScreen() {
             </View>
 
             {receiptModalBill && (
-              <View style={styles.receiptBody}>
-                <Text style={styles.receiptSocietyName}>Mana Community Housing Society</Text>
-                <Text style={styles.receiptFlatDetail}>Tower {user?.tower || 'A'} - Unit {user?.flatNumber || '1204'}</Text>
-                <View style={styles.receiptDivider} />
+              <View style={{ gap: 6 }}>
+                <Text style={s.receiptSociety}>Mana Community Housing Society</Text>
+                <Text style={s.receiptFlat}>Tower {user?.tower || 'A'} - Unit {user?.flatNumber || '1204'}</Text>
+                <View style={s.receiptDivider} />
 
-                <View style={styles.receiptMetaRow}>
-                  <Text style={styles.receiptMetaKey}>Invoice No:</Text>
-                  <Text style={styles.receiptMetaVal}>{receiptModalBill.billNumber}</Text>
-                </View>
-                <View style={styles.receiptMetaRow}>
-                  <Text style={styles.receiptMetaKey}>Period:</Text>
-                  <Text style={styles.receiptMetaVal}>{receiptModalBill.monthYear}</Text>
-                </View>
-                <View style={styles.receiptMetaRow}>
-                  <Text style={styles.receiptMetaKey}>Payment Mode:</Text>
-                  <Text style={styles.receiptMetaVal}>{receiptModalBill.paymentMethod || 'Online Gateway'}</Text>
-                </View>
-                <View style={styles.receiptMetaRow}>
-                  <Text style={styles.receiptMetaKey}>Status:</Text>
-                  <Text style={[styles.receiptMetaVal, { color: '#059669', fontWeight: '800' }]}>SETTLED</Text>
-                </View>
+                {[
+                  { k: 'Invoice No', v: receiptModalBill.billNumber },
+                  { k: 'Period', v: receiptModalBill.monthYear },
+                  { k: 'Payment Mode', v: receiptModalBill.paymentMethod || 'Online Gateway' },
+                  { k: 'Status', v: 'SETTLED', highlight: true },
+                ].map((row) => (
+                  <View key={row.k} style={s.receiptMetaRow}>
+                    <Text style={s.receiptKey}>{row.k}</Text>
+                    <Text style={[s.receiptVal, row.highlight && { color: '#059669', fontWeight: '800' }]}>{row.v}</Text>
+                  </View>
+                ))}
 
-                <View style={styles.receiptAmountBox}>
-                  <Text style={styles.receiptAmountLabel}>Total Settled Amount</Text>
-                  <Text style={styles.receiptAmountValue}>₹{receiptModalBill.totalAmount.toLocaleString()}</Text>
+                <View style={s.receiptAmtBox}>
+                  <Text style={s.receiptAmtLabel}>Total Settled</Text>
+                  <Text style={s.receiptAmtValue}>₹{receiptModalBill.totalAmount.toLocaleString()}</Text>
                 </View>
 
-                <TouchableOpacity
-                  style={styles.receiptDoneBtn}
-                  onPress={() => setReceiptModalBill(null)}
-                >
-                  <Text style={styles.receiptDoneBtnText}>Done</Text>
+                <TouchableOpacity style={s.receiptDoneBtn} onPress={() => setReceiptModalBill(null)}>
+                  <Text style={s.receiptDoneBtnText}>Done</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
         </View>
       </Modal>
+
+      <View style={{ height: 32 }} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  content: { padding: SPACING.lg, paddingBottom: 40 },
-  centerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9FAFB', padding: SPACING.xl },
-  loadingText: { marginTop: SPACING.md, fontSize: 13, color: COLORS.textMuted, fontFamily: 'DMSans-Medium' },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  content: { paddingBottom: 32 },
+  centerBox: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', padding: 24 },
+  loadingText: { marginTop: 12, fontSize: 13, color: COLORS.textMuted },
 
+  // Header
+  header: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14, gap: 10 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerBtn: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  headerSub: { fontSize: 10, color: 'rgba(255,255,255,0.75)', marginTop: 1 },
+  headerStats: {
+    flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: RADIUS.md, paddingVertical: 8,
+  },
+  headerStat: { flex: 1, alignItems: 'center', gap: 2 },
+  headerStatValue: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  headerStatLabel: { fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
+
+  // Hub Grid
+  hubGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12,
+    paddingTop: 14, gap: 8,
+  },
+  hubItem: {
+    width: '22%', flexGrow: 1, alignItems: 'center', gap: 4,
+    backgroundColor: '#fff', borderRadius: RADIUS.md, paddingVertical: 8,
+    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
+  },
+  hubIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  hubEmoji: { fontSize: 16 },
+  hubLabel: { fontSize: 9, fontWeight: '600', color: COLORS.textMuted, textAlign: 'center' },
+
+  // Domain Switcher
+  switcherRow: { flexDirection: 'row', gap: 8, marginHorizontal: 12, marginTop: 12 },
+  switcherActive: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    backgroundColor: '#4F46E5', paddingVertical: 9, borderRadius: RADIUS.md,
+  },
+  switcherActiveText: { color: '#fff', fontWeight: '800', fontSize: 12 },
+  switcherInactive: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    backgroundColor: '#fff', paddingVertical: 9, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: '#C7D2FE',
+  },
+  switcherInactiveText: { color: '#4F46E5', fontWeight: '700', fontSize: 12 },
+
+  // ERP Banner
+  erpBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 12, marginTop: 10,
+    backgroundColor: '#312E81', borderRadius: RADIUS.lg, padding: 12, ...SHADOWS.sm,
+  },
+  erpIconBox: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
+  },
+  erpTitle: { fontSize: 13, fontWeight: '800', color: '#fff' },
+  erpSub: { fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 1 },
+
+  // Wallet
   walletCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.15)',
-    marginBottom: SPACING.lg,
-    ...SHADOWS.md,
+    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 14,
+    marginHorizontal: 12, marginTop: 10,
+    borderWidth: 1, borderColor: '#E8E8F0', ...SHADOWS.sm,
   },
-  walletHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
-  walletIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
-  walletTitle: { fontSize: 13, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  walletBadge: { backgroundColor: '#D1FAE5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  walletBadgeText: { fontSize: 9, fontWeight: '800', color: '#059669', textTransform: 'uppercase' },
-  walletSubtitle: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
-  walletAmount: { fontSize: 19, fontWeight: '900', color: '#059669', fontFamily: 'Outfit-Bold' },
+  walletRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  walletIconBox: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
+  },
+  walletTitle: { fontSize: 13, fontWeight: '800', color: COLORS.text },
+  activeBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+  },
+  activeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#059669' },
+  activeBadgeText: { fontSize: 8, fontWeight: '800', color: '#059669', textTransform: 'uppercase' },
+  walletFlat: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  walletAmount: { fontSize: 18, fontWeight: '900', color: '#059669' },
 
+  // Bill Card
   billCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
-    ...SHADOWS.md,
+    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 14,
+    marginHorizontal: 12, marginTop: 10, gap: 10,
+    borderWidth: 1, borderColor: '#E8E8F0', ...SHADOWS.sm,
   },
-  billHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: SPACING.md },
-  billPeriod: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  billNumber: { fontSize: 11, fontFamily: 'monospace', color: COLORS.textMuted, marginTop: 2 },
-  statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: RADIUS.sm },
+  billHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  billPeriod: { fontSize: 15, fontWeight: '800', color: COLORS.text },
+  billNumber: { fontSize: 10, fontFamily: 'monospace', color: COLORS.textMuted, marginTop: 2 },
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+  },
   statusText: { fontSize: 10, fontWeight: '800' },
   statusPending: { backgroundColor: '#EEF2FF' },
-  textPending: { fontSize: 10, fontWeight: '800', color: COLORS.primary },
-  statusPaid: { backgroundColor: '#D1FAE5' },
-  textPaid: { fontSize: 10, fontWeight: '800', color: '#059669' },
+  textPending: { color: '#4F46E5' },
+  statusPaid: { backgroundColor: '#DCFCE7' },
+  textPaid: { color: '#059669' },
   statusOverdue: { backgroundColor: '#FEE2E2' },
-  textOverdue: { fontSize: 10, fontWeight: '800', color: '#DC2626' },
+  textOverdue: { color: '#DC2626' },
 
-  chargeList: { backgroundColor: '#F8FAFC', borderRadius: RADIUS.md, padding: SPACING.md, gap: SPACING.sm },
+  chargeList: { backgroundColor: '#F8FAFC', borderRadius: RADIUS.md, padding: 12, gap: 8 },
   chargeRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  chargeItem: { fontSize: 12, color: COLORS.textSecondary, fontFamily: 'DMSans-Regular' },
-  chargeAmount: { fontSize: 12, fontWeight: '600', color: COLORS.text, fontFamily: 'DMSans-Medium' },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.sm, marginTop: 4 },
-  totalLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  totalAmount: { fontSize: 15, fontWeight: '800', color: COLORS.primary, fontFamily: 'Outfit-Bold' },
+  chargeItem: { fontSize: 12, color: COLORS.textSecondary },
+  chargeAmt: { fontSize: 12, fontWeight: '600', color: COLORS.text },
+  totalRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 8, marginTop: 4,
+  },
+  totalLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  totalAmount: { fontSize: 15, fontWeight: '800', color: '#4F46E5' },
 
-  dueRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: SPACING.md },
-  dueLabel: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
-  outstandingLabel: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
-  outstandingValue: { fontSize: 15, fontWeight: '800', color: '#DC2626', fontFamily: 'Outfit-Bold' },
-  clearedValue: { fontSize: 15, fontWeight: '800', color: '#059669', fontFamily: 'Outfit-Bold' },
+  dueRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 },
+  dueItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dueText: { fontSize: 11, color: COLORS.textMuted },
 
   payBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    gap: SPACING.xs,
-    ...SHADOWS.sm,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#4F46E5', paddingVertical: 11, borderRadius: RADIUS.md, ...SHADOWS.sm,
   },
-  payBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: 'Outfit-Bold' },
-  clearedBannerWrap: { gap: SPACING.sm },
-  clearedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ECFDF5',
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    gap: SPACING.xs,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
+  payBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  settledWrap: { gap: 6 },
+  settledBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#ECFDF5', padding: 10, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: '#A7F3D0',
   },
-  clearedText: { color: '#059669', fontSize: 13, fontWeight: '700', fontFamily: 'DMSans-Medium' },
-  viewReceiptLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.xs,
-    gap: 4,
+  settledText: { color: '#059669', fontSize: 12, fontWeight: '700' },
+  receiptLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 4,
   },
-  viewReceiptLinkText: { fontSize: 12, fontWeight: '700', color: COLORS.primary, fontFamily: 'DMSans-Medium' },
+  receiptLinkText: { fontSize: 11, fontWeight: '700', color: '#4F46E5' },
 
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  sectionSubCount: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
-
-  emptyHistory: {
-    padding: SPACING.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: SPACING.sm,
+  // Section
+  sectionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginHorizontal: 12, marginTop: 16, marginBottom: 8,
   },
-  emptyHistoryText: { fontSize: 13, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sectionDot: { width: 8, height: 8, borderRadius: 4 },
+  sectionTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text, letterSpacing: -0.2 },
+  countBadge: { backgroundColor: '#EEF2FF', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 1 },
+  countBadgeText: { fontSize: 10, fontWeight: '800', color: '#4F46E5' },
 
+  // Empty
+  emptyBox: {
+    alignItems: 'center', justifyContent: 'center', padding: 36, marginHorizontal: 12,
+    backgroundColor: '#fff', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: '#E8E8F0', gap: 8,
+  },
+  emptyIconBox: {
+    width: 56, height: 56, borderRadius: 16,
+    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
+  },
+  emptyTitle: { fontSize: 14, fontWeight: '800', color: COLORS.text },
+  emptySub: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center' },
+
+  // History
   historyCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    ...SHADOWS.sm,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 12,
+    marginHorizontal: 12, borderWidth: 1, borderColor: '#E8E8F0', ...SHADOWS.sm,
   },
-  historyIconWrap: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
-  historyPeriod: { fontSize: 13, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  historyNum: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontFamily: 'monospace' },
-  historyAmount: { fontSize: 14, fontWeight: '800', color: COLORS.text, marginRight: SPACING.sm, fontFamily: 'Outfit-Bold' },
-  methodBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 },
-  methodBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.textSecondary },
-  receiptBtn: { padding: SPACING.sm, backgroundColor: '#EEF2FF', borderRadius: RADIUS.sm },
+  historyIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
+  },
+  historyPeriod: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  historyNum: { fontSize: 10, color: COLORS.textMuted, marginTop: 1, fontFamily: 'monospace' },
+  historyAmount: { fontSize: 13, fontWeight: '800', color: COLORS.text },
+  methodPill: { backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
+  methodPillText: { fontSize: 8, fontWeight: '700', color: COLORS.textSecondary },
+  dlBtn: {
+    width: 30, height: 30, borderRadius: 8,
+    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
+  },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: SPACING.lg },
-  modalContent: { width: '100%', backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.xl, ...SHADOWS.md },
+  // Payment Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  modalCard: { width: '100%', backgroundColor: '#fff', borderRadius: RADIUS.xl, padding: 20, ...SHADOWS.md },
   modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  modalSubtitle: { fontSize: 13, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
-  methodCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    gap: SPACING.sm,
+  modalTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  modalSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  mCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    padding: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: '#E2E8F0',
   },
-  methodCardActive: { borderColor: COLORS.primary, backgroundColor: '#EEF2FF' },
-  methodCardDisabled: { opacity: 0.6, borderColor: '#F3F4F6', backgroundColor: '#FAFAFA' },
-  methodText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', fontFamily: 'DMSans-Medium' },
-  methodTextActive: { color: COLORS.primary, fontWeight: '700', fontFamily: 'Outfit-Bold' },
-  methodSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
-  modalSummaryBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginTop: SPACING.xs,
+  mCardActive: { borderColor: '#4F46E5', backgroundColor: '#FAFAFF' },
+  mCardDisabled: { opacity: 0.5, backgroundColor: '#FAFAFA' },
+  mIconBox: {
+    width: 38, height: 38, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
-  modalSummaryLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
-  modalSummaryValue: { fontSize: 17, fontWeight: '900', color: COLORS.primary, fontFamily: 'Outfit-Bold' },
+  mText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
+  mTextActive: { color: '#4F46E5', fontWeight: '700' },
+  mSub: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  summaryBox: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC', borderRadius: RADIUS.md, padding: 12, marginTop: 4,
+  },
+  summaryLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
+  summaryValue: { fontSize: 17, fontWeight: '900', color: '#4F46E5' },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  cancelBtn: {
+    flex: 1, paddingVertical: 11, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center',
+  },
+  cancelBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  confirmBtn: {
+    flex: 1.4, paddingVertical: 11, borderRadius: RADIUS.md,
+    backgroundColor: '#4F46E5', alignItems: 'center', ...SHADOWS.sm,
+  },
+  confirmBtnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
 
-  modalActions: { flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.md },
-  cancelBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
-  cancelBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
-  confirmPayBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center', ...SHADOWS.sm },
-  confirmPayText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Outfit-Bold' },
-
-  receiptModalCard: { width: '100%', backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.xl, ...SHADOWS.md },
-  receiptModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
-  receiptBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  receiptBadgeText: { fontSize: 11, fontWeight: '800', color: '#059669', fontFamily: 'Outfit-Bold' },
-  receiptBody: { gap: SPACING.xs },
-  receiptSocietyName: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  receiptFlatDetail: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
-  receiptDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.sm },
+  // Receipt Modal
+  receiptCard: { width: '100%', backgroundColor: '#fff', borderRadius: RADIUS.xl, padding: 20, ...SHADOWS.md },
+  receiptHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  receiptBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+  },
+  receiptBadgeText: { fontSize: 10, fontWeight: '800', color: '#059669' },
+  receiptSociety: { fontSize: 15, fontWeight: '800', color: COLORS.text },
+  receiptFlat: { fontSize: 11, color: COLORS.textMuted },
+  receiptDivider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 8 },
   receiptMetaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  receiptMetaKey: { fontSize: 12, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
-  receiptMetaVal: { fontSize: 12, fontWeight: '700', color: COLORS.text, fontFamily: 'DMSans-Medium' },
-  receiptAmountBox: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginTop: SPACING.md,
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.2)',
+  receiptKey: { fontSize: 11, color: COLORS.textMuted },
+  receiptVal: { fontSize: 11, fontWeight: '700', color: COLORS.text },
+  receiptAmtBox: {
+    backgroundColor: '#EEF2FF', borderRadius: RADIUS.md, padding: 12,
+    alignItems: 'center', marginTop: 10, borderWidth: 1, borderColor: '#C7D2FE',
   },
-  receiptAmountLabel: { fontSize: 11, color: COLORS.primary, fontWeight: '600', fontFamily: 'DMSans-Medium' },
-  receiptAmountValue: { fontSize: 22, fontWeight: '900', color: COLORS.primary, marginTop: 2, fontFamily: 'Outfit-Bold' },
+  receiptAmtLabel: { fontSize: 10, color: '#4F46E5', fontWeight: '600' },
+  receiptAmtValue: { fontSize: 22, fontWeight: '900', color: '#4F46E5', marginTop: 2 },
   receiptDoneBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-    marginTop: SPACING.lg,
-    ...SHADOWS.sm,
+    backgroundColor: '#4F46E5', borderRadius: RADIUS.md,
+    paddingVertical: 11, alignItems: 'center', marginTop: 14, ...SHADOWS.sm,
   },
-  receiptDoneBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: 'Outfit-Bold' },
-  societyHubBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#EEF2FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  societyHubLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  societyHubIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  societyHubTitle: { fontSize: 13, fontWeight: 'bold', color: COLORS.primary, fontFamily: 'Outfit-Bold' },
-  societyHubSub: { fontSize: 11, color: '#64748B', fontFamily: 'DMSans-Regular', marginTop: 1 },
+  receiptDoneBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
