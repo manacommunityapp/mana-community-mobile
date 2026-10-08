@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { VENDOR_COLORS } from '@/constants/vendorTheme';
@@ -38,6 +39,7 @@ function StatCard({ icon, label, value, color, bg }: StatCardProps) {
 }
 
 export default function VendorDashboardScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const [stats, setStats] = useState<VendorDashboardStats | null>(null);
   const [bookings, setBookings] = useState<VendorBooking[]>([]);
@@ -97,6 +99,29 @@ export default function VendorDashboardScreen() {
           <StatCard icon="construct" label="Work Orders" value={String(stats?.activeWorkOrders ?? 0)} color="#7C3AED" bg="#EDE9FE" />
           <StatCard icon="cash" label="This Month" value={`₹${((stats?.monthRevenue ?? 0) / 1000).toFixed(1)}k`} color="#059669" bg="#D1FAE5" />
         </View>
+
+        {/* Group Buying Wholesale Commerce Banner */}
+        <TouchableOpacity
+          style={s.groupBuyBanner}
+          onPress={() => router.push('/vendor/deals' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={s.groupBuyIconWrap}>
+            <Ionicons name="cart" size={22} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={s.groupBuyTitleRow}>
+              <Text style={s.groupBuyTitle}>Mana Group Buy Portal</Text>
+              <View style={s.groupBuyBadge}>
+                <Text style={s.groupBuyBadgeText}>WHOLESALE</Text>
+              </View>
+            </View>
+            <Text style={s.groupBuySub}>
+              Launch bulk community deals, track MOQ volume progress & print manifests
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={VENDOR_COLORS.accent} />
+        </TouchableOpacity>
 
         {/* Availability toggle */}
         <TouchableOpacity style={s.availCard} activeOpacity={0.8}>
@@ -238,4 +263,53 @@ const s = StyleSheet.create({
   statusChipText: { fontSize: 10, fontWeight: '700' },
   priorityChip: { borderRadius: RADIUS.xs, paddingHorizontal: 8, paddingVertical: 3 },
   priorityChipText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+
+  groupBuyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: RADIUS.lg,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: VENDOR_COLORS.accent,
+    ...SHADOWS.sm,
+  },
+  groupBuyIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: VENDOR_COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupBuyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  groupBuyTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  groupBuyBadge: {
+    backgroundColor: VENDOR_COLORS.accentLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  groupBuyBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: VENDOR_COLORS.accentDark,
+  },
+  groupBuySub: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+    lineHeight: 15,
+  },
 });

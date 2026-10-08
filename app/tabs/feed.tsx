@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, RefreshControl, Image,
+  View, Text, FlatList, StyleSheet, RefreshControl,
   TouchableOpacity, ActivityIndicator, ListRenderItemInfo,
   Share, ScrollView, Dimensions, TextInput, Platform,
 } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +21,7 @@ import { PostDto, EventDto } from '@/types/api';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppBack } from '@/hooks/useAppBack';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.68;
@@ -310,6 +312,17 @@ export default function FeedScreen() {
   const [filter, setFilter] = useState<FeedFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useAppBack({
+    isRootScreen: true,
+    onBeforeBack: () => {
+      if (isSearchOpen) {
+        setIsSearchOpen(false);
+        setSearchQuery('');
+        return true;
+      }
+    },
+  });
 
   const {
     data, fetchNextPage, hasNextPage,

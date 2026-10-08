@@ -11,6 +11,7 @@ export default function TripsLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: '🚌 Community Trips & Treks' }} />
+      <Stack.Screen name="split" options={{ title: '💰 Trip Split & Expenses' }} />
     </Stack>
   );
 }

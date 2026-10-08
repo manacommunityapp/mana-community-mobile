@@ -49,7 +49,7 @@ export const privacyService = {
    */
   async getSettings(): Promise<UserPrivacySettingsDto> {
     try {
-      const res = await api.get<UserPrivacySettingsDto>('/api/privacy/settings');
+      const res = await api.get<UserPrivacySettingsDto>('/privacy/settings');
       if (res.data) return res.data;
     } catch {}
 
@@ -70,7 +70,7 @@ export const privacyService = {
     dto: Partial<UserPrivacySettingsDto>,
   ): Promise<UserPrivacySettingsDto> {
     try {
-      const res = await api.put<UserPrivacySettingsDto>('/api/privacy/settings', dto);
+      const res = await api.put<UserPrivacySettingsDto>('/privacy/settings', dto);
       return res.data;
     } catch {}
 
@@ -91,7 +91,7 @@ export const privacyService = {
    */
   async exportMyData(): Promise<UserDataExportDto> {
     try {
-      const res = await api.get<UserDataExportDto>('/api/privacy/my-data');
+      const res = await api.get<UserDataExportDto>('/privacy/my-data');
       if (res.data) return res.data;
     } catch {}
 
@@ -118,7 +118,7 @@ export const privacyService = {
   async requestDeletion(reason?: string): Promise<DataDeletionRequestDto> {
     try {
       const res = await api.post<DataDeletionRequestDto>(
-        '/api/privacy/deletion-request',
+        '/privacy/deletion-request',
         { reason },
       );
       return res.data;
@@ -149,7 +149,7 @@ export const privacyService = {
   async getDeletionStatus(): Promise<DataDeletionRequestDto[]> {
     try {
       const res = await api.get<DataDeletionRequestDto[]>(
-        '/api/privacy/deletion-request/status',
+        '/privacy/deletion-request/status',
       );
       if (res.data) return res.data;
     } catch {}
@@ -170,7 +170,7 @@ export const privacyService = {
   async cancelDeletion(requestId: number): Promise<DataDeletionRequestDto> {
     try {
       const res = await api.post<DataDeletionRequestDto>(
-        '/api/privacy/deletion-request/cancel',
+        '/privacy/deletion-request/cancel',
         { requestId },
       );
       return res.data;
@@ -198,7 +198,7 @@ export const privacyService = {
    */
   async getConsents(): Promise<UserConsentDto[]> {
     try {
-      const res = await api.get<UserConsentDto[]>('/api/privacy/consents');
+      const res = await api.get<UserConsentDto[]>('/privacy/consents');
       if (res.data && res.data.length > 0) return res.data;
     } catch {}
 
@@ -216,7 +216,7 @@ export const privacyService = {
    */
   async updateConsent(consentId: string, granted: boolean): Promise<void> {
     try {
-      await api.post(`/api/privacy/consents`, { consentId, granted });
+      await api.post(`/privacy/consents`, { consentId, granted });
       return;
     } catch {}
 
@@ -232,7 +232,7 @@ export const privacyService = {
    */
   async revokeConsent(consentId: string): Promise<void> {
     try {
-      await api.delete(`/api/privacy/consents/${consentId}`);
+      await api.delete(`/privacy/consents/${consentId}`);
       return;
     } catch {}
 
@@ -248,7 +248,7 @@ export const privacyService = {
    */
   async getAuditLog(): Promise<PrivacyAuditLogDto[]> {
     try {
-      const res = await api.get<PrivacyAuditLogDto[]>('/api/privacy/audit-log');
+      const res = await api.get<PrivacyAuditLogDto[]>('/privacy/audit-log');
       if (res.data) return res.data;
     } catch {}
 
@@ -265,7 +265,7 @@ export const privacyService = {
    */
   async anonymizeHistory(): Promise<void> {
     try {
-      await api.post('/api/privacy/anonymize');
+      await api.post('/privacy/anonymize');
       return;
     } catch {}
 

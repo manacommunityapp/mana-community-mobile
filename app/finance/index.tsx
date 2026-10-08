@@ -1,3 +1,4 @@
+import { personalFinanceService } from '@/services/personalFinanceService';
 import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -173,6 +174,20 @@ export default function MaintenanceDuesScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
     >
+      {/* ── Finance Domain Switcher ── */}
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: SPACING.md }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.primary, paddingVertical: 10, paddingHorizontal: 12, borderRadius: RADIUS.md, alignItems: 'center' }}>
+          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>Community Finance</Text>
+        </View>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', paddingVertical: 10, paddingHorizontal: 12, borderRadius: RADIUS.md, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+          onPress={() => router.push('/personal-finance' as any)}
+        >
+          <Ionicons name="wallet-outline" size={16} color={COLORS.primary} />
+          <Text style={{ color: COLORS.text, fontWeight: '700', fontSize: 13 }}>My Money</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ── Society Accounting ERP Hub Switcher ── */}
       <TouchableOpacity
         style={styles.societyHubBanner}

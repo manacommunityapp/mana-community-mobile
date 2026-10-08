@@ -10,7 +10,7 @@ export default function FinanceLayout() {
         headerTitleStyle: { fontFamily: 'Outfit-Bold', fontWeight: 'bold' },
       }}
     >
-      <Stack.Screen name="index" options={{ title: '🏢 Maintenance Dues' }} />
+      <Stack.Screen name="index" options={{ title: '🏢 Community Finance' }} />
       <Stack.Screen name="society-dashboard" options={{ title: '🏛️ Society Treasury & ERP' }} />
       <Stack.Screen name="invoices" options={{ title: '📄 Invoices & Demands' }} />
       <Stack.Screen name="vendors" options={{ title: '💼 Vendors & TDS' }} />

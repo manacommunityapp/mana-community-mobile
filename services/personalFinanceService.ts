@@ -1,3 +1,19 @@
+
+export interface PersonalReceiptDto {
+  id: string;
+  merchantName: string;
+  amount: number;
+  date: string;
+  category: string;
+  imageUrl: string;
+  ocrExtracted: boolean;
+  taxAmount?: number;
+  itemsCount?: number;
+  transactionId?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 import api from './apiClient';
 import { secureLog } from '@/security';
 
@@ -46,6 +62,17 @@ export interface CreateCategoryDto {
   color?: string;
   type: 'INCOME' | 'EXPENSE';
   parentId?: string;
+}
+
+
+export interface PersonalSpendingCategoryDto {
+  key: string;
+  label: string;
+  icon: string;
+  color: string;
+  amount: number;
+  percentage: number;
+  transactionCount: number;
 }
 
 export interface PersonalTransactionDto {
@@ -149,6 +176,7 @@ export interface PersonalBillDto {
   categoryIcon?: string;
   categoryColor?: string;
   isPaid: boolean;
+  isAutoPay?: boolean;
   reminderDaysBefore: number;
   isManaInvoice?: boolean;
   invoiceId?: string;
@@ -163,6 +191,10 @@ export interface DashboardSummaryDto {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
+  totalCommunitySpending?: number;
+  communitySpendingBreakdown?: PersonalSpendingCategoryDto[];
+  totalOtherSpending?: number;
+  otherSpendingBreakdown?: PersonalSpendingCategoryDto[];
   recentTransactions: PersonalTransactionDto[];
   manaProjections: PersonalTransactionDto[];
   budgetAlerts: PersonalBudgetDto[];
@@ -191,8 +223,34 @@ export interface ReportPeriodDto {
   totalIncome: number;
   totalExpenses: number;
   netSavings: number;
+  savingsRate?: number;
+  previousPeriodExpenses?: number;
+  expenseChangePercentage?: number;
+  trendInsightText?: string;
   topCategories: TopCategoryDto[];
   monthlyBreakdown: MonthlyBreakdownDto[];
+}
+
+
+export interface FinancialInsightDto {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  severity: 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
+  potentialSavings?: number;
+  category?: string;
+  actionLabel?: string;
+  actionRoute?: string;
+}
+
+export interface FinancialInsightsSummaryDto {
+  healthScore: number;
+  healthGrade: string;
+  summaryMessage: string;
+  monthlyProjectedSavings: number;
+  insights: FinancialInsightDto[];
+  metrics?: Record<string, any>;
 }
 
 // ─── P3 DTOs ─────────────────────────────────────────────────────────────────
@@ -641,7 +699,73 @@ async function tryPaths<T>(paths: string[], fallback: () => T): Promise<T> {
   return fallback();
 }
 
+
+let MOCK_RECEIPTS: PersonalReceiptDto[] = [
+  {
+    id: 'rcpt-1',
+    merchantName: 'Nature Basket Supermarket',
+    amount: 3420,
+    date: '2026-10-02',
+    category: 'Groceries',
+    imageUrl: 'https://images.unsplash.com/photo-1554415707-9e4c29729ff7?w=600&auto=format&fit=crop&q=80',
+    ocrExtracted: true,
+    taxAmount: 171,
+    itemsCount: 14,
+    transactionId: 'txn-1',
+    notes: 'Monthly staples & organic veggies',
+    createdAt: '2026-10-02T16:30:00Z',
+  },
+  {
+    id: 'rcpt-2',
+    merchantName: 'BESCOM Electricity Bill',
+    amount: 2850,
+    date: '2026-09-28',
+    category: 'Utilities',
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+    ocrExtracted: true,
+    taxAmount: 0,
+    itemsCount: 1,
+    transactionId: 'txn-2',
+    notes: 'Meter #482910 September bill',
+    createdAt: '2026-09-28T10:15:00Z',
+  },
+  {
+    id: 'rcpt-3',
+    merchantName: 'Prestige Society Maintenance',
+    amount: 4500,
+    date: '2026-10-01',
+    category: 'Housing',
+    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
+    ocrExtracted: true,
+    taxAmount: 405,
+    itemsCount: 1,
+    transactionId: 'txn-3',
+    notes: 'Flat B-402 October Maintenance',
+    createdAt: '2026-10-01T09:00:00Z',
+  },
+];
+
 export const personalFinanceService = {
+
+  getReceipts: async (): Promise<PersonalReceiptDto[]> => {
+    return MOCK_RECEIPTS;
+  },
+
+  uploadReceipt: async (receipt: Omit<PersonalReceiptDto, 'id' | 'createdAt'>): Promise<PersonalReceiptDto> => {
+    const newReceipt: PersonalReceiptDto = {
+      ...receipt,
+      id: `rcpt-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    MOCK_RECEIPTS.unshift(newReceipt);
+    return newReceipt;
+  },
+
+  deleteReceipt: async (receiptId: string): Promise<{ success: boolean }> => {
+    MOCK_RECEIPTS = MOCK_RECEIPTS.filter(r => r.id !== receiptId);
+    return { success: true };
+  },
+
   // ── Dashboard ───────────────────────────────────────────────────────────────
   getDashboardSummary: async (month?: string): Promise<DashboardSummaryDto> => {
     const q = month ? `?month=${month}` : '';
@@ -991,6 +1115,19 @@ export const personalFinanceService = {
   },
 
   // ── Bills ───────────────────────────────────────────────────────────────────
+  createBill: async (bill: any): Promise<PersonalBillDto> => {
+    return {
+      id: 'bill-' + Date.now(),
+      name: bill.name || bill.billerName || bill.title || 'New Bill',
+      amount: bill.amount || 0,
+      dueDate: bill.dueDate || new Date().toISOString(),
+      categoryName: bill.category || bill.categoryName || 'Utilities',
+      categoryIcon: bill.categoryIcon || 'receipt-outline',
+      isPaid: false,
+      isAutoPay: bill.isAutoPay || false,
+      reminderDaysBefore: bill.reminderDaysBefore || 3,
+    };
+  },
   getBills: async (): Promise<PersonalBillDto[]> => {
     return tryPaths<PersonalBillDto[]>(
       ['/api/v1/personal-finance/bills', '/personal-finance/bills'],
@@ -1161,6 +1298,53 @@ export const personalFinanceService = {
     );
   },
 
+  // ── Community Finance Integration (Smart Linking) ──────────────────────────
+  linkCommunityFinanceTransaction: async (params: {
+    communityInvoiceId: string;
+    amount: number;
+    description?: string;
+    paidDate?: string;
+    accountId?: string;
+  }): Promise<PersonalTransactionDto> => {
+    const existing = LOCAL_TRANSACTIONS.find(
+      t => t.sourceModule === 'COMMUNITY_FINANCE' && t.sourceId === params.communityInvoiceId
+    );
+    if (existing) {
+      return existing; // Avoid duplicate transactions
+    }
+
+    const housingCat = LOCAL_CATEGORIES.find(c => c.name.includes('Housing')) || LOCAL_CATEGORIES[0];
+    const acc = LOCAL_ACCOUNTS.find(a => a.id === params.accountId) || LOCAL_ACCOUNTS[0];
+
+    const linkedTxn: PersonalTransactionDto = {
+      id: `txn-link-${Date.now()}`,
+      type: 'EXPENSE',
+      amount: params.amount,
+      currency: acc.currency || '₹',
+      categoryId: housingCat.id,
+      categoryName: housingCat.name,
+      categoryIcon: housingCat.icon,
+      categoryColor: housingCat.color,
+      subcategoryName: 'Maintenance Dues',
+      accountId: acc.id,
+      accountName: acc.name,
+      description: params.description || `Community Maintenance - Invoice #${params.communityInvoiceId}`,
+      date: params.paidDate || new Date().toISOString().split('T')[0],
+      isManaProjection: true,
+      sourceModule: 'COMMUNITY_FINANCE',
+      sourceType: 'INVOICE',
+      sourceId: params.communityInvoiceId,
+      sourceLabel: `Mana Community Finance (Invoice #${params.communityInvoiceId})`,
+      createdAt: new Date().toISOString(),
+    };
+
+    LOCAL_TRANSACTIONS.unshift(linkedTxn);
+    if (acc) {
+      acc.balance -= params.amount;
+    }
+    return linkedTxn;
+  },
+
   // ── Mana Projections ────────────────────────────────────────────────────────
   getManaProjections: async (): Promise<PersonalTransactionDto[]> => {
     const live = await tryPaths<PersonalTransactionDto[]>(
@@ -1170,4 +1354,49 @@ export const personalFinanceService = {
     if (live.length > 0) return live;
     return LOCAL_TRANSACTIONS.filter(t => t.isManaProjection);
   },
+
+  // ── Financial Insights ──────────────────────────────────────────────────────
+  getFinancialInsights: async (): Promise<FinancialInsightsSummaryDto> => {
+    return tryPaths<FinancialInsightsSummaryDto>(
+      ['/api/v1/personal-finance/insights', '/personal-finance/insights'],
+      () => ({
+        healthScore: 82,
+        healthGrade: 'A',
+        summaryMessage: 'Your financial health index is 82/100 (A). Solid savings habit maintained this month.',
+        monthlyProjectedSavings: 2400,
+        insights: [
+          {
+            id: 'ins-save-good',
+            type: 'HEALTH_SCORE',
+            title: 'High Savings Rate (42%)',
+            description: 'You are saving more than 30% of your income this month. Excellent financial cushion!',
+            severity: 'SUCCESS',
+            potentialSavings: 38000,
+            category: 'Savings',
+            actionLabel: 'View Goals',
+            actionRoute: '/personal-finance/goals',
+          },
+          {
+            id: 'ins-comm-group',
+            type: 'SAVINGS_OPPORTUNITY',
+            title: 'Save ~₹1,800 with Community Group Buying',
+            description: 'Your grocery spend is eligible for 20-30% volume discounts via Society Group Buying.',
+            severity: 'INFO',
+            potentialSavings: 1800,
+            category: 'Food & Groceries',
+            actionLabel: 'Explore Group Deals',
+            actionRoute: '/group-buying',
+          }
+        ],
+        metrics: {
+          savingsRate: 42,
+          monthlyIncome: 97000,
+          monthlyExpense: 19189,
+          netSavings: 77811,
+          activeBudgetsCount: 2,
+        }
+      })
+    );
+  },
+
 };

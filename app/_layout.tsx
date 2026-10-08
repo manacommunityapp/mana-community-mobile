@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import * as ScreenCapture from 'expo-screen-capture';
+import * as Sentry from '@sentry/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -22,8 +23,14 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
 import { setupGlobalFonts } from '@/utils/globalFonts';
+import { initSentry, setUser, clearUser } from '@/utils/sentry';
+import { offlineSyncService } from '@/services/offlineSyncService';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { getPortalForRole } from '@/hooks/useRoleSwitcher';
 
 SplashScreen.preventAutoHideAsync();
+initSentry();
+offlineSyncService.init();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +48,15 @@ function AuthGuard() {
   usePushNotifications(isAuthenticated && !isPending);
   useIdleTimeout(isAuthenticated && !isPending, logout);
   useDeviceSecurity();
+  useRealtimeSync(isAuthenticated && !isPending);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      setUser(String(user.id), user.email);
+    } else {
+      clearUser();
+    }
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => { loadUser(); }, []);
 
@@ -72,27 +88,15 @@ function AuthGuard() {
 
     // Fully verified — send to role-appropriate home
     if (inOnboarding || inAuth) {
-      const role = user?.role;
-      if (role === 'SECURITY' || role === 'GUARD') {
-        router.replace('/guard/tabs/dashboard');
-      } else if (role === 'VENDOR') {
-        router.replace('/vendor/tabs/dashboard');
-      } else if (role === 'SPORTS_ADMIN') {
-        router.replace('/sports-admin/tabs/dashboard');
-      } else if (role === 'EVENT_ADMIN') {
-        router.replace('/event-admin/tabs/dashboard');
-      } else if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'COMMUNITY_ADMIN') {
-        router.replace('/admin-role/tabs/dashboard');
-      } else {
-        router.replace('/tabs/feed');
-      }
+      const portal = getPortalForRole(user?.role ?? '');
+      router.replace((portal?.route ?? '/tabs/feed') as any);
     }
   }, [isAuthenticated, isLoading, isPending, segments]);
 
   return null;
 }
 
-export default function RootLayout() {
+function RootLayout() {
   useEffect(() => {
     ScreenCapture.preventScreenCaptureAsync();
     return () => { ScreenCapture.allowScreenCaptureAsync(); };
@@ -168,3 +172,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

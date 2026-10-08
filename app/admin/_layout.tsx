@@ -1,22 +1,10 @@
-import { useEffect } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import { useAuth } from '@/hooks/useAuth';
+import { useAdminGuard } from '@/hooks/useRoleGuard';
 import { COLORS } from '@/constants/config';
 
-const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'];
-
 export default function AdminLayout() {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isLoading) return;
-    // Kick non-admins back to feed immediately
-    if (!user || !ADMIN_ROLES.includes(user.role)) {
-      router.replace('/tabs/feed');
-    }
-  }, [user, isLoading, router]);
+  const { authorized, isLoading } = useAdminGuard();
 
   if (isLoading) {
     return (
@@ -26,8 +14,7 @@ export default function AdminLayout() {
     );
   }
 
-  // Don't render children if not admin (guard in useEffect handles redirect)
-  if (!user || !ADMIN_ROLES.includes(user.role)) return null;
+  if (!authorized) return null;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -36,6 +23,9 @@ export default function AdminLayout() {
       <Stack.Screen name="moderation" />
       <Stack.Screen name="announcements" />
       <Stack.Screen name="community-settings" />
+      <Stack.Screen name="audit-logs" />
+      <Stack.Screen name="bulk-upload" />
+      <Stack.Screen name="privacy" />
     </Stack>
   );
 }

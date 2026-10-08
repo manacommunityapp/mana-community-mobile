@@ -4,17 +4,18 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppBack } from '@/hooks/useAppBack';
 import { COLORS, FONTS, SHADOWS, RADIUS, GRADIENTS } from '@/constants/config';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterScreen() {
   const { register } = useAuth();
-  const router = useRouter();
+  const { goBack } = useAppBack({ fallbackRoute: '/onboarding' });
   const [form, setForm] = useState({
     name: '', email: '', mobile: '', password: '',
     communityCode: '', flatNumber: '', tower: '',
@@ -82,7 +83,7 @@ export default function RegisterScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => router.back()}
+            onPress={goBack}
             hitSlop={8}
           >
             <Ionicons name="arrow-back" size={20} color={COLORS.text} />

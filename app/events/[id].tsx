@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventService } from '@/services/eventService';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppBack } from '@/hooks/useAppBack';
 import { COLORS, GRADIENTS, SHADOWS, RADIUS, FONTS, SPACING } from '@/constants/config';
 import { format, parseISO, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 
@@ -28,6 +29,7 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { goBack } = useAppBack({ fallbackRoute: '/events' });
 
   const { data: event, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['event', id],
@@ -100,7 +102,7 @@ export default function EventDetailScreen() {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <View style={s.navBar}>
-          <TouchableOpacity onPress={() => router.back()} style={s.navBtn}>
+          <TouchableOpacity onPress={goBack} style={s.navBtn}>
             <Ionicons name="arrow-back" size={20} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={s.navTitle}>Event Not Found</Text>
@@ -142,7 +144,7 @@ export default function EventDetailScreen() {
         >
           {/* Nav overlay */}
           <View style={s.heroNav}>
-            <TouchableOpacity onPress={() => router.back()} style={s.heroNavBtn} hitSlop={8}>
+            <TouchableOpacity onPress={goBack} style={s.heroNavBtn} hitSlop={8}>
               <Ionicons name="arrow-back" size={20} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleShare} style={s.heroNavBtn} hitSlop={8}>
@@ -277,6 +279,37 @@ export default function EventDetailScreen() {
                   <Text style={[s.metaChipText, { color: COLORS.error }]}>Event is full</Text>
                 </View>
               )}
+            </View>
+          </View>
+
+          {/* Event Hub Grid */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Event Hub</Text>
+            <View style={s.gridContainer}>
+              {[
+                { title: 'Programs', sub: 'Schedule & acts', icon: 'list-outline', color: '#4F46E5', bg: '#EEF2FF', route: `/events/programs?id=${id}` },
+                { title: 'Gate Pass', sub: 'QR Entry', icon: 'qr-code-outline', color: '#059669', bg: '#ECFDF5', route: `/events/gatepass?id=${id}` },
+                { title: 'Donations', sub: 'Contribute', icon: 'heart-outline', color: '#E11D48', bg: '#FFF1F2', route: `/events/donations?id=${id}` },
+                { title: 'Volunteers', sub: 'Join team', icon: 'hand-left-outline', color: '#D97706', bg: '#FEF3C7', route: `/events/volunteers?id=${id}` },
+                { title: 'Gallery', sub: 'Photos & video', icon: 'images-outline', color: '#2563EB', bg: '#EFF6FF', route: `/events/gallery?id=${id}` },
+                { title: 'Food & Meals', sub: 'Diet & tokens', icon: 'restaurant-outline', color: '#EA580C', bg: '#FFF7ED', route: `/events/meals?id=${id}` },
+                { title: 'Sponsors', sub: 'Partners', icon: 'ribbon-outline', color: '#7C3AED', bg: '#F5F3FF', route: `/events/sponsors?id=${id}` },
+                { title: 'Tasks', sub: 'To-do items', icon: 'checkbox-outline', color: '#0D9488', bg: '#F0FDFA', route: `/events/tasks?id=${id}` },
+                { title: 'Expenses', sub: 'Budget & bills', icon: 'receipt-outline', color: '#475569', bg: '#F1F5F9', route: `/events/expenses?id=${id}` },
+              ].map((item, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={s.gridCard}
+                  onPress={() => router.push(item.route as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[s.gridIconWrap, { backgroundColor: item.bg }]}>
+                    <Ionicons name={item.icon as any} size={22} color={item.color} />
+                  </View>
+                  <Text style={s.gridTitle}>{item.title}</Text>
+                  <Text style={s.gridSub} numberOfLines={1}>{item.sub}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
@@ -545,10 +578,19 @@ const s = StyleSheet.create({
   },
   metaChipText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500', fontFamily: FONTS.medium },
 
-  // Sections
+  // Sections & Event Hub Grid
   section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginBottom: 8, fontFamily: FONTS.displayBold },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginBottom: 12, fontFamily: FONTS.displayBold },
   sectionBody: { fontSize: 15, color: COLORS.textSecondary, lineHeight: 23, fontFamily: FONTS.regular },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  gridCard: {
+    width: '31%', backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
+    padding: 10, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  gridIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  gridTitle: { fontSize: 12, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
+  gridSub: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', marginTop: 1 },
 
   noteCard: {
     flexDirection: 'row',

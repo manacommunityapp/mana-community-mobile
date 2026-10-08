@@ -1,0 +1,97 @@
+{
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "retry": "पुन: प्रयास करें",
+    "cancel": "रद्द करें",
+    "confirm": "पुष्टि करें",
+    "save": "सहेजें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "search": "खोजें",
+    "noResults": "कोई परिणाम नहीं मिला",
+    "error": "कुछ गलत हो गया",
+    "success": "सफल",
+    "offline": "आप ऑफ़लाइन हैं",
+    "back": "वापस",
+    "next": "अगला",
+    "done": "हो गया",
+    "close": "बंद करें",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "ok": "ठीक है",
+    "all": "सभी",
+    "viewAll": "सभी देखें",
+    "new": "नया"
+  },
+  "auth": {
+    "login": "लॉग इन",
+    "register": "रजिस्टर करें",
+    "logout": "लॉग आउट",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "confirmPassword": "पासवर्ड की पुष्टि करें",
+    "fullName": "पूरा नाम",
+    "phone": "फ़ोन नंबर"
+  },
+  "feed": {
+    "title": "सामुदायिक फ़ीड",
+    "createPost": "पोस्ट बनाएं",
+    "whatsOnMind": "आपके मन में क्या है?",
+    "like": "पसंद",
+    "comment": "टिप्पणी",
+    "share": "साझा करें"
+  },
+  "services": {
+    "title": "घरेलू सहायता और गृह सेवाएं",
+    "subtitle": "स्टाफ निर्देशिका, उपस्थिति और सेवा कैटलॉग",
+    "myStaff": "मेरा स्टाफ",
+    "attendance": "उपस्थिति",
+    "salary": "वेतन",
+    "jobBoard": "जॉब बोर्ड",
+    "bookings": "बुकिंग",
+    "bookVisit": "विज़िट बुक करें",
+    "verified": "सत्यापित",
+    "providers": "सेवा प्रदाता"
+  },
+  "safety": {
+    "title": "सुरक्षा कमांड सेंटर",
+    "sos": "एसओएस",
+    "anpr": "एएनपीआर",
+    "patrol": "पेट्रोल",
+    "incidents": "घटनाएं",
+    "triggerSos": "एसओएस ट्रिगर करें",
+    "sosConfirm": "क्या आप वाकई एसओएस अलर्ट ट्रिगर करना चाहते हैं?"
+  },
+  "visitors": {
+    "title": "आगंतुक",
+    "invite": "आगंतुक को आमंत्रित करें",
+    "expected": "अपेक्षित",
+    "checkedIn": "चेक इन",
+    "checkedOut": "चेक आउट"
+  },
+  "parking": {
+    "title": "पार्किंग",
+    "mySpot": "मेरा स्थान",
+    "available": "उपलब्ध",
+    "occupied": "व्यस्त"
+  },
+  "finance": {
+    "title": "वित्त",
+    "dues": "बकाया",
+    "payments": "भुगतान",
+    "invoices": "चालान"
+  },
+  "notifications": {
+    "title": "सूचनाएं",
+    "markAllRead": "सभी पढ़ा हुआ चिह्नित करें",
+    "noNotifications": "अभी तक कोई सूचना नहीं"
+  },
+  "profile": {
+    "title": "मेरी प्रोफ़ाइल",
+    "editProfile": "प्रोफ़ाइल संपादित करें",
+    "settings": "सेटिंग्स",
+    "myListings": "मेरी लिस्टिंग",
+    "myBookings": "मेरी बुकिंग"
+  }
+}

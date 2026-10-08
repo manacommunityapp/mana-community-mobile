@@ -10,7 +10,7 @@ export default function PersonalFinanceLayout() {
         headerTitleStyle: { fontFamily: 'Outfit-Bold', fontWeight: 'bold' },
       }}
     >
-      <Stack.Screen name="index" options={{ title: '💰 My Finance' }} />
+      <Stack.Screen name="index" options={{ title: '👤 My Money' }} />
       <Stack.Screen name="accounts" options={{ title: '🏦 Accounts & Net Worth' }} />
       <Stack.Screen name="transactions" options={{ title: '🧾 Ledger & Transactions' }} />
       <Stack.Screen name="budgets" options={{ title: '🎯 Budgets & Pace' }} />

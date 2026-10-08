@@ -22,6 +22,9 @@ export interface FacilityBookingRequest {
   endTime: string;
   guestCount?: number;
   purpose?: string;
+  isRecurring?: boolean;
+  recurringOccurrences?: number;
+  recurringFrequency?: string;
 }
 
 export interface FacilityBookingDto {
@@ -33,7 +36,12 @@ export interface FacilityBookingDto {
   endTime: string;
   guestCount?: number;
   totalAmount?: number;
-  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'PENDING';
+  refundAmount?: number;
+  refundPercentage?: number;
+  penaltyAmount?: number;
+  isRecurring?: boolean;
+  recurringPattern?: string;
+  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'PENDING' | 'NO_SHOW' | 'WAITLISTED';
   bookingRef?: string;
   qrCode?: string;
   createdAt?: string;
@@ -76,7 +84,12 @@ function mapBookingResponseToDto(b: any): FacilityBookingDto {
     endTime: b.endTime || '07:00 AM',
     guestCount: b.numberOfGuests ?? b.guestCount ?? 1,
     totalAmount: typeof b.totalAmount === 'number' ? b.totalAmount : 0,
-    status: (b.status === 'CANCELLED' || b.status === 'COMPLETED') ? b.status : 'CONFIRMED',
+    refundAmount: typeof b.refundAmount === 'number' ? b.refundAmount : undefined,
+    refundPercentage: typeof b.refundPercentage === 'number' ? b.refundPercentage : undefined,
+    penaltyAmount: typeof b.penaltyAmount === 'number' ? b.penaltyAmount : undefined,
+    isRecurring: b.isRecurring === true,
+    recurringPattern: b.recurringPattern,
+    status: (['CANCELLED', 'COMPLETED', 'NO_SHOW', 'WAITLISTED'].includes(b.status)) ? b.status : 'CONFIRMED',
     bookingRef: b.bookingNumber || b.bookingRef || `FAC-${b.id}`,
     qrCode: b.qrCode,
     createdAt: b.createdAt,
@@ -85,15 +98,15 @@ function mapBookingResponseToDto(b: any): FacilityBookingDto {
 
 export const facilityService = {
   /**
-   * GET /api/resource-booking/resources or /facilities
+   * GET /resource-booking/resources or /facilities
    */
   async getFacilities(): Promise<FacilityDto[]> {
     try {
-      const res = await api.get('/api/resource-booking/resources');
+      const res = await api.get('/resource-booking/resources');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(mapResourceToFacility);
     } catch (err) {
-      secureLog.warn('[facilityService] /api/resource-booking/resources failed, trying /facilities alias', err);
+      secureLog.warn('[facilityService] /resource-booking/resources failed, trying /facilities alias', err);
       const res = await api.get('/facilities');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(mapResourceToFacility);
@@ -101,11 +114,11 @@ export const facilityService = {
   },
 
   /**
-   * GET /api/resource-booking/resources/{id}/slots or /facilities/{id}/slots
+   * GET /resource-booking/resources/{id}/slots or /facilities/{id}/slots
    */
   async getAvailableSlots(facilityId: string, date: string): Promise<string[]> {
     try {
-      const res = await api.get(`/api/resource-booking/resources/${facilityId}/slots`, {
+      const res = await api.get(`/resource-booking/resources/${facilityId}/slots`, {
         params: { date },
       });
       const data = res.data;
@@ -131,11 +144,11 @@ export const facilityService = {
   },
 
   /**
-   * POST /api/resource-booking/bookings or /facilities/book
+   * POST /resource-booking/bookings or /facilities/book
    */
   async bookSlot(data: FacilityBookingRequest): Promise<FacilityBookingDto> {
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         resourceId: isNaN(Number(data.facilityId)) ? data.facilityId : Number(data.facilityId),
         bookingDate: data.date,
         startTime: data.startTime,
@@ -144,26 +157,31 @@ export const facilityService = {
         numberOfGuests: data.guestCount || 1,
         purpose: data.purpose || 'Amenity Slot Reservation',
       };
+      if (data.isRecurring) {
+        payload.isRecurring = true;
+        payload.recurringOccurrences = data.recurringOccurrences || 1;
+        payload.recurringFrequency = data.recurringFrequency || 'DAILY';
+      }
 
-      const res = await api.post('/api/resource-booking/bookings', payload);
+      const res = await api.post('/resource-booking/bookings', payload);
       return mapBookingResponseToDto(res.data);
     } catch (err) {
-      secureLog.warn('[facilityService] /api/resource-booking/bookings failed, trying /facilities/book alias', err);
+      secureLog.warn('[facilityService] /resource-booking/bookings failed, trying /facilities/book alias', err);
       const res = await api.post('/facilities/book', data);
       return mapBookingResponseToDto(res.data);
     }
   },
 
   /**
-   * GET /api/resource-booking/bookings/mine or /facilities/my-bookings
+   * GET /resource-booking/bookings/mine or /facilities/my-bookings
    */
   async getMyBookings(): Promise<FacilityBookingDto[]> {
     try {
-      const res = await api.get('/api/resource-booking/bookings/mine');
+      const res = await api.get('/resource-booking/bookings/mine');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(mapBookingResponseToDto);
     } catch (err) {
-      secureLog.warn('[facilityService] /api/resource-booking/bookings/mine failed, trying /facilities/my-bookings', err);
+      secureLog.warn('[facilityService] /resource-booking/bookings/mine failed, trying /facilities/my-bookings', err);
       const res = await api.get('/facilities/my-bookings');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(mapBookingResponseToDto);
@@ -171,16 +189,49 @@ export const facilityService = {
   },
 
   /**
-   * PUT /api/resource-booking/bookings/{id}/cancel
+   * PUT /resource-booking/bookings/{id}/cancel
    */
   async cancelBooking(bookingId: string, reason?: string): Promise<{ success: boolean }> {
     try {
-      await api.put(`/api/resource-booking/bookings/${bookingId}/cancel`, {
+      await api.put(`/resource-booking/bookings/${bookingId}/cancel`, {
         reason: reason || 'Cancelled by resident',
       });
       return { success: true };
     } catch (err) {
       secureLog.error(`[facilityService] Failed to cancel booking ${bookingId}`, err);
+      throw err;
+    }
+  },
+
+  /**
+   * POST /resource-booking/waitlist
+   */
+  async joinWaitlist(facilityId: string, date: string, startTime: string, endTime: string): Promise<any> {
+    try {
+      const res = await api.post('/resource-booking/waitlist', {
+        resourceId: isNaN(Number(facilityId)) ? facilityId : Number(facilityId),
+        requestedDate: date,
+        requestedStartTime: startTime,
+        requestedEndTime: endTime,
+      });
+      return res.data;
+    } catch (err) {
+      secureLog.error('[facilityService] Failed to join waitlist', err);
+      throw err;
+    }
+  },
+
+  /**
+   * PUT /resource-booking/bookings/{id}/no-show
+   */
+  async markNoShow(bookingId: string, penaltyAmount?: number, reason?: string): Promise<FacilityBookingDto> {
+    try {
+      const res = await api.put(`/resource-booking/bookings/${bookingId}/no-show`, null, {
+        params: { penaltyAmount, reason },
+      });
+      return mapBookingResponseToDto(res.data);
+    } catch (err) {
+      secureLog.error(`[facilityService] Failed to mark booking ${bookingId} as no-show`, err);
       throw err;
     }
   },

@@ -89,7 +89,7 @@ export default function VendorPaymentsScreen() {
             <Text style={s.serviceText}>{item.service}</Text>
             <View style={s.metaRow}>
               <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} />
-              <Text style={s.metaText}>Issued {new Date(item.issuedAt).toLocaleDateString()}</Text>
+              <Text style={s.metaText}>Issued {item.issuedAt ? new Date(item.issuedAt).toLocaleDateString() : 'N/A'}</Text>
               <Text style={s.metaDot}>·</Text>
               <Text style={[s.metaText, item.status === 'OVERDUE' && { color: COLORS.error, fontWeight: '600' }]}>
                 Due {item.dueDate}

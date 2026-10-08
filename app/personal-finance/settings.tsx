@@ -156,6 +156,36 @@ export default function PersonalFinanceSettings() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* ── Community Payments Consent & Integration ── */}
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="business-outline" size={18} color={COLORS.primary} />
+          <Text style={styles.sectionTitle}>Community Payments Integration</Text>
+        </View>
+
+        <View style={styles.settingRow}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={styles.settingLabel}>Ask Before Adding Payments</Text>
+            <Text style={styles.settingSub}>
+              Prompt to optionally add Maintenance, Sports, Events, Pooja & Marketplace payments into your Personal Finance
+            </Text>
+          </View>
+          <Switch
+            value={true}
+            onValueChange={() => {}}
+            trackColor={{ false: '#CBD5E1', true: COLORS.primary }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+
+        <View style={styles.infoBox}>
+          <Ionicons name="shield-checkmark-outline" size={16} color="#059669" />
+          <Text style={styles.infoText}>
+            Consent Guaranteed: Community payments are NEVER auto-inserted into your personal records without your explicit approval. Society admins have zero visibility into your private expenses.
+          </Text>
+        </View>
+      </View>
+
       {/* ── Security & App Lock ── */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>

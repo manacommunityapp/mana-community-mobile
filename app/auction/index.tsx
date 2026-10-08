@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Image, ActivityIndicator, RefreshControl, BackHandler,
+  ActivityIndicator, RefreshControl, BackHandler,
 } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';

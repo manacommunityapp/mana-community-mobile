@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Image, Alert, ActivityIndicator, RefreshControl,
+  Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
