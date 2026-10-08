@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ActivityIndicator, Alert, ScrollView,
+  ActivityIndicator, Alert, ScrollView, Dimensions,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppBack } from '@/hooks/useAppBack';
 import { getBiometricCapability, authenticateWithBiometric, BiometricCapability } from '@/hooks/useBiometricAuth';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS } from '@/constants/config';
+
+const SCREEN_W = Dimensions.get('window').width;
 
 export default function LoginScreen() {
   const { login, loadUser } = useAuth();
@@ -34,7 +36,6 @@ export default function LoginScreen() {
       return { value: trimmed.toLowerCase(), type: 'email' };
     }
 
-    // Clean phone number (strip spaces, dashes, parentheses, +91 prefix)
     let digits = trimmed.replace(PHONE_CLEAN_RE, '');
     if (digits.length === 12 && digits.startsWith('91')) {
       digits = digits.slice(2);
@@ -50,7 +51,7 @@ export default function LoginScreen() {
   };
 
   const isPhoneInput = /^[0-9+\s()-]+$/.test(identifier.trim()) && identifier.trim().length > 0;
-  const inputIconName = isPhoneInput ? 'call-outline' : (identifier.includes('@') ? 'mail-outline' : 'person-outline');
+  const inputEmoji = isPhoneInput ? '📱' : (identifier.includes('@') ? '📧' : '👤');
 
   useEffect(() => {
     getBiometricCapability().then(setBiometric).catch(() => {});
@@ -98,54 +99,73 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={st.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        {/* Header Hero */}
-        <View style={styles.hero}>
-          <LinearGradient
-            colors={GRADIENTS.hero as unknown as [string, string, string]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          {/* Decorative circles */}
-          <View style={styles.decCircle1} />
-          <View style={styles.decCircle2} />
+      <ScrollView contentContainerStyle={st.scroll} keyboardShouldPersistTaps="handled">
+        {/* ── Hero Header ──────────────────────────────── */}
+        <LinearGradient
+          colors={['#1E1B4B', '#312E81', '#4F46E5']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={st.hero}
+        >
+          {/* Decorative elements */}
+          <View style={st.decCircle1} />
+          <View style={st.decCircle2} />
+          <View style={st.decCircle3} />
 
-          {/* Back Button */}
+          {/* Back button */}
           <TouchableOpacity
-            style={styles.heroBackBtn}
+            style={st.heroBackBtn}
             onPress={goBack}
             hitSlop={8}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <View style={styles.logoBox}>
-            <Text style={styles.logoText}>M</Text>
+          {/* Logo */}
+          <View style={st.logoBox}>
+            <Text style={st.logoEmoji}>🏠</Text>
           </View>
-          <Text style={styles.heroTitle}>Mana Community</Text>
-          <Text style={styles.heroSub}>Your community, connected</Text>
-        </View>
+          <Text style={st.heroTitle}>Mana Community</Text>
+          <Text style={st.heroSub}>Your community, connected</Text>
 
-        {/* Form Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Welcome back</Text>
-          <Text style={styles.cardSub}>Sign in to your account</Text>
+          {/* Trust badges */}
+          <View style={st.trustRow}>
+            <View style={st.trustBadge}>
+              <Text style={st.trustEmoji}>🔒</Text>
+              <Text style={st.trustText}>Secure</Text>
+            </View>
+            <View style={st.trustBadge}>
+              <Text style={st.trustEmoji}>⚡</Text>
+              <Text style={st.trustText}>Instant</Text>
+            </View>
+            <View style={st.trustBadge}>
+              <Text style={st.trustEmoji}>🛡️</Text>
+              <Text style={st.trustText}>Private</Text>
+            </View>
+          </View>
+        </LinearGradient>
 
-          <View style={styles.form}>
+        {/* ── Form Card ────────────────────────────────── */}
+        <View style={st.card}>
+          <View style={st.cardTitleRow}>
+            <Text style={st.cardEmoji}>👋</Text>
+            <View>
+              <Text style={st.cardTitle}>Welcome back</Text>
+              <Text style={st.cardSub}>Sign in to your account</Text>
+            </View>
+          </View>
+
+          <View style={st.form}>
             {/* Email or Phone */}
-            <View style={styles.field}>
-              <Text style={styles.label}>Email or Mobile Number</Text>
-              <View style={[styles.inputWrap, inputFocused && styles.inputWrapFocused]}>
-                <View style={[styles.inputIconWrap, inputFocused && styles.inputIconWrapFocused]}>
-                  <Ionicons name={inputIconName as any} size={17} color={inputFocused ? COLORS.primary : COLORS.textMuted} />
-                </View>
+            <View style={st.field}>
+              <Text style={st.label}>{inputEmoji} Email or Mobile Number</Text>
+              <View style={[st.inputWrap, inputFocused && st.inputWrapFocused]}>
                 <TextInput
-                  style={styles.input}
+                  style={st.input}
                   placeholder="you@example.com or 9876543210"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="email-address"
@@ -161,14 +181,11 @@ export default function LoginScreen() {
             </View>
 
             {/* Password */}
-            <View style={styles.field}>
-              <Text style={styles.label}>Password</Text>
-              <View style={[styles.inputWrap, passFocused && styles.inputWrapFocused]}>
-                <View style={[styles.inputIconWrap, passFocused && styles.inputIconWrapFocused]}>
-                  <Ionicons name="lock-closed-outline" size={17} color={passFocused ? COLORS.primary : COLORS.textMuted} />
-                </View>
+            <View style={st.field}>
+              <Text style={st.label}>🔑 Password</Text>
+              <View style={[st.inputWrap, passFocused && st.inputWrapFocused]}>
                 <TextInput
-                  style={styles.input}
+                  style={st.input}
                   placeholder="Enter your password"
                   placeholderTextColor={COLORS.textMuted}
                   secureTextEntry={!showPassword}
@@ -178,39 +195,35 @@ export default function LoginScreen() {
                   onFocus={() => setPassFocused(true)}
                   onBlur={() => setPassFocused(false)}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={8} style={styles.eyeBtn}>
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={19}
-                    color={COLORS.textMuted}
-                  />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={8} style={st.eyeBtn}>
+                  <Text style={st.eyeEmoji}>{showPassword ? '🙈' : '👁️'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <Link href="/auth/forgot-password" style={styles.forgot}>
+            <Link href="/auth/forgot-password" style={st.forgot}>
               Forgot password?
             </Link>
 
             {/* Sign In Button */}
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[st.button, loading && st.buttonDisabled]}
               onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.85}
             >
               <LinearGradient
-                colors={GRADIENTS.primary as unknown as [string, string]}
+                colors={['#312E81', '#4F46E5']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.buttonGradient}
+                style={st.buttonGradient}
               >
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <>
-                    <Text style={styles.buttonText}>Sign In</Text>
-                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                    <Text style={st.buttonText}>Sign In</Text>
+                    <Text style={st.buttonEmoji}>🚀</Text>
                   </>
                 )}
               </LinearGradient>
@@ -219,32 +232,62 @@ export default function LoginScreen() {
             {/* Biometric Sign-in */}
             {biometric?.available && biometric.hasStoredSession && (
               <>
-                <View style={styles.orRow}>
-                  <View style={styles.orLine} />
-                  <Text style={styles.orText}>or</Text>
-                  <View style={styles.orLine} />
+                <View style={st.orRow}>
+                  <View style={st.orLine} />
+                  <Text style={st.orText}>or sign in with</Text>
+                  <View style={st.orLine} />
                 </View>
+
                 <TouchableOpacity
-                  style={[styles.biometricBtn, loading && styles.buttonDisabled]}
+                  style={[st.biometricCard, loading && st.buttonDisabled]}
                   onPress={handleBiometricLogin}
                   disabled={loading}
                   activeOpacity={0.85}
                 >
-                  <Ionicons
-                    name={biometric.label.includes('Face') ? 'scan-outline' : 'finger-print-outline'}
-                    size={20}
-                    color={COLORS.primary}
-                  />
-                  <Text style={styles.biometricText}>{biometric.label}</Text>
+                  <LinearGradient
+                    colors={['#EEF2FF', '#E0E7FF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={st.biometricGradient}
+                  >
+                    {/* Fingerprint icon circle */}
+                    <View style={st.fpOuterRing}>
+                      <LinearGradient
+                        colors={['#4F46E5', '#312E81']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={st.fpCircle}
+                      >
+                        <Ionicons
+                          name={biometric.label.includes('Face') ? 'scan-outline' : 'finger-print-outline'}
+                          size={32}
+                          color="#fff"
+                        />
+                      </LinearGradient>
+                    </View>
+
+                    <View style={st.biometricInfo}>
+                      <Text style={st.biometricTitle}>{biometric.label}</Text>
+                      <Text style={st.biometricSub}>
+                        {biometric.label.includes('Face')
+                          ? 'Look at your device to sign in'
+                          : 'Touch the sensor to sign in'}
+                      </Text>
+                    </View>
+
+                    <View style={st.fpArrow}>
+                      <Ionicons name="chevron-forward" size={18} color="#4F46E5" />
+                    </View>
+                  </LinearGradient>
                 </TouchableOpacity>
               </>
             )}
           </View>
 
           {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <Link href="/auth/register" style={styles.footerLink}>Register</Link>
+          <View style={st.footer}>
+            <Text style={st.footerText}>Don't have an account? </Text>
+            <Link href="/auth/register" style={st.footerLink}>Register</Link>
           </View>
         </View>
       </ScrollView>
@@ -252,23 +295,25 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const st = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F8FAFC',
   },
   scroll: {
     flexGrow: 1,
   },
 
-  // ── Hero Header ────────────────────────────────────────────────────
+  // ── Hero Header ────────────────────────────────────────────────
   hero: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 80,
-    paddingBottom: 60,
+    paddingTop: Platform.OS === 'ios' ? 80 : 60,
+    paddingBottom: 50,
     overflow: 'hidden',
     position: 'relative',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   heroBackBtn: {
     position: 'absolute',
@@ -277,95 +322,128 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: 'rgba(255,255,255,0.25)',
     zIndex: 10,
   },
   decCircle1: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    top: -60,
-    right: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    top: -70,
+    right: -70,
   },
   decCircle2: {
     position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    bottom: -50,
+    left: -50,
+  },
+  decCircle3: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: 'rgba(255,255,255,0.06)',
-    bottom: -40,
-    left: -40,
+    top: 30,
+    left: SCREEN_W * 0.6,
   },
   logoBox: {
-    width: 72,
-    height: 72,
+    width: 76,
+    height: 76,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
-  logoText: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '800',
-    fontFamily: FONTS.displayEB,
-  },
+  logoEmoji: { fontSize: 34 },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
     color: '#fff',
     fontFamily: FONTS.displayEB,
     letterSpacing: -0.5,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   heroSub: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.75)',
+    color: 'rgba(255,255,255,0.7)',
     fontFamily: FONTS.regular,
+    marginBottom: 18,
+  },
+  trustRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  trustBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  trustEmoji: { fontSize: 12 },
+  trustText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: FONTS.medium,
   },
 
-  // ── Form Card ──────────────────────────────────────────────────────
+  // ── Form Card ──────────────────────────────────────────────────
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 32,
+    paddingTop: 28,
     paddingBottom: 40,
     marginTop: -20,
     ...SHADOWS.lg,
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 24,
+  },
+  cardEmoji: { fontSize: 28 },
   cardTitle: {
     fontSize: 22,
     fontWeight: '800',
     color: COLORS.text,
     fontFamily: FONTS.displayEB,
     letterSpacing: -0.5,
-    marginBottom: 4,
   },
   cardSub: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textMuted,
     fontFamily: FONTS.regular,
-    marginBottom: 28,
+    marginTop: 1,
   },
 
-  // ── Form ───────────────────────────────────────────────────────────
+  // ── Form ───────────────────────────────────────────────────────
   form: {
-    gap: 18,
+    gap: 16,
   },
   field: {
-    gap: 7,
+    gap: 6,
   },
   label: {
     fontSize: 13,
@@ -378,32 +456,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    backgroundColor: COLORS.surfaceAlt,
+    borderColor: '#E8E8F0',
+    borderRadius: RADIUS.lg,
+    backgroundColor: '#F8FAFC',
     overflow: 'hidden',
   },
   inputWrapFocused: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
-    ...SHADOWS.primary,
-  },
-  inputIconWrap: {
-    width: 46,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: COLORS.border,
-  },
-  inputIconWrapFocused: {
-    borderRightColor: COLORS.primaryMid,
-    backgroundColor: 'rgba(79,70,229,0.06)',
+    borderColor: '#4F46E5',
+    backgroundColor: '#F5F3FF',
+    ...SHADOWS.sm,
   },
   input: {
     flex: 1,
     paddingVertical: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     fontSize: 15,
     color: COLORS.text,
     fontFamily: FONTS.regular,
@@ -411,18 +477,19 @@ const styles = StyleSheet.create({
   eyeBtn: {
     paddingHorizontal: 14,
   },
+  eyeEmoji: { fontSize: 18 },
   forgot: {
-    color: COLORS.primary,
+    color: '#4F46E5',
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'right',
     fontFamily: FONTS.bold,
   },
   button: {
-    borderRadius: 14,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
-    marginTop: 6,
-    ...SHADOWS.primary,
+    marginTop: 4,
+    ...SHADOWS.md,
   },
   buttonGradient: {
     flexDirection: 'row',
@@ -438,45 +505,79 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
-    fontFamily: FONTS.bold,
+    fontFamily: FONTS.displayBold,
   },
+  buttonEmoji: { fontSize: 16 },
 
-  // ── Biometric ──────────────────────────────────────────────────────
+  // ── Biometric ──────────────────────────────────────────────────
   orRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginTop: 4,
+    marginTop: 2,
   },
   orLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: '#E8E8F0',
   },
   orText: {
     fontSize: 12,
     color: COLORS.textMuted,
     fontFamily: FONTS.regular,
   },
-  biometricBtn: {
+  biometricCard: {
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#E0E7FF',
+    ...SHADOWS.sm,
+  },
+  biometricGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryMid,
-    borderRadius: 14,
-    paddingVertical: 14,
-    backgroundColor: COLORS.primaryLight,
+    padding: 14,
+    gap: 14,
   },
-  biometricText: {
+  fpOuterRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    borderWidth: 2.5,
+    borderColor: 'rgba(79,70,229,0.2)',
+    padding: 3,
+  },
+  fpCircle: {
+    flex: 1,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  biometricInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  biometricTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.primary,
-    fontFamily: FONTS.semiBold,
+    fontWeight: '700',
+    color: '#312E81',
+    fontFamily: FONTS.displayBold,
+  },
+  biometricSub: {
+    fontSize: 12,
+    color: '#6366F1',
+    fontFamily: FONTS.regular,
+  },
+  fpArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(79,70,229,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  // ── Footer ─────────────────────────────────────────────────────────
+  // ── Footer ─────────────────────────────────────────────────────
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -488,7 +589,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
   },
   footerLink: {
-    color: COLORS.primary,
+    color: '#4F46E5',
     fontSize: 14,
     fontWeight: '700',
     fontFamily: FONTS.bold,

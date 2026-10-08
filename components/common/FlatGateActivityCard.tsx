@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Modal, TextInput, Alert, Share, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -227,205 +227,101 @@ export function FlatGateActivityCard() {
     <View style={s.container}>
       {/* ── Header ────────────────────────────────────────── */}
       <View style={s.headerRow}>
-        <View style={s.headerLeft}>
-          <View style={s.flatPill}>
-            <Ionicons name="business" size={13} color={COLORS.primary} />
-            <Text style={s.flatPillText}>{flatLabel}</Text>
-          </View>
+        <Text style={s.mainTitle}>🚪 Gate</Text>
+        <View style={s.headerRight}>
           <View style={s.liveStatusBadge}>
             <View style={s.pulsingDot} />
-            <Text style={s.liveStatusText}>Gate 1 Live</Text>
+            <Text style={s.liveStatusText}>{flatLabel}</Text>
           </View>
+          <TouchableOpacity onPress={() => router.push('/visitors')} activeOpacity={0.7} hitSlop={8}>
+            <Text style={s.viewAllText}>Log →</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={s.viewAllBtn}
-          onPress={() => router.push('/visitors')}
-          activeOpacity={0.7}
-          hitSlop={8}
-        >
-          <Text style={s.viewAllText}>Gate Log</Text>
-          <Ionicons name="chevron-forward" size={13} color={COLORS.primary} />
-        </TouchableOpacity>
       </View>
 
-      {/* ── Title Row ────────────────────────────────────── */}
-      <View style={s.titleRow}>
-        <Text style={s.mainTitle}>🚪 Flat Entry Updates</Text>
-        <Text style={s.subTitle}>Live guard check-ins, deliveries & visitors</Text>
-      </View>
-
-      {/* ── 1. MyGate-Style Pending Gate Approval Hero Callout ── */}
+      {/* ── Pending Approval Inline Alert ── */}
       {pendingVisitor && (
         <View style={s.pendingCard}>
-          <LinearGradient
-            colors={['#FFFBEB', '#FEF3C7']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.pendingGradient}
-          />
-          <View style={s.pendingTopRow}>
-            <View style={s.pendingAlertBadge}>
-              <View style={[s.pulsingDot, { backgroundColor: '#DC2626' }]} />
-              <Text style={s.pendingAlertText}>VISITOR AT MAIN GATE</Text>
-            </View>
-            <Text style={s.pendingTime}>{pendingVisitor.timestamp}</Text>
-          </View>
-
           <View style={s.pendingInfoRow}>
-            <View style={[s.typeIconBox, { backgroundColor: TYPE_CONFIG[pendingVisitor.type]?.bg || '#FEF3C7' }]}>
+            <View style={[s.pendingIcon, { backgroundColor: TYPE_CONFIG[pendingVisitor.type]?.bg || '#FEF3C7' }]}>
               <Ionicons
                 name={TYPE_CONFIG[pendingVisitor.type]?.icon || 'cube'}
-                size={22}
+                size={16}
                 color={TYPE_CONFIG[pendingVisitor.type]?.color || '#D97706'}
               />
             </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={s.pendingName}>{pendingVisitor.name}</Text>
-              <Text style={s.pendingPurpose}>{pendingVisitor.purpose}</Text>
-              {pendingVisitor.vehicleNumber && (
-                <View style={s.vehicleBadge}>
-                  <Ionicons name="car-outline" size={11} color="#64748B" />
-                  <Text style={s.vehicleText}>{pendingVisitor.vehicleNumber}</Text>
-                </View>
-              )}
+            <View style={s.pendingDetails}>
+              <Text style={s.pendingName} numberOfLines={1}>{pendingVisitor.name}</Text>
+              <Text style={s.pendingPurpose} numberOfLines={1}>{pendingVisitor.purpose}{pendingVisitor.vehicleNumber ? ` · ${pendingVisitor.vehicleNumber}` : ''}</Text>
             </View>
           </View>
-
-          {/* Action Buttons: Allow / Leave at Gate / Deny */}
           <View style={s.pendingActionRow}>
-            <TouchableOpacity
-              style={s.allowBtn}
-              onPress={() => handleAllowEntry(pendingVisitor)}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#059669', '#10B981']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={s.allowBtnGrad}
-              >
-                <Ionicons name="checkmark-circle" size={15} color="#FFFFFF" />
-                <Text style={s.allowBtnText}>Allow</Text>
-              </LinearGradient>
+            <TouchableOpacity style={s.allowBtn} onPress={() => handleAllowEntry(pendingVisitor)} activeOpacity={0.8}>
+              <Ionicons name="checkmark" size={13} color="#fff" />
+              <Text style={s.allowBtnText}>Allow</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={s.holdBtn}
-              onPress={() => handleHoldAtGate(pendingVisitor)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="cube-outline" size={14} color="#D97706" />
-              <Text style={s.holdBtnText}>Leave at Gate</Text>
+            <TouchableOpacity style={s.holdBtn} onPress={() => handleHoldAtGate(pendingVisitor)} activeOpacity={0.7}>
+              <Text style={s.holdBtnText}>Hold</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={s.denyBtn}
-              onPress={() => handleDenyEntry(pendingVisitor)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close-circle-outline" size={14} color="#DC2626" />
+            <TouchableOpacity style={s.denyBtn} onPress={() => handleDenyEntry(pendingVisitor)} activeOpacity={0.7}>
               <Text style={s.denyBtnText}>Deny</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* ── 2. Recent Flat Entries Stream ────────────────────────── */}
-      <View style={s.recentList}>
+      {/* ── Recent Entries (horizontal scroll) ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.entryScroll}
+      >
         {recentActivities.map((entry) => {
           const cfg = TYPE_CONFIG[entry.type] || TYPE_CONFIG.GUEST;
           const statusCfg = STATUS_BADGE[entry.status] || STATUS_BADGE.CHECKED_IN;
-
           return (
             <TouchableOpacity
               key={entry.id}
-              style={s.entryRow}
+              style={s.entryCard}
               onPress={() => setSelectedPass(entry)}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
             >
-              <View style={[s.entryIconCircle, { backgroundColor: cfg.bg }]}>
+              <View style={[s.entryIconBox, { backgroundColor: cfg.bg }]}>
                 <Ionicons name={cfg.icon} size={16} color={cfg.color} />
               </View>
-
-              <View style={s.entryMain}>
-                <View style={s.entryHeaderLine}>
-                  <Text style={s.entryName} numberOfLines={1}>{entry.name}</Text>
-                  <View style={[s.statusTag, { backgroundColor: statusCfg.bg }]}>
-                    <View style={[s.statusDot, { backgroundColor: statusCfg.dotColor }]} />
-                    <Text style={[s.statusTagText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
-                  </View>
-                </View>
-
-                <View style={s.entrySubLine}>
-                  <Text style={s.entryPurpose} numberOfLines={1}>{entry.purpose}</Text>
-                  <Text style={s.entryTime}>{entry.timestamp}</Text>
-                </View>
+              <Text style={s.entryName} numberOfLines={1}>{entry.name}</Text>
+              <Text style={s.entryPurpose} numberOfLines={1}>{entry.purpose}</Text>
+              <View style={[s.statusTag, { backgroundColor: statusCfg.bg }]}>
+                <View style={[s.statusDot, { backgroundColor: statusCfg.dotColor }]} />
+                <Text style={[s.statusTagText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
               </View>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
-      {/* ── 3. Quick Pre-Approval Shortcuts ──────────────────────── */}
+      {/* ── Quick Shortcuts ── */}
       <View style={s.quickShortcutsRow}>
-        <TouchableOpacity
-          style={s.shortcutChip}
-          onPress={() => {
-            setVisitorType('GUEST');
-            setIsPreApproveOpen(true);
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={[s.shortcutIconBox, { backgroundColor: '#EEF2FF' }]}>
-            <Ionicons name="person-add" size={14} color="#4F46E5" />
-          </View>
-          <Text style={s.shortcutText}>+ Guest Pass</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={s.shortcutChip}
-          onPress={() => {
-            setVisitorType('DELIVERY');
-            setVisitorName('Delivery Executive');
-            setPurpose('Package Drop');
-            setIsPreApproveOpen(true);
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={[s.shortcutIconBox, { backgroundColor: '#FEF3C7' }]}>
-            <Ionicons name="cube" size={14} color="#D97706" />
-          </View>
-          <Text style={s.shortcutText}>+ Delivery Pass</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={s.shortcutChip}
-          onPress={() => {
-            setVisitorType('CAB');
-            setVisitorName('Cab / Auto');
-            setPurpose('Pickup / Drop');
-            setIsPreApproveOpen(true);
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={[s.shortcutIconBox, { backgroundColor: '#DBEAFE' }]}>
-            <Ionicons name="car" size={14} color="#2563EB" />
-          </View>
-          <Text style={s.shortcutText}>+ Cab Pass</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={s.shortcutChip}
-          onPress={() => router.push('/services')}
-          activeOpacity={0.7}
-        >
-          <View style={[s.shortcutIconBox, { backgroundColor: '#FCE7F3' }]}>
-            <Ionicons name="people" size={14} color="#DB2777" />
-          </View>
-          <Text style={s.shortcutText}>Staff Log</Text>
-        </TouchableOpacity>
+        {([
+          { type: 'GUEST' as GateEntryType, label: '+ Guest', bg: '#EEF2FF', color: '#4F46E5', icon: 'person-add' as keyof typeof Ionicons.glyphMap },
+          { type: 'DELIVERY' as GateEntryType, label: '+ Delivery', bg: '#FEF3C7', color: '#D97706', icon: 'cube' as keyof typeof Ionicons.glyphMap },
+          { type: 'CAB' as GateEntryType, label: '+ Cab', bg: '#DBEAFE', color: '#2563EB', icon: 'car' as keyof typeof Ionicons.glyphMap },
+        ]).map(item => (
+          <TouchableOpacity
+            key={item.type}
+            style={s.shortcutChip}
+            onPress={() => {
+              setVisitorType(item.type);
+              if (item.type === 'DELIVERY') { setVisitorName('Delivery Executive'); setPurpose('Package Drop'); }
+              else if (item.type === 'CAB') { setVisitorName('Cab / Auto'); setPurpose('Pickup / Drop'); }
+              setIsPreApproveOpen(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={item.icon} size={10} color={item.color} />
+            <Text style={[s.shortcutText, { color: item.color }]}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* ── Pre-Approve Modal ────────────────────────────────────── */}
@@ -599,12 +495,13 @@ const s = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginTop: 10,
-    marginBottom: 6,
+    marginBottom: 2,
     backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.xl,
-    padding: 14,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.12)',
+    borderColor: '#E8E8F0',
     ...SHADOWS.sm,
   },
   headerRow: {
@@ -613,309 +510,206 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  headerLeft: {
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  flatPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  flatPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.primary,
-    fontFamily: FONTS.semiBold,
   },
   liveStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   pulsingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: '#10B981',
   },
   liveStatusText: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: '600',
     color: '#059669',
-    fontFamily: FONTS.semiBold,
-  },
-  viewAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
+    fontFamily: FONTS.medium,
   },
   viewAllText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: COLORS.primary,
     fontFamily: FONTS.semiBold,
   },
-  titleRow: {
-    marginBottom: 10,
-  },
   mainTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '800',
     color: COLORS.text,
     fontFamily: FONTS.displayBold,
   },
-  subTitle: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    marginTop: 1,
-    fontFamily: FONTS.regular,
-  },
 
-  // ── Pending Approval Hero Card ──
+  // ── Pending Approval Inline ──
   pendingCard: {
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 6,
+    backgroundColor: '#FFFBEB',
     borderWidth: 1,
-    borderColor: '#FCD34D',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  pendingGradient: {
-    ...StyleSheet.absoluteFill,
-  },
-  pendingTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  pendingAlertBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  pendingAlertText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#DC2626',
-    letterSpacing: 0.4,
-  },
-  pendingTime: {
-    fontSize: 11,
-    color: '#92400E',
-    fontWeight: '600',
+    borderColor: '#FDE68A',
   },
   pendingInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
+    gap: 8,
+    marginBottom: 6,
   },
-  typeIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  pendingIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pendingDetails: {
+    flex: 1,
+  },
   pendingName: {
-    fontSize: 13.5,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#78350F',
     fontFamily: FONTS.bold,
   },
   pendingPurpose: {
-    fontSize: 11,
-    color: '#92400E',
-    marginTop: 1,
-  },
-  vehicleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 3,
-  },
-  vehicleText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: '#475569',
+    color: '#92400E',
+    fontFamily: FONTS.regular,
   },
   pendingActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   allowBtn: {
-    flex: 1.2,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  allowBtnGrad: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
+    gap: 3,
+    backgroundColor: '#059669',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   allowBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
     color: '#FFFFFF',
+    fontFamily: FONTS.bold,
   },
   holdBtn: {
-    flex: 1.2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
     backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 8,
-    paddingVertical: 7,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   holdBtnText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#B45309',
+    fontFamily: FONTS.bold,
   },
   denyBtn: {
-    flex: 0.9,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 8,
-    paddingVertical: 7,
   },
   denyBtnText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#DC2626',
+    fontFamily: FONTS.bold,
   },
 
-  // ── Recent List ──
-  recentList: {
+  // ── Entry Cards (horizontal) ──
+  entryScroll: {
     gap: 8,
-    marginBottom: 10,
+    paddingVertical: 2,
   },
-  entryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 7,
-    paddingHorizontal: 8,
+  entryCard: {
+    width: 110,
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
+    padding: 10,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E8E8F0',
+    gap: 4,
+    alignItems: 'center',
   },
-  entryIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  entryIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  entryMain: {
-    flex: 1,
-  },
-  entryHeaderLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    marginBottom: 2,
   },
   entryName: {
-    fontSize: 12.5,
+    fontSize: 11,
     fontWeight: '700',
     color: COLORS.text,
     fontFamily: FONTS.semiBold,
-    maxWidth: '55%',
+    textAlign: 'center',
+  },
+  entryPurpose: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+    textAlign: 'center',
   },
   statusTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  statusTagText: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    fontFamily: FONTS.medium,
-  },
-  entrySubLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
     marginTop: 2,
   },
-  entryPurpose: {
-    fontSize: 10.5,
-    color: COLORS.textMuted,
-    maxWidth: '65%',
+  statusDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
-  entryTime: {
-    fontSize: 10,
-    color: '#64748B',
-    fontWeight: '600',
+  statusTagText: {
+    fontSize: 8,
+    fontWeight: '700',
+    fontFamily: FONTS.medium,
   },
 
   // ── Quick Shortcuts ──
   quickShortcutsRow: {
     flexDirection: 'row',
     gap: 6,
-    paddingTop: 8,
+    marginTop: 6,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   shortcutChip: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
+    paddingVertical: 4,
+    borderRadius: 6,
     backgroundColor: '#F8FAFC',
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  shortcutIconBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   shortcutText: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
-    color: COLORS.textSecondary,
-    fontFamily: FONTS.medium,
+    fontFamily: FONTS.semiBold,
   },
 
   // ── Modals ──

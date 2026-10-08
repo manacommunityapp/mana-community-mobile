@@ -29,17 +29,17 @@ const EVENT_CARD_W = SCREEN_W * 0.68;
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
-const FEED_FILTERS: { key: FeedFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'ALL',          label: 'All',          icon: 'sparkles-outline' },
-  { key: 'ANNOUNCEMENT', label: 'Notices',      icon: 'megaphone-outline' },
-  { key: 'POLL',         label: 'Polls',        icon: 'stats-chart-outline' },
-  { key: 'GENERAL',      label: 'Community',    icon: 'chatbubbles-outline' },
+const FEED_FILTERS: { key: FeedFilter; label: string; emoji: string }[] = [
+  { key: 'ALL',          label: 'All',       emoji: '✨' },
+  { key: 'ANNOUNCEMENT', label: 'Notices',   emoji: '📢' },
+  { key: 'POLL',         label: 'Polls',     emoji: '📊' },
+  { key: 'GENERAL',      label: 'Community', emoji: '💬' },
 ];
 
-const POST_TYPE_META: Record<string, { label: string; color: string; bg: string; accent: string }> = {
-  poll:         { label: 'POLL',      color: '#7C3AED', bg: '#EDE9FE', accent: '#7C3AED' },
-  announcement: { label: 'NOTICE',    color: '#4F46E5', bg: '#EEF2FF', accent: '#4F46E5' },
-  post:         { label: 'COMMUNITY', color: '#2563EB', bg: '#DBEAFE', accent: '#2563EB' },
+const POST_TYPE_META: Record<string, { label: string; emoji: string; color: string; bg: string; accent: string }> = {
+  poll:         { label: 'POLL',      emoji: '📊', color: '#7C3AED', bg: '#EDE9FE', accent: '#7C3AED' },
+  announcement: { label: 'NOTICE',    emoji: '📢', color: '#4F46E5', bg: '#EEF2FF', accent: '#4F46E5' },
+  post:         { label: 'POST',      emoji: '💬', color: '#2563EB', bg: '#DBEAFE', accent: '#2563EB' },
 };
 
 // ── Upcoming Event Card ───────────────────────────────────────
@@ -75,11 +75,11 @@ function UpcomingEventCard({ event, onPress }: { event: EventDto; onPress: () =>
         style={es.imageArea}
       >
         <View style={es.eventIconCircle}>
-          <Ionicons name="calendar" size={28} color="rgba(255,255,255,0.9)" />
+          <Text style={es.eventEmoji}>📅</Text>
         </View>
         <View style={es.dateBadgeWrap}>
           <Text style={es.dateBadge}>
-            {fmtDate(event.startDate)}{event.startTime ? `  •  ${fmtTime(event.startTime)}` : ''}
+            {fmtDate(event.startDate)}{event.startTime ? `  ·  ${fmtTime(event.startTime)}` : ''}
           </Text>
         </View>
       </LinearGradient>
@@ -110,7 +110,7 @@ const es = StyleSheet.create({
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     ...SHADOWS.md,
   },
   imageArea: {
@@ -127,6 +127,7 @@ const es = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  eventEmoji: { fontSize: 24 },
   dateBadgeWrap: {
     position: 'absolute',
     bottom: 0,
@@ -209,7 +210,6 @@ function PostCard({ post }: { post: PostDto }) {
 
   const avatarColor = getAvatarColor(post.authorName || 'Neighbor');
   const typeMeta = POST_TYPE_META[post.type] || POST_TYPE_META.post;
-  const flatLabel = post.authorFlat ? ` · ${post.authorFlat}` : '';
   const timeAgo = (() => {
     if (!post.createdAt) return 'recently';
     try { return formatDistanceToNow(new Date(post.createdAt), { addSuffix: false }); }
@@ -218,7 +218,6 @@ function PostCard({ post }: { post: PostDto }) {
 
   return (
     <View style={styles.card}>
-      {/* Left accent bar */}
       <View style={[styles.cardAccent, { backgroundColor: typeMeta.accent }]} />
 
       <View style={styles.cardInner}>
@@ -245,6 +244,7 @@ function PostCard({ post }: { post: PostDto }) {
           </View>
 
           <View style={[styles.typeBadge, { backgroundColor: typeMeta.bg }]}>
+            <Text style={styles.typeBadgeEmoji}>{typeMeta.emoji}</Text>
             <Text style={[styles.typeBadgeText, { color: typeMeta.color }]}>
               {typeMeta.label}
             </Text>
@@ -280,24 +280,20 @@ function PostCard({ post }: { post: PostDto }) {
             onPress={() => likeMutation.mutate()}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name={post.liked ? 'heart' : 'heart-outline'}
-              size={17}
-              color={post.liked ? COLORS.error : COLORS.textMuted}
-            />
+            <Text style={styles.actionEmoji}>{post.liked ? '❤️' : '🤍'}</Text>
             <Text style={[styles.actionText, post.liked && styles.likedText]}>
               {post.likeCount || 0}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-            <Ionicons name="chatbubble-outline" size={16} color={COLORS.textMuted} />
+            <Text style={styles.actionEmoji}>💬</Text>
             <Text style={styles.actionText}>{post.commentCount || 0}</Text>
           </TouchableOpacity>
 
           <View style={styles.actionsRight}>
             <TouchableOpacity style={styles.actionBtnIcon} onPress={handleShare} activeOpacity={0.7}>
-              <Ionicons name="share-social-outline" size={17} color={COLORS.textMuted} />
+              <Text style={styles.actionEmoji}>🔗</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -402,17 +398,15 @@ export default function FeedScreen() {
   const announcements = allPosts.filter(p => p.type === 'announcement');
   const latestAnnouncement = announcements.length > 0 ? announcements[0] : null;
 
-  // ── Finance Banner ─────────────────────────────────────────────────
-  // Hidden until finance API is wired up — avoids showing stale hardcoded amounts
   const FinanceBanner = null;
 
   // ── Quick Stats Row (dynamic) ───────────────────────────────────────
   const statTiles = useMemo(() => [
-    { id: 'events',  label: 'Events',   value: upcomingEvents.length,                color: '#4F46E5', labelColor: '#3730A3', bg: '#EEF2FF', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap, route: '/tabs/events' },
-    { id: 'polls',   label: 'Polls',    value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', icon: 'bar-chart-outline' as keyof typeof Ionicons.glyphMap, route: '/polls' },
-    { id: 'tickets', label: 'Tickets',  value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', icon: 'headset-outline' as keyof typeof Ionicons.glyphMap, route: '/helpdesk' },
-    { id: 'sports',  label: 'Live',     value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#DCFCE7', icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap, route: '/sports' },
-    { id: 'notifs',  label: 'Notifs',   value: unreadCount,                          color: '#2563EB', labelColor: '#1E40AF', bg: '#DBEAFE', icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, route: '/notifications' },
+    { id: 'events',  label: 'Events',  emoji: '📅', value: upcomingEvents.length,                color: '#4F46E5', labelColor: '#3730A3', bg: '#EEF2FF', route: '/tabs/events' },
+    { id: 'polls',   label: 'Polls',   emoji: '📊', value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', route: '/polls' },
+    { id: 'tickets', label: 'Tickets', emoji: '🎧', value: openTickets.length,                   color: '#0891B2', labelColor: '#155E75', bg: '#CFFAFE', route: '/helpdesk' },
+    { id: 'sports',  label: 'Live',    emoji: '🏆', value: 0,                                    color: '#059669', labelColor: '#065F46', bg: '#DCFCE7', route: '/sports' },
+    { id: 'notifs',  label: 'Notifs',  emoji: '🔔', value: unreadCount,                          color: '#2563EB', labelColor: '#1E40AF', bg: '#DBEAFE', route: '/notifications' },
   ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
 
   const StatsRow = useMemo(() => (
@@ -426,7 +420,7 @@ export default function FeedScreen() {
         >
           <View style={styles.statTileTop}>
             <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
-            <Ionicons name={tile.icon} size={12} color={tile.color} style={{ opacity: 0.7 }} />
+            <Text style={styles.statEmoji}>{tile.emoji}</Text>
           </View>
           <Text style={[styles.statLabel, { color: tile.labelColor }]} numberOfLines={1}>
             {tile.label}
@@ -453,7 +447,7 @@ export default function FeedScreen() {
             style={styles.announcementGradient}
           />
           <View style={styles.announcementIconWrap}>
-            <Ionicons name="volume-high" size={20} color={COLORS.primary} />
+            <Text style={styles.announcementEmoji}>📢</Text>
           </View>
           <View style={styles.announcementContent}>
             <Text style={styles.announcementLabel}>COMMUNITY UPDATE</Text>
@@ -464,7 +458,7 @@ export default function FeedScreen() {
               {latestAnnouncement.content}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+          <Text style={styles.announcementArrow}>{'>'}</Text>
         </View>
       )}
 
@@ -472,9 +466,12 @@ export default function FeedScreen() {
       {upcomingEvents.length > 0 && (
         <View style={styles.eventsSection}>
           <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Upcoming Events</Text>
-              <Text style={styles.sectionSub}>{upcomingEvents.length} events this week</Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionEmoji}>🎉</Text>
+              <View>
+                <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                <Text style={styles.sectionSub}>{upcomingEvents.length} events this week</Text>
+              </View>
             </View>
             <TouchableOpacity
               style={styles.seeAllBtn}
@@ -535,7 +532,7 @@ export default function FeedScreen() {
               activeOpacity={0.7}
               hitSlop={4}
             >
-              <Ionicons name="bar-chart-outline" size={15} color="#7C3AED" />
+              <Text style={styles.composerChipEmoji}>📊</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.composerIconChip, { backgroundColor: '#DBEAFE' }]}
@@ -543,7 +540,7 @@ export default function FeedScreen() {
               activeOpacity={0.7}
               hitSlop={4}
             >
-              <Ionicons name="chatbubble-ellipses-outline" size={15} color="#2563EB" />
+              <Text style={styles.composerChipEmoji}>💬</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.composerIconChip, { backgroundColor: '#CCFBF1' }]}
@@ -551,7 +548,7 @@ export default function FeedScreen() {
               activeOpacity={0.7}
               hitSlop={4}
             >
-              <Ionicons name="calendar-outline" size={15} color="#0D9488" />
+              <Text style={styles.composerChipEmoji}>📅</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.composerIconChip, { backgroundColor: '#FEF3C7' }]}
@@ -559,7 +556,7 @@ export default function FeedScreen() {
               activeOpacity={0.7}
               hitSlop={4}
             >
-              <Ionicons name="camera-outline" size={15} color="#D97706" />
+              <Text style={styles.composerChipEmoji}>📸</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -568,7 +565,10 @@ export default function FeedScreen() {
       {/* Feed Filter Chips */}
       <View style={styles.filterSection}>
         <View style={styles.filterTitleRow}>
-          <Text style={styles.feedHeading}>Community Feed</Text>
+          <View style={styles.feedHeadingRow}>
+            <Text style={styles.feedHeadingEmoji}>📰</Text>
+            <Text style={styles.feedHeading}>Community Feed</Text>
+          </View>
           <Text style={styles.postCount}>{filteredPosts.length} posts</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
@@ -581,11 +581,7 @@ export default function FeedScreen() {
                 onPress={() => setFilter(f.key)}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={f.icon}
-                  size={13}
-                  color={active ? '#fff' : COLORS.textMuted}
-                />
+                <Text style={styles.filterEmoji}>{f.emoji}</Text>
                 <Text style={[styles.filterText, active && styles.filterTextActive]}>
                   {f.label}
                 </Text>
@@ -599,8 +595,13 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* ── Top Bar ────────────────────────────────── */}
-      <View style={styles.topBar}>
+      {/* ── Gradient Top Bar ────────────────────────── */}
+      <LinearGradient
+        colors={['#312E81', '#4F46E5', '#6366F1']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.topBar}
+      >
         <TouchableOpacity
           style={styles.welcomeRow}
           onPress={() => router.push('/tabs/profile')}
@@ -613,14 +614,9 @@ export default function FeedScreen() {
               onError={() => setUserPhotoError(true)}
             />
           ) : (
-            <LinearGradient
-              colors={GRADIENTS.avatar}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.profileAvatar}
-            >
+            <View style={styles.profileAvatar}>
               <Text style={styles.profileAvatarText}>{userInitial}</Text>
-            </LinearGradient>
+            </View>
           )}
           <View style={styles.welcomeText}>
             <Text style={styles.welcomeLabel}>{greeting} 👋</Text>
@@ -631,7 +627,7 @@ export default function FeedScreen() {
         <View style={styles.topBarRight}>
           {!!communityName && !isSearchOpen && (
             <View style={styles.communityBadge}>
-              <Ionicons name="home-outline" size={11} color={COLORS.primary} />
+              <Text style={styles.communityBadgeEmoji}>🏠</Text>
               <Text style={styles.communityBadgeText}>{communityName}</Text>
             </View>
           )}
@@ -644,11 +640,7 @@ export default function FeedScreen() {
             activeOpacity={0.7}
             hitSlop={8}
           >
-            <Ionicons
-              name={isSearchOpen ? 'close-outline' : 'search-outline'}
-              size={21}
-              color={isSearchOpen ? COLORS.primary : COLORS.text}
-            />
+            <Text style={styles.headerIconEmoji}>{isSearchOpen ? '✕' : '🔍'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -657,9 +649,9 @@ export default function FeedScreen() {
             activeOpacity={0.7}
             hitSlop={8}
           >
-            <Ionicons name="alert-circle-outline" size={20} color="#DC2626" />
+            <Text style={styles.emergencyEmoji}>🚨</Text>
             <View style={styles.emergencyBadge}>
-              <Text style={styles.emergencyBadgeText}>24*7</Text>
+              <Text style={styles.emergencyBadgeText}>24x7</Text>
             </View>
           </TouchableOpacity>
 
@@ -669,7 +661,7 @@ export default function FeedScreen() {
             activeOpacity={0.7}
             hitSlop={8}
           >
-            <Ionicons name="notifications-outline" size={21} color={COLORS.text} />
+            <Text style={styles.notifEmoji}>🔔</Text>
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -679,13 +671,13 @@ export default function FeedScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* ── Search Bar ─────────────────────────────── */}
       {isSearchOpen && (
         <View style={styles.searchBarWrap}>
           <View style={styles.searchBarCurved}>
-            <Ionicons name="search-outline" size={16} color={COLORS.primary} style={styles.searchIcon} />
+            <Text style={styles.searchEmoji}>🔍</Text>
             <TextInput
               style={styles.searchInput}
               placeholder="Search updates, notices, neighbors..."
@@ -730,12 +722,9 @@ export default function FeedScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <LinearGradient
-                colors={[COLORS.primaryLight, '#dde6ff']}
-                style={styles.emptyIconWrap}
-              >
-                <Ionicons name="chatbubbles-outline" size={34} color={COLORS.primary} />
-              </LinearGradient>
+              <View style={styles.emptyIconWrap}>
+                <Text style={styles.emptyIcon}>💬</Text>
+              </View>
               <Text style={styles.emptyTitle}>No posts yet</Text>
               <Text style={styles.emptyText}>Be the first to share an update with your neighbors!</Text>
               <TouchableOpacity
@@ -744,12 +733,12 @@ export default function FeedScreen() {
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={GRADIENTS.primary as unknown as [string, string]}
+                  colors={['#312E81', '#4F46E5']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.emptyBtnGradient}
                 >
-                  <Ionicons name="add-circle-outline" size={17} color="#fff" />
+                  <Text style={styles.emptyBtnEmoji}>✏️</Text>
                   <Text style={styles.emptyBtnText}>Create Post</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -762,7 +751,7 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
 
   // ── Loading ──────────────────────────────────────────────────────
   loadingWrap: {
@@ -777,68 +766,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
   },
 
-  // ── Finance Banner ────────────────────────────────────────────────
-  financeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    overflow: 'hidden',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FCD34D',
-  },
-  financeIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#D97706',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    ...SHADOWS.sm,
-  },
-  financeText: { flex: 1 },
-  financeLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#92400E',
-    letterSpacing: 0.7,
-    fontFamily: FONTS.bold,
-  },
-  financeAmountRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  financeAmount: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#D97706',
-    fontFamily: FONTS.displayEB,
-    letterSpacing: -0.5,
-  },
-  financeDue: {
-    fontSize: 12,
-    color: '#92400E',
-    fontFamily: FONTS.medium,
-  },
-  payBtn: {
-    backgroundColor: '#D97706',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    ...SHADOWS.sm,
-  },
-  payBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
-    fontFamily: FONTS.bold,
-  },
-
   // ── Quick Stats Row ───────────────────────────────────────────────
   statsContainer: {
     flexDirection: 'row',
@@ -850,7 +777,7 @@ const styles = StyleSheet.create({
   statTile: {
     flex: 1,
     minWidth: 0,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     paddingHorizontal: 6,
     paddingVertical: 6,
     borderWidth: 1,
@@ -870,6 +797,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.displayEB,
     lineHeight: 22,
   },
+  statEmoji: { fontSize: 12 },
   statLabel: {
     fontSize: 11,
     fontWeight: '600',
@@ -878,16 +806,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // ── Welcome Top Bar ───────────────────────────────────────────────
+  // ── Gradient Top Bar ──────────────────────────────────────────────
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingVertical: 14,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     gap: 8,
   },
   welcomeRow: {
@@ -899,16 +826,19 @@ const styles = StyleSheet.create({
   profileAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   profileAvatarImage: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 14,
     borderWidth: 2,
-    borderColor: 'rgba(99,102,241,0.3)',
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   profileAvatarText: {
     color: '#fff',
@@ -919,13 +849,13 @@ const styles = StyleSheet.create({
   welcomeText: {},
   welcomeLabel: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: 'rgba(255,255,255,0.75)',
     fontFamily: FONTS.regular,
   },
   welcomeName: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
-    color: COLORS.text,
+    color: '#fff',
     letterSpacing: -0.4,
     fontFamily: FONTS.displayEB,
   },
@@ -938,15 +868,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: COLORS.primaryMid,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
+  communityBadgeEmoji: { fontSize: 11 },
   communityBadgeText: {
-    color: COLORS.primary,
+    color: '#fff',
     fontSize: 11,
     fontWeight: '700',
     fontFamily: FONTS.bold,
@@ -954,28 +885,30 @@ const styles = StyleSheet.create({
   headerIconBtn: {
     width: 37,
     height: 37,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   headerIconBtnActive: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: COLORS.primaryMid,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(255,255,255,0.35)',
   },
+  headerIconEmoji: { fontSize: 16 },
   emergencyBtn: {
     width: 37,
     height: 37,
-    borderRadius: 18,
-    backgroundColor: '#FEE2E2',
+    borderRadius: 12,
+    backgroundColor: 'rgba(220,38,38,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: 'rgba(220,38,38,0.35)',
   },
+  emergencyEmoji: { fontSize: 16 },
   emergencyBadge: {
     position: 'absolute',
     top: -5,
@@ -985,7 +918,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1.5,
     borderWidth: 1.5,
-    borderColor: COLORS.surface,
+    borderColor: '#312E81',
   },
   emergencyBadgeText: {
     color: '#FFFFFF',
@@ -997,19 +930,20 @@ const styles = StyleSheet.create({
   notifBtn: {
     width: 37,
     height: 37,
-    borderRadius: 18,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    backgroundColor: COLORS.surfaceAlt,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
+  notifEmoji: { fontSize: 16 },
   badge: {
     position: 'absolute',
     top: -1,
     right: -1,
-    backgroundColor: COLORS.error,
+    backgroundColor: '#DC2626',
     borderRadius: 20,
     minWidth: 17,
     height: 17,
@@ -1017,7 +951,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: COLORS.surface,
+    borderColor: '#312E81',
   },
   badgeText: {
     color: '#fff',
@@ -1029,21 +963,21 @@ const styles = StyleSheet.create({
   searchBarWrap: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    backgroundColor: '#F8FAFC',
   },
   searchBarCurved: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.full,
     paddingHorizontal: 14,
     paddingVertical: Platform.OS === 'ios' ? 9 : 3,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 1.5,
+    borderColor: '#E8E8F0',
+    ...SHADOWS.sm,
+    gap: 8,
   },
-  searchIcon: { marginRight: 6 },
+  searchEmoji: { fontSize: 14 },
   searchInput: {
     flex: 1,
     fontSize: 14,
@@ -1062,10 +996,10 @@ const styles = StyleSheet.create({
     gap: 12,
     marginHorizontal: 14,
     marginTop: 14,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.primaryMid,
+    borderColor: '#E0E7FF',
     overflow: 'hidden',
     ...SHADOWS.sm,
   },
@@ -1075,12 +1009,13 @@ const styles = StyleSheet.create({
   announcementIconWrap: {
     width: 42,
     height: 42,
-    borderRadius: 21,
+    borderRadius: 14,
     backgroundColor: 'rgba(79,70,229,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
+  announcementEmoji: { fontSize: 20 },
   announcementContent: { flex: 1 },
   announcementLabel: {
     fontSize: 10,
@@ -1103,6 +1038,11 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     fontFamily: FONTS.regular,
   },
+  announcementArrow: {
+    fontSize: 18,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
 
   // ── Upcoming Events ────────────────────────────────────────────────
   eventsSection: {
@@ -1115,6 +1055,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 12,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionEmoji: { fontSize: 20 },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '800',
@@ -1134,10 +1080,10 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#EEF2FF',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.primaryMid,
+    borderColor: '#E0E7FF',
   },
   seeAll: {
     fontSize: 12,
@@ -1153,13 +1099,13 @@ const styles = StyleSheet.create({
 
   // ── Composer Card ──────────────────────────────────────────────────
   composerCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     marginHorizontal: 14,
     marginTop: 14,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     padding: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     ...SHADOWS.sm,
   },
   composerRow: {
@@ -1189,12 +1135,12 @@ const styles = StyleSheet.create({
   },
   composerInput: {
     flex: 1,
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderRadius: RADIUS.full,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     justifyContent: 'center',
   },
   composerPlaceholder: {
@@ -1214,6 +1160,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  composerChipEmoji: { fontSize: 14 },
 
   // ── Filter Section ─────────────────────────────────────────────────
   filterSection: {
@@ -1226,6 +1173,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
+  feedHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  feedHeadingEmoji: { fontSize: 18 },
   feedHeading: {
     fontSize: 17,
     fontWeight: '800',
@@ -1243,18 +1196,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.full,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
   },
   filterChipActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
     ...SHADOWS.primary,
   },
+  filterEmoji: { fontSize: 13 },
   filterText: {
     fontSize: 13,
     fontWeight: '600',
@@ -1270,12 +1224,12 @@ const styles = StyleSheet.create({
   // ── Post Card ──────────────────────────────────────────────────────
   list: { paddingBottom: 28 },
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#fff',
     marginHorizontal: 12,
     marginTop: 10,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E8F0',
     ...SHADOWS.sm,
     flexDirection: 'row',
     overflow: 'hidden',
@@ -1297,7 +1251,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1319,7 +1273,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
   },
   flatChip: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#EEF2FF',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -1337,10 +1291,14 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
   },
   typeBadge: {
-    borderRadius: 6,
+    borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
+  typeBadgeEmoji: { fontSize: 10 },
   typeBadgeText: {
     fontSize: 9,
     fontWeight: '800',
@@ -1355,15 +1313,15 @@ const styles = StyleSheet.create({
   },
   pollContainer: { marginTop: 2 },
   mediaWrap: {
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     overflow: 'hidden',
     marginTop: 2,
   },
   mediaImage: {
     width: '100%',
     height: 185,
-    borderRadius: 12,
-    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#F1F5F9',
   },
   actions: {
     flexDirection: 'row',
@@ -1371,7 +1329,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: '#E8E8F0',
   },
   actionsRight: {
     flex: 1,
@@ -1392,6 +1350,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   actionBtnLiked: { backgroundColor: '#FEE2E2' },
+  actionEmoji: { fontSize: 15 },
   actionText: {
     fontSize: 13,
     color: COLORS.textMuted,
@@ -1411,10 +1370,14 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
   },
+  emptyIcon: { fontSize: 32 },
   emptyTitle: {
     fontSize: 17,
     fontWeight: '700',
@@ -1429,10 +1392,10 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
   },
   emptyBtn: {
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
     marginTop: 6,
-    ...SHADOWS.primary,
+    ...SHADOWS.md,
   },
   emptyBtnGradient: {
     flexDirection: 'row',
@@ -1441,6 +1404,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 12,
   },
+  emptyBtnEmoji: { fontSize: 14 },
   emptyBtnText: {
     color: '#fff',
     fontSize: 14,
