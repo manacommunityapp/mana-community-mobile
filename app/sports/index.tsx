@@ -562,10 +562,10 @@ export default function SportsHubScreen() {
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 2 }}>
                   <Text style={[s.auctionBid, { color: '#059669' }]}>
-                    ₹{item.currentPrice || item.startingPrice || 0}
+                    ₹{item.currentBid || item.startingPrice || 0}
                   </Text>
                   <Text style={s.auctionBidder}>
-                    {item.totalBids || 0} bids
+                    {item.bidCount || 0} bids
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -602,23 +602,25 @@ export default function SportsHubScreen() {
           {loadingLeaderboard ? (
             <ActivityIndicator color="#059669" size="small" style={{ marginVertical: 8 }} />
           ) : topPerformers.length > 0 ? (
-            topPerformers.map((p, idx) => (
-              <View key={p.userId || idx} style={s.leaderRow}>
-                <Text style={s.leaderMedal}>{MEDALS[idx] || ('#' + (idx + 1))}</Text>
-                <View style={s.leaderAvatar}>
-                  <Text style={s.leaderAvatarText}>{(p.userName || 'P')[0]?.toUpperCase()}</Text>
+            topPerformers.map((p, idx) => {
+              const name = p.playerName || p.name || 'Resident Player';
+              const flat = p.flatNumber || p.flatNo || p.teamName || 'Mana Athlete';
+              return (
+                <View key={p.userId || idx} style={s.leaderRow}>
+                  <Text style={s.leaderMedal}>{MEDALS[idx] || ('#' + (idx + 1))}</Text>
+                  <View style={s.leaderAvatar}>
+                    <Text style={s.leaderAvatarText}>{(name)[0]?.toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.leaderName}>{name}</Text>
+                    <Text style={s.leaderFlat}>Flat {flat}</Text>
+                  </View>
+                  <View style={s.winPill}>
+                    <Text style={s.winPillText}>{p.score || p.matchesPlayed || 0} Wins</Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.leaderName}>{p.userName || 'Resident Player'}</Text>
-                  <Text style={s.leaderFlat}>
-                    {p.userFlatNumber ? ('Flat ' + p.userFlatNumber) : (p.teamName || 'Mana Athlete')} {p.sport ? SPORT_EMOJI_MAP[p.sport?.toUpperCase()] || '🏅' : ''}
-                  </Text>
-                </View>
-                <View style={s.winPill}>
-                  <Text style={s.winPillText}>{p.value || 0} Wins</Text>
-                </View>
-              </View>
-            ))
+              );
+            })
           ) : (
             <TouchableOpacity
               style={s.emptyLeaderboardRow}
