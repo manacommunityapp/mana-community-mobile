@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
   ActivityIndicator, RefreshControl, ListRenderItemInfo,
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '@/services/notificationService';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
+import { syncAppBadge, clearAppBadge } from '@/hooks/usePushNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import type { NotificationDto } from '@/types/api';
 
@@ -20,6 +21,11 @@ const TYPE_META: Record<string, { emoji: string; color: string; bg: string }> = 
   EVENT:       { emoji: '📅', color: '#0891B2', bg: '#CFFAFE' },
   SPORTS:      { emoji: '🏆', color: '#059669', bg: '#D1FAE5' },
   AUCTION:     { emoji: '🔨', color: '#D97706', bg: '#FEF3C7' },
+  VISITOR:     { emoji: '🛡️', color: '#059669', bg: '#D1FAE5' },
+  PARKING:     { emoji: '🚗', color: '#2563EB', bg: '#DBEAFE' },
+  FINANCE:     { emoji: '💳', color: '#4F46E5', bg: '#EEF2FF' },
+  HELPDESK:    { emoji: '🎫', color: '#D97706', bg: '#FEF3C7' },
+  SAFETY:      { emoji: '🚨', color: '#DC2626', bg: '#FEE2E2' },
   MARKETPLACE: { emoji: '🛒', color: '#DC2626', bg: '#FEE2E2' },
   COMMUNITY:   { emoji: '🏘️', color: '#4F46E5', bg: '#EEF2FF' },
 };
@@ -89,24 +95,42 @@ export default function NotificationsScreen() {
   const notifications = data?.content ?? [];
   const unreadCount   = notifications.filter((n) => !n.read).length;
 
+  // Sync OS home screen badge count with unread count
+  useEffect(() => {
+    syncAppBadge(unreadCount);
+  }, [unreadCount]);
+
   const markReadMutation = useMutation({
     mutationFn: (id: number) => notificationService.markRead(id),
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
   const markAllMutation = useMutation({
-    mutationFn: notificationService.markAllRead,
+    mutationFn: async () => {
+      await notificationService.markAllRead();
+      await clearAppBadge();
+    },
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
   const handlePress = useCallback(
     (n: NotificationDto) => {
       if (!n.read) markReadMutation.mutate(n.id);
-      const t = n.type;
-      if (t.includes('MESSAGE'))     router.push('/tabs/chat');
-      else if (t.includes('EVENT'))  router.push('/tabs/events');
-      else if (t.includes('SPORTS')) router.push('/sports');
-      else                           router.push('/tabs/feed');
+      const t = n.type || '';
+      if (t.includes('MESSAGE'))             router.push('/tabs/chat');
+      else if (t.includes('VISITOR'))        router.push('/visitors');
+      else if (t.includes('AUCTION'))        router.push('/auction');
+      else if (t.includes('SPORTS'))         router.push('/sports');
+      else if (t.includes('EVENT'))          router.push('/tabs/events');
+      else if (t.includes('SAFETY') || t.includes('EMERGENCY') || t.includes('SOS')) router.push('/safety');
+      else if (t.includes('FINANCE') || t.includes('BILLING') || t.includes('INVOICE') || t.includes('PAYMENT')) router.push('/finance');
+      else if (t.includes('PARKING'))        router.push('/parking');
+      else if (t.includes('HELPDESK'))       router.push('/helpdesk');
+      else if (t.includes('FACILITY'))       router.push('/facilities');
+      else if (t.includes('SERVICE'))        router.push('/services');
+      else if (t.includes('FOOD'))           router.push('/food');
+      else if (t.includes('MARKETPLACE'))    router.push('/tabs/marketplace');
+      else                                   router.push('/tabs/feed');
     },
     [markReadMutation, router],
   );

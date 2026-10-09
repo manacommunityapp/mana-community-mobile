@@ -98,29 +98,31 @@ function mapBookingResponseToDto(b: any): FacilityBookingDto {
 
 export const facilityService = {
   /**
-   * GET /resource-booking/resources or /facilities
+   * GET /facilities or /resource-booking/resources
    */
   async getFacilities(): Promise<FacilityDto[]> {
     try {
-      const res = await api.get('/resource-booking/resources');
-      const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
-      return list.map(mapResourceToFacility);
-    } catch (err) {
-      secureLog.warn('[facilityService] /resource-booking/resources failed, trying /facilities alias', err);
       const res = await api.get('/facilities');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(mapResourceToFacility);
+    } catch {
+      try {
+        const res = await api.get('/resource-booking/resources');
+        const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
+        return list.map(mapResourceToFacility);
+      } catch (err) {
+        secureLog.warn('[facilityService] Unable to fetch facilities', err);
+        return [];
+      }
     }
   },
 
   /**
-   * GET /resource-booking/resources/{id}/slots or /facilities/{id}/slots
+   * GET /facilities/{id}/slots or /resource-booking/resources/{id}/slots
    */
   async getAvailableSlots(facilityId: string, date: string): Promise<string[]> {
     try {
-      const res = await api.get(`/resource-booking/resources/${facilityId}/slots`, {
-        params: { date },
-      });
+      const res = await api.get<any>(`/facilities/${facilityId}/slots`, { params: { date } });
       const data = res.data;
       if (Array.isArray(data)) {
         if (data.length > 0 && typeof data[0] === 'object' && 'startTime' in data[0]) {
@@ -131,11 +133,21 @@ export const facilityService = {
         return data as string[];
       }
       return [];
-    } catch (err) {
-      secureLog.warn('[facilityService] Primary slot query failed, checking alias', err);
+    } catch {
       try {
-        const res = await api.get<string[]>(`/facilities/${facilityId}/slots`, { params: { date } });
-        return Array.isArray(res.data) ? res.data : [];
+        const res = await api.get(`/resource-booking/resources/${facilityId}/slots`, {
+          params: { date },
+        });
+        const data = res.data;
+        if (Array.isArray(data)) {
+          if (data.length > 0 && typeof data[0] === 'object' && 'startTime' in data[0]) {
+            return data
+              .filter((s: any) => s.available !== false)
+              .map((s: any) => `${s.startTime} - ${s.endTime}`);
+          }
+          return data as string[];
+        }
+        return [];
       } catch (aliasErr) {
         secureLog.error('[facilityService] Failed to load live slots', aliasErr);
         throw aliasErr;
@@ -144,10 +156,13 @@ export const facilityService = {
   },
 
   /**
-   * POST /resource-booking/bookings or /facilities/book
+   * POST /facilities/book or /resource-booking/bookings
    */
   async bookSlot(data: FacilityBookingRequest): Promise<FacilityBookingDto> {
     try {
+      const res = await api.post('/facilities/book', data);
+      return mapBookingResponseToDto(res.data);
+    } catch {
       const payload: Record<string, any> = {
         resourceId: isNaN(Number(data.facilityId)) ? data.facilityId : Number(data.facilityId),
         bookingDate: data.date,
@@ -162,29 +177,27 @@ export const facilityService = {
         payload.recurringOccurrences = data.recurringOccurrences || 1;
         payload.recurringFrequency = data.recurringFrequency || 'DAILY';
       }
-
       const res = await api.post('/resource-booking/bookings', payload);
-      return mapBookingResponseToDto(res.data);
-    } catch (err) {
-      secureLog.warn('[facilityService] /resource-booking/bookings failed, trying /facilities/book alias', err);
-      const res = await api.post('/facilities/book', data);
       return mapBookingResponseToDto(res.data);
     }
   },
 
   /**
-   * GET /resource-booking/bookings/mine or /facilities/my-bookings
+   * GET /facilities/my-bookings or /resource-booking/bookings/mine
    */
   async getMyBookings(): Promise<FacilityBookingDto[]> {
     try {
-      const res = await api.get('/resource-booking/bookings/mine');
-      const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
-      return list.map(mapBookingResponseToDto);
-    } catch (err) {
-      secureLog.warn('[facilityService] /resource-booking/bookings/mine failed, trying /facilities/my-bookings', err);
       const res = await api.get('/facilities/my-bookings');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
       return list.map(mapBookingResponseToDto);
+    } catch {
+      try {
+        const res = await api.get('/resource-booking/bookings/mine');
+        const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
+        return list.map(mapBookingResponseToDto);
+      } catch {
+        return [];
+      }
     }
   },
 
