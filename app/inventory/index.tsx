@@ -456,6 +456,22 @@ export default function InventoryScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ── Quick Ops Shortcuts Strip ── */}
+      <View style={s.opsRow}>
+        <TouchableOpacity style={s.opsChip} onPress={() => router.push('/inventory/maintenance')}>
+          <Ionicons name="construct-outline" size={14} color="#D97706" />
+          <Text style={s.opsChipText}>Preventive AMCs</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.opsChip} onPress={() => router.push('/inventory/procurement')}>
+          <Ionicons name="cart-outline" size={14} color="#7C3AED" />
+          <Text style={s.opsChipText}>PO Approvals</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.opsChip} onPress={() => router.push('/inventory/audit')}>
+          <Ionicons name="qr-code-outline" size={14} color="#059669" />
+          <Text style={s.opsChipText}>Audit Scanner</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ── Tabs ── */}
       <View style={s.tabBar}>
         {([
@@ -806,6 +822,34 @@ const s = StyleSheet.create({
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: '#EEF2FF',
     alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Ops Shortcuts
+  opsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+    backgroundColor: COLORS.surface,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(99, 102, 241, 0.08)',
+  },
+  opsChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 7,
+    borderRadius: 8,
+    gap: 4,
+  },
+  opsChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155',
   },
 
   // Tabs
