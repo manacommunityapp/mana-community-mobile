@@ -78,7 +78,7 @@ const MOCK_METERS: SmartMeterDto[] = [
 export const smartMeterService = {
   async getUnitMeters(unitId: number = 504): Promise<SmartMeterDto[]> {
     try {
-      const res = await api.get<SmartMeterDto[]>(`/api/v1/iot/meters/unit/${unitId}`);
+      const res = await api.get<SmartMeterDto[]>(`/v1/iot/meters/unit/${unitId}`);
       if (res.data && res.data.length > 0) return res.data;
     } catch (err) {
       secureLog.warn('SmartMeter: fallback to mock meters', err);
@@ -88,7 +88,7 @@ export const smartMeterService = {
 
   async getConsumptionSummary(unitId: number = 504): Promise<UtilityConsumptionSummary> {
     try {
-      const res = await api.get<UtilityConsumptionSummary>(`/api/v1/iot/meters/summary/${unitId}`);
+      const res = await api.get<UtilityConsumptionSummary>(`/v1/iot/meters/summary/${unitId}`);
       if (res.data) return res.data;
     } catch {}
     return {
@@ -108,7 +108,7 @@ export const smartMeterService = {
 
   async simulatePulseIngestion(meterId: number, pulseCount: number): Promise<{ success: boolean; newReading: number }> {
     try {
-      const res = await api.post(`/api/v1/iot/meters/${meterId}/pulse`, { pulseCount });
+      const res = await api.post(`/v1/iot/meters/${meterId}/pulse`, { pulseCount });
       return res.data;
     } catch {
       return { success: true, newReading: 1520.4 };

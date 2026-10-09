@@ -48,7 +48,7 @@ function usePortalGuard(portal: PortalType) {
     }
   }, [isLoading, user, authorized, router]);
 
-  return { authorized, isLoading };
+  return { authorized, isAuthorized: authorized, isAdmin: authorized, isLoading };
 }
 
 export function useAdminGuard() {
@@ -95,5 +95,5 @@ export function useRoleGuard(requiredRoles: UserRole[]) {
     }
   }, [isLoading, user, authorized, router]);
 
-  return { authorized, isLoading };
+  return { authorized, isAuthorized: authorized, isAdmin: authorized, isLoading };
 }

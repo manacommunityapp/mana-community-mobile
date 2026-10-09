@@ -10,7 +10,7 @@ import type {
 export const commerceCoreService = {
   checkout: async (request: CommerceCheckoutRequest): Promise<CommerceOrder> => {
     try {
-      const response = await apiClient.post('/api/commerce/orders/checkout', request);
+      const response = await apiClient.post('/commerce/orders/checkout', request);
       return (response.data as any)?.data || response.data;
     } catch {
       const mockOrderNumber = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
@@ -44,7 +44,7 @@ export const commerceCoreService = {
 
   getMyOrders: async (): Promise<CommerceOrder[]> => {
     try {
-      const response = await apiClient.get('/api/commerce/orders/my');
+      const response = await apiClient.get('/commerce/orders/my');
       return (response.data as any)?.data || response.data;
     } catch {
       return [];
@@ -53,7 +53,7 @@ export const commerceCoreService = {
 
   verifyHandover: async (request: HandoverVerificationRequest): Promise<HandoverVerificationResponse> => {
     try {
-      const response = await apiClient.post('/api/commerce/handover/verify', request);
+      const response = await apiClient.post('/commerce/handover/verify', request);
       return (response.data as any)?.data || response.data;
     } catch {
       return {
