@@ -919,6 +919,14 @@ export default function ProfileScreen() {
             iconBg="#D1FAE5"
           />
           <MenuItem
+            icon="finger-print-outline"
+            label="App Lock & Biometrics"
+            sublabel="Fingerprint, Face ID, PIN & pattern protection"
+            onPress={() => router.push('/settings/security' as any)}
+            iconColor="#4F46E5"
+            iconBg="#EEF2FF"
+          />
+          <MenuItem
             icon="lock-closed-outline"
             label="Change Password"
             sublabel="Update your login credentials"

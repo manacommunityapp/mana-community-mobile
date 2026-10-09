@@ -90,13 +90,13 @@ export default function MyEventsScreen() {
             </Text>
             {item.status && (
               <View style={[
-                s.statusBadge,
+                st.statusBadge,
                 item.status === 'CANCELLED' && { backgroundColor: '#FEF2F2' },
                 item.status === 'ONGOING' && { backgroundColor: '#ECFDF5' },
                 item.status === 'COMPLETED' && { backgroundColor: COLORS.surfaceAlt },
               ]}>
                 <Text style={[
-                  s.statusText,
+                  st.statusText,
                   item.status === 'CANCELLED' && { color: COLORS.error },
                   item.status === 'ONGOING' && { color: '#059669' },
                   item.status === 'COMPLETED' && { color: COLORS.textMuted },

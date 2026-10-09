@@ -27,6 +27,8 @@ import { initSentry, setUser, clearUser } from '@/utils/sentry';
 import { offlineSyncService } from '@/services/offlineSyncService';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { getPortalForRole } from '@/hooks/useRoleSwitcher';
+import { useAppBiometrics } from '@/hooks/useAppBiometrics';
+import { BiometricLockModal } from '@/components/security/BiometricLockModal';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
@@ -93,7 +95,14 @@ function AuthGuard() {
     }
   }, [isAuthenticated, isLoading, isPending, segments]);
 
-  return null;
+  const { isLocked, unlock } = useAppBiometrics();
+
+  return (
+    <BiometricLockModal
+      visible={isAuthenticated && !isPending && isLocked}
+      onUnlock={unlock}
+    />
+  );
 }
 
 function RootLayout() {
@@ -166,6 +175,7 @@ function RootLayout() {
             <Stack.Screen name="admin-role" />
             <Stack.Screen name="sports-admin" />
             <Stack.Screen name="event-admin" />
+            <Stack.Screen name="settings" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

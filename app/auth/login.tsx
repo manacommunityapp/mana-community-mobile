@@ -10,7 +10,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppBack } from '@/hooks/useAppBack';
 import { getBiometricCapability, authenticateWithBiometric, BiometricCapability } from '@/hooks/useBiometricAuth';
-import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS } from '@/constants/config';
+import { appLockService } from '@/services/appLockService';
+import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, SPACING } from '@/constants/config';
 
 const SCREEN_W = Dimensions.get('window').width;
 
@@ -24,6 +25,10 @@ export default function LoginScreen() {
   const [inputFocused, setInputFocused]   = useState(false);
   const [passFocused, setPassFocused]     = useState(false);
   const [biometric, setBiometric]         = useState<BiometricCapability | null>(null);
+  const [hasAppPin, setHasAppPin]         = useState(false);
+  const [showPinModal, setShowPinModal]   = useState(false);
+  const [quickPin, setQuickPin]           = useState('');
+  const [quickPinError, setQuickPinError] = useState('');
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const PHONE_CLEAN_RE = /\D/g;
@@ -56,6 +61,32 @@ export default function LoginScreen() {
   useEffect(() => {
     getBiometricCapability().then(setBiometric).catch(() => {});
   }, []);
+
+  
+  const handleQuickPinDigit = async (digit: string) => {
+    if (quickPin.length >= 4) return;
+    const next = quickPin + digit;
+    setQuickPin(next);
+    setQuickPinError('');
+    if (next.length === 4) {
+      const valid = await appLockService.verifyPin(next);
+      if (valid) {
+        setShowPinModal(false);
+        setQuickPin('');
+        setLoading(true);
+        try {
+          await loadUser();
+        } catch {
+          Alert.alert('Session Expired', 'Please enter your password to sign in.');
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setQuickPinError('Invalid 4-digit PIN');
+        setTimeout(() => setQuickPin(''), 400);
+      }
+    }
+  };
 
   const handleBiometricLogin = async () => {
     setLoading(true);
@@ -229,8 +260,8 @@ export default function LoginScreen() {
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* Biometric Sign-in */}
-            {biometric?.available && biometric.hasStoredSession && (
+            {/* Biometric or PIN Sign-in */}
+            {(biometric?.available || hasAppPin) && biometric?.hasStoredSession && (
               <>
                 <View style={st.orRow}>
                   <View style={st.orLine} />
@@ -238,48 +269,89 @@ export default function LoginScreen() {
                   <View style={st.orLine} />
                 </View>
 
-                <TouchableOpacity
-                  style={[st.biometricCard, loading && st.buttonDisabled]}
-                  onPress={handleBiometricLogin}
-                  disabled={loading}
-                  activeOpacity={0.85}
-                >
-                  <LinearGradient
-                    colors={['#EEF2FF', '#E0E7FF']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={st.biometricGradient}
-                  >
-                    {/* Fingerprint icon circle */}
-                    <View style={st.fpOuterRing}>
+                <View style={{ gap: 10 }}>
+                  {biometric?.available && (
+                    <TouchableOpacity
+                      style={[st.biometricCard, loading && st.buttonDisabled]}
+                      onPress={handleBiometricLogin}
+                      disabled={loading}
+                      activeOpacity={0.85}
+                    >
                       <LinearGradient
-                        colors={['#4F46E5', '#312E81']}
+                        colors={['#EEF2FF', '#E0E7FF']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
-                        style={st.fpCircle}
+                        style={st.biometricGradient}
                       >
-                        <Ionicons
-                          name={biometric.label.includes('Face') ? 'scan-outline' : 'finger-print-outline'}
-                          size={32}
-                          color="#fff"
-                        />
+                        <View style={st.fpOuterRing}>
+                          <LinearGradient
+                            colors={['#4F46E5', '#312E81']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={st.fpCircle}
+                          >
+                            <Ionicons
+                              name={biometric.label.includes('Face') ? 'scan-outline' : 'finger-print-outline'}
+                              size={32}
+                              color="#fff"
+                            />
+                          </LinearGradient>
+                        </View>
+
+                        <View style={st.biometricInfo}>
+                          <Text style={st.biometricTitle}>{biometric.label}</Text>
+                          <Text style={st.biometricSub}>
+                            {biometric.label.includes('Face')
+                              ? 'Look at your device to sign in'
+                              : 'Touch the sensor to sign in'}
+                          </Text>
+                        </View>
+
+                        <View style={st.fpArrow}>
+                          <Ionicons name="chevron-forward" size={18} color="#4F46E5" />
+                        </View>
                       </LinearGradient>
-                    </View>
+                    </TouchableOpacity>
+                  )}
 
-                    <View style={st.biometricInfo}>
-                      <Text style={st.biometricTitle}>{biometric.label}</Text>
-                      <Text style={st.biometricSub}>
-                        {biometric.label.includes('Face')
-                          ? 'Look at your device to sign in'
-                          : 'Touch the sensor to sign in'}
-                      </Text>
-                    </View>
+                  {hasAppPin && (
+                    <TouchableOpacity
+                      style={[st.biometricCard, loading && st.buttonDisabled]}
+                      onPress={() => { setQuickPin(''); setQuickPinError(''); setShowPinModal(true); }}
+                      disabled={loading}
+                      activeOpacity={0.85}
+                    >
+                      <LinearGradient
+                        colors={['#FEF3C7', '#FDE68A']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={st.biometricGradient}
+                      >
+                        <View style={[st.fpOuterRing, { borderColor: 'rgba(217, 119, 6, 0.25)' }]}>
+                          <LinearGradient
+                            colors={['#D97706', '#B45309']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={st.fpCircle}
+                          >
+                            <Ionicons name="keypad" size={28} color="#fff" />
+                          </LinearGradient>
+                        </View>
 
-                    <View style={st.fpArrow}>
-                      <Ionicons name="chevron-forward" size={18} color="#4F46E5" />
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
+                        <View style={st.biometricInfo}>
+                          <Text style={[st.biometricTitle, { color: '#92400E' }]}>Sign in with 4-Digit PIN</Text>
+                          <Text style={[st.biometricSub, { color: '#B45309' }]}>
+                            Enter your configured secret passcode
+                          </Text>
+                        </View>
+
+                        <View style={st.fpArrow}>
+                          <Ionicons name="chevron-forward" size={18} color="#D97706" />
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </>
             )}
           </View>
@@ -593,5 +665,87 @@ const st = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: FONTS.bold,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: SPACING.xl,
+    alignItems: 'center',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 6,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
+    fontFamily: FONTS.bold,
+  },
+  modalSub: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontFamily: FONTS.regular,
+  },
+  modalDots: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+  },
+  modalDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+  },
+  modalDotFilled: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  modalDotError: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
+  modalError: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalKeypad: {
+    width: '100%',
+    maxWidth: 270,
+    gap: 12,
+    marginTop: 8,
+  },
+  modalKeyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalKeyBtn: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalKeyText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.text,
+    fontFamily: FONTS.semiBold,
   },
 });
