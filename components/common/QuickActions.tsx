@@ -19,33 +19,50 @@ export interface QuickActionItem {
 
 export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   // Primary Highlighted Services
-  { id: "health",       emoji: "🩺", icon: "medkit-outline",            label: "Health",        route: "/health",               bg: "#F0FDFA", color: "#0D9488", category: "Safety & Help",   badge: "NEW" },
-  { id: "my_money",     emoji: "💰", icon: "wallet-outline",            label: "My Money",      route: "/personal-finance",     bg: "#ECFDF5", color: "#059669", category: "Living & Bills",  badge: "NEW" },
-  { id: "dues",         emoji: "💳", icon: "card-outline",              label: "Dues",          route: "/finance",              bg: "#EEF2FF", color: "#4F46E5", category: "Living & Bills" },
-  { id: "projects",     emoji: "🏗️", icon: "hammer-outline",            label: "Projects",      route: "/projects",             bg: "#F5F3FF", color: "#7C3AED", category: "Living & Bills",  badge: "NEW" },
-  { id: "group_buying", emoji: "👜", icon: "bag-handle-outline",         label: "Group Buy",     route: "/group-buying",         bg: "#ECFDF5", color: "#059669", category: "Commerce & Food" },
-  { id: "offers",       emoji: "🛍️", icon: "pricetag-outline",          label: "Offers",        route: "/offers",               bg: "#FEF3C7", color: "#D97706", category: "Commerce & Food", badge: "NEW" },
-  { id: "emergency",    emoji: "🚨", icon: "alert-circle-outline",      label: "Emergency SOS", route: "/emergency",            bg: "#FEE2E2", color: "#DC2626", category: "Safety & Help",   badge: "24x7" },
-  { id: "ai_chat",      emoji: "✨", icon: "sparkles-outline",          label: "Mana AI",       route: "/ai-chat",              bg: "#EEF2FF", color: "#6366F1", category: "Safety & Help",   badge: "AI" },
-  { id: "visitors",     emoji: "🛡️", icon: "shield-checkmark-outline", label: "Visitors Gate", route: "/visitors",             bg: "#CFFAFE", color: "#0891B2", category: "Safety & Help" },
-  { id: "sports",       emoji: "🏆", icon: "trophy-outline",            label: "Sports",        route: "/sports",               bg: "#DCFCE7", color: "#059669", category: "Social & Sports" },
-  { id: "commute",      emoji: "🚗", icon: "car-sport-outline",         label: "Commute",       route: "/commute",              bg: "#CFFAFE", color: "#0284C7", category: "Social & Sports" },
-  { id: "governance",   emoji: "🏛️", icon: "business-outline",          label: "Governance",    route: "/governance",           bg: "#EDE9FE", color: "#7C3AED", category: "Social & Sports", badge: "NEW" },
-  { id: "academy",      emoji: "🎓", icon: "school-outline",            label: "Academy",       route: "/academy",              bg: "#F3E8FF", color: "#7C3AED", category: "Social & Sports", badge: "NEW" },
-  { id: "cpos",         emoji: "🏠", icon: "home-outline",              label: "Property OS",   route: "/cpos",                 bg: "#DCFCE7", color: "#059669", category: "Living & Bills",  badge: "NEW" },
-  { id: "jobs",         emoji: "💼", icon: "briefcase-outline",         label: "CPN Jobs",      route: "/cpn",                  bg: "#EFF6FF", color: "#2563EB", category: "Social & Sports", badge: "NEW" },
-  { id: "helpdesk",     emoji: "🎧", icon: "headset-outline",           label: "Helpdesk",      route: "/helpdesk",             bg: "#FEF3C7", color: "#D97706", category: "Safety & Help" },
-  { id: "services",     emoji: "🛠️", icon: "construct-outline",        label: "Home Services", route: "/services",             bg: "#FCE7F3", color: "#DB2777", category: "Living & Bills" },
-  { id: "parking",      emoji: "🅿️", icon: "car-outline",              label: "Parking Slots", route: "/parking",              bg: "#E0E7FF", color: "#4338CA", category: "Living & Bills" },
-  { id: "events",       emoji: "📅", icon: "calendar-outline",         label: "Events & Passes",route: "/tabs/events",          bg: "#EEF2FF", color: "#4F46E5", category: "Social & Sports" },
-  { id: "trips",        emoji: "🧭", icon: "compass-outline",          label: "Community Trips",route: "/trips",               bg: "#CCFBF1", color: "#0D9488", category: "Social & Sports" },
-  { id: "polls",        emoji: "📊", icon: "bar-chart-outline",        label: "Polls & Votes", route: "/polls",                bg: "#EDE9FE", color: "#7C3AED", category: "Social & Sports" },
-  { id: "pets",         emoji: "🐾", icon: "paw-outline",              label: "Pet Care",      route: "/pets",                 bg: "#F3E8FF", color: "#9333EA", category: "Social & Sports" },
-  { id: "market",       emoji: "🏪", icon: "storefront-outline",       label: "Marketplace",   route: "/tabs/marketplace",     bg: "#D1FAE5", color: "#059669", category: "Commerce & Food" },
-  { id: "food",         emoji: "🍽️", icon: "restaurant-outline",       label: "Food & Kitchen",route: "/food",                 bg: "#FFE4E6", color: "#E11D48", category: "Commerce & Food" },
-  { id: "facilities",   emoji: "🏋️", icon: "fitness-outline",          label: "Amenities",     route: "/facilities",           bg: "#CCFBF1", color: "#0D9488", category: "Facilities" },
-  { id: "safety",       emoji: "🛡️", icon: "shield-half-outline",      label: "Safety Center", route: "/safety",               bg: "#0F172A", color: "#F8FAFC", category: "Safety & Help",   badge: "NEW" },
+  { id: "health",           emoji: "🩺", icon: "medkit-outline",            label: "Health",        route: "/health",                   bg: "#F0FDFA", color: "#0D9488", category: "Safety & Help",   badge: "NEW" },
+  { id: "my_money",         emoji: "💰", icon: "wallet-outline",            label: "My Money",      route: "/personal-finance",         bg: "#ECFDF5", color: "#059669", category: "Living & Bills",  badge: "NEW" },
+  { id: "dues",             emoji: "💳", icon: "card-outline",              label: "Dues",          route: "/finance",                  bg: "#EEF2FF", color: "#4F46E5", category: "Living & Bills" },
+  { id: "society_treasury", emoji: "🏦", icon: "business-outline",          label: "Society ERP",   route: "/finance/society-dashboard",bg: "#EEF2FF", color: "#4F46E5", category: "Living & Bills",  badge: "ERP" },
+  { id: "budget",           emoji: "📑", icon: "bar-chart-outline",        label: "Budgeting",     route: "/finance/budget",           bg: "#FFF7ED", color: "#EA580C", category: "Living & Bills" },
+  { id: "inventory",        emoji: "📦", icon: "cube-outline",              label: "Inventory",     route: "/inventory",                bg: "#FEF3C7", color: "#D97706", category: "Facilities",      badge: "NEW" },
+  { id: "amc_maintenance",  emoji: "⚙️", icon: "construct-outline",        label: "AMCs & Assets", route: "/inventory/maintenance",    bg: "#F0FDF4", color: "#16A34A", category: "Facilities",      badge: "AMC" },
+  { id: "projects",         emoji: "🏗️", icon: "hammer-outline",            label: "Projects",      route: "/projects",                 bg: "#F5F3FF", color: "#7C3AED", category: "Living & Bills",  badge: "NEW" },
+  { id: "group_buying",     emoji: "👜", icon: "bag-handle-outline",         label: "Group Buy",     route: "/group-buying",             bg: "#ECFDF5", color: "#059669", category: "Commerce & Food" },
+  { id: "offers",           emoji: "🛍️", icon: "pricetag-outline",          label: "Offers",        route: "/offers",                   bg: "#FEF3C7", color: "#D97706", category: "Commerce & Food", badge: "NEW" },
+  { id: "emergency",        emoji: "🚨", icon: "alert-circle-outline",      label: "Emergency SOS", route: "/emergency",                bg: "#FEE2E2", color: "#DC2626", category: "Safety & Help",   badge: "24x7" },
+  { id: "ai_chat",          emoji: "✨", icon: "sparkles-outline",          label: "Mana AI",       route: "/ai-chat",                  bg: "#EEF2FF", color: "#6366F1", category: "Safety & Help",   badge: "AI" },
+  { id: "visitors",         emoji: "🛡️", icon: "shield-checkmark-outline", label: "Visitors Gate", route: "/visitors",                 bg: "#CFFAFE", color: "#0891B2", category: "Safety & Help" },
+  { id: "sports",           emoji: "🏆", icon: "trophy-outline",            label: "Sports",        route: "/sports",                   bg: "#DCFCE7", color: "#059669", category: "Social & Sports" },
+  { id: "commute",          emoji: "🚗", icon: "car-sport-outline",         label: "Commute",       route: "/commute",                  bg: "#CFFAFE", color: "#0284C7", category: "Social & Sports" },
+  { id: "governance",       emoji: "🏛️", icon: "business-outline",          label: "Governance",    route: "/governance",               bg: "#EDE9FE", color: "#7C3AED", category: "Social & Sports", badge: "NEW" },
+  { id: "academy",          emoji: "🎓", icon: "school-outline",            label: "Academy",       route: "/academy",                  bg: "#F3E8FF", color: "#7C3AED", category: "Social & Sports", badge: "NEW" },
+  { id: "cpos",             emoji: "🏠", icon: "home-outline",              label: "Property OS",   route: "/cpos",                     bg: "#DCFCE7", color: "#059669", category: "Living & Bills",  badge: "NEW" },
+  { id: "jobs",             emoji: "💼", icon: "briefcase-outline",         label: "CPN Jobs",      route: "/cpn",                      bg: "#EFF6FF", color: "#2563EB", category: "Social & Sports", badge: "NEW" },
+  { id: "helpdesk",         emoji: "🎧", icon: "headset-outline",           label: "Helpdesk",      route: "/helpdesk",                 bg: "#FEF3C7", color: "#D97706", category: "Safety & Help" },
+  { id: "services",         emoji: "🛠️", icon: "construct-outline",        label: "Home Services", route: "/services",                 bg: "#FCE7F3", color: "#DB2777", category: "Living & Bills" },
+  { id: "parking",          emoji: "🅿️", icon: "car-outline",              label: "Parking Slots", route: "/parking",                  bg: "#E0E7FF", color: "#4338CA", category: "Living & Bills" },
+  { id: "events",           emoji: "📅", icon: "calendar-outline",         label: "Events & Passes",route: "/tabs/events",              bg: "#EEF2FF", color: "#4F46E5", category: "Social & Sports" },
+  { id: "trips",            emoji: "🧭", icon: "compass-outline",          label: "Community Trips",route: "/trips",                   bg: "#CCFBF1", color: "#0D9488", category: "Social & Sports" },
+  { id: "polls",            emoji: "📊", icon: "bar-chart-outline",        label: "Polls & Votes", route: "/polls",                    bg: "#EDE9FE", color: "#7C3AED", category: "Social & Sports" },
+  { id: "pets",             emoji: "🐾", icon: "paw-outline",              label: "Pet Care",      route: "/pets",                     bg: "#F3E8FF", color: "#9333EA", category: "Social & Sports" },
+  { id: "market",           emoji: "🏪", icon: "storefront-outline",       label: "Marketplace",   route: "/tabs/marketplace",         bg: "#D1FAE5", color: "#059669", category: "Commerce & Food" },
+  { id: "lost_found",       emoji: "🔍", icon: "search-outline",           label: "Lost & Found",  route: "/marketplace/lost-found",   bg: "#FEF2F2", color: "#DC2626", category: "Commerce & Food" },
+  { id: "donations",        emoji: "🎁", icon: "gift-outline",             label: "Give Away",     route: "/marketplace/donations",    bg: "#FDF2F8", color: "#DB2777", category: "Commerce & Food" },
+  { id: "food",             emoji: "🍽️", icon: "restaurant-outline",       label: "Food & Kitchen",route: "/food",                     bg: "#FFE4E6", color: "#E11D48", category: "Commerce & Food" },
+  { id: "facilities",       emoji: "🏋️", icon: "fitness-outline",          label: "Amenities",     route: "/facilities",               bg: "#CCFBF1", color: "#0D9488", category: "Facilities" },
+  { id: "safety",           emoji: "🛡️", icon: "shield-half-outline",      label: "Safety Center", route: "/safety",                   bg: "#0F172A", color: "#F8FAFC", category: "Safety & Help",   badge: "NEW" },
 ];
+
+function getBadgeBg(badge?: string): string {
+  switch (badge) {
+    case 'NEW': return '#DCFCE7';
+    case 'ERP': return '#EDE9FE';
+    case 'AMC': return '#FEF3C7';
+    case '24x7': return '#FEE2E2';
+    case 'AI': return '#EEF2FF';
+    default: return '#F1F5F9';
+  }
+}
 
 export function QuickActions() {
   const router = useRouter();
@@ -96,7 +113,7 @@ export function QuickActions() {
             activeOpacity={0.8}
           >
             {action.badge && (
-              <View style={[s.badgePill, action.badge === "NEW" ? s.badgeNew : action.badge === "24x7" ? s.badge247 : s.badgeAi]}>
+              <View style={[s.badgePill, { backgroundColor: getBadgeBg(action.badge) }]}>
                 <Text style={s.badgePillText}>{action.badge}</Text>
               </View>
             )}
@@ -151,7 +168,7 @@ export function QuickActions() {
                         activeOpacity={0.78}
                       >
                         {action.badge && (
-                          <View style={[s.badgePill, action.badge === "NEW" ? s.badgeNew : action.badge === "24x7" ? s.badge247 : s.badgeAi]}>
+                          <View style={[s.badgePill, { backgroundColor: getBadgeBg(action.badge) }]}>
                             <Text style={s.badgePillText}>{action.badge}</Text>
                           </View>
                         )}
