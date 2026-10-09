@@ -32,10 +32,10 @@ const CATEGORIES: { key: MarketplaceCategory; label: string; emoji: string; colo
 ];
 
 const QUICK_ACTIONS = [
-  { label: 'Sell Item',    emoji: '📸', bg: '#DCFCE7', color: '#059669', route: '/marketplace/create' },
-  { label: 'My Listings',  emoji: '📋', bg: '#EEF2FF', color: '#4F46E5', route: '/marketplace/my-listings' },
-  { label: 'Saved',        emoji: '❤️', bg: '#FEE2E2', color: '#DC2626', route: '/marketplace/saved' },
-  { label: 'Free Stuff',   emoji: '🎁', bg: '#F0FDFA', color: '#0D9488', action: 'free' },
+  { label: 'Sell Item',     emoji: '📸', bg: '#DCFCE7', color: '#059669', route: '/marketplace/create' },
+  { label: 'Lost & Found',  emoji: '🔍', bg: '#FEF3C7', color: '#D97706', route: '/marketplace/lost-found' },
+  { label: 'Giveaways',     emoji: '🎁', bg: '#F0FDFA', color: '#0D9488', route: '/marketplace/donations' },
+  { label: 'My Listings',   emoji: '📋', bg: '#EEF2FF', color: '#4F46E5', route: '/marketplace/my-listings' },
 ];
 
 export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boolean }) {
@@ -104,7 +104,7 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
     setFreeOnly(false);
   }, []);
 
-  const handleQuickAction = useCallback((action: typeof QUICK_ACTIONS[0]) => {
+  const handleQuickAction = useCallback((action: typeof QUICK_ACTIONS[0] & { action?: string }) => {
     if (action.action === 'free') {
       setCategory('FREE');
       setFreeOnly(true);
