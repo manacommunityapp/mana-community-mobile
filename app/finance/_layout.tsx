@@ -5,18 +5,18 @@ export default function FinanceLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: COLORS.primary },
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: { fontFamily: 'Outfit-Bold', fontWeight: 'bold' },
+        headerShown: false,
+        animation: 'slide_from_right',
       }}
     >
-      <Stack.Screen name="index" options={{ title: '🏢 Community Finance' }} />
-      <Stack.Screen name="society-dashboard" options={{ title: '🏛️ Society Treasury & ERP' }} />
-      <Stack.Screen name="invoices" options={{ title: '📄 Invoices & Demands' }} />
-      <Stack.Screen name="vendors" options={{ title: '💼 Vendors & TDS' }} />
-      <Stack.Screen name="expenses" options={{ title: '✍️ Expense Approvals' }} />
-      <Stack.Screen name="ledger" options={{ title: '📖 Chart of Accounts' }} />
-      <Stack.Screen name="society-reports" options={{ title: '📊 AGM & Tax Statements' }} />
+      <Stack.Screen name="index" />
+      <Stack.Screen name="society-dashboard" />
+      <Stack.Screen name="budget" />
+      <Stack.Screen name="invoices" />
+      <Stack.Screen name="vendors" />
+      <Stack.Screen name="expenses" />
+      <Stack.Screen name="ledger" />
+      <Stack.Screen name="society-reports" />
     </Stack>
   );
 }

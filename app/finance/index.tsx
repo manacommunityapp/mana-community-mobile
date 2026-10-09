@@ -19,10 +19,10 @@ import {
 const FINANCE_HUBS = [
   { emoji: '🏦', label: 'Treasury',   color: '#4F46E5', bg: '#EEF2FF', route: '/finance/society-dashboard' },
   { emoji: '💳', label: 'Pay Dues',   color: '#059669', bg: '#ECFDF5', route: '/finance' },
-  { emoji: '📊', label: 'Reports',    color: '#D97706', bg: '#FFFBEB', route: '/finance/reports' },
+  { emoji: '📊', label: 'Reports',    color: '#D97706', bg: '#FFFBEB', route: '/finance/society-reports' },
   { emoji: '📋', label: 'Invoices',   color: '#0284C7', bg: '#E0F2FE', route: '/finance/invoices' },
   { emoji: '👥', label: 'Vendors',    color: '#7C3AED', bg: '#F5F3FF', route: '/finance/vendors' },
-  { emoji: '✅', label: 'Approvals',  color: '#DC2626', bg: '#FEF2F2', route: '/finance/approvals' },
+  { emoji: '✅', label: 'Approvals',  color: '#DC2626', bg: '#FEF2F2', route: '/finance/expenses' },
   { emoji: '📑', label: 'Budget',     color: '#EA580C', bg: '#FFF7ED', route: '/finance/budget' },
   { emoji: '💰', label: 'My Money',   color: '#16A34A', bg: '#DCFCE7', route: '/personal-finance' },
 ] as const;
