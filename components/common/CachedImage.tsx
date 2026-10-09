@@ -1,5 +1,6 @@
 import { Image as ExpoImage, ImageProps as ExpoImageProps, ImageContentFit } from 'expo-image';
 import { ImageSourcePropType, ImageStyle, StyleProp } from 'react-native';
+import { resolveImageUrl } from '@/utils/imageUrlUtils';
 
 const RESIZE_MAP: Record<string, ImageContentFit> = {
   cover: 'cover',
@@ -19,11 +20,12 @@ type CachedImageProps = {
 export function CachedImage({ source, style, resizeMode = 'cover', accessibilityLabel, onError }: CachedImageProps) {
   let src: ExpoImageProps['source'];
   if (typeof source === 'string') {
-    src = { uri: source };
+    src = { uri: resolveImageUrl(source) };
   } else if (typeof source === 'number') {
     src = source;
-  } else if (source && 'uri' in source) {
-    src = { uri: (source as { uri: string }).uri };
+  } else if (source && typeof source === 'object' && 'uri' in source) {
+    const rawUri = (source as { uri: string }).uri;
+    src = { ...(source as object), uri: resolveImageUrl(rawUri) };
   } else {
     src = source as ExpoImageProps['source'];
   }

@@ -23,6 +23,7 @@ import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor, getInitials 
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppBack } from '@/hooks/useAppBack';
+import { ProfileImageModal } from '@/components/common/ProfileImageModal';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.68;
@@ -194,6 +195,27 @@ const es = StyleSheet.create({
 function PostCard({ post }: { post: PostDto }) {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const [showAuthorModal, setShowAuthorModal] = useState(false);
+  const [authorPhotoError, setAuthorPhotoError] = useState(false);
+
+  const authorPhotoUri =
+    post.authorPhoto ||
+    (post as any).profilePicUrl ||
+    (post as any).authorProfilePic ||
+    (post as any).authorProfilePicUrl ||
+    (post as any).profilePhoto;
+
+  const hasAuthorPhoto =
+    !authorPhotoError &&
+    !!authorPhotoUri &&
+    typeof authorPhotoUri === 'string' &&
+    authorPhotoUri.trim().length > 0 &&
+    !authorPhotoUri.includes('null') &&
+    !authorPhotoUri.includes('undefined') &&
+    (authorPhotoUri.startsWith('http') ||
+      authorPhotoUri.startsWith('/') ||
+      authorPhotoUri.startsWith('file://') ||
+      authorPhotoUri.startsWith('data:'));
 
   const likeMutation = useMutation({
     mutationFn: () => feedService.likePost(post.id),
@@ -223,11 +245,23 @@ function PostCard({ post }: { post: PostDto }) {
       <View style={styles.cardInner}>
         {/* Author Row */}
         <View style={styles.authorRow}>
-          <View style={[styles.avatar, { backgroundColor: avatarColor.bg }]}>
-            <Text style={[styles.avatarText, { color: avatarColor.text }]}>
-              {getInitials(post.authorName)}
-            </Text>
-          </View>
+          <TouchableOpacity
+            style={[styles.avatar, { backgroundColor: avatarColor.bg, overflow: 'hidden' }]}
+            activeOpacity={0.85}
+            onPress={() => setShowAuthorModal(true)}
+          >
+            {hasAuthorPhoto ? (
+              <Image
+                source={{ uri: authorPhotoUri }}
+                style={styles.avatarImage}
+                onError={() => setAuthorPhotoError(true)}
+              />
+            ) : (
+              <Text style={[styles.avatarText, { color: avatarColor.text }]}>
+                {getInitials(post.authorName)}
+              </Text>
+            )}
+          </TouchableOpacity>
 
           <View style={styles.authorInfo}>
             <View style={styles.authorNameRow}>
@@ -298,6 +332,15 @@ function PostCard({ post }: { post: PostDto }) {
           </View>
         </View>
       </View>
+
+      {/* Enlarged Post Author Photo Modal */}
+      <ProfileImageModal
+        visible={showAuthorModal}
+        onClose={() => setShowAuthorModal(false)}
+        imageUrl={hasAuthorPhoto ? authorPhotoUri : null}
+        name={post.authorName || 'Community Member'}
+        subtitle={post.authorFlat ? `Flat ${post.authorFlat}` : undefined}
+      />
     </View>
   );
 }
@@ -309,6 +352,7 @@ export default function FeedScreen() {
   const [filter, setFilter] = useState<FeedFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [showUserPhotoModal, setShowUserPhotoModal] = useState(false);
 
   useAppBack({
     isRootScreen: true,
@@ -393,7 +437,7 @@ export default function FeedScreen() {
   const userInitial = getInitials(userDisplayName);
   const avatarColor = getAvatarColor(userDisplayName);
   const userPhotoUri = user?.profilePicUrl || user?.profilePhoto;
-  const hasUserPhoto = !userPhotoError && !!userPhotoUri && typeof userPhotoUri === 'string' && userPhotoUri.trim().length > 0 && !userPhotoUri.includes('null') && !userPhotoUri.includes('undefined') && (userPhotoUri.startsWith('http') || userPhotoUri.startsWith('file://') || userPhotoUri.startsWith('data:'));
+  const hasUserPhoto = !userPhotoError && !!userPhotoUri && typeof userPhotoUri === 'string' && userPhotoUri.trim().length > 0 && !userPhotoUri.includes('null') && !userPhotoUri.includes('undefined') && (userPhotoUri.startsWith('http') || userPhotoUri.startsWith('/') || userPhotoUri.startsWith('file://') || userPhotoUri.startsWith('data:'));
 
   const announcements = allPosts.filter(p => p.type === 'announcement');
   const latestAnnouncement = announcements.length > 0 ? announcements[0] : null;
@@ -500,22 +544,27 @@ export default function FeedScreen() {
       {/* Composer Card */}
       <View style={styles.composerCard}>
         <View style={styles.composerRow}>
-          {hasUserPhoto ? (
-            <Image
-              source={{ uri: userPhotoUri }}
-              style={styles.composerAvatarImage}
-              onError={() => setUserPhotoError(true)}
-            />
-          ) : (
-            <LinearGradient
-              colors={GRADIENTS.avatar}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.composerAvatar}
-            >
-              <Text style={styles.composerAvatarText}>{userInitial}</Text>
-            </LinearGradient>
-          )}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => setShowUserPhotoModal(true)}
+          >
+            {hasUserPhoto ? (
+              <Image
+                source={{ uri: userPhotoUri }}
+                style={styles.composerAvatarImage}
+                onError={() => setUserPhotoError(true)}
+              />
+            ) : (
+              <LinearGradient
+                colors={GRADIENTS.avatar}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.composerAvatar}
+              >
+                <Text style={styles.composerAvatarText}>{userInitial}</Text>
+              </LinearGradient>
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.composerInput}
             onPress={() => router.push('/polls/create')}
@@ -746,6 +795,15 @@ export default function FeedScreen() {
           }
         />
       )}
+
+      {/* Enlarged Current User Photo Modal */}
+      <ProfileImageModal
+        visible={showUserPhotoModal}
+        onClose={() => setShowUserPhotoModal(false)}
+        imageUrl={hasUserPhoto ? userPhotoUri : null}
+        name={userDisplayName}
+        subtitle={communityName || 'Resident'}
+      />
     </SafeAreaView>
   );
 }
@@ -1254,6 +1312,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     fontWeight: '700',

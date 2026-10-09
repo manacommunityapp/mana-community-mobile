@@ -21,6 +21,7 @@ import { sportsService } from '@/services/sportsService';
 import { maintenanceDuesService } from '@/services/maintenanceDuesService';
 import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { notificationService } from '@/services/notificationService';
+import { ProfileImageModal } from '@/components/common/ProfileImageModal';
 import {
   VIEW_EMERGENCY,
   VIEW_GROUP_BUYING,
@@ -132,6 +133,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [passModalVisible, setPassModalVisible] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // ── Database Queries ──────────────────────────────────────────────
   // 1. Fresh Profile from /api/users/me
@@ -276,6 +278,7 @@ export default function ProfileScreen() {
     !profilePhoto.includes('null') &&
     !profilePhoto.includes('undefined') &&
     (profilePhoto.startsWith('http') ||
+      profilePhoto.startsWith('/') ||
       profilePhoto.startsWith('file://') ||
       profilePhoto.startsWith('data:'));
 
@@ -354,7 +357,11 @@ export default function ProfileScreen() {
 
             {/* Profile Avatar & Quick Badges */}
             <View style={styles.heroHeaderRow}>
-              <View style={styles.avatarContainer}>
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                activeOpacity={0.85}
+                onPress={() => setShowPhotoModal(true)}
+              >
                 {hasPhoto ? (
                   <Image
                     source={{ uri: profilePhoto }}
@@ -374,7 +381,7 @@ export default function ProfileScreen() {
 
                 {/* Online verification dot */}
                 <View style={styles.avatarOnlineDot} />
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.heroInfoWrap}>
                 <View style={styles.verifiedRow}>
@@ -1075,6 +1082,15 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Enlarged Profile Photo Modal */}
+      <ProfileImageModal
+        visible={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        imageUrl={hasPhoto ? profilePhoto : null}
+        name={displayName}
+        subtitle={[tower, flatNumber].filter(Boolean).join(' • ') || communityName}
+      />
     </SafeAreaView>
   );
 }

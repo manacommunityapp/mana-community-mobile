@@ -24,31 +24,93 @@ try {
     });
 
     if (Platform.OS === 'android') {
+      // 1. General & Notices
       Notifications.setNotificationChannelAsync('default', {
-        name: 'Mana Community',
+        name: 'Community Notices & Updates',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#4F46E5',
         sound: 'default',
       });
 
+      // 2. Chat & Direct Messages
       Notifications.setNotificationChannelAsync('chat', {
-        name: 'Messages',
+        name: 'Chat & Direct Messages',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 150],
         lightColor: '#4F46E5',
         sound: 'default',
       });
 
+      // 3. Security & Gate Approvals
+      Notifications.setNotificationChannelAsync('security', {
+        name: 'Gate Approvals & Visitors',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 300, 150, 300],
+        lightColor: '#059669',
+        sound: 'default',
+      });
+
+      // 4. Emergency & SOS Alerts
+      Notifications.setNotificationChannelAsync('emergency', {
+        name: 'Emergency & SOS Broadcasts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 500, 200, 500],
+        lightColor: '#DC2626',
+        sound: 'default',
+      });
+
+      // 5. Events & Circulars
       Notifications.setNotificationChannelAsync('events', {
-        name: 'Events & Announcements',
+        name: 'Events & Calendar',
         importance: Notifications.AndroidImportance.DEFAULT,
+        sound: 'default',
+      });
+
+      // 6. Sports & Tournaments
+      Notifications.setNotificationChannelAsync('sports', {
+        name: 'Sports & Tournaments',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+      });
+
+      // 7. Auctions & Bidding
+      Notifications.setNotificationChannelAsync('auctions', {
+        name: 'Auctions & Live Bidding',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+      });
+
+      // 8. Finance & Dues
+      Notifications.setNotificationChannelAsync('finance', {
+        name: 'Maintenance Dues & Invoices',
+        importance: Notifications.AndroidImportance.HIGH,
         sound: 'default',
       });
     }
   }
 } catch {
   secureLog.warn('[Push] expo-notifications not available');
+}
+
+/**
+ * Sync the OS home screen app icon badge count
+ */
+export async function syncAppBadge(count: number): Promise<void> {
+  if (Notifications && typeof Notifications.setBadgeCountAsync === 'function') {
+    try {
+      await Notifications.setBadgeCountAsync(Math.max(0, count));
+    } catch {
+      // Ignored if badge unsupported on specific device/launcher
+    }
+  }
+}
+
+/**
+ * Clear the OS home screen app icon badge
+ */
+export async function clearAppBadge(): Promise<void> {
+  await syncAppBadge(0);
 }
 
 function resolveRoute(data: Record<string, unknown>): string | null {

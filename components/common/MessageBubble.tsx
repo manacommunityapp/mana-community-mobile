@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { View, Text, Image, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+import { CachedImage as Image } from '@/components/common/CachedImage';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ChatMessageDto, ChatAttachmentDto } from '@/types/api';
 import { COLORS, getInitials } from '@/constants/config';
