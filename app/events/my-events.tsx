@@ -88,6 +88,23 @@ export default function MyEventsScreen() {
             <Text style={[st.cardTitle, eventIsPast && st.cardTitlePast]} numberOfLines={1}>
               {item.title}
             </Text>
+            {item.status && (
+              <View style={[
+                s.statusBadge,
+                item.status === 'CANCELLED' && { backgroundColor: '#FEF2F2' },
+                item.status === 'ONGOING' && { backgroundColor: '#ECFDF5' },
+                item.status === 'COMPLETED' && { backgroundColor: COLORS.surfaceAlt },
+              ]}>
+                <Text style={[
+                  s.statusText,
+                  item.status === 'CANCELLED' && { color: COLORS.error },
+                  item.status === 'ONGOING' && { color: '#059669' },
+                  item.status === 'COMPLETED' && { color: COLORS.textMuted },
+                ]}>
+                  {item.status === 'UPCOMING' ? 'Upcoming' : item.status === 'ONGOING' ? 'Live' : item.status === 'CANCELLED' ? 'Cancelled' : item.status === 'COMPLETED' ? 'Done' : item.status}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={st.cardChipRow}>

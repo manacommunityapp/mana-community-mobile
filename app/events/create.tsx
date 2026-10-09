@@ -142,6 +142,7 @@ export default function CreateEventScreen() {
                   onChangeText={setTitle}
                 />
               </View>
+              <Text style={s.sectionTitle}>Basic Information</Text>
             </View>
 
             <View style={st.field}>
