@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, RADIUS, SHADOWS, FONTS, GROWW_THEME } from '@/constants/config';
+import { COLORS, SPACING, RADIUS, SHADOWS, FONTS } from '@/constants/config';
+import { GROWW_THEME } from '@/constants/theme';;
 import { useQuery } from '@tanstack/react-query';
 import { budgetService } from '@/services/budgetService';
 

@@ -7,7 +7,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { SHADOWS, FONTS, GROWW_THEME } from '@/constants/config';
+import { SHADOWS, FONTS } from '@/constants/config';
+import { GROWW_THEME } from '@/constants/theme';;
 import { budgetService, BudgetAllocation } from '@/services/budgetService';
 
 const CATEGORIES = [
