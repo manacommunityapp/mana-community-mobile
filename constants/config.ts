@@ -4,9 +4,11 @@
 const DEV_API_URL  = "http://3.109.145.130:8081";   // dev Lightsail (PostgreSQL-backed)
 const PROD_API_URL = "https://api.manacommunity.in";
 
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
+
 export const CONFIG = {
-  API_BASE_URL: __DEV__ ? DEV_API_URL : PROD_API_URL,
-  WS_URL:       __DEV__ ? `ws://3.109.145.130:8081/ws` : `wss://api.manacommunity.in/ws`,
+  API_BASE_URL: isDev ? DEV_API_URL : PROD_API_URL,
+  WS_URL:       isDev ? `ws://3.109.145.130:8081/ws` : `wss://api.manacommunity.in/ws`,
   APP_NAME:     "Mana Community",
   VERSION:      "1.0.0",
 } as const;
@@ -148,6 +150,30 @@ export const RADIUS = {
 } as const;
 
 // ── Shadows (Multi-Layer Ambient & Directional Depth) ──────────
+// ── Groww Modern Fintech Design System ────────────────────────
+export const GROWW_THEME = {
+  brand:        "#00D09C",  // Groww Emerald Primary
+  brandDark:    "#008767",  // Deeper emerald for text
+  brandLight:   "#E6FAF5",  // 10% alpha emerald tint
+  brandBorder:  "#A7F3D0",  // Emerald border
+  loss:         "#EB5B5B",  // Groww Coral Red
+  lossDark:     "#DC2626",
+  lossLight:    "#FEEFEF",  // 10% alpha red tint
+  lossBorder:   "#FECACA",
+  surface:      "#FFFFFF",  // Main card surface
+  surfaceSubtle:"#F9FAFC",  // Subtle secondary surface
+  surfaceMuted: "#F1F4F7",  // Background chip
+  border:       "#EBEFF2",  // 1px hairline border
+  borderMedium: "#DFE4E8",
+  textPrimary:  "#44475B",  // Soft Charcoal (Groww primary text)
+  textSecondary:"#7C7E8C",  // Groww secondary text
+  textMuted:    "#9CA3AF",
+  indigo:       "#5367FF",  // Groww electric accent
+  indigoLight:  "#EEF2FF",
+  amber:        "#FFB800",
+  amberLight:   "#FFFBEB",
+} as const;
+
 export const SHADOWS = {
   sm: {
     shadowColor: "#0F172A",

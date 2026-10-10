@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, TextInput, Modal, Alert, ActivityIndicator,
-  RefreshControl, ScrollView
+  TextInput, Modal, Alert, ActivityIndicator,
+  RefreshControl, ScrollView, Platform, DimensionValue,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { COLORS, SHADOWS } from '@/constants/config';
+import { SHADOWS, FONTS, GROWW_THEME } from '@/constants/config';
 import { budgetService, BudgetAllocation } from '@/services/budgetService';
 
 const CATEGORIES = [
-  { value: 'CapEx_Asset', label: 'CapEx (Capital Assets)', icon: 'cube-outline' as const, color: '#4F46E5' },
-  { value: 'OpEx_Maintenance', label: 'OpEx (Maintenance & AMCs)', icon: 'construct-outline' as const, color: '#D97706' },
-  { value: 'SECURITY', label: 'Security Services', icon: 'shield-checkmark-outline' as const, color: '#0284C7' },
-  { value: 'CLEANING', label: 'Housekeeping & Sanitation', icon: 'sparkles-outline' as const, color: '#059669' },
-  { value: 'FESTIVAL', label: 'Festival Celebrations', icon: 'color-wand-outline' as const, color: '#DB2777' },
-  { value: 'SPORTS', label: 'Sports & Amenities', icon: 'football-outline' as const, color: '#7C3AED' },
-  { value: 'OpEx_Consumable', label: 'Supplies & Consumables', icon: 'cart-outline' as const, color: '#64748B' },
-  { value: 'OpEx_Other', label: 'Other Operational Expenses', icon: 'receipt-outline' as const, color: '#EA580C' },
+  { value: 'CapEx_Asset', label: 'CapEx (Capital Assets)', icon: 'cube-outline' as const, color: GROWW_THEME.indigo, bg: GROWW_THEME.indigoLight },
+  { value: 'OpEx_Maintenance', label: 'OpEx (Maintenance & AMCs)', icon: 'construct-outline' as const, color: '#EA580C', bg: '#FFF7ED' },
+  { value: 'SECURITY', label: 'Security Services', icon: 'shield-checkmark-outline' as const, color: '#0284C7', bg: '#E0F2FE' },
+  { value: 'CLEANING', label: 'Housekeeping & Sanitation', icon: 'sparkles-outline' as const, color: GROWW_THEME.brandDark, bg: GROWW_THEME.brandLight },
+  { value: 'FESTIVAL', label: 'Festival Celebrations', icon: 'color-wand-outline' as const, color: '#DB2777', bg: '#FCE7F3' },
+  { value: 'SPORTS', label: 'Sports & Amenities', icon: 'football-outline' as const, color: '#7C3AED', bg: '#F5F3FF' },
+  { value: 'OpEx_Consumable', label: 'Supplies & Consumables', icon: 'cart-outline' as const, color: '#64748B', bg: '#F1F5F9' },
+  { value: 'OpEx_Other', label: 'Other Operational Expenses', icon: 'receipt-outline' as const, color: '#D97706', bg: '#FFFBEB' },
 ];
 
 export default function SocietyBudgetScreen() {
@@ -50,251 +49,519 @@ export default function SocietyBudgetScreen() {
     onError: (err: any) => Alert.alert('Error', err?.message || 'Could not allocate budget.'),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => budgetService.deleteAllocation(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['society-budget-screen'] });
-      Alert.alert('Removed', 'Budget allocation removed.');
-    },
-  });
+  const totalAllocated = budgets.reduce((acc, b) => acc + (b.allocatedAmount || 0), 0);
+  const totalSpent = budgets.reduce((acc, b) => acc + (b.spentAmount || 0), 0);
+  const spendRatio = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
 
-  // KPI Calculations
-  const totalAllocated = budgets.reduce((sum, b) => sum + (b.allocatedAmount || 0), 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + (b.spentAmount || 0), 0);
-  const remaining = totalAllocated - totalSpent;
-  const utilizationPct = totalAllocated > 0 ? Math.min(100, Math.round((totalSpent / totalAllocated) * 100)) : 0;
+  const handleSaveAllocation = () => {
+    const amt = parseFloat(amount);
+    if (isNaN(amt) || amt <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid allocation amount.');
+      return;
+    }
+    allocateMutation.mutate({
+      financialYear: fy,
+      category: category,
+      amount: amt,
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  const progressFillWidth: DimensionValue = (Math.min(spendRatio, 100) + '%') as DimensionValue;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#0F172A" />
+    <View style={s.container}>
+      {/* Top Header */}
+      <View style={s.topNav}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/finance');
+          }}
+          style={s.backBtn}
+        >
+          <Ionicons name="arrow-back" size={20} color={GROWW_THEME.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Society Budget & Funds</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-          <Ionicons name="add" size={18} color="#FFFFFF" />
+        <View style={s.topNavTitleBox}>
+          <Text style={s.topNavTitle}>Society Budgeting</Text>
+          <Text style={s.topNavSubtitle}>{fy} Planning & Variance</Text>
+        </View>
+        <TouchableOpacity
+          style={s.topNavIconBtn}
+          onPress={() => setModalVisible(true)}
+        >
+          <Ionicons name="add" size={22} color={GROWW_THEME.brandDark} />
         </TouchableOpacity>
       </View>
 
-      {/* FY Selector Strip */}
-      <View style={styles.fyStrip}>
-        {['FY 2026-27', 'FY 2025-26', 'FY 2024-25'].map(year => (
-          <TouchableOpacity
-            key={year}
-            style={[styles.fyChip, fy === year && styles.fyChipActive]}
-            onPress={() => setFy(year)}
-          >
-            <Text style={[styles.fyText, fy === year && styles.fyTextActive]}>{year}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Master Treasury Budget Card */}
-      <View style={styles.masterCard}>
-        <Text style={styles.masterLabel}>TOTAL {fy} CAPITAL & OPEX BUDGET</Text>
-        <Text style={styles.masterAmount}>₹{(totalAllocated / 100000).toFixed(2)} Lakhs</Text>
-
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { width: `${utilizationPct}%` }]} />
-        </View>
-
-        <View style={styles.masterStatsRow}>
-          <View>
-            <Text style={styles.subStatLabel}>Utilized ({utilizationPct}%)</Text>
-            <Text style={styles.subStatVal}>₹{(totalSpent / 100000).toFixed(2)} L</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.subStatLabel}>Reserve Balance</Text>
-            <Text style={[styles.subStatVal, { color: '#34D399' }]}>₹{(remaining / 100000).toFixed(2)} L</Text>
-          </View>
-        </View>
-      </View>
-
-      <FlatList
-        data={budgets}
-        keyExtractor={item => String(item.id)}
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
-        renderItem={({ item }) => {
-          const cfg = CATEGORIES.find(c => c.value === item.category) || CATEGORIES[0];
-          const pct = item.allocatedAmount > 0 ? Math.min(100, Math.round((item.spentAmount / item.allocatedAmount) * 100)) : 0;
-          const isOverBudget = item.spentAmount > item.allocatedAmount;
-
-          return (
-            <View style={styles.card}>
-              <View style={styles.cardTop}>
-                <View style={[styles.iconBox, { backgroundColor: `${cfg.color}15` }]}>
-                  <Ionicons name={cfg.icon} size={18} color={cfg.color} />
-                </View>
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.catTitle}>{cfg.label}</Text>
-                  {item.notes && <Text style={styles.catNotes}>{item.notes}</Text>}
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    Alert.alert('Delete Allocation', `Remove budget allocation for ${cfg.label}?`, [
-                      { text: 'Cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(item.id) }
-                    ]);
-                  }}
-                >
-                  <Ionicons name="trash-outline" size={16} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.budgetNumsRow}>
-                <View>
-                  <Text style={styles.numLabel}>Allocated</Text>
-                  <Text style={styles.numVal}>₹{item.allocatedAmount.toLocaleString('en-IN')}</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.numLabel}>Spent ({pct}%)</Text>
-                  <Text style={[styles.numVal, isOverBudget && { color: '#DC2626' }]}>
-                    ₹{item.spentAmount.toLocaleString('en-IN')}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Progress Bar */}
-              <View style={styles.cardProgressBarTrack}>
-                <View style={[
-                  styles.cardProgressBar,
-                  { width: `${pct}%`, backgroundColor: isOverBudget ? '#DC2626' : cfg.color }
-                ]} />
-              </View>
+      <ScrollView
+        contentContainerStyle={s.scrollContent}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={[GROWW_THEME.brand]} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Summary Card */}
+        <View style={s.summaryCard}>
+          <View style={s.summaryHeader}>
+            <View>
+              <Text style={s.summarySub}>Total Approved Budget</Text>
+              <Text style={s.summaryAmount}>₹{totalAllocated.toLocaleString('en-IN')}</Text>
             </View>
-          );
-        }}
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>No budget allocations for {fy}</Text>
-            <Text style={styles.emptySub}>Tap + to allocate funds for society categories</Text>
+            <View style={s.spendRatioBadge}>
+              <Text style={s.spendRatioText}>{spendRatio.toFixed(1)}% Utilized</Text>
+            </View>
           </View>
-        }
-      />
 
-      {/* Allocate Modal */}
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Allocate Society Budget</Text>
+          {/* Groww Progress Bar */}
+          <View style={s.progressBarBg}>
+            <View style={[s.progressBarFill, { width: progressFillWidth }]} />
+          </View>
+
+          <View style={s.summaryDivider} />
+
+          <View style={s.summaryMetricsRow}>
+            <View style={s.metricItem}>
+              <Text style={s.metricLabel}>Total Incurred</Text>
+              <Text style={s.metricValue}>₹{totalSpent.toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={s.metricDivider} />
+            <View style={s.metricItem}>
+              <Text style={s.metricLabel}>Remaining Buffer</Text>
+              <Text style={[s.metricValue, { color: GROWW_THEME.brandDark }]}>
+                ₹{Math.max(totalAllocated - totalSpent, 0).toLocaleString('en-IN')}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Category List */}
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionTitle}>Department Allocations</Text>
+          <Text style={s.sectionCount}>{budgets.length} Categories</Text>
+        </View>
+
+        <View style={s.cardsList}>
+          {budgets.map((b) => {
+            const cfg = CATEGORIES.find(c => c.value === b.category) || CATEGORIES[0];
+            const ratio = b.allocatedAmount > 0 ? (b.spentAmount / b.allocatedAmount) * 100 : 0;
+            const isOver = b.spentAmount > b.allocatedAmount;
+            const catFillWidth: DimensionValue = (Math.min(ratio, 100) + '%') as DimensionValue;
+
+            return (
+              <View key={b.id} style={s.catCard}>
+                <View style={s.catHeader}>
+                  <View style={[s.catIconBox, { backgroundColor: cfg.bg }]}>
+                    <Ionicons name={cfg.icon} size={17} color={cfg.color} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={s.catTitle}>{cfg.label}</Text>
+                    <Text style={s.catNotes}>{b.notes || 'Allocated for FY 2026-27'}</Text>
+                  </View>
+                  <View style={[s.statusPill, isOver ? s.statusOver : s.statusOk]}>
+                    <Text style={[s.statusPillText, isOver ? s.textOver : s.textOk]}>
+                      {isOver ? 'OVER BUDGET' : ratio.toFixed(0) + '%'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Category Progress Bar */}
+                <View style={s.catBarBg}>
+                  <View style={[
+                    s.catBarFill,
+                    { width: catFillWidth, backgroundColor: isOver ? GROWW_THEME.loss : GROWW_THEME.brand }
+                  ]} />
+                </View>
+
+                <View style={s.catFiguresRow}>
+                  <Text style={s.catFigSpent}>Spent: ₹{b.spentAmount.toLocaleString('en-IN')}</Text>
+                  <Text style={s.catFigAlloc}>Allocated: ₹{b.allocatedAmount.toLocaleString('en-IN')}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+
+      {/* Add Allocation Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={s.modalSheet}>
+            <View style={s.modalHandle} />
+            <View style={s.modalHeaderRow}>
+              <Text style={s.modalTitle}>Allocate Society Budget</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={20} color="#64748B" />
+                <Ionicons name="close" size={22} color={GROWW_THEME.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>Select Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 12 }}>
-              {CATEGORIES.map(c => (
+            {/* Category Choices */}
+            <Text style={s.inputLabel}>Select Category</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+              {CATEGORIES.map((c) => (
                 <TouchableOpacity
                   key={c.value}
-                  style={[styles.catPill, category === c.value && styles.catPillActive]}
+                  style={[s.chipChoice, category === c.value && s.chipChoiceActive]}
                   onPress={() => setCategory(c.value)}
                 >
-                  <Text style={[styles.catPillText, category === c.value && styles.catPillTextActive]}>
+                  <Text style={[s.chipChoiceText, category === c.value && s.chipChoiceTextActive]}>
                     {c.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
-            <Text style={styles.label}>Allocated Amount (₹) *</Text>
+            <Text style={s.inputLabel}>Allocated Amount (₹)</Text>
             <TextInput
-              style={styles.input}
+              style={s.textInput}
               placeholder="e.g. 500000"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={GROWW_THEME.textMuted}
               keyboardType="numeric"
               value={amount}
               onChangeText={setAmount}
             />
 
-            <Text style={styles.label}>Allocation Notes / Justification</Text>
+            <Text style={s.inputLabel}>Allocation Notes / Scope</Text>
             <TextInput
-              style={styles.textArea}
-              placeholder="e.g. Annual lift and generator maintenance contract..."
-              placeholderTextColor="#94A3B8"
-              multiline
-              numberOfLines={3}
+              style={s.textInput}
+              placeholder="e.g. Annual lift and DG maintenance AMC"
+              placeholderTextColor={GROWW_THEME.textMuted}
               value={notes}
               onChangeText={setNotes}
             />
 
             <TouchableOpacity
-              style={styles.submitBtn}
-              onPress={() => {
-                const num = parseFloat(amount);
-                if (isNaN(num) || num <= 0) {
-                  Alert.alert('Required', 'Please enter a valid amount.');
-                  return;
-                }
-                allocateMutation.mutate({
-                  financialYear: fy,
-                  category,
-                  amount: num,
-                  notes: notes.trim() || undefined,
-                });
-              }}
+              style={s.saveBtn}
+              onPress={handleSaveAllocation}
               disabled={allocateMutation.isPending}
             >
               {allocateMutation.isPending ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitBtnText}>Confirm Allocation</Text>
+                <Text style={s.saveBtnText}>Save Allocation</Text>
               )}
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
-  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#4F46E5', justifyContent: 'center', alignItems: 'center' },
-  fyStrip: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 10 },
-  fyChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
-  fyChipActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-  fyText: { fontSize: 11, fontWeight: '600', color: '#64748B' },
-  fyTextActive: { color: '#FFFFFF', fontWeight: '700' },
-  masterCard: { marginHorizontal: 16, backgroundColor: '#1E1B4B', borderRadius: 18, padding: 18, marginBottom: 12 },
-  masterLabel: { fontSize: 10, color: '#A5B4FC', fontWeight: '700', letterSpacing: 0.5 },
-  masterAmount: { fontSize: 24, fontWeight: '900', color: '#FFFFFF', marginVertical: 4 },
-  progressContainer: { height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, marginVertical: 8, overflow: 'hidden' },
-  progressBar: { height: 6, backgroundColor: '#38BDF8', borderRadius: 3 },
-  masterStatsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  subStatLabel: { fontSize: 10, color: '#C7D2FE' },
-  subStatVal: { fontSize: 13, fontWeight: '800', color: '#FFFFFF', marginTop: 1 },
-  listContent: { padding: 16, paddingBottom: 40 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  iconBox: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  catTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  catNotes: { fontSize: 11, color: '#64748B', marginTop: 1 },
-  budgetNumsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  numLabel: { fontSize: 10, color: '#64748B' },
-  numVal: { fontSize: 13, fontWeight: '800', color: '#0F172A', marginTop: 1 },
-  cardProgressBarTrack: { height: 5, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
-  cardProgressBar: { height: 5, borderRadius: 3 },
-  emptyBox: { padding: 40, alignItems: 'center' },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  emptySub: { fontSize: 12, color: '#64748B', marginTop: 4 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  modalTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
-  label: { fontSize: 11, fontWeight: '700', color: '#334155', marginBottom: 4 },
-  catPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#F1F5F9' },
-  catPillActive: { backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#4F46E5' },
-  catPillText: { fontSize: 11, color: '#64748B' },
-  catPillTextActive: { color: '#4F46E5', fontWeight: '700' },
-  input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7, fontSize: 13, color: '#0F172A', marginBottom: 10 },
-  textArea: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, padding: 8, fontSize: 12, color: '#0F172A', height: 60, textAlignVertical: 'top', marginBottom: 14 },
-  submitBtn: { backgroundColor: '#4F46E5', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
-  submitBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAFBFC',
+  },
+  topNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 52 : 16,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: GROWW_THEME.border,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: GROWW_THEME.surfaceMuted,
+  },
+  topNavTitleBox: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  topNavTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: GROWW_THEME.textPrimary,
+    fontFamily: FONTS.displayBold,
+  },
+  topNavSubtitle: {
+    fontSize: 11,
+    color: GROWW_THEME.textSecondary,
+    fontFamily: FONTS.regular,
+  },
+  topNavIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: GROWW_THEME.brandLight,
+  },
+  scrollContent: {
+    padding: 16,
+    gap: 14,
+  },
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: GROWW_THEME.border,
+    padding: 16,
+    ...SHADOWS.card,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  summarySub: {
+    fontSize: 12,
+    color: GROWW_THEME.textSecondary,
+    fontFamily: FONTS.medium,
+  },
+  summaryAmount: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: GROWW_THEME.textPrimary,
+    marginTop: 4,
+    fontFamily: FONTS.displayBold,
+    fontVariant: ['tabular-nums'],
+  },
+  spendRatioBadge: {
+    backgroundColor: GROWW_THEME.brandLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  spendRatioText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: GROWW_THEME.brandDark,
+    fontFamily: FONTS.semiBold,
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: GROWW_THEME.surfaceMuted,
+    borderRadius: 3,
+    marginTop: 14,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: GROWW_THEME.brand,
+    borderRadius: 3,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: GROWW_THEME.border,
+    marginVertical: 14,
+  },
+  summaryMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metricItem: {
+    flex: 1,
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: GROWW_THEME.textSecondary,
+    fontFamily: FONTS.regular,
+  },
+  metricValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: GROWW_THEME.textPrimary,
+    marginTop: 2,
+    fontFamily: FONTS.semiBold,
+    fontVariant: ['tabular-nums'],
+  },
+  metricDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: GROWW_THEME.border,
+    marginHorizontal: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: GROWW_THEME.textPrimary,
+    fontFamily: FONTS.semiBold,
+  },
+  sectionCount: {
+    fontSize: 12,
+    color: GROWW_THEME.textSecondary,
+    fontFamily: FONTS.regular,
+  },
+  cardsList: {
+    gap: 10,
+  },
+  catCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: GROWW_THEME.border,
+    padding: 14,
+  },
+  catHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  catIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  catTitle: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: GROWW_THEME.textPrimary,
+    fontFamily: FONTS.semiBold,
+  },
+  catNotes: {
+    fontSize: 11,
+    color: GROWW_THEME.textSecondary,
+    marginTop: 1,
+  },
+  statusPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  statusPillText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    fontFamily: FONTS.semiBold,
+  },
+  statusOk: {
+    backgroundColor: GROWW_THEME.brandLight,
+  },
+  textOk: {
+    color: GROWW_THEME.brandDark,
+  },
+  statusOver: {
+    backgroundColor: GROWW_THEME.lossLight,
+  },
+  textOver: {
+    color: GROWW_THEME.lossDark,
+  },
+  catBarBg: {
+    height: 4,
+    backgroundColor: GROWW_THEME.surfaceMuted,
+    borderRadius: 2,
+    marginVertical: 10,
+    overflow: 'hidden',
+  },
+  catBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  catFiguresRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  catFigSpent: {
+    fontSize: 11.5,
+    color: GROWW_THEME.textSecondary,
+    fontFamily: FONTS.regular,
+    fontVariant: ['tabular-nums'],
+  },
+  catFigAlloc: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: GROWW_THEME.textPrimary,
+    fontFamily: FONTS.semiBold,
+    fontVariant: ['tabular-nums'],
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 20,
+    gap: 12,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: GROWW_THEME.borderMedium,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: GROWW_THEME.textPrimary,
+    fontFamily: FONTS.displayBold,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: GROWW_THEME.textPrimary,
+    fontFamily: FONTS.semiBold,
+    marginTop: 4,
+  },
+  chipChoice: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: '#FAFBFC',
+    borderWidth: 1,
+    borderColor: GROWW_THEME.border,
+  },
+  chipChoiceActive: {
+    backgroundColor: GROWW_THEME.brandLight,
+    borderColor: GROWW_THEME.brandBorder,
+  },
+  chipChoiceText: {
+    fontSize: 11.5,
+    color: GROWW_THEME.textSecondary,
+  },
+  chipChoiceTextActive: {
+    fontWeight: '700',
+    color: GROWW_THEME.brandDark,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: GROWW_THEME.border,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: GROWW_THEME.textPrimary,
+    backgroundColor: '#FAFBFC',
+  },
+  saveBtn: {
+    backgroundColor: GROWW_THEME.brand,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: FONTS.bold,
+  },
 });

@@ -15,14 +15,18 @@ const webStore = {
 
 const store = Platform.OS === 'web' ? webStore : SecureStore;
 
+const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
+
 // ── Token helpers ──────────────────────────────────────────────
 export const tokenStore = {
   getAccess:      () => store.getItemAsync(ACCESS_TOKEN_KEY),
   getRefresh:     () => store.getItemAsync(REFRESH_TOKEN_KEY),
   getPushToken:   () => store.getItemAsync(PUSH_TOKEN_KEY),
-  setAccess:      (t: string) => store.setItemAsync(ACCESS_TOKEN_KEY, t),
-  setRefresh:     (t: string) => store.setItemAsync(REFRESH_TOKEN_KEY, t),
-  setPushToken:   (t: string) => store.setItemAsync(PUSH_TOKEN_KEY, t),
+  setAccess:      (t: string) => store.setItemAsync(ACCESS_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
+  setRefresh:     (t: string) => store.setItemAsync(REFRESH_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
+  setPushToken:   (t: string) => store.setItemAsync(PUSH_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
   clearPushToken: () => store.deleteItemAsync(PUSH_TOKEN_KEY),
   clearAll:       async () => {
     await store.deleteItemAsync(ACCESS_TOKEN_KEY);

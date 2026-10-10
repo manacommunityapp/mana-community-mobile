@@ -113,7 +113,7 @@ export async function clearAppBadge(): Promise<void> {
   await syncAppBadge(0);
 }
 
-function resolveRoute(data: Record<string, unknown>): string | null {
+export function resolveRoute(data: Record<string, unknown>): string | null {
   const type = data?.type as string | undefined;
   switch (type) {
     // Chat

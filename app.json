@@ -14,7 +14,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.manacommunity.mobile",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "associatedDomains": [
+        "applinks:app.manacommunity.com"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -31,6 +34,29 @@
         "android.permission.VIBRATE",
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "app.manacommunity.com",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "mana-community"
+            },
+            {
+              "scheme": "mana"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
       ]
     },
     "web": {
