@@ -128,6 +128,15 @@ export default function TripsScreen() {
           <Text style={styles.heroSubtitle}>
             Resident-curated weekend treks, spiritual yatras, and family getaways with doorstep society bus pickup.
           </Text>
+          <TouchableOpacity
+            style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginTop: 4 }}
+            onPress={() => router.push('/trips/create')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add-circle" size={16} color={COLORS.primary} />
+            <Text style={{ color: COLORS.primary, fontWeight: '800', fontSize: 13 }}>Host a Trip</Text>
+          </TouchableOpacity>
+
           <View style={styles.heroStatsRow}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatValue}>{trips.length}</Text>
@@ -348,6 +357,18 @@ export default function TripsScreen() {
                     </View>
 
                     <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={[styles.splitIconBtn, { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }]}
+                        onPress={() => router.push({
+                          pathname: '/trips/roster',
+                          params: { tripId: trip.id, tripTitle: trip.title },
+                        })}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="list-outline" size={14} color={COLORS.primary} />
+                        <Text style={[styles.splitIconBtnText, { color: COLORS.primary }]}>Roster</Text>
+                      </TouchableOpacity>
+
                       <TouchableOpacity
                         style={styles.splitIconBtn}
                         onPress={() => router.push({
