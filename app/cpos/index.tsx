@@ -243,11 +243,15 @@ export default function CPOSScreen() {
 
   const portfolioStats = useMemo(() => {
     const totalValue = properties.reduce((sum, p) => {
-      const num = parseFloat(p.estimatedMarketValue.replace(/[^\d.]/g, ''));
+      const valStr = String(p.estimatedMarketValue || '');
+      const num = parseFloat(valStr.replace(/[^\d.]/g, ''));
       return sum + (isNaN(num) ? 0 : num);
     }, 0);
     const avgYield = properties.length
-      ? (properties.reduce((sum, p) => sum + parseFloat(p.rentalYield), 0) / properties.length).toFixed(1)
+      ? (properties.reduce((sum, p) => {
+          const yieldNum = parseFloat(String(p.rentalYield || '0'));
+          return sum + (isNaN(yieldNum) ? 0 : yieldNum);
+        }, 0) / properties.length).toFixed(1)
       : '0';
     return { count: properties.length, totalValue, avgYield };
   }, [properties]);
@@ -392,10 +396,10 @@ export default function CPOSScreen() {
 
               <View style={s.metricsGrid}>
                 {[
-                  { label: 'CONFIG', value: p.configuration },
-                  { label: 'AREA', value: `${p.carpetAreaSqFt} sq.ft` },
-                  { label: 'VALUE', value: p.estimatedMarketValue },
-                  { label: 'YIELD', value: p.rentalYield },
+                  { label: 'CONFIG', value: p.configuration || '—' },
+                  { label: 'AREA', value: p.carpetAreaSqFt ? `${p.carpetAreaSqFt} sq.ft` : '—' },
+                  { label: 'VALUE', value: p.estimatedMarketValue || '—' },
+                  { label: 'YIELD', value: p.rentalYield || '—' },
                 ].map((m) => (
                   <View key={m.label} style={s.metricItem}>
                     <Text style={s.metricLabel}>{m.label}</Text>
@@ -404,12 +408,14 @@ export default function CPOSScreen() {
                 ))}
               </View>
 
-              <View style={s.parkingRow}>
-                <Ionicons name="car-outline" size={14} color={COLORS.primary} />
-                <Text style={s.parkingText}>
-                  Parking: <Text style={{ fontWeight: '800' }}>{p.parkingSlotsAssigned.join(', ')}</Text>
-                </Text>
-              </View>
+              {Array.isArray(p.parkingSlotsAssigned) && p.parkingSlotsAssigned.length > 0 && (
+                <View style={s.parkingRow}>
+                  <Ionicons name="car-outline" size={14} color={COLORS.primary} />
+                  <Text style={s.parkingText}>
+                    Parking: <Text style={{ fontWeight: '800' }}>{p.parkingSlotsAssigned.join(', ')}</Text>
+                  </Text>
+                </View>
+              )}
             </View>
           )}
           ListEmptyComponent={
