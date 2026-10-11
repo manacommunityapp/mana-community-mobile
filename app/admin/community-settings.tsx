@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
 import { COLORS } from '@/constants/config';
-import { useAdminGuard } from '@/security';
+import { useAdminGuard } from '@/security/useAdminGuard';
 import type { CommunitySettingsDto } from '@/types/api';
 
 function SectionHeader({ title }: { title: string }) {

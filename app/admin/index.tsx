@@ -9,7 +9,7 @@ import { adminService } from '@/services/adminService';
 import { StatCard } from '@/components/admin/StatCard';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS } from '@/constants/config';
-import { useAdminGuard } from '@/security';
+import { useAdminGuard } from '@/security/useAdminGuard';
 
 interface QuickAction {
   emoji:  string;

@@ -183,4 +183,5 @@ function RootLayout() {
   );
 }
 
-export default Sentry.wrap(RootLayout);
+// Only wrap with Sentry in production when Sentry.init has run
+export default !__DEV__ ? Sentry.wrap(RootLayout) : RootLayout;

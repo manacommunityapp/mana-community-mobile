@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
 import { COLORS, getInitials } from '@/constants/config';
-import { useAdminGuard } from '@/security';
+import { useAdminGuard } from '@/security/useAdminGuard';
 import { format } from 'date-fns';
 import type { AdminMemberDto } from '@/types/api';
 

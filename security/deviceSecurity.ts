@@ -28,7 +28,8 @@ export const deviceSecurity = {
 
     // 2. Root / Jailbreak indicators
     const isRooted = await this.checkRootIndicators();
-    if (isRooted) {
+    // In development or when running on an emulator, test-keys/debug builds are normal
+    if (isRooted && !__DEV__ && isPhysical) {
       violations.push('ROOT_OR_JAILBREAK_DETECTED');
       secureLog.security('DEVICE_INTEGRITY_COMPROMISED');
     }

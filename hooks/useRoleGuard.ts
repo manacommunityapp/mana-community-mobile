@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ADMIN_ROLES, GUARD_ROLES, type UserRole } from '@/constants/permissions';
-import { secureLog } from '@/security';
+import { secureLog } from '@/security/secureLogger';
 
 type PortalType = 'admin' | 'guard' | 'vendor' | 'sports-admin' | 'event-admin';
 

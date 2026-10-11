@@ -90,7 +90,9 @@ try {
     }
   }
 } catch {
-  secureLog.warn('[Push] expo-notifications not available');
+  if (!__DEV__) {
+    secureLog.warn('[Push] expo-notifications not available');
+  }
 }
 
 /**
