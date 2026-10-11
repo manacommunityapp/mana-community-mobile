@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+﻿import { Stack } from 'expo-router';
 import { COLORS } from '@/constants/config';
 
 export default function TripsLayout() {
@@ -12,6 +12,8 @@ export default function TripsLayout() {
     >
       <Stack.Screen name="index" options={{ title: '🚌 Community Trips & Treks' }} />
       <Stack.Screen name="split" options={{ title: '💰 Trip Split & Expenses' }} />
+      <Stack.Screen name="create" options={{ title: '🗺️ Host a Community Trip' }} />
+      <Stack.Screen name="roster" options={{ title: '📋 Passenger Manifest Roster' }} />
     </Stack>
   );
 }

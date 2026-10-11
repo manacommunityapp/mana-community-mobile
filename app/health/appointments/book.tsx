@@ -21,7 +21,8 @@ export default function AppointmentBookScreen() {
       healthService.getDoctorById(doctorId).then(d => {
         if (d) {
           setDoctor(d);
-          setSelectedSlot(d.availableSlots[0] || "");
+          const slots = d.availableSlots || (d.appointmentSlots ? d.appointmentSlots.map(s => s.time) : [d.nextAvailableSlot]);
+          setSelectedSlot(slots[0] || "");
           setSelectedMode(d.consultationModes[0] || "IN_PERSON");
         }
       });
@@ -114,7 +115,7 @@ export default function AppointmentBookScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionHeader}>Available Time Slots</Text>
           <View style={styles.slotsWrap}>
-            {doctor.availableSlots.map(slot => (
+            {(doctor.availableSlots || (doctor.appointmentSlots ? doctor.appointmentSlots.map(s => s.time) : [doctor.nextAvailableSlot])).map(slot => (
               <TouchableOpacity
                 key={slot}
                 style={[styles.slotChip, selectedSlot === slot && styles.activeSlotChip]}

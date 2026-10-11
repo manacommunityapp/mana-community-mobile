@@ -448,6 +448,51 @@ export interface MarketplaceFilters {
   freeOnly?:    boolean;
 }
 
+export interface MarketplaceOfferDto {
+  id: number;
+  listingId: number;
+  listingTitle: string;
+  originalPrice: number;
+  offerPrice: number;
+  buyer: { id: number; fullName: string; verified?: boolean };
+  sellerId: number;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COUNTERED';
+  counterPrice?: number;
+  note?: string;
+  createdAt: string;
+}
+
+export interface SendOfferRequest {
+  listingId: number;
+  offerPrice: number;
+  note?: string;
+}
+
+export interface MarketplaceOrderDto {
+  id: number;
+  orderNumber: string;
+  buyer: { id: number; fullName: string };
+  seller: { id: number; fullName: string; verified?: boolean };
+  status: 'PENDING' | 'CONFIRMED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
+  totalAmount: number;
+  notes?: string;
+  deliveryAddress: string;
+  deliveryMethod?: string;
+  paymentMode?: string;
+  paymentStatus?: 'PAID' | 'PENDING' | 'REFUNDED';
+  pickupOtp?: string; // 4-digit security handover OTP
+  items: {
+    id: number;
+    listingId: number;
+    listingTitle: string;
+    quantity: number;
+    unitPrice: number;
+    imageUrl?: string | null;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Admin (append to existing Admin types) ─────────────────────
 export interface AdminStatsDto {
   totalMembers:     number;

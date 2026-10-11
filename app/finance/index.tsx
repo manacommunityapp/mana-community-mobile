@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { SHADOWS, FONTS } from '@/constants/config';
-import { GROWW_THEME } from '@/constants/theme';;
+import { THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import {
   maintenanceDuesService,
@@ -18,14 +18,14 @@ import {
 } from '@/services/maintenanceDuesService';
 
 const FINANCE_HUBS = [
-  { emoji: '🏦', label: 'Treasury',   color: GROWW_THEME.indigo,   bg: GROWW_THEME.indigoLight, route: '/finance/society-dashboard' },
-  { emoji: '💳', label: 'Pay Dues',   color: GROWW_THEME.brandDark, bg: GROWW_THEME.brandLight,  route: '/finance' },
+  { emoji: '🏦', label: 'Treasury',   color: THEME.indigo,   bg: THEME.indigoLight, route: '/finance/society-dashboard' },
+  { emoji: '💳', label: 'Pay Dues',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/finance' },
   { emoji: '📑', label: 'Budget',     color: '#EA580C',            bg: '#FFF7ED',              route: '/finance/budget' },
   { emoji: '📊', label: 'Reports',    color: '#D97706',            bg: '#FFFBEB',              route: '/finance/society-reports' },
   { emoji: '📋', label: 'Invoices',   color: '#0284C7',            bg: '#E0F2FE',              route: '/finance/invoices' },
   { emoji: '👥', label: 'Vendors',    color: '#7C3AED',            bg: '#F5F3FF',              route: '/finance/vendors' },
   { emoji: '✅', label: 'Approvals',  color: '#DC2626',            bg: '#FEF2F2',              route: '/finance/expenses' },
-  { emoji: '💰', label: 'My Money',   color: GROWW_THEME.brandDark, bg: GROWW_THEME.brandLight,  route: '/personal-finance' },
+  { emoji: '💰', label: 'My Money',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/personal-finance' },
 ] as const;
 
 export default function MaintenanceDuesScreen() {
@@ -199,7 +199,7 @@ export default function MaintenanceDuesScreen() {
           }}
           style={s.backBtn}
         >
-          <Ionicons name="arrow-back" size={20} color={GROWW_THEME.textPrimary} />
+          <Ionicons name="arrow-back" size={20} color={THEME.textPrimary} />
         </TouchableOpacity>
         <View style={s.topNavTitleBox}>
           <Text style={s.topNavTitle}>Society Finance</Text>
@@ -209,16 +209,16 @@ export default function MaintenanceDuesScreen() {
           style={s.topNavIconBtn}
           onPress={() => router.push('/finance/society-dashboard' as any)}
         >
-          <Ionicons name="stats-chart-outline" size={19} color={GROWW_THEME.brandDark} />
+          <Ionicons name="stats-chart-outline" size={19} color={THEME.brandDark} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         contentContainerStyle={s.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[GROWW_THEME.brand]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[THEME.brand]} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Groww Pill Navigation Strip */}
+        {/* Pill Navigation Strip */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -237,7 +237,7 @@ export default function MaintenanceDuesScreen() {
           ))}
         </ScrollView>
 
-        {/* Groww Portfolio Balance Hero Card */}
+        {/* Portfolio Balance Hero Card */}
         <View style={s.portfolioCard}>
           <View style={s.portfolioHeader}>
             <View>
@@ -250,7 +250,7 @@ export default function MaintenanceDuesScreen() {
               <Ionicons
                 name={totalOutstanding > 0 ? "alert-circle" : "checkmark-circle"}
                 size={13}
-                color={totalOutstanding > 0 ? GROWW_THEME.lossDark : GROWW_THEME.brandDark}
+                color={totalOutstanding > 0 ? THEME.lossDark : THEME.brandDark}
               />
               <Text style={[s.gainBadgePillText, totalOutstanding > 0 ? s.dueBadgeText : s.clearBadgeText]}>
                 {totalOutstanding > 0 ? 'Due This Month' : 'All Cleared'}
@@ -286,7 +286,7 @@ export default function MaintenanceDuesScreen() {
           activeOpacity={0.8}
         >
           <View style={s.treasuryIconBox}>
-            <Ionicons name="business" size={18} color={GROWW_THEME.brandDark} />
+            <Ionicons name="business" size={18} color={THEME.brandDark} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -297,10 +297,10 @@ export default function MaintenanceDuesScreen() {
             </View>
             <Text style={s.treasurySub}>Collections, Sinking Funds & TDS Compliance</Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={GROWW_THEME.textSecondary} />
+          <Ionicons name="chevron-forward" size={16} color={THEME.textSecondary} />
         </TouchableOpacity>
 
-        {/* Active Bill Breakdown Card (Groww Style) */}
+        {/* Active Bill Breakdown Card */}
         {activeBill ? (
           <View style={s.billCard}>
             <View style={s.billCardHeader}>
@@ -336,7 +336,7 @@ export default function MaintenanceDuesScreen() {
           </View>
         ) : (
           <View style={s.emptyCard}>
-            <Ionicons name="checkmark-done-circle-outline" size={44} color={GROWW_THEME.brand} />
+            <Ionicons name="checkmark-done-circle-outline" size={44} color={THEME.brand} />
             <Text style={s.emptyTitle}>No Pending Invoices</Text>
             <Text style={s.emptySub}>You have settled all your society maintenance dues.</Text>
           </View>
@@ -364,7 +364,7 @@ export default function MaintenanceDuesScreen() {
                   onPress={() => handleDownloadReceipt(bill)}
                 >
                   <View style={s.historyIconBox}>
-                    <Ionicons name="receipt-outline" size={17} color={GROWW_THEME.brandDark} />
+                    <Ionicons name="receipt-outline" size={17} color={THEME.brandDark} />
                   </View>
                   <View style={{ flex: 1, marginLeft: 10 }}>
                     <Text style={s.historyTitle}>{bill.monthYear || 'Society Maintenance'}</Text>
@@ -392,12 +392,12 @@ export default function MaintenanceDuesScreen() {
             <Text style={s.stickyPriceValue}>₹{(activeBill.totalAmount || 0).toLocaleString('en-IN')}</Text>
           </View>
           <TouchableOpacity
-            style={s.growwPayBtn}
+            style={s.payBtn}
             onPress={handlePayPress}
             activeOpacity={0.85}
           >
             <Ionicons name="flash" size={16} color="#FFFFFF" />
-            <Text style={s.growwPayBtnText}>Pay Now</Text>
+            <Text style={s.payBtnText}>Pay Now</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -415,7 +415,7 @@ export default function MaintenanceDuesScreen() {
             <View style={s.modalHeaderRow}>
               <Text style={s.modalTitle}>Choose Payment Method</Text>
               <TouchableOpacity onPress={() => setIsPayModal(false)}>
-                <Ionicons name="close" size={22} color={GROWW_THEME.textSecondary} />
+                <Ionicons name="close" size={22} color={THEME.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -430,7 +430,7 @@ export default function MaintenanceDuesScreen() {
                 onPress={() => setSelectedMethod('UPI')}
               >
                 <View style={s.methodIconBox}>
-                  <Ionicons name="qr-code-outline" size={20} color={GROWW_THEME.brandDark} />
+                  <Ionicons name="qr-code-outline" size={20} color={THEME.brandDark} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.methodName}>Instant UPI (GPay / PhonePe / Paytm)</Text>
@@ -439,7 +439,7 @@ export default function MaintenanceDuesScreen() {
                 <Ionicons
                   name={selectedMethod === 'UPI' ? "radio-button-on" : "radio-button-off"}
                   size={19}
-                  color={selectedMethod === 'UPI' ? GROWW_THEME.brand : GROWW_THEME.textSecondary}
+                  color={selectedMethod === 'UPI' ? THEME.brand : THEME.textSecondary}
                 />
               </TouchableOpacity>
 
@@ -448,7 +448,7 @@ export default function MaintenanceDuesScreen() {
                 onPress={() => setSelectedMethod('WALLET')}
               >
                 <View style={s.methodIconBox}>
-                  <Ionicons name="wallet-outline" size={20} color={GROWW_THEME.indigo} />
+                  <Ionicons name="wallet-outline" size={20} color={THEME.indigo} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.methodName}>Advance Wallet Balance</Text>
@@ -457,7 +457,7 @@ export default function MaintenanceDuesScreen() {
                 <Ionicons
                   name={selectedMethod === 'WALLET' ? "radio-button-on" : "radio-button-off"}
                   size={19}
-                  color={selectedMethod === 'WALLET' ? GROWW_THEME.brand : GROWW_THEME.textSecondary}
+                  color={selectedMethod === 'WALLET' ? THEME.brand : THEME.textSecondary}
                 />
               </TouchableOpacity>
 
@@ -475,7 +475,7 @@ export default function MaintenanceDuesScreen() {
                 <Ionicons
                   name={selectedMethod === 'CARD' ? "radio-button-on" : "radio-button-off"}
                   size={19}
-                  color={selectedMethod === 'CARD' ? GROWW_THEME.brand : GROWW_THEME.textSecondary}
+                  color={selectedMethod === 'CARD' ? THEME.brand : THEME.textSecondary}
                 />
               </TouchableOpacity>
             </View>
@@ -511,7 +511,7 @@ const s = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: GROWW_THEME.border,
+    borderBottomColor: THEME.border,
   },
   backBtn: {
     width: 36,
@@ -519,7 +519,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
   },
   topNavTitleBox: {
     flex: 1,
@@ -528,12 +528,12 @@ const s = StyleSheet.create({
   topNavTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
   },
   topNavSubtitle: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
   },
   topNavIconBtn: {
@@ -542,7 +542,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
   },
   scrollContent: {
     padding: 16,
@@ -561,11 +561,11 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   hubPillActive: {
-    backgroundColor: GROWW_THEME.brandLight,
-    borderColor: GROWW_THEME.brandBorder,
+    backgroundColor: THEME.brandLight,
+    borderColor: THEME.brandBorder,
   },
   hubEmoji: {
     fontSize: 14,
@@ -573,17 +573,17 @@ const s = StyleSheet.create({
   hubLabel: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   hubLabelActive: {
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
   },
   portfolioCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 16,
     ...SHADOWS.card,
   },
@@ -594,14 +594,14 @@ const s = StyleSheet.create({
   },
   portfolioSub: {
     fontSize: 12,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontWeight: '500',
     fontFamily: FONTS.medium,
   },
   portfolioAmount: {
     fontSize: 26,
     fontWeight: '800',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     marginTop: 4,
     fontFamily: FONTS.displayBold,
     fontVariant: ['tabular-nums'],
@@ -620,20 +620,20 @@ const s = StyleSheet.create({
     fontFamily: FONTS.semiBold,
   },
   dueBadge: {
-    backgroundColor: GROWW_THEME.lossLight,
+    backgroundColor: THEME.lossLight,
   },
   dueBadgeText: {
-    color: GROWW_THEME.lossDark,
+    color: THEME.lossDark,
   },
   clearBadge: {
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
   },
   clearBadgeText: {
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
   },
   portfolioDivider: {
     height: 1,
-    backgroundColor: GROWW_THEME.border,
+    backgroundColor: THEME.border,
     marginVertical: 14,
   },
   metricsRow: {
@@ -646,20 +646,20 @@ const s = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 10.5,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
   },
   metricValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     marginTop: 2,
     fontFamily: FONTS.semiBold,
   },
   metricDivider: {
     width: 1,
     height: 24,
-    backgroundColor: GROWW_THEME.border,
+    backgroundColor: THEME.border,
     marginHorizontal: 8,
   },
   treasuryBanner: {
@@ -668,7 +668,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 12,
     gap: 12,
   },
@@ -676,18 +676,18 @@ const s = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   treasuryTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   erpBadgePill: {
-    backgroundColor: GROWW_THEME.indigoLight,
+    backgroundColor: THEME.indigoLight,
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
@@ -695,11 +695,11 @@ const s = StyleSheet.create({
   erpBadgeText: {
     fontSize: 9,
     fontWeight: '800',
-    color: GROWW_THEME.indigo,
+    color: THEME.indigo,
   },
   treasurySub: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     marginTop: 2,
     fontFamily: FONTS.regular,
   },
@@ -707,7 +707,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 16,
   },
   billCardHeader: {
@@ -718,12 +718,12 @@ const s = StyleSheet.create({
   billTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   billSubtitle: {
     fontSize: 11.5,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     marginTop: 2,
     fontFamily: FONTS.regular,
   },
@@ -737,20 +737,20 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
   pillPending: {
-    backgroundColor: GROWW_THEME.lossLight,
+    backgroundColor: THEME.lossLight,
   },
   textPending: {
-    color: GROWW_THEME.lossDark,
+    color: THEME.lossDark,
   },
   pillPaid: {
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
   },
   textPaid: {
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
   },
   chargesDivider: {
     height: 1,
-    backgroundColor: GROWW_THEME.border,
+    backgroundColor: THEME.border,
     marginVertical: 12,
   },
   chargesTable: {
@@ -763,13 +763,13 @@ const s = StyleSheet.create({
   },
   chargeItem: {
     fontSize: 13,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
   },
   chargeAmount: {
     fontSize: 13,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
     fontVariant: ['tabular-nums'],
   },
@@ -777,7 +777,7 @@ const s = StyleSheet.create({
     height: 1,
     borderStyle: 'dashed',
     borderWidth: 0.8,
-    borderColor: GROWW_THEME.borderMedium,
+    borderColor: THEME.borderMedium,
     marginVertical: 12,
   },
   totalRow: {
@@ -788,13 +788,13 @@ const s = StyleSheet.create({
   totalLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.bold,
   },
   totalValue: {
     fontSize: 17,
     fontWeight: '800',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
     fontVariant: ['tabular-nums'],
   },
@@ -802,7 +802,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 24,
     alignItems: 'center',
     gap: 6,
@@ -810,12 +810,12 @@ const s = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   emptySub: {
     fontSize: 12,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     textAlign: 'center',
     fontFamily: FONTS.regular,
   },
@@ -828,32 +828,32 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   sectionLink: {
     fontSize: 12,
     fontWeight: '600',
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
     fontFamily: FONTS.semiBold,
   },
   noHistoryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 16,
     alignItems: 'center',
   },
   noHistoryText: {
     fontSize: 12,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
   },
   historyContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     paddingHorizontal: 14,
   },
   historyRow: {
@@ -865,38 +865,38 @@ const s = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   historyTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   historyDate: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     marginTop: 2,
     fontFamily: FONTS.regular,
   },
   historyAmount: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
     fontVariant: ['tabular-nums'],
   },
   historyReceiptLink: {
     fontSize: 10.5,
     fontWeight: '600',
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
     marginTop: 2,
   },
   historyDivider: {
     height: 1,
-    backgroundColor: GROWW_THEME.border,
+    backgroundColor: THEME.border,
   },
   stickyFooter: {
     position: 'absolute',
@@ -905,7 +905,7 @@ const s = StyleSheet.create({
     right: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: GROWW_THEME.border,
+    borderTopColor: THEME.border,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 28 : 14,
@@ -919,26 +919,26 @@ const s = StyleSheet.create({
   },
   stickyPriceLabel: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
   },
   stickyPriceValue: {
     fontSize: 19,
     fontWeight: '800',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
     fontVariant: ['tabular-nums'],
   },
-  growwPayBtn: {
+  payBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: GROWW_THEME.brand,
+    backgroundColor: THEME.brand,
     paddingHorizontal: 22,
     paddingVertical: 12,
     borderRadius: 10,
   },
-  growwPayBtnText: {
+  payBtnText: {
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
@@ -961,7 +961,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: GROWW_THEME.borderMedium,
+    backgroundColor: THEME.borderMedium,
     alignSelf: 'center',
     marginBottom: 4,
   },
@@ -973,12 +973,12 @@ const s = StyleSheet.create({
   modalTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
   },
   modalBillTitle: {
     fontSize: 12.5,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.medium,
   },
   methodsList: {
@@ -989,14 +989,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FAFBFC',
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     borderRadius: 12,
     padding: 12,
     gap: 12,
   },
   methodCardActive: {
-    borderColor: GROWW_THEME.brand,
-    backgroundColor: GROWW_THEME.brandLight,
+    borderColor: THEME.brand,
+    backgroundColor: THEME.brandLight,
   },
   methodIconBox: {
     width: 36,
@@ -1009,16 +1009,16 @@ const s = StyleSheet.create({
   methodName: {
     fontSize: 13,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   methodSub: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     marginTop: 2,
   },
   modalConfirmBtn: {
-    backgroundColor: GROWW_THEME.brand,
+    backgroundColor: THEME.brand,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

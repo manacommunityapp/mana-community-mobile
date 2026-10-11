@@ -1,4 +1,4 @@
-export interface ProfessionalProfileDto {
+﻿export interface ProfessionalProfileDto {
   id: string;
   name: string;
   headline: string;
@@ -15,6 +15,27 @@ export interface ProfessionalProfileDto {
   avatarUrl?: string;
   linkedinUrl?: string;
   githubUrl?: string;
+  // Privacy Matrix
+  isDiscoverable?: boolean;
+  showPhone?: boolean;
+  showEmail?: boolean;
+  allowDirectMessages?: boolean;
+}
+
+export interface CPNPostDto {
+  id: string;
+  authorName: string;
+  authorHeadline: string;
+  authorTower: string;
+  authorFlat: string;
+  authorAvatar?: string;
+  timeAgo: string;
+  type: 'ACHIEVEMENT' | 'HIRING' | 'ARTICLE' | 'GENERAL';
+  content: string;
+  hashtags: string[];
+  reactionsCount: number;
+  commentsCount: number;
+  hasUserLiked?: boolean;
 }
 
 export interface JobPostingDto {

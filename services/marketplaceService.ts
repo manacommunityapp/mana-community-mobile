@@ -181,4 +181,54 @@ export const marketplaceService = {
   async reportListing(id: number, reason: string): Promise<void> {
     await api.post('/marketplace/admin/moderation/report', { listingId: id, reason });
   },
+
+  // ── Bargaining / Offers ──────────────────────────────────────
+  async submitOffer(data: { listingId: number; offerPrice: number; note?: string }): Promise<any> {
+    const res = await api.post('/marketplace/offers', data);
+    return res.data;
+  },
+
+  async getOffersForMyListings(): Promise<any[]> {
+    const res = await api.get('/marketplace/offers/received');
+    return res.data;
+  },
+
+  async getMySentOffers(): Promise<any[]> {
+    const res = await api.get('/marketplace/offers/sent');
+    return res.data;
+  },
+
+  async respondToOffer(offerId: number, status: 'ACCEPTED' | 'DECLINED', counterPrice?: number): Promise<any> {
+    const res = await api.put(`/marketplace/offers/${offerId}/respond`, { status, counterPrice });
+    return res.data;
+  },
+
+  // ── Orders & Gate Handover ───────────────────────────────────
+  async getMyOrders(page = 0): Promise<PageResponse<any>> {
+    const res = await api.get<PageResponse<any>>('/marketplace/orders/mine', {
+      params: { page, size: 20 },
+    });
+    return res.data;
+  },
+
+  async getSellerOrders(page = 0): Promise<PageResponse<any>> {
+    const res = await api.get<PageResponse<any>>('/marketplace/orders/selling', {
+      params: { page, size: 20 },
+    });
+    return res.data;
+  },
+
+  async updateOrderStatus(orderId: number, status: string): Promise<any> {
+    const res = await api.put(`/marketplace/orders/${orderId}/status?status=${status}`, {});
+    return res.data;
+  },
+
+  async verifyPickupOtp(orderId: number, otp: string): Promise<any> {
+    const res = await api.post(`/marketplace/orders/${orderId}/verify-otp?otp=${otp}`, {});
+    return res.data;
+  },
+
+  async cancelOrder(orderId: number): Promise<void> {
+    await api.put(`/marketplace/orders/${orderId}/cancel`, {});
+  },
 };

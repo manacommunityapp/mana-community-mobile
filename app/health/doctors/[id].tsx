@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { healthService } from "@/services/healthService";
@@ -74,17 +74,66 @@ export default function DoctorDetailScreen() {
           </View>
         </View>
 
-        {/* Clinic Location */}
+        {/* Community Exclusive Offer */}
+        {doctor.communityOffer && (
+          <View style={[styles.card, styles.offerCard]}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={styles.offerCardTitle}>🎉 {doctor.communityOffer.title}</Text>
+              <View style={styles.offerBadgePill}>
+                <Text style={styles.offerBadgeText}>{doctor.communityOffer.badge}</Text>
+              </View>
+            </View>
+            <Text style={styles.offerDesc}>{doctor.communityOffer.description}</Text>
+            {doctor.communityOffer.promoCode && (
+              <Text style={styles.promoCodeText}>Code: {doctor.communityOffer.promoCode}</Text>
+            )}
+          </View>
+        )}
+
+        {/* Clinic Location & Hours */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Clinic & Consultation Modes</Text>
+          <Text style={styles.cardTitle}>Clinic Schedule & Modes</Text>
           <Text style={styles.clinicName}>{doctor.clinicName}</Text>
-          <Text style={styles.clinicAddress}>{doctor.clinicAddress}</Text>
+          <Text style={styles.clinicAddress}>
+            {doctor.clinicAddress} {doctor.distanceKm !== undefined ? `(${doctor.distanceKm === 0 ? "On-Campus" : `${doctor.distanceKm} km`})` : ""}
+          </Text>
+          
+          {doctor.phone && (
+            <TouchableOpacity
+              style={styles.callRow}
+              onPress={() => Linking.openURL(`tel:${doctor.phone?.replace(/[^0-9+]/g, "")}`)}
+            >
+              <Ionicons name="call" size={15} color="#0D9488" />
+              <Text style={styles.callPhoneText}>Call: {doctor.phone}</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Weekly Hours */}
+          {doctor.clinicHours && doctor.clinicHours.length > 0 && (
+            <View style={styles.hoursList}>
+              <Text style={styles.hoursTitle}>Operating Hours:</Text>
+              {doctor.clinicHours.map((slot, idx) => (
+                <View key={idx} style={styles.hourRow}>
+                  <Text style={styles.hourDay}>{slot.day}</Text>
+                  <Text style={styles.hourVal}>
+                    {slot.is24x7 ? "24x7 Open" : slot.isClosed ? "Closed" : [slot.morning, slot.evening].filter(Boolean).join(" | ")}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={styles.modesRow}>
             {doctor.consultationModes.map(m => (
               <View key={m} style={styles.modePill}>
-                <Text style={styles.modeText}>{m === "IN_PERSON" ? "🏥 In-Person Clinic" : m === "VIDEO" ? "📹 Video Call" : "📞 Phone"}</Text>
+                <Text style={styles.modeText}>{m === "IN_PERSON" ? "🏥 Clinic Visit" : m === "VIDEO" ? "📹 Video Call" : "📞 Phone"}</Text>
               </View>
             ))}
+            {doctor.homeVisitAvailable && (
+              <View style={[styles.modePill, { backgroundColor: "#ECFDF5" }]}>
+                <Text style={[styles.modeText, { color: "#065F46" }]}>🏡 Home Visit Available</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -168,5 +217,18 @@ const styles = StyleSheet.create({
   feeLabel: { fontSize: 11, color: "#6B7280" },
   feeAmount: { fontSize: 20, fontWeight: "bold", color: "#0D9488" },
   bookCta: { backgroundColor: "#0D9488", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  bookCtaText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 }
+  bookCtaText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
+  offerCard: { backgroundColor: "#FEF3C7", borderColor: "#FDE68A" },
+  offerCardTitle: { fontSize: 14, fontWeight: "bold", color: "#92400E" },
+  offerBadgePill: { backgroundColor: "#F59E0B", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  offerBadgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "bold" },
+  offerDesc: { fontSize: 12, color: "#78350F", marginTop: 4 },
+  promoCodeText: { fontSize: 11, fontWeight: "bold", color: "#B45309", marginTop: 4 },
+  callRow: { flexDirection: "row", alignItems: "center", gap: 6, marginVertical: 4 },
+  callPhoneText: { fontSize: 12, color: "#0D9488", fontWeight: "bold" },
+  hoursList: { backgroundColor: "#F8FAFC", padding: 10, borderRadius: 8, marginVertical: 6, gap: 4 },
+  hoursTitle: { fontSize: 11, fontWeight: "bold", color: "#334155", marginBottom: 2 },
+  hourRow: { flexDirection: "row", justifyContent: "space-between" },
+  hourDay: { fontSize: 11, fontWeight: "600", color: "#475569" },
+  hourVal: { fontSize: 11, color: "#64748B" }
 });

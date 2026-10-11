@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '@/constants/config';
-import { GROWW_THEME } from '@/constants/theme';
+import { THEME } from '@/constants/theme';
 import {
   homeServicesService,
   HomeHelpWorkerDto,
@@ -242,12 +242,12 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      {/* ── Groww Clean Header ── */}
+      {/* ── Clean Header ── */}
       <View style={s.cleanHeader}>
         <View style={s.headerRow}>
           {!isTab && (
             <TouchableOpacity onPress={goHome} style={s.headerBackBtn} hitSlop={8}>
-              <Ionicons name="arrow-back" size={18} color={GROWW_THEME.textPrimary} />
+              <Ionicons name="arrow-back" size={18} color={THEME.textPrimary} />
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }}>
@@ -1116,7 +1116,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 // ═══════════════════════════════════════════════════════════════
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: GROWW_THEME.background },
+  safe: { flex: 1, backgroundColor: THEME.background },
   listContent: { padding: 16, paddingBottom: 40, gap: 12 },
   centerBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   loadingCircle: {
@@ -1135,7 +1135,7 @@ const s = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: GROWW_THEME.border,
+    borderBottomColor: THEME.border,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1147,22 +1147,22 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     letterSpacing: -0.3,
     fontFamily: FONTS.displayBold,
   },
   headerSub: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     marginTop: 2,
     fontFamily: FONTS.regular,
   },
@@ -1175,11 +1175,11 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   headerIconBtnActive: {
     backgroundColor: 'rgba(255,255,255,0.3)',
@@ -1207,7 +1207,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: GROWW_THEME.brandDark,
+    backgroundColor: THEME.brandDark,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -1225,12 +1225,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 16,
     marginTop: 10,
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
     borderRadius: 16,
     paddingVertical: 10,
     paddingHorizontal: 4,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   statItem: {
     flex: 1,

@@ -14,6 +14,7 @@ export default function HomeServicesLayout() {
       <Stack.Screen name="bookings" />
       <Stack.Screen name="packages" />
       <Stack.Screen name="jobs" />
+      <Stack.Screen name="provider-deck" />
     </Stack>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, TextInput, ActivityIndicator, Alert, RefreshControl,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -51,6 +52,12 @@ export default function SmartHelpdeskScreen() {
   const [category, setCategory] = useState<TicketCategory>('OTHER');
   const [priority, setPriority] = useState<TicketPriority>('MEDIUM');
   const [autoDetected, setAutoDetected] = useState(false);
+
+  // Rating & Feedback State
+  const [ratingStars, setRatingStars] = useState(5);
+  const [ratingComment, setRatingComment] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [newCommentText, setNewCommentText] = useState('');
 
   // ── 1. Fetch Live Tickets ────────────────────────────────────────────────
   const {
@@ -291,10 +298,24 @@ export default function SmartHelpdeskScreen() {
                     <Text style={[styles.priorityTagText, { color: prioMeta.color }]}>{prioMeta.label}</Text>
                   </View>
 
+                  {ticket.slaHours && ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && (
+                    <View style={styles.slaBadge}>
+                      <Ionicons name="time-outline" size={11} color="#D97706" />
+                      <Text style={styles.slaBadgeText}>SLA: {ticket.slaHours}h</Text>
+                    </View>
+                  )}
+
+                  {ticket.residentRating && (
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={11} color="#F59E0B" />
+                      <Text style={styles.ratingBadgeText}>{ticket.residentRating}/5</Text>
+                    </View>
+                  )}
+
                   {ticket.assignedTo ? (
                     <View style={styles.assignedBadge}>
                       <Ionicons name="person-outline" size={12} color={COLORS.primary} />
-                      <Text style={styles.assignedBadgeText}>{ticket.assignedTo}</Text>
+                      <Text style={styles.assignedBadgeText} numberOfLines={1}>{ticket.assignedTo}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -446,49 +467,160 @@ export default function SmartHelpdeskScreen() {
             </View>
 
             {selectedTicket && (
-              <View style={{ gap: SPACING.sm, marginTop: SPACING.xs }}>
-                <Text style={styles.detailTitle}>{selectedTicket.title}</Text>
+              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 520 }}>
+                <View style={{ gap: SPACING.sm, marginTop: SPACING.xs }}>
+                  <Text style={styles.detailTitle}>{selectedTicket.title}</Text>
 
-                <View style={{ flexDirection: 'row', gap: 6, marginVertical: 4 }}>
-                  <View style={[styles.badge, { backgroundColor: STATUS_META[selectedTicket.status]?.bg || '#EEF2FF' }]}>
-                    <Text style={[styles.badgeText, { color: STATUS_META[selectedTicket.status]?.color || COLORS.primary }]}>
-                      {STATUS_META[selectedTicket.status]?.label || selectedTicket.status}
-                    </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 4 }}>
+                    <View style={[styles.badge, { backgroundColor: STATUS_META[selectedTicket.status]?.bg || '#EEF2FF' }]}>
+                      <Text style={[styles.badgeText, { color: STATUS_META[selectedTicket.status]?.color || COLORS.primary }]}>
+                        {STATUS_META[selectedTicket.status]?.label || selectedTicket.status}
+                      </Text>
+                    </View>
+                    <View style={[styles.priorityTag, { backgroundColor: PRIORITY_META[selectedTicket.priority]?.bg || '#F1F5F9' }]}>
+                      <Text style={[styles.priorityTagText, { color: PRIORITY_META[selectedTicket.priority]?.color || COLORS.textSecondary }]}>
+                        {PRIORITY_META[selectedTicket.priority]?.label || selectedTicket.priority}
+                      </Text>
+                    </View>
+                    {selectedTicket.slaHours && (
+                      <View style={[styles.priorityTag, { backgroundColor: '#FEF3C7' }]}>
+                        <Ionicons name="time" size={10} color="#D97706" style={{ marginRight: 3 }} />
+                        <Text style={[styles.priorityTagText, { color: '#D97706' }]}>
+                          SLA: Within {selectedTicket.slaHours}h
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  <View style={[styles.priorityTag, { backgroundColor: PRIORITY_META[selectedTicket.priority]?.bg || '#F1F5F9' }]}>
-                    <Text style={[styles.priorityTagText, { color: PRIORITY_META[selectedTicket.priority]?.color || COLORS.textSecondary }]}>
-                      {PRIORITY_META[selectedTicket.priority]?.label || selectedTicket.priority}
-                    </Text>
+
+                  {/* Assigned Technician Banner with Call Button */}
+                  {selectedTicket.assignedTo && (
+                    <View style={styles.techBanner}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.techBannerSub}>Assigned Technician</Text>
+                        <Text style={styles.techBannerName}>{selectedTicket.assignedTo}</Text>
+                        <Text style={styles.techBannerPhone}>{selectedTicket.assignedPhone || '+91 98801 44332'}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.techCallBtn}
+                        onPress={() => Linking.openURL(`tel:${selectedTicket.assignedPhone || '+919880144332'}`)}
+                      >
+                        <Ionicons name="call" size={14} color="#FFFFFF" />
+                        <Text style={styles.techCallBtnText}>Call</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  <View style={styles.detailBox}>
+                    <Text style={styles.detailBoxLabel}>Issue Description</Text>
+                    <Text style={styles.detailBoxText}>{selectedTicket.description}</Text>
                   </View>
+
+                  <View style={styles.detailMetaGrid}>
+                    <View style={styles.detailMetaRow}>
+                      <Text style={styles.detailMetaKey}>Category:</Text>
+                      <Text style={styles.detailMetaVal}>{CATEGORY_META[selectedTicket.category]?.label || selectedTicket.category}</Text>
+                    </View>
+                    <View style={styles.detailMetaRow}>
+                      <Text style={styles.detailMetaKey}>Location:</Text>
+                      <Text style={styles.detailMetaVal}>{selectedTicket.location || `Tower ${user?.tower || 'A'} - Flat ${user?.flatNumber || '1204'}`}</Text>
+                    </View>
+                  </View>
+
+                  {/* Lifecycle Audit Trail / Timeline */}
+                  {selectedTicket.timeline && selectedTicket.timeline.length > 0 && (
+                    <View style={styles.timelineBox}>
+                      <Text style={styles.detailBoxLabel}>Lifecycle Activity Trail</Text>
+                      {selectedTicket.timeline.map((item, idx) => (
+                        <View key={item.id || idx} style={styles.timelineItem}>
+                          <View style={styles.timelineDot} />
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                              <Text style={styles.timelineAction}>{item.action} by {item.author}</Text>
+                              <Text style={styles.timelineTime}>{item.timestamp}</Text>
+                            </View>
+                            <Text style={styles.timelineNote}>{item.note}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Resident Rating Section if Resolved */}
+                  {(selectedTicket.status === 'RESOLVED' || selectedTicket.status === 'CLOSED') && (
+                    <View style={styles.ratingSection}>
+                      <Text style={styles.ratingSectionTitle}>Resident Service Feedback</Text>
+                      {selectedTicket.residentRating ? (
+                        <View style={{ gap: 4 }}>
+                          <View style={{ flexDirection: 'row', gap: 4 }}>
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Ionicons
+                                key={s}
+                                name={s <= (selectedTicket.residentRating || 0) ? 'star' : 'star-outline'}
+                                size={18}
+                                color="#F59E0B"
+                              />
+                            ))}
+                          </View>
+                          {selectedTicket.residentComment ? (
+                            <Text style={styles.ratingCommentText}>"{selectedTicket.residentComment}"</Text>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <View style={{ gap: 8 }}>
+                          <Text style={styles.ratingPromptText}>How was the technician's response & workmanship?</Text>
+                          <View style={{ flexDirection: 'row', gap: 8 }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <TouchableOpacity key={star} onPress={() => setRatingStars(star)}>
+                                <Ionicons
+                                  name={star <= ratingStars ? 'star' : 'star-outline'}
+                                  size={26}
+                                  color={star <= ratingStars ? '#F59E0B' : '#CBD5E1'}
+                                />
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          <TextInput
+                            style={styles.ratingInput}
+                            placeholder="Add optional feedback..."
+                            placeholderTextColor={COLORS.textMuted}
+                            value={ratingComment}
+                            onChangeText={setRatingComment}
+                          />
+                          <TouchableOpacity
+                            style={[styles.submitRatingBtn, submittingRating && { opacity: 0.6 }]}
+                            disabled={submittingRating}
+                            onPress={async () => {
+                              if (!selectedTicket) return;
+                              setSubmittingRating(true);
+                              try {
+                                await smartHelpdeskService.submitFeedback(selectedTicket.id, ratingStars, ratingComment);
+                                setSelectedTicket({
+                                  ...selectedTicket,
+                                  residentRating: ratingStars,
+                                  residentComment: ratingComment,
+                                });
+                                queryClient.invalidateQueries({ queryKey: ['helpdesk'] });
+                                Alert.alert('Thank You', 'Your rating has been recorded!');
+                              } finally {
+                                setSubmittingRating(false);
+                              }
+                            }}
+                          >
+                            <Text style={styles.submitRatingBtnText}>Submit Service Review</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.detailCloseBtn}
+                    onPress={() => setSelectedTicket(null)}
+                  >
+                    <Text style={styles.detailCloseBtnText}>Close</Text>
+                  </TouchableOpacity>
                 </View>
-
-                <View style={styles.detailBox}>
-                  <Text style={styles.detailBoxLabel}>Description</Text>
-                  <Text style={styles.detailBoxText}>{selectedTicket.description}</Text>
-                </View>
-
-                <View style={styles.detailMetaGrid}>
-                  <View style={styles.detailMetaRow}>
-                    <Text style={styles.detailMetaKey}>Category:</Text>
-                    <Text style={styles.detailMetaVal}>{CATEGORY_META[selectedTicket.category]?.label || selectedTicket.category}</Text>
-                  </View>
-                  <View style={styles.detailMetaRow}>
-                    <Text style={styles.detailMetaKey}>Assigned Tech:</Text>
-                    <Text style={styles.detailMetaVal}>{selectedTicket.assignedTo || 'Pending Assignment'}</Text>
-                  </View>
-                  <View style={styles.detailMetaRow}>
-                    <Text style={styles.detailMetaKey}>Unit Location:</Text>
-                    <Text style={styles.detailMetaVal}>Tower {user?.tower || 'A'} - Flat {user?.flatNumber || '1204'}</Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.detailCloseBtn}
-                  onPress={() => setSelectedTicket(null)}
-                >
-                  <Text style={styles.detailCloseBtnText}>Close</Text>
-                </TouchableOpacity>
-              </View>
+              </ScrollView>
             )}
           </View>
         </View>
@@ -706,4 +838,106 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   detailCloseBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: 'Outfit-Bold' },
+
+  slaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+  },
+  slaBadgeText: { fontSize: 10, color: '#D97706', fontWeight: '700', fontFamily: 'DMSans-Medium' },
+
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    gap: 3,
+  },
+  ratingBadgeText: { fontSize: 10, color: '#B45309', fontWeight: '800' },
+
+  techBanner: {
+    backgroundColor: '#F5F3FF',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  techBannerSub: { fontSize: 9, textTransform: 'uppercase', color: '#7C3AED', fontWeight: '800' },
+  techBannerName: { fontSize: 13, fontWeight: '800', color: '#1E1B4B', marginTop: 1 },
+  techBannerPhone: { fontSize: 11, color: '#6B7280', marginTop: 1 },
+  techCallBtn: {
+    backgroundColor: '#7C3AED',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+  },
+  techCallBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+
+  timelineBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 8,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  timelineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
+    marginTop: 5,
+  },
+  timelineAction: { fontSize: 11, fontWeight: '700', color: '#1E293B' },
+  timelineTime: { fontSize: 10, color: '#94A3B8' },
+  timelineNote: { fontSize: 11, color: '#64748B', marginTop: 1 },
+
+  ratingSection: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    gap: 8,
+  },
+  ratingSectionTitle: { fontSize: 12, fontWeight: '800', color: '#92400E' },
+  ratingPromptText: { fontSize: 11, color: '#B45309' },
+  ratingCommentText: { fontSize: 11, color: '#78350F', fontStyle: 'italic', marginTop: 2 },
+  ratingInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: '#1E293B',
+  },
+  submitRatingBtn: {
+    backgroundColor: '#D97706',
+    borderRadius: RADIUS.sm,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  submitRatingBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
 });

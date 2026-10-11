@@ -9,19 +9,19 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { SHADOWS } from '@/constants/config';
+import { SHADOWS, FONTS } from '@/constants/config';
 import { homeServicesService, HomeHelpWorkerDto } from '@/services/homeServicesService';
 
 const CATEGORIES = [
-  { code: 'ALL', name: 'All' },
-  { code: 'PLUMBING', name: 'Plumber' },
-  { code: 'ELECTRICAL', name: 'Electrician' },
-  { code: 'CLEANING', name: 'Cleaning' },
-  { code: 'APPLIANCE', name: 'Appliance' },
-  { code: 'CARPENTRY', name: 'Carpentry' },
-  { code: 'PAINTING', name: 'Painting' },
-  { code: 'MAID', name: 'Maid/Cook' },
-  { code: 'PEST_CONTROL', name: 'Pest Control' },
+  { code: 'ALL',          name: 'All',          emoji: '🏠' },
+  { code: 'PLUMBING',     name: 'Plumber',      emoji: '🔧' },
+  { code: 'ELECTRICAL',   name: 'Electrician',  emoji: '⚡' },
+  { code: 'CLEANING',     name: 'Cleaning',     emoji: '✨' },
+  { code: 'APPLIANCE',    name: 'Appliance',    emoji: '📺' },
+  { code: 'CARPENTRY',    name: 'Carpentry',    emoji: '🪚' },
+  { code: 'PAINTING',     name: 'Painting',     emoji: '🎨' },
+  { code: 'MAID',         name: 'Maid/Cook',    emoji: '👩‍🍳' },
+  { code: 'PEST_CONTROL', name: 'Pest Control', emoji: '🐛' },
 ];
 
 export default function FindHelpScreen() {
@@ -64,29 +64,38 @@ export default function FindHelpScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Find Home Help</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <View style={styles.searchBar}>
-        <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by name, skill, or service..."
-          placeholderTextColor="#94A3B8"
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={18} color="#94A3B8" />
+      <LinearGradient
+        colors={['#1E1B4B', '#312E81', '#4F46E5']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
-        )}
-      </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>🔍 Find Home Help</Text>
+            <Text style={styles.headerSub}>Verified professionals near you</Text>
+          </View>
+        </View>
+
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, skill, or service..."
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </LinearGradient>
 
       <FlatList
         horizontal
@@ -101,6 +110,7 @@ export default function FindHelpScreen() {
               style={[styles.catPill, active && styles.catPillActive]}
               onPress={() => setSelectedCategory(item.code)}
             >
+              <Text style={styles.catPillEmoji}>{item.emoji}</Text>
               <Text style={[styles.catPillText, active && styles.catPillTextActive]}>{item.name}</Text>
             </TouchableOpacity>
           );
@@ -109,7 +119,9 @@ export default function FindHelpScreen() {
 
       {isLoading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <View style={styles.loadingCircle}>
+            <ActivityIndicator size="large" color="#4F46E5" />
+          </View>
           <Text style={styles.loadingText}>Finding verified professionals...</Text>
         </View>
       ) : (
@@ -121,6 +133,7 @@ export default function FindHelpScreen() {
           refreshing={isLoading}
           renderItem={({ item }) => (
             <View style={styles.card}>
+              <View style={styles.cardAccent} />
               <View style={styles.cardTop}>
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
@@ -130,19 +143,26 @@ export default function FindHelpScreen() {
                     <Text style={styles.name}>{item.name}</Text>
                     {item.verified && (
                       <View style={styles.verifiedBadge}>
-                        <Ionicons name="checkmark-circle" size={14} color="#059669" />
-                        <Text style={styles.verifiedText}>Verified</Text>
+                        <Text style={styles.verifiedText}>✅ Verified</Text>
                       </View>
                     )}
                   </View>
                   <Text style={styles.speciality}>{item.speciality || item.category}</Text>
                   <View style={styles.metaRow}>
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={11} color="#F59E0B" />
+                    <View style={styles.ratingChip}>
+                      <Text style={styles.ratingEmoji}>⭐</Text>
                       <Text style={styles.ratingText}>{item.rating} ({item.reviewCount})</Text>
                     </View>
-                    {item.experience && <Text style={styles.expText}>• {item.experience}</Text>}
-                    {item.priceRange && <Text style={styles.priceText}>• {item.priceRange}</Text>}
+                    {item.experience && (
+                      <View style={styles.metaChip}>
+                        <Text style={styles.metaChipText}>🕐 {item.experience}</Text>
+                      </View>
+                    )}
+                    {item.priceRange && (
+                      <View style={[styles.metaChip, { borderColor: '#A7F3D0' }]}>
+                        <Text style={[styles.metaChipText, { color: '#059669' }]}>💰 {item.priceRange}</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>
@@ -152,8 +172,7 @@ export default function FindHelpScreen() {
                   style={styles.callBtn}
                   onPress={() => Linking.openURL(`tel:${item.phone}`)}
                 >
-                  <Ionicons name="call" size={14} color="#059669" />
-                  <Text style={styles.callBtnText}>Call</Text>
+                  <Text style={styles.callBtnText}>📞 Call</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.bookBtn}
@@ -165,8 +184,7 @@ export default function FindHelpScreen() {
                     end={{ x: 1, y: 0 }}
                     style={styles.bookGrad}
                   >
-                    <Ionicons name="calendar-outline" size={14} color="#FFFFFF" />
-                    <Text style={styles.bookBtnText}>Book Visit</Text>
+                    <Text style={styles.bookBtnText}>📅 Book Visit</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -174,6 +192,9 @@ export default function FindHelpScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
+              <View style={styles.emptyIconCircle}>
+                <Text style={styles.emptyEmoji}>🔍</Text>
+              </View>
               <Text style={styles.emptyTitle}>No service providers found</Text>
               <Text style={styles.emptySub}>Try selecting another category</Text>
             </View>
@@ -184,15 +205,21 @@ export default function FindHelpScreen() {
       <Modal visible={!!bookingWorker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <View style={styles.modalAccent} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Book {bookingWorker?.name}</Text>
-              <TouchableOpacity onPress={() => setBookingWorker(null)}>
-                <Ionicons name="close" size={20} color="#64748B" />
+              <Text style={styles.modalTitle}>📅 Book {bookingWorker?.name}</Text>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setBookingWorker(null)}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSub}>Category: {bookingWorker?.category}</Text>
+            <View style={styles.modalCategoryChip}>
+              <Text style={styles.modalCategoryText}>🏷️ {bookingWorker?.category}</Text>
+            </View>
 
-            <Text style={styles.inputLabel}>Preferred Time Slot</Text>
+            <Text style={styles.inputLabel}>🕐 Preferred Time Slot</Text>
             <View style={styles.slotRow}>
               {['Morning (9 AM - 12 PM)', 'Afternoon (1 PM - 4 PM)', 'Evening (5 PM - 8 PM)'].map(s => (
                 <TouchableOpacity
@@ -205,7 +232,7 @@ export default function FindHelpScreen() {
               ))}
             </View>
 
-            <Text style={styles.inputLabel}>Describe Issue / Requirement</Text>
+            <Text style={styles.inputLabel}>📝 Describe Issue / Requirement</Text>
             <TextInput
               style={styles.textArea}
               placeholder="e.g. Tap leaking in master bathroom, need washer fix..."
@@ -232,11 +259,18 @@ export default function FindHelpScreen() {
               }}
               disabled={bookMutation.isPending}
             >
-              {bookMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.confirmBtnText}>Confirm Visit</Text>
-              )}
+              <LinearGradient
+                colors={['#4F46E5', '#6366F1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.confirmGrad}
+              >
+                {bookMutation.isPending ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmBtnText}>✅ Confirm Visit</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -247,54 +281,258 @@ export default function FindHelpScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', marginHorizontal: 16, paddingHorizontal: 12, height: 42, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 10 },
-  searchInput: { flex: 1, fontSize: 13, color: '#0F172A' },
-  catList: { paddingHorizontal: 16, paddingBottom: 10 },
-  catPill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', marginRight: 8 },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  headerTitle: { fontSize: 20, fontFamily: FONTS.displayEB, color: '#FFFFFF' },
+  headerSub: { fontSize: 11, fontFamily: FONTS.regular, color: '#C7D2FE', marginTop: 2 },
+
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    height: 44,
+    borderRadius: 14,
+  },
+  searchIcon: { fontSize: 14, marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 13, fontFamily: FONTS.medium, color: '#FFFFFF' },
+
+  catList: { paddingHorizontal: 16, paddingVertical: 12 },
+  catPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    marginRight: 8,
+    ...SHADOWS.sm,
+  },
   catPillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-  catPillText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
-  catPillTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  catPillEmoji: { fontSize: 14, marginRight: 6 },
+  catPillText: { fontSize: 12, fontFamily: FONTS.semiBold, color: '#64748B' },
+  catPillTextActive: { color: '#FFFFFF', fontFamily: FONTS.bold },
+
   listContent: { padding: 16, paddingBottom: 40 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm },
+
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#4F46E5',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+  },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start' },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  avatarText: { fontSize: 18, fontWeight: '800', color: '#4F46E5' },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: '#C7D2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: { fontSize: 20, fontFamily: FONTS.displayEB, color: '#4F46E5' },
   nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  name: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  verifiedText: { fontSize: 10, color: '#059669', fontWeight: '700', marginLeft: 3 },
-  speciality: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  ratingBadge: { flexDirection: 'row', alignItems: 'center' },
-  ratingText: { fontSize: 11, fontWeight: '700', color: '#0F172A', marginLeft: 3 },
-  expText: { fontSize: 11, color: '#64748B', marginLeft: 4 },
-  priceText: { fontSize: 11, color: '#059669', fontWeight: '600', marginLeft: 4 },
-  cardActions: { flexDirection: 'row', marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-  callBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ECFDF5', paddingVertical: 9, borderRadius: 10, marginRight: 8 },
-  callBtnText: { color: '#059669', fontSize: 13, fontWeight: '700', marginLeft: 6 },
-  bookBtn: { flex: 2, borderRadius: 10, overflow: 'hidden' },
-  bookGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 9 },
-  bookBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginLeft: 6 },
+  name: { fontSize: 15, fontFamily: FONTS.displayBold, color: '#0F172A' },
+  verifiedBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  verifiedText: { fontSize: 10, fontFamily: FONTS.bold, color: '#059669' },
+  speciality: { fontSize: 12, fontFamily: FONTS.regular, color: '#64748B', marginTop: 3 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 8, gap: 6 },
+  ratingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  ratingEmoji: { fontSize: 11, marginRight: 4 },
+  ratingText: { fontSize: 11, fontFamily: FONTS.bold, color: '#92400E' },
+  metaChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  metaChipText: { fontSize: 10, fontFamily: FONTS.semiBold, color: '#64748B' },
+
+  cardActions: {
+    flexDirection: 'row',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 8,
+  },
+  callBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  callBtnText: { fontSize: 13, fontFamily: FONTS.bold, color: '#059669' },
+  bookBtn: { flex: 2, borderRadius: 12, overflow: 'hidden' },
+  bookGrad: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
+  bookBtnText: { color: '#FFFFFF', fontSize: 13, fontFamily: FONTS.bold },
+
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { fontSize: 13, color: '#64748B', marginTop: 8 },
-  emptyBox: { padding: 40, alignItems: 'center' },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  emptySub: { fontSize: 12, color: '#64748B', marginTop: 4 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
-  modalSub: { fontSize: 12, color: '#64748B', marginTop: 2, marginBottom: 14 },
-  inputLabel: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 },
-  slotRow: { marginBottom: 12 },
-  slotChip: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, marginBottom: 6 },
+  loadingCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: '#C7D2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  loadingText: { fontSize: 13, fontFamily: FONTS.medium, color: '#64748B' },
+
+  emptyBox: { paddingVertical: 60, alignItems: 'center' },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: '#C7D2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  emptyEmoji: { fontSize: 28 },
+  emptyTitle: { fontSize: 16, fontFamily: FONTS.displayBold, color: '#0F172A' },
+  emptySub: { fontSize: 12, fontFamily: FONTS.regular, color: '#64748B', marginTop: 4 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.65)', justifyContent: 'flex-end' },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    overflow: 'hidden',
+  },
+  modalAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: '#4F46E5',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  modalTitle: { fontSize: 17, fontFamily: FONTS.displayEB, color: '#0F172A' },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCategoryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    marginTop: 6,
+    marginBottom: 14,
+  },
+  modalCategoryText: { fontSize: 11, fontFamily: FONTS.bold, color: '#4F46E5' },
+
+  inputLabel: { fontSize: 12, fontFamily: FONTS.bold, color: '#334155', marginBottom: 8 },
+  slotRow: { marginBottom: 14 },
+  slotChip: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
   slotChipActive: { backgroundColor: '#EEF2FF', borderColor: '#4F46E5' },
-  slotChipText: { fontSize: 12, color: '#334155' },
-  slotChipTextActive: { color: '#4F46E5', fontWeight: '700' },
-  textArea: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 10, fontSize: 13, color: '#0F172A', textAlignVertical: 'top', height: 80, marginBottom: 16 },
-  confirmBtn: { backgroundColor: '#4F46E5', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  slotChipText: { fontSize: 12, fontFamily: FONTS.medium, color: '#334155' },
+  slotChipTextActive: { color: '#4F46E5', fontFamily: FONTS.bold },
+  textArea: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    borderRadius: 14,
+    padding: 12,
+    fontSize: 13,
+    fontFamily: FONTS.regular,
+    color: '#0F172A',
+    textAlignVertical: 'top',
+    height: 80,
+    marginBottom: 16,
+  },
+  confirmBtn: { borderRadius: 14, overflow: 'hidden' },
+  confirmGrad: { paddingVertical: 14, alignItems: 'center' },
+  confirmBtnText: { color: '#FFFFFF', fontSize: 14, fontFamily: FONTS.bold },
 });

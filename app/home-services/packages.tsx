@@ -6,9 +6,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
-import { SHADOWS } from '@/constants/config';
+import { SHADOWS, FONTS } from '@/constants/config';
 import { homeServicesService } from '@/services/homeServicesService';
+
+const PAYMENT_STATUS: Record<string, { emoji: string; color: string; bg: string; border: string }> = {
+  PAID:    { emoji: '✅', color: '#059669', bg: '#ECFDF5', border: '#A7F3D0' },
+  DUE:     { emoji: '⏳', color: '#D97706', bg: '#FEF3C7', border: '#FDE68A' },
+  OVERDUE: { emoji: '🔴', color: '#DC2626', bg: '#FEE2E2', border: '#FECACA' },
+};
 
 export default function PackagesScreen() {
   const router = useRouter();
@@ -22,76 +29,99 @@ export default function PackagesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Salary & Retainers</Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <LinearGradient
+        colors={['#1E1B4B', '#312E81', '#4F46E5']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>💰 Salary & Retainers</Text>
+            <Text style={styles.headerSub}>Monthly domestic staff payroll</Text>
+          </View>
+        </View>
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Total Monthly Domestic Payroll</Text>
-        <Text style={styles.summaryValue}>₹{totalMonthly.toLocaleString()}</Text>
-        <Text style={styles.summarySub}>{packages.length} active service packages</Text>
-      </View>
+        <View style={styles.payrollBanner}>
+          <View style={styles.payrollLeft}>
+            <Text style={styles.payrollLabel}>📊 Total Monthly Payroll</Text>
+            <Text style={styles.payrollAmount}>₹{totalMonthly.toLocaleString()}</Text>
+            <Text style={styles.payrollSub}>{packages.length} active service packages</Text>
+          </View>
+          <View style={styles.payrollRight}>
+            <View style={styles.payrollEmojiCircle}>
+              <Text style={styles.payrollEmoji}>💸</Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
 
       <FlatList
         data={packages}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.staffName}>{item.staffName}</Text>
-                <Text style={styles.staffRole}>{item.role} • Unit {item.flatNumber}</Text>
-              </View>
-              <View style={styles.salaryCol}>
-                <Text style={styles.salaryAmount}>₹{item.monthlySalary.toLocaleString()}</Text>
-                <Text style={styles.salaryFreq}>/{item.packageType.toLowerCase()}</Text>
-              </View>
-            </View>
+        renderItem={({ item }) => {
+          const pCfg = PAYMENT_STATUS[item.paymentStatus] || PAYMENT_STATUS.DUE;
 
-            <View style={styles.servicesRow}>
-              {item.services.map((svc, i) => (
-                <View key={i} style={styles.serviceChip}>
-                  <Ionicons name="checkmark" size={10} color="#4F46E5" style={{ marginRight: 3 }} />
-                  <Text style={styles.serviceChipText}>{svc}</Text>
+          return (
+            <View style={styles.card}>
+              <View style={styles.cardAccent} />
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.staffName}>👤 {item.staffName}</Text>
+                  <Text style={styles.staffRole}>{item.role} • 🏠 Unit {item.flatNumber}</Text>
                 </View>
-              ))}
-            </View>
-
-            <View style={styles.dueDateRow}>
-              <Text style={styles.dueText}>Next Due: {item.nextDueDate}</Text>
-              <View style={[
-                styles.statusBadge,
-                item.paymentStatus === 'PAID' ? styles.paidBadge : styles.dueBadge
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  item.paymentStatus === 'PAID' ? styles.paidText : styles.dueBadgeText
-                ]}>
-                  {item.paymentStatus}
-                </Text>
+                <View style={styles.salaryCol}>
+                  <Text style={styles.salaryAmount}>₹{item.monthlySalary.toLocaleString()}</Text>
+                  <Text style={styles.salaryFreq}>/{item.packageType.toLowerCase()}</Text>
+                </View>
               </View>
-            </View>
 
-            <TouchableOpacity
-              style={styles.payBtn}
-              onPress={() => Alert.alert('Confirm Salary Payment', `Record payment of ₹${item.monthlySalary.toLocaleString()} to ${item.staffName}?`, [
-                { text: 'Cancel' },
-                { text: 'Mark Paid', onPress: () => Alert.alert('Success', 'Payment recorded!') }
-              ])}
-            >
-              <Ionicons name="wallet-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.payBtnText}>Record Payment</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              <View style={styles.servicesRow}>
+                {item.services.map((svc, i) => (
+                  <View key={i} style={styles.serviceChip}>
+                    <Text style={styles.serviceCheck}>✓</Text>
+                    <Text style={styles.serviceChipText}>{svc}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.dueDateRow}>
+                <Text style={styles.dueText}>📅 Next Due: {item.nextDueDate}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: pCfg.bg, borderColor: pCfg.border }]}>
+                  <Text style={styles.statusEmoji}>{pCfg.emoji}</Text>
+                  <Text style={[styles.statusText, { color: pCfg.color }]}>{item.paymentStatus}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.payBtn}
+                onPress={() => Alert.alert('Confirm Salary Payment', `Record payment of ₹${item.monthlySalary.toLocaleString()} to ${item.staffName}?`, [
+                  { text: 'Cancel' },
+                  { text: 'Mark Paid', onPress: () => Alert.alert('Success', 'Payment recorded!') }
+                ])}
+              >
+                <LinearGradient
+                  colors={['#4F46E5', '#6366F1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.payBtnGrad}
+                >
+                  <Text style={styles.payBtnText}>💳 Record Payment</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
+            <View style={styles.emptyIconCircle}>
+              <Text style={styles.emptyEmoji}>💰</Text>
+            </View>
             <Text style={styles.emptyTitle}>No active salary retainers</Text>
             <Text style={styles.emptySub}>Set up monthly subscriptions for your domestic help</Text>
           </View>
@@ -103,35 +133,135 @@ export default function PackagesScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  summaryCard: { marginHorizontal: 16, backgroundColor: '#1E1B4B', borderRadius: 16, padding: 18, marginBottom: 12 },
-  summaryLabel: { color: '#C7D2FE', fontSize: 12, fontWeight: '600' },
-  summaryValue: { color: '#FFFFFF', fontSize: 26, fontWeight: '800', marginVertical: 4 },
-  summarySub: { color: '#A5B4FC', fontSize: 11 },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  headerTitle: { fontSize: 20, fontFamily: FONTS.displayEB, color: '#FFFFFF' },
+  headerSub: { fontSize: 11, fontFamily: FONTS.regular, color: '#C7D2FE', marginTop: 2 },
+
+  payrollBanner: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'center',
+  },
+  payrollLeft: { flex: 1 },
+  payrollLabel: { fontSize: 11, fontFamily: FONTS.bold, color: '#C7D2FE' },
+  payrollAmount: { fontSize: 28, fontFamily: FONTS.displayEB, color: '#FFFFFF', marginVertical: 4 },
+  payrollSub: { fontSize: 11, fontFamily: FONTS.regular, color: '#A5B4FC' },
+  payrollRight: { marginLeft: 12 },
+  payrollEmojiCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  payrollEmoji: { fontSize: 24 },
+
   listContent: { padding: 16, paddingBottom: 40 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm },
+
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#4F46E5',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+  },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  staffName: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  staffRole: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  staffName: { fontSize: 15, fontFamily: FONTS.displayBold, color: '#0F172A' },
+  staffRole: { fontSize: 12, fontFamily: FONTS.regular, color: '#64748B', marginTop: 3 },
   salaryCol: { alignItems: 'flex-end' },
-  salaryAmount: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  salaryFreq: { fontSize: 10, color: '#64748B' },
-  servicesRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
-  serviceChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 6, marginBottom: 4 },
-  serviceChipText: { fontSize: 11, color: '#4F46E5', fontWeight: '600' },
-  dueDateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-  dueText: { fontSize: 11, color: '#64748B' },
-  statusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  statusText: { fontSize: 10, fontWeight: '700' },
-  paidBadge: { backgroundColor: '#DCFCE7' },
-  paidText: { color: '#059669', fontSize: 10, fontWeight: '700' },
-  dueBadge: { backgroundColor: '#FEF3C7' },
-  dueBadgeText: { color: '#D97706', fontSize: 10, fontWeight: '700' },
-  payBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4F46E5', marginTop: 12, paddingVertical: 10, borderRadius: 10 },
-  payBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginLeft: 6 },
-  emptyBox: { padding: 40, alignItems: 'center' },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  emptySub: { fontSize: 12, color: '#64748B', marginTop: 4 },
+  salaryAmount: { fontSize: 18, fontFamily: FONTS.displayEB, color: '#0F172A' },
+  salaryFreq: { fontSize: 10, fontFamily: FONTS.regular, color: '#64748B' },
+
+  servicesRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, gap: 6 },
+  serviceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  serviceCheck: { fontSize: 11, color: '#4F46E5', fontFamily: FONTS.bold, marginRight: 4 },
+  serviceChipText: { fontSize: 11, fontFamily: FONTS.semiBold, color: '#4F46E5' },
+
+  dueDateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  dueText: { fontSize: 11, fontFamily: FONTS.medium, color: '#64748B' },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  statusEmoji: { fontSize: 11, marginRight: 4 },
+  statusText: { fontSize: 10, fontFamily: FONTS.bold },
+
+  payBtn: { marginTop: 12, borderRadius: 12, overflow: 'hidden' },
+  payBtnGrad: { alignItems: 'center', justifyContent: 'center', paddingVertical: 11 },
+  payBtnText: { color: '#FFFFFF', fontSize: 13, fontFamily: FONTS.bold },
+
+  emptyBox: { paddingVertical: 60, alignItems: 'center' },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: '#C7D2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  emptyEmoji: { fontSize: 28 },
+  emptyTitle: { fontSize: 16, fontFamily: FONTS.displayBold, color: '#0F172A' },
+  emptySub: { fontSize: 12, fontFamily: FONTS.regular, color: '#64748B', marginTop: 4, textAlign: 'center' },
 });

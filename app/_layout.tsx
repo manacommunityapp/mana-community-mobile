@@ -107,8 +107,8 @@ function AuthGuard() {
 
 function RootLayout() {
   useEffect(() => {
-    ScreenCapture.preventScreenCaptureAsync();
-    return () => { ScreenCapture.allowScreenCaptureAsync(); };
+    ScreenCapture.preventScreenCaptureAsync().catch(() => {});
+    return () => { ScreenCapture.allowScreenCaptureAsync().catch(() => {}); };
   }, []);
 
   const [fontsLoaded] = Font.useFonts({

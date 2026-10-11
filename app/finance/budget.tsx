@@ -8,14 +8,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SHADOWS, FONTS } from '@/constants/config';
-import { GROWW_THEME } from '@/constants/theme';;
+import { THEME } from '@/constants/theme';
 import { budgetService, BudgetAllocation } from '@/services/budgetService';
 
 const CATEGORIES = [
-  { value: 'CapEx_Asset', label: 'CapEx (Capital Assets)', icon: 'cube-outline' as const, color: GROWW_THEME.indigo, bg: GROWW_THEME.indigoLight },
+  { value: 'CapEx_Asset', label: 'CapEx (Capital Assets)', icon: 'cube-outline' as const, color: THEME.indigo, bg: THEME.indigoLight },
   { value: 'OpEx_Maintenance', label: 'OpEx (Maintenance & AMCs)', icon: 'construct-outline' as const, color: '#EA580C', bg: '#FFF7ED' },
   { value: 'SECURITY', label: 'Security Services', icon: 'shield-checkmark-outline' as const, color: '#0284C7', bg: '#E0F2FE' },
-  { value: 'CLEANING', label: 'Housekeeping & Sanitation', icon: 'sparkles-outline' as const, color: GROWW_THEME.brandDark, bg: GROWW_THEME.brandLight },
+  { value: 'CLEANING', label: 'Housekeeping & Sanitation', icon: 'sparkles-outline' as const, color: THEME.brandDark, bg: THEME.brandLight },
   { value: 'FESTIVAL', label: 'Festival Celebrations', icon: 'color-wand-outline' as const, color: '#DB2777', bg: '#FCE7F3' },
   { value: 'SPORTS', label: 'Sports & Amenities', icon: 'football-outline' as const, color: '#7C3AED', bg: '#F5F3FF' },
   { value: 'OpEx_Consumable', label: 'Supplies & Consumables', icon: 'cart-outline' as const, color: '#64748B', bg: '#F1F5F9' },
@@ -81,7 +81,7 @@ export default function SocietyBudgetScreen() {
           }}
           style={s.backBtn}
         >
-          <Ionicons name="arrow-back" size={20} color={GROWW_THEME.textPrimary} />
+          <Ionicons name="arrow-back" size={20} color={THEME.textPrimary} />
         </TouchableOpacity>
         <View style={s.topNavTitleBox}>
           <Text style={s.topNavTitle}>Society Budgeting</Text>
@@ -91,13 +91,13 @@ export default function SocietyBudgetScreen() {
           style={s.topNavIconBtn}
           onPress={() => setModalVisible(true)}
         >
-          <Ionicons name="add" size={22} color={GROWW_THEME.brandDark} />
+          <Ionicons name="add" size={22} color={THEME.brandDark} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         contentContainerStyle={s.scrollContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={[GROWW_THEME.brand]} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={[THEME.brand]} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Summary Card */}
@@ -112,7 +112,7 @@ export default function SocietyBudgetScreen() {
             </View>
           </View>
 
-          {/* Groww Progress Bar */}
+          {/* Progress Bar */}
           <View style={s.progressBarBg}>
             <View style={[s.progressBarFill, { width: progressFillWidth }]} />
           </View>
@@ -127,7 +127,7 @@ export default function SocietyBudgetScreen() {
             <View style={s.metricDivider} />
             <View style={s.metricItem}>
               <Text style={s.metricLabel}>Remaining Buffer</Text>
-              <Text style={[s.metricValue, { color: GROWW_THEME.brandDark }]}>
+              <Text style={[s.metricValue, { color: THEME.brandDark }]}>
                 ₹{Math.max(totalAllocated - totalSpent, 0).toLocaleString('en-IN')}
               </Text>
             </View>
@@ -168,7 +168,7 @@ export default function SocietyBudgetScreen() {
                 <View style={s.catBarBg}>
                   <View style={[
                     s.catBarFill,
-                    { width: catFillWidth, backgroundColor: isOver ? GROWW_THEME.loss : GROWW_THEME.brand }
+                    { width: catFillWidth, backgroundColor: isOver ? THEME.loss : THEME.brand }
                   ]} />
                 </View>
 
@@ -195,7 +195,7 @@ export default function SocietyBudgetScreen() {
             <View style={s.modalHeaderRow}>
               <Text style={s.modalTitle}>Allocate Society Budget</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={22} color={GROWW_THEME.textSecondary} />
+                <Ionicons name="close" size={22} color={THEME.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -219,7 +219,7 @@ export default function SocietyBudgetScreen() {
             <TextInput
               style={s.textInput}
               placeholder="e.g. 500000"
-              placeholderTextColor={GROWW_THEME.textMuted}
+              placeholderTextColor={THEME.textMuted}
               keyboardType="numeric"
               value={amount}
               onChangeText={setAmount}
@@ -229,7 +229,7 @@ export default function SocietyBudgetScreen() {
             <TextInput
               style={s.textInput}
               placeholder="e.g. Annual lift and DG maintenance AMC"
-              placeholderTextColor={GROWW_THEME.textMuted}
+              placeholderTextColor={THEME.textMuted}
               value={notes}
               onChangeText={setNotes}
             />
@@ -265,7 +265,7 @@ const s = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: GROWW_THEME.border,
+    borderBottomColor: THEME.border,
   },
   backBtn: {
     width: 36,
@@ -273,7 +273,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
   },
   topNavTitleBox: {
     flex: 1,
@@ -282,12 +282,12 @@ const s = StyleSheet.create({
   topNavTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
   },
   topNavSubtitle: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
   },
   topNavIconBtn: {
@@ -296,7 +296,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
   },
   scrollContent: {
     padding: 16,
@@ -306,7 +306,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 16,
     ...SHADOWS.card,
   },
@@ -317,19 +317,19 @@ const s = StyleSheet.create({
   },
   summarySub: {
     fontSize: 12,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.medium,
   },
   summaryAmount: {
     fontSize: 24,
     fontWeight: '800',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     marginTop: 4,
     fontFamily: FONTS.displayBold,
     fontVariant: ['tabular-nums'],
   },
   spendRatioBadge: {
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -337,24 +337,24 @@ const s = StyleSheet.create({
   spendRatioText: {
     fontSize: 11,
     fontWeight: '700',
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
     fontFamily: FONTS.semiBold,
   },
   progressBarBg: {
     height: 6,
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
     borderRadius: 3,
     marginTop: 14,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: GROWW_THEME.brand,
+    backgroundColor: THEME.brand,
     borderRadius: 3,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: GROWW_THEME.border,
+    backgroundColor: THEME.border,
     marginVertical: 14,
   },
   summaryMetricsRow: {
@@ -367,13 +367,13 @@ const s = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
   },
   metricValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     marginTop: 2,
     fontFamily: FONTS.semiBold,
     fontVariant: ['tabular-nums'],
@@ -381,7 +381,7 @@ const s = StyleSheet.create({
   metricDivider: {
     width: 1,
     height: 24,
-    backgroundColor: GROWW_THEME.border,
+    backgroundColor: THEME.border,
     marginHorizontal: 12,
   },
   sectionHeader: {
@@ -393,12 +393,12 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   sectionCount: {
     fontSize: 12,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
   },
   cardsList: {
@@ -408,7 +408,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 14,
   },
   catHeader: {
@@ -425,12 +425,12 @@ const s = StyleSheet.create({
   catTitle: {
     fontSize: 13.5,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   catNotes: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     marginTop: 1,
   },
   statusPill: {
@@ -444,20 +444,20 @@ const s = StyleSheet.create({
     fontFamily: FONTS.semiBold,
   },
   statusOk: {
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
   },
   textOk: {
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
   },
   statusOver: {
-    backgroundColor: GROWW_THEME.lossLight,
+    backgroundColor: THEME.lossLight,
   },
   textOver: {
-    color: GROWW_THEME.lossDark,
+    color: THEME.lossDark,
   },
   catBarBg: {
     height: 4,
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
     borderRadius: 2,
     marginVertical: 10,
     overflow: 'hidden',
@@ -473,14 +473,14 @@ const s = StyleSheet.create({
   },
   catFigSpent: {
     fontSize: 11.5,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
     fontVariant: ['tabular-nums'],
   },
   catFigAlloc: {
     fontSize: 11.5,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
     fontVariant: ['tabular-nums'],
   },
@@ -501,7 +501,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: GROWW_THEME.borderMedium,
+    backgroundColor: THEME.borderMedium,
     alignSelf: 'center',
     marginBottom: 4,
   },
@@ -513,13 +513,13 @@ const s = StyleSheet.create({
   modalTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
     marginTop: 4,
   },
@@ -529,31 +529,31 @@ const s = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#FAFBFC',
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   chipChoiceActive: {
-    backgroundColor: GROWW_THEME.brandLight,
-    borderColor: GROWW_THEME.brandBorder,
+    backgroundColor: THEME.brandLight,
+    borderColor: THEME.brandBorder,
   },
   chipChoiceText: {
     fontSize: 11.5,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
   },
   chipChoiceTextActive: {
     fontWeight: '700',
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     borderRadius: 10,
     padding: 12,
     fontSize: 14,
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     backgroundColor: '#FAFBFC',
   },
   saveBtn: {
-    backgroundColor: GROWW_THEME.brand,
+    backgroundColor: THEME.brand,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
-import { GROWW_THEME } from '@/constants/theme';
+import { THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 
@@ -416,7 +416,7 @@ export function FlatGateActivityCard() {
               }}
               activeOpacity={0.8}
             >
-              <View style={[s.submitBtnGrad, { backgroundColor: GROWW_THEME.brandDark }]}>
+              <View style={[s.submitBtnGrad, { backgroundColor: THEME.brandDark }]}>
                 {preApproveMutation.isPending ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (

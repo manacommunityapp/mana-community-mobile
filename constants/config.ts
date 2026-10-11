@@ -24,14 +24,14 @@ export const COLORS = {
   accent:       "#4F46E5",  // primary indigo
   accentDark:   "#3730A3",  // indigo-800
   accentLight:  "#EEF2FF",  // indigo-50
-  background:   "#F9FAFC",  // Groww light mode base background
-  backgroundAlt:"#F1F4F7",  // Groww secondary background
+  background:   "#F9FAFC",  // light mode base background
+  backgroundAlt:"#F1F4F7",  // secondary background
   surface:      "#FFFFFF",  // white card
   surfaceAlt:   "#F8FAFC",  // soft slate surface
   surfaceCard:  "#FFFFFF",  // card surface
   border:       "rgba(99, 102, 241, 0.14)",  // refined border
   borderLight:  "rgba(99, 102, 241, 0.08)",  // subtle border
-  borderSlate:  "#EBEFF2",  // Groww hairline border
+  borderSlate:  "#EBEFF2",  // hairline border
   text:         "#0F172A",  // slate-900 (ultra-crisp)
   textSecondary:"#475569",  // slate-600
   textMuted:    "#64748B",  // slate-500
@@ -151,13 +151,13 @@ export const RADIUS = {
 } as const;
 
 // ── Shadows (Multi-Layer Ambient & Directional Depth) ──────────
-// ── Groww Modern Fintech Design System ────────────────────────
-export const GROWW_THEME = {
-  brand:        "#00D09C",  // Groww Emerald Primary
+// ── Mana Community Design System ────────────────────────
+export const THEME = {
+  brand:        "#00D09C",  // Emerald Primary
   brandDark:    "#008767",  // Deeper emerald for text
   brandLight:   "#E6FAF5",  // 10% alpha emerald tint
   brandBorder:  "#A7F3D0",  // Emerald border
-  loss:         "#EB5B5B",  // Groww Coral Red
+  loss:         "#EB5B5B",  // Coral Red
   lossDark:     "#DC2626",
   lossLight:    "#FEEFEF",  // 10% alpha red tint
   lossBorder:   "#FECACA",
@@ -166,10 +166,10 @@ export const GROWW_THEME = {
   surfaceMuted: "#F1F4F7",  // Background chip
   border:       "#EBEFF2",  // 1px hairline border
   borderMedium: "#DFE4E8",
-  textPrimary:  "#44475B",  // Soft Charcoal (Groww primary text)
-  textSecondary:"#7C7E8C",  // Groww secondary text
+  textPrimary:  "#44475B",  // Soft Charcoal primary text
+  textSecondary:"#7C7E8C",  // Secondary text
   textMuted:    "#9CA3AF",
-  indigo:       "#5367FF",  // Groww electric accent
+  indigo:       "#5367FF",  // Electric accent
   indigoLight:  "#EEF2FF",
   amber:        "#FFB800",
   amberLight:   "#FFFBEB",

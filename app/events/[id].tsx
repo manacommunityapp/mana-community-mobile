@@ -27,9 +27,11 @@ const TYPE_THEME: Record<string, { color: string; bg: string; gradient: [string,
 };
 
 const HUB_ITEMS = [
+  { title: 'Pooja & Seva',sub: 'Rituals & sankalp', emoji: '🪔', color: '#DC2626', bg: '#FEF2F2', routeKey: 'pooja' },
   { title: 'Programs',    sub: 'Schedule & acts', emoji: '📋', color: '#4F46E5', bg: '#EEF2FF', routeKey: 'programs' },
   { title: 'Gate Pass',   sub: 'QR Entry',        emoji: '🎫', color: '#059669', bg: '#ECFDF5', routeKey: 'gatepass' },
   { title: 'Donations',   sub: 'Contribute',      emoji: '❤️', color: '#E11D48', bg: '#FFF1F2', routeKey: 'donations' },
+  { title: 'Live Auction',sub: 'Prasadam & bids', emoji: '🔨', color: '#0891B2', bg: '#ECFEFF', routeKey: 'auction' },
   { title: 'Volunteers',  sub: 'Join team',       emoji: '🤝', color: '#D97706', bg: '#FEF3C7', routeKey: 'volunteers' },
   { title: 'Gallery',     sub: 'Photos & video',  emoji: '📸', color: '#2563EB', bg: '#EFF6FF', routeKey: 'gallery' },
   { title: 'Food & Meals',sub: 'Diet & tokens',   emoji: '🍽️', color: '#EA580C', bg: '#FFF7ED', routeKey: 'meals' },
@@ -308,7 +310,13 @@ export default function EventDetailScreen() {
                 <TouchableOpacity
                   key={idx}
                   style={s.gridCard}
-                  onPress={() => router.push(`/events/${item.routeKey}?id=${id}` as any)}
+                  onPress={() => {
+                    if (item.routeKey === 'auction') {
+                      router.push('/auction' as any);
+                    } else {
+                      router.push(`/events/${item.routeKey}?id=${id}` as any);
+                    }
+                  }}
                   activeOpacity={0.7}
                 >
                   <View style={[s.gridIconWrap, { backgroundColor: item.bg }]}>

@@ -1,4 +1,4 @@
-import { GROWW_THEME } from '@/constants/theme';
+import { THEME } from '@/constants/theme';
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +27,7 @@ function TabIcon({
         <Ionicons
           name={focused ? iconFocused : icon}
           size={22}
-          color={focused ? GROWW_THEME.brandDark : GROWW_THEME.textSecondary}
+          color={focused ? THEME.brandDark : THEME.textSecondary}
         />
         {badgeCount != null && badgeCount > 0 && (
           <View style={styles.badge}>
@@ -60,7 +60,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: GROWW_THEME.brandDark,
+        tabBarActiveTintColor: THEME.brandDark,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarHideOnKeyboard: true,
       }}
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: Platform.OS === 'ios' ? 22 : 6,
     borderTopWidth: 1,
-    borderTopColor: GROWW_THEME.border,
+    borderTopColor: THEME.border,
     backgroundColor: COLORS.surface,
     ...SHADOWS.lg,
     elevation: 20,
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconBgActive: {
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
   },
   iconLabel: {
     fontSize: 10,

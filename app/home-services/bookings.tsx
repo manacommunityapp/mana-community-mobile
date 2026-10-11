@@ -6,9 +6,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { SHADOWS } from '@/constants/config';
+import { SHADOWS, FONTS } from '@/constants/config';
 import { homeServicesService, HomeServiceBookingDto } from '@/services/homeServicesService';
+import { RateServiceModal } from '@/components/home-services/RateServiceModal';
+
+const STATUS_CONFIG: Record<string, { emoji: string; color: string; bg: string; border: string; label: string }> = {
+  CONFIRMED: { emoji: '📅', color: '#D97706', bg: '#FEF3C7', border: '#FDE68A', label: 'Confirmed' },
+  IN_PROGRESS: { emoji: '🔄', color: '#0284C7', bg: '#E0F2FE', border: '#7DD3FC', label: 'In Progress' },
+  COMPLETED: { emoji: '✅', color: '#059669', bg: '#DCFCE7', border: '#A7F3D0', label: 'Completed' },
+  CANCELLED: { emoji: '❌', color: '#DC2626', bg: '#FEE2E2', border: '#FECACA', label: 'Cancelled' },
+};
 
 export default function BookingsScreen() {
   const router = useRouter();
@@ -16,6 +25,7 @@ export default function BookingsScreen() {
 
   const [otpModalBooking, setOtpModalBooking] = useState<HomeServiceBookingDto | null>(null);
   const [enteredOtp, setEnteredOtp] = useState('');
+  const [ratingBooking, setRatingBooking] = useState<HomeServiceBookingDto | null>(null);
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ['my-home-service-bookings'],
@@ -51,15 +61,45 @@ export default function BookingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Service Bookings</Text>
-        <TouchableOpacity style={styles.newBookingBtn} onPress={() => router.push('/home-services/find-help')}>
-          <Ionicons name="add" size={18} color="#4F46E5" />
-        </TouchableOpacity>
-      </View>
+      <LinearGradient
+        colors={['#1E1B4B', '#312E81', '#4F46E5']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>📋 Service Bookings</Text>
+            <Text style={styles.headerSub}>Track visits, OTP & payments</Text>
+          </View>
+          <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/home-services/find-help')}>
+            <Text style={styles.addBtnText}>➕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.statsStrip}>
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>📅</Text>
+            <Text style={styles.statVal}>{bookings.filter(b => b.status === 'CONFIRMED').length}</Text>
+            <Text style={styles.statLbl}>Upcoming</Text>
+          </View>
+          <View style={styles.statDiv} />
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>🔄</Text>
+            <Text style={styles.statVal}>{bookings.filter(b => b.status === 'IN_PROGRESS').length}</Text>
+            <Text style={styles.statLbl}>Active</Text>
+          </View>
+          <View style={styles.statDiv} />
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>✅</Text>
+            <Text style={styles.statVal}>{bookings.filter(b => b.status === 'COMPLETED').length}</Text>
+            <Text style={styles.statLbl}>Done</Text>
+          </View>
+        </View>
+      </LinearGradient>
 
       <FlatList
         data={bookings}
@@ -69,34 +109,29 @@ export default function BookingsScreen() {
         renderItem={({ item }) => {
           const isCompleted = item.status === 'COMPLETED';
           const isCancelled = item.status === 'CANCELLED';
+          const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.CONFIRMED;
 
           return (
             <View style={styles.card}>
+              <View style={[styles.cardAccent, { backgroundColor: cfg.color }]} />
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.providerName}>{item.providerName}</Text>
-                  <Text style={styles.category}>{item.category} • #{item.id}</Text>
+                  <Text style={styles.category}>{item.category} • #{item.id.slice(0, 6)}</Text>
                 </View>
-                <View style={[
-                  styles.statusBadge,
-                  isCompleted ? styles.completedBadge : isCancelled ? styles.cancelledBadge : styles.pendingBadge
-                ]}>
-                  <Text style={[
-                    styles.statusText,
-                    isCompleted ? styles.completedText : isCancelled ? styles.cancelledText : styles.pendingText
-                  ]}>
-                    {item.status}
-                  </Text>
+                <View style={[styles.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
+                  <Text style={styles.statusEmoji}>{cfg.emoji}</Text>
+                  <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
                 </View>
               </View>
 
               <View style={styles.detailsBox}>
                 <View style={styles.detailRow}>
-                  <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                  <Text style={styles.detailEmoji}>📅</Text>
                   <Text style={styles.detailText}>{item.date} ({item.timeSlot})</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Ionicons name="document-text-outline" size={14} color="#64748B" />
+                  <Text style={styles.detailEmoji}>📝</Text>
                   <Text style={styles.detailText}>{item.issue}</Text>
                 </View>
               </View>
@@ -104,14 +139,14 @@ export default function BookingsScreen() {
               {item.completionOtp && !isCompleted && !isCancelled && (
                 <View style={styles.otpRow}>
                   <View style={styles.otpBox}>
-                    <Text style={styles.otpLabel}>Technician Share OTP:</Text>
+                    <Text style={styles.otpLabel}>🔑 OTP:</Text>
                     <Text style={styles.otpVal}>{item.completionOtp}</Text>
                   </View>
                   <TouchableOpacity
                     style={styles.verifyOtpBtn}
                     onPress={() => { setOtpModalBooking(item); setEnteredOtp(item.completionOtp || ''); }}
                   >
-                    <Text style={styles.verifyOtpBtnText}>Verify OTP</Text>
+                    <Text style={styles.verifyOtpBtnText}>Verify</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -127,7 +162,7 @@ export default function BookingsScreen() {
                       ]);
                     }}
                   >
-                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                    <Text style={styles.cancelBtnText}>❌ Cancel</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -137,8 +172,25 @@ export default function BookingsScreen() {
                   style={styles.payBtn}
                   onPress={() => payMutation.mutate(item.id)}
                 >
-                  <Ionicons name="card" size={14} color="#FFFFFF" />
-                  <Text style={styles.payBtnText}>Pay Online / Mark Paid</Text>
+                  <LinearGradient
+                    colors={['#059669', '#10B981']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.payBtnGrad}
+                  >
+                    <Text style={styles.payBtnText}>💳 Pay Online / Mark Paid</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+
+              {isCompleted && (
+                <TouchableOpacity
+                  style={styles.rateBtn}
+                  onPress={() => setRatingBooking(item)}
+                >
+                  <Text style={styles.rateBtnText}>
+                    {item.rating ? `⭐ Rated ${item.rating}/5` : '⭐ Rate Service Experience'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -146,8 +198,24 @@ export default function BookingsScreen() {
         }}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
+            <View style={styles.emptyIconCircle}>
+              <Text style={styles.emptyEmoji}>📋</Text>
+            </View>
             <Text style={styles.emptyTitle}>No service bookings yet</Text>
             <Text style={styles.emptySub}>Book electricians, plumbers, or cleaners anytime</Text>
+            <TouchableOpacity
+              style={styles.emptyCta}
+              onPress={() => router.push('/home-services/find-help')}
+            >
+              <LinearGradient
+                colors={['#4F46E5', '#6366F1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.emptyCtaGrad}
+              >
+                <Text style={styles.emptyCtaText}>🔍 Find Help Now</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -155,7 +223,8 @@ export default function BookingsScreen() {
       <Modal visible={!!otpModalBooking} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Complete Service Visit</Text>
+            <View style={styles.modalAccent} />
+            <Text style={styles.modalTitle}>🔐 Complete Service Visit</Text>
             <Text style={styles.modalSub}>Enter the 4-digit code provided to the technician:</Text>
             <TextInput
               style={styles.otpInput}
@@ -178,60 +247,254 @@ export default function BookingsScreen() {
                   }
                 }}
               >
-                <Text style={styles.modalSubmitText}>Verify & Finish</Text>
+                <LinearGradient
+                  colors={['#4F46E5', '#6366F1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.modalSubmitGrad}
+                >
+                  <Text style={styles.modalSubmitText}>✅ Verify & Finish</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      {ratingBooking && (
+        <RateServiceModal
+          visible={!!ratingBooking}
+          bookingId={ratingBooking.id}
+          providerName={ratingBooking.providerName}
+          category={ratingBooking.category}
+          onClose={() => setRatingBooking(null)}
+          onSuccess={() => refetch()}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  newBookingBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center' },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  headerTitle: { fontSize: 20, fontFamily: FONTS.displayEB, color: '#FFFFFF' },
+  headerSub: { fontSize: 11, fontFamily: FONTS.regular, color: '#C7D2FE', marginTop: 2 },
+  addBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addBtnText: { fontSize: 16 },
+
+  statsStrip: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  statItem: { flex: 1, alignItems: 'center' },
+  statEmoji: { fontSize: 16, marginBottom: 2 },
+  statVal: { fontSize: 18, fontFamily: FONTS.displayEB, color: '#FFFFFF' },
+  statLbl: { fontSize: 10, fontFamily: FONTS.medium, color: '#C7D2FE' },
+  statDiv: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.15)' },
+
   listContent: { padding: 16, paddingBottom: 40 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm },
+
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+  },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  providerName: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  category: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  pendingBadge: { backgroundColor: '#FEF3C7' },
-  pendingText: { color: '#D97706', fontSize: 11, fontWeight: '700' },
-  completedBadge: { backgroundColor: '#DCFCE7' },
-  completedText: { color: '#059669', fontSize: 11, fontWeight: '700' },
-  cancelledBadge: { backgroundColor: '#FEE2E2' },
-  cancelledText: { color: '#DC2626', fontSize: 11, fontWeight: '700' },
-  detailsBox: { backgroundColor: '#F8FAFC', borderRadius: 10, padding: 10, marginTop: 10 },
+  providerName: { fontSize: 15, fontFamily: FONTS.displayBold, color: '#0F172A' },
+  category: { fontSize: 12, fontFamily: FONTS.regular, color: '#64748B', marginTop: 2 },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  statusEmoji: { fontSize: 12, marginRight: 4 },
+  statusText: { fontSize: 11, fontFamily: FONTS.bold },
+
+  detailsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+  },
   detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  detailText: { fontSize: 12, color: '#334155', marginLeft: 6, flex: 1 },
-  otpRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, backgroundColor: '#EEF2FF', padding: 8, borderRadius: 8 },
+  detailEmoji: { fontSize: 13, marginRight: 6 },
+  detailText: { fontSize: 12, fontFamily: FONTS.medium, color: '#334155', flex: 1 },
+
+  otpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    backgroundColor: '#EEF2FF',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
   otpBox: { flexDirection: 'row', alignItems: 'center' },
-  otpLabel: { fontSize: 11, color: '#4F46E5', marginRight: 6 },
-  otpVal: { fontSize: 14, fontWeight: '800', color: '#312E81', letterSpacing: 2 },
-  verifyOtpBtn: { backgroundColor: '#4F46E5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
-  verifyOtpBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  otpLabel: { fontSize: 12, fontFamily: FONTS.semiBold, color: '#4F46E5', marginRight: 6 },
+  otpVal: { fontSize: 16, fontFamily: FONTS.displayEB, color: '#312E81', letterSpacing: 3 },
+  verifyOtpBtn: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  verifyOtpBtnText: { color: '#FFFFFF', fontSize: 12, fontFamily: FONTS.bold },
+
   cardActions: { flexDirection: 'row', marginTop: 12 },
-  cancelBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#FEE2E2' },
-  cancelBtnText: { color: '#DC2626', fontSize: 12, fontWeight: '600' },
-  payBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#059669', marginTop: 10, paddingVertical: 9, borderRadius: 10 },
-  payBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginLeft: 6 },
-  emptyBox: { padding: 40, alignItems: 'center' },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  emptySub: { fontSize: 12, color: '#64748B', marginTop: 4 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', maxWidth: 320, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, alignItems: 'center' },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  modalSub: { fontSize: 12, color: '#64748B', textAlign: 'center', marginTop: 4, marginBottom: 16 },
-  otpInput: { width: '80%', borderWidth: 2, borderColor: '#4F46E5', borderRadius: 12, paddingVertical: 10, fontSize: 22, fontWeight: '800', textAlign: 'center', letterSpacing: 8, color: '#0F172A', marginBottom: 20 },
+  cancelBtn: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  cancelBtnText: { color: '#DC2626', fontSize: 12, fontFamily: FONTS.semiBold },
+
+  payBtn: { marginTop: 12, borderRadius: 12, overflow: 'hidden' },
+  payBtnGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+  },
+  payBtnText: { color: '#FFFFFF', fontSize: 13, fontFamily: FONTS.bold },
+
+  rateBtn: {
+    marginTop: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  rateBtnText: { fontSize: 13, fontFamily: FONTS.semiBold, color: '#1E293B' },
+
+  emptyBox: { paddingVertical: 60, alignItems: 'center' },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: '#C7D2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  emptyEmoji: { fontSize: 28 },
+  emptyTitle: { fontSize: 16, fontFamily: FONTS.displayBold, color: '#0F172A' },
+  emptySub: { fontSize: 12, fontFamily: FONTS.regular, color: '#64748B', marginTop: 4, textAlign: 'center' },
+  emptyCta: { marginTop: 16, borderRadius: 12, overflow: 'hidden' },
+  emptyCtaGrad: { paddingHorizontal: 24, paddingVertical: 10 },
+  emptyCtaText: { color: '#FFFFFF', fontSize: 13, fontFamily: FONTS.bold },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  modalAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: '#4F46E5',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  modalTitle: { fontSize: 17, fontFamily: FONTS.displayEB, color: '#0F172A', marginTop: 4 },
+  modalSub: { fontSize: 12, fontFamily: FONTS.regular, color: '#64748B', textAlign: 'center', marginTop: 4, marginBottom: 16 },
+  otpInput: {
+    width: '80%',
+    borderWidth: 2,
+    borderColor: '#4F46E5',
+    borderRadius: 14,
+    paddingVertical: 12,
+    fontSize: 24,
+    fontFamily: FONTS.displayEB,
+    textAlign: 'center',
+    letterSpacing: 8,
+    color: '#0F172A',
+    marginBottom: 20,
+    backgroundColor: '#F8FAFC',
+  },
   modalButtons: { flexDirection: 'row', width: '100%' },
-  modalCancel: { flex: 1, paddingVertical: 10, alignItems: 'center', marginRight: 8, borderRadius: 8, backgroundColor: '#F1F5F9' },
-  modalCancelText: { color: '#64748B', fontWeight: '600' },
-  modalSubmit: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: '#4F46E5' },
-  modalSubmitText: { color: '#FFFFFF', fontWeight: '700' },
+  modalCancel: {
+    flex: 1,
+    paddingVertical: 11,
+    alignItems: 'center',
+    marginRight: 8,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  modalCancelText: { fontFamily: FONTS.semiBold, color: '#64748B', fontSize: 13 },
+  modalSubmit: { flex: 1.5, borderRadius: 12, overflow: 'hidden' },
+  modalSubmitGrad: { paddingVertical: 11, alignItems: 'center' },
+  modalSubmitText: { fontFamily: FONTS.bold, color: '#FFFFFF', fontSize: 13 },
 });

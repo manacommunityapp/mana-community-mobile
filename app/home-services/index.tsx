@@ -9,8 +9,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
-import { COLORS, SHADOWS } from '@/constants/config';
+import { COLORS, SHADOWS, FONTS } from '@/constants/config';
 import { homeServicesService } from '@/services/homeServicesService';
+import { SubscriptionModal } from '@/components/home-services/SubscriptionModal';
 
 const SCREEN_W = Dimensions.get('window').width;
 
@@ -19,7 +20,7 @@ interface QuickModule {
   title: string;
   subtitle: string;
   route: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  emoji: string;
   gradient: [string, string];
   badge?: string;
 }
@@ -30,16 +31,16 @@ const MODULES: QuickModule[] = [
     title: 'Find Help',
     subtitle: 'Electricians, Plumbers & More',
     route: '/home-services/find-help',
-    icon: 'search-outline',
+    emoji: '🔍',
     gradient: ['#4F46E5', '#6366F1'],
-    badge: 'Popular',
+    badge: '⚡ Popular',
   },
   {
     id: 'my-help',
     title: 'My Domestic Staff',
     subtitle: 'Maid, Cook, Driver & Nanny',
     route: '/home-services/my-help',
-    icon: 'people-outline',
+    emoji: '👥',
     gradient: ['#0284C7', '#38BDF8'],
   },
   {
@@ -47,7 +48,7 @@ const MODULES: QuickModule[] = [
     title: 'Service Bookings',
     subtitle: 'Track Visits & OTP status',
     route: '/home-services/bookings',
-    icon: 'calendar-outline',
+    emoji: '📅',
     gradient: ['#059669', '#34D399'],
   },
   {
@@ -55,7 +56,7 @@ const MODULES: QuickModule[] = [
     title: 'Salary & Packages',
     subtitle: 'Monthly Staff Retainers',
     route: '/home-services/packages',
-    icon: 'wallet-outline',
+    emoji: '💰',
     gradient: ['#D97706', '#FBBF24'],
   },
   {
@@ -63,20 +64,29 @@ const MODULES: QuickModule[] = [
     title: 'Community Job Board',
     subtitle: 'Post Help Requirements',
     route: '/home-services/jobs',
-    icon: 'megaphone-outline',
+    emoji: '📢',
     gradient: ['#7C3AED', '#A78BFA'],
+  },
+  {
+    id: 'provider-deck',
+    title: 'Provider Job Deck',
+    subtitle: 'PIN Verify & Photo Proof',
+    route: '/home-services/provider-deck',
+    emoji: '🛠️',
+    gradient: ['#0F172A', '#334155'],
+    badge: '🔒 Staff',
   },
 ];
 
 const CATEGORIES = [
-  { code: 'PLUMBING', name: 'Plumber', icon: 'water-outline' as const, color: '#0284C7', bg: '#E0F2FE' },
-  { code: 'ELECTRICAL', name: 'Electrician', icon: 'flash-outline' as const, color: '#D97706', bg: '#FEF3C7' },
-  { code: 'CLEANING', name: 'Deep Clean', icon: 'sparkles-outline' as const, color: '#059669', bg: '#DCFCE7' },
-  { code: 'APPLIANCE', name: 'Appliance', icon: 'tv-outline' as const, color: '#7C3AED', bg: '#EDE9FE' },
-  { code: 'CARPENTRY', name: 'Carpentry', icon: 'hammer-outline' as const, color: '#B45309', bg: '#FEF3C7' },
-  { code: 'PAINTING', name: 'Painting', icon: 'color-palette-outline' as const, color: '#DB2777', bg: '#FCE7F3' },
-  { code: 'MAID', name: 'Maid/Cook', icon: 'person-outline' as const, color: '#4F46E5', bg: '#EEF2FF' },
-  { code: 'PEST_CONTROL', name: 'Pest Control', icon: 'bug-outline' as const, color: '#DC2626', bg: '#FEE2E2' },
+  { code: 'PLUMBING', name: 'Plumber', emoji: '🔧', color: '#0284C7', bg: '#E0F2FE' },
+  { code: 'ELECTRICAL', name: 'Electrician', emoji: '⚡', color: '#D97706', bg: '#FEF3C7' },
+  { code: 'CLEANING', name: 'Deep Clean', emoji: '✨', color: '#059669', bg: '#DCFCE7' },
+  { code: 'APPLIANCE', name: 'Appliance', emoji: '📺', color: '#7C3AED', bg: '#EDE9FE' },
+  { code: 'CARPENTRY', name: 'Carpentry', emoji: '🪚', color: '#B45309', bg: '#FEF3C7' },
+  { code: 'PAINTING', name: 'Painting', emoji: '🎨', color: '#DB2777', bg: '#FCE7F3' },
+  { code: 'MAID', name: 'Maid/Cook', emoji: '👩‍🍳', color: '#4F46E5', bg: '#EEF2FF' },
+  { code: 'PEST_CONTROL', name: 'Pest Control', emoji: '🐛', color: '#DC2626', bg: '#FEE2E2' },
 ];
 
 export default function HomeServicesHubScreen() {
@@ -101,6 +111,9 @@ export default function HomeServicesHubScreen() {
     await Promise.allSettled([refetch(), refetchBookings()]);
   }, [refetch, refetchBookings]);
 
+  const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
+  const [subscriptionPreset, setSubscriptionPreset] = useState<'CAR_WASH' | 'IRONING' | 'MAID'>('CAR_WASH');
+
   const activeBooking = useMemo(() => {
     return bookings.find(b => b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS');
   }, [bookings]);
@@ -109,9 +122,8 @@ export default function HomeServicesHubScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header Banner */}
       <LinearGradient
-        colors={['#1E1B4B', '#312E81', '#4F46E5']}
+        colors={['#1E1B4B', '#312E81', '#4F46E5', '#6366F1']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.header}
@@ -124,35 +136,42 @@ export default function HomeServicesHubScreen() {
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>Home Services Hub</Text>
-            <Text style={styles.headerSubtitle}>Verified domestic staff & on-demand experts</Text>
+            <Text style={styles.headerTitle}>🏠 Home Services</Text>
+            <Text style={styles.headerSubtitle}>Verified staff & on-demand experts</Text>
           </View>
           <TouchableOpacity
             style={styles.postJobBtn}
             onPress={() => router.push('/home-services/jobs')}
           >
-            <Ionicons name="add" size={16} color="#FFFFFF" />
-            <Text style={styles.postJobBtnText}>Post Need</Text>
+            <Text style={styles.postJobBtnText}>➕ Post</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Attendance & Staff Quick Stats */}
-        <View style={styles.statsCard}>
+        <View style={styles.statsStrip}>
           <View style={styles.statItem}>
+            <View style={styles.statEmojiHalo}>
+              <Text style={styles.statEmoji}>🚪</Text>
+            </View>
             <Text style={styles.statNumber}>{attSummary?.checkedIn ?? 0}</Text>
-            <Text style={styles.statLabel}>Staff In Gate</Text>
+            <Text style={styles.statLabel}>In Gate</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
+            <View style={styles.statEmojiHalo}>
+              <Text style={styles.statEmoji}>✅</Text>
+            </View>
             <Text style={styles.statNumber}>{workers.length}</Text>
-            <Text style={styles.statLabel}>Verified Pros</Text>
+            <Text style={styles.statLabel}>Verified</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: activeBooking ? '#34D399' : '#FFFFFF' }]}>
+            <View style={styles.statEmojiHalo}>
+              <Text style={styles.statEmoji}>📋</Text>
+            </View>
+            <Text style={[styles.statNumber, activeBooking ? { color: '#34D399' } : undefined]}>
               {bookings.length}
             </Text>
-            <Text style={styles.statLabel}>My Bookings</Text>
+            <Text style={styles.statLabel}>Bookings</Text>
           </View>
         </View>
       </LinearGradient>
@@ -163,32 +182,36 @@ export default function HomeServicesHubScreen() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={[COLORS.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Active Booking Banner */}
         {activeBooking && (
           <TouchableOpacity
             style={styles.activeBookingCard}
             onPress={() => router.push('/home-services/bookings')}
             activeOpacity={0.8}
           >
-            <View style={styles.activeBookingBadge}>
-              <Ionicons name="time" size={14} color="#059669" />
-              <Text style={styles.activeBookingBadgeText}>Active Visit</Text>
-            </View>
-            <Text style={styles.activeBookingTitle}>{activeBooking.providerName}</Text>
-            <Text style={styles.activeBookingSlot}>
-              {activeBooking.date} • {activeBooking.timeSlot}
-            </Text>
-            {activeBooking.completionOtp && (
-              <View style={styles.otpPill}>
-                <Text style={styles.otpLabel}>Completion OTP:</Text>
-                <Text style={styles.otpVal}>{activeBooking.completionOtp}</Text>
+            <View style={styles.activeBookingAccent} />
+            <View style={styles.activeBookingInner}>
+              <View style={styles.activeBookingBadge}>
+                <Text style={styles.activeBookingBadgeEmoji}>🟢</Text>
+                <Text style={styles.activeBookingBadgeText}>Active Visit</Text>
               </View>
-            )}
+              <Text style={styles.activeBookingTitle}>{activeBooking.providerName}</Text>
+              <Text style={styles.activeBookingSlot}>
+                📅 {activeBooking.date} • 🕐 {activeBooking.timeSlot}
+              </Text>
+              {activeBooking.completionOtp && (
+                <View style={styles.otpPill}>
+                  <Text style={styles.otpLabel}>🔑 OTP:</Text>
+                  <Text style={styles.otpVal}>{activeBooking.completionOtp}</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.activeBookingArrow}>
+              <Ionicons name="chevron-forward" size={18} color="#4F46E5" />
+            </View>
           </TouchableOpacity>
         )}
 
-        {/* Modules Grid */}
-        <Text style={styles.sectionHeader}>Service Hub Navigation</Text>
+        <Text style={styles.sectionHeader}>🧭 Service Hub</Text>
         <View style={styles.modulesGrid}>
           {MODULES.map((mod) => (
             <TouchableOpacity
@@ -204,7 +227,7 @@ export default function HomeServicesHubScreen() {
                 style={styles.moduleGradient}
               >
                 <View style={styles.moduleIconBox}>
-                  <Ionicons name={mod.icon} size={22} color="#FFFFFF" />
+                  <Text style={styles.moduleEmoji}>{mod.emoji}</Text>
                 </View>
                 {mod.badge && (
                   <View style={styles.moduleBadge}>
@@ -218,11 +241,14 @@ export default function HomeServicesHubScreen() {
           ))}
         </View>
 
-        {/* Quick Categories */}
         <View style={styles.catHeaderRow}>
-          <Text style={styles.sectionHeader}>Top Categories</Text>
-          <TouchableOpacity onPress={() => router.push('/home-services/find-help')}>
+          <Text style={styles.sectionHeader}>🏷️ Top Categories</Text>
+          <TouchableOpacity
+            style={styles.viewAllBtn}
+            onPress={() => router.push('/home-services/find-help')}
+          >
             <Text style={styles.viewAllText}>View All</Text>
+            <Ionicons name="chevron-forward" size={14} color="#4F46E5" />
           </TouchableOpacity>
         </View>
         <View style={styles.categoriesGrid}>
@@ -234,18 +260,21 @@ export default function HomeServicesHubScreen() {
               activeOpacity={0.7}
             >
               <View style={[styles.catIconWrap, { backgroundColor: cat.bg }]}>
-                <Ionicons name={cat.icon} size={22} color={cat.color} />
+                <Text style={styles.catEmoji}>{cat.emoji}</Text>
               </View>
               <Text style={styles.catName} numberOfLines={1}>{cat.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Top Rated Specialists */}
         <View style={styles.catHeaderRow}>
-          <Text style={styles.sectionHeader}>Featured Professionals</Text>
-          <TouchableOpacity onPress={() => router.push('/home-services/find-help')}>
+          <Text style={styles.sectionHeader}>⭐ Featured Pros</Text>
+          <TouchableOpacity
+            style={styles.viewAllBtn}
+            onPress={() => router.push('/home-services/find-help')}
+          >
             <Text style={styles.viewAllText}>Browse 20+</Text>
+            <Ionicons name="chevron-forward" size={14} color="#4F46E5" />
           </TouchableOpacity>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredRow}>
@@ -256,20 +285,118 @@ export default function HomeServicesHubScreen() {
               onPress={() => router.push({ pathname: '/home-services/find-help', params: { category: w.category } } as any)}
               activeOpacity={0.8}
             >
+              <View style={styles.featuredCardAccent} />
               <View style={styles.featuredAvatar}>
                 <Text style={styles.featuredAvatarText}>{w.name.charAt(0)}</Text>
               </View>
               <Text style={styles.featuredName} numberOfLines={1}>{w.name}</Text>
               <Text style={styles.featuredSpeciality} numberOfLines={1}>{w.speciality || w.category}</Text>
               <View style={styles.featuredRating}>
-                <Ionicons name="star" size={12} color="#F59E0B" />
+                <Text style={styles.featuredRatingStar}>⭐</Text>
                 <Text style={styles.featuredRatingText}>{w.rating}</Text>
                 <Text style={styles.featuredExpText}>• {w.experience || 'Verified'}</Text>
               </View>
+              {w.verified && (
+                <View style={styles.featuredVerified}>
+                  <Text style={styles.featuredVerifiedText}>✅ Verified</Text>
+                </View>
+              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        <View style={styles.catHeaderRow}>
+          <Text style={styles.sectionHeader}>🔄 Doorstep Subscriptions</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredRow}>
+          <TouchableOpacity
+            style={styles.subCard}
+            onPress={() => {
+              setSubscriptionPreset('CAR_WASH');
+              setSubscriptionModalVisible(true);
+            }}
+          >
+            <LinearGradient
+              colors={['#1E1B4B', '#312E81']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.subCardGradient}
+            >
+              <Text style={styles.subCardEmoji}>🚗</Text>
+              <Text style={styles.subCardTitle}>Doorstep Car Wash</Text>
+              <Text style={styles.subCardDesc}>6 days/wk basement clean</Text>
+              <View style={styles.subCardPriceRow}>
+                <Text style={styles.subCardPrice}>₹899</Text>
+                <Text style={styles.subCardPer}>/mo</Text>
+              </View>
+              <View style={styles.subCardBadge}>
+                <Text style={styles.subCardBadgeText}>🛡️ Replace Guarantee</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.subCard}
+            onPress={() => {
+              setSubscriptionPreset('IRONING');
+              setSubscriptionModalVisible(true);
+            }}
+          >
+            <LinearGradient
+              colors={['#3B0764', '#581C87']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.subCardGradient}
+            >
+              <Text style={styles.subCardEmoji}>👔</Text>
+              <Text style={styles.subCardTitle}>Daily Steam Iron</Text>
+              <Text style={styles.subCardDesc}>Doorstep pickup & delivery</Text>
+              <View style={styles.subCardPriceRow}>
+                <Text style={styles.subCardPrice}>₹799</Text>
+                <Text style={styles.subCardPer}>/mo</Text>
+              </View>
+              <View style={styles.subCardBadge}>
+                <Text style={styles.subCardBadgeText}>⏰ Morning Pickup</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.subCard}
+            onPress={() => {
+              setSubscriptionPreset('MAID');
+              setSubscriptionModalVisible(true);
+            }}
+          >
+            <LinearGradient
+              colors={['#064E3B', '#047857']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.subCardGradient}
+            >
+              <Text style={styles.subCardEmoji}>🧹</Text>
+              <Text style={styles.subCardTitle}>House Maid Plan</Text>
+              <Text style={styles.subCardDesc}>Daily cleaning & mopping</Text>
+              <View style={styles.subCardPriceRow}>
+                <Text style={styles.subCardPrice}>₹3,500</Text>
+                <Text style={styles.subCardPer}>/mo</Text>
+              </View>
+              <View style={styles.subCardBadge}>
+                <Text style={styles.subCardBadgeText}>👩‍🍳 Cook Add-on</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <View style={{ height: 20 }} />
       </ScrollView>
+
+      <SubscriptionModal
+        visible={subscriptionModalVisible}
+        initialType={subscriptionPreset}
+        onClose={() => setSubscriptionModalVisible(false)}
+        onSuccess={() => refetchBookings()}
+      />
     </SafeAreaView>
   );
 }
@@ -278,6 +405,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
   container: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
+
   header: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -287,72 +415,163 @@ const styles = StyleSheet.create({
   },
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
-  headerSubtitle: { fontSize: 12, color: '#E0E7FF', marginTop: 2 },
-  postJobBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+  headerTitle: {
+    fontSize: 22,
+    fontFamily: FONTS.displayEB,
+    color: '#FFFFFF',
   },
-  postJobBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', marginLeft: 4 },
-  statsCard: {
+  headerSubtitle: {
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    color: '#C7D2FE',
+    marginTop: 2,
+  },
+  postJobBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  postJobBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+  },
+
+  statsStrip: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statNumber: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
-  statLabel: { fontSize: 11, color: '#C7D2FE', marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.15)' },
+  statEmojiHalo: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statEmoji: { fontSize: 14 },
+  statNumber: {
+    fontSize: 20,
+    fontFamily: FONTS.displayEB,
+    color: '#FFFFFF',
+  },
+  statLabel: {
+    fontSize: 10,
+    fontFamily: FONTS.medium,
+    color: '#C7D2FE',
+    marginTop: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+
   activeBookingCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E8E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
     ...SHADOWS.sm,
   },
+  activeBookingAccent: {
+    width: 4,
+    alignSelf: 'stretch',
+    backgroundColor: '#10B981',
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  activeBookingInner: { flex: 1, padding: 14 },
   activeBookingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#DCFCE7',
     alignSelf: 'flex-start',
+    backgroundColor: '#ECFDF5',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 8,
+    borderRadius: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
-  activeBookingBadgeText: { color: '#059669', fontSize: 11, fontWeight: '700', marginLeft: 4 },
-  activeBookingTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  activeBookingSlot: { fontSize: 13, color: '#64748B', marginTop: 2 },
+  activeBookingBadgeEmoji: { fontSize: 10, marginRight: 4 },
+  activeBookingBadgeText: {
+    color: '#059669',
+    fontSize: 11,
+    fontFamily: FONTS.bold,
+  },
+  activeBookingTitle: {
+    fontSize: 15,
+    fontFamily: FONTS.displayBold,
+    color: '#0F172A',
+  },
+  activeBookingSlot: {
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    color: '#64748B',
+    marginTop: 3,
+  },
+  activeBookingArrow: {
+    paddingRight: 14,
+  },
   otpPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EEF2FF',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
-  otpLabel: { fontSize: 11, color: '#4F46E5', fontWeight: '600', marginRight: 4 },
-  otpVal: { fontSize: 12, color: '#312E81', fontWeight: '800', letterSpacing: 1 },
-  sectionHeader: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 12 },
+  otpLabel: {
+    fontSize: 11,
+    fontFamily: FONTS.semiBold,
+    color: '#4F46E5',
+    marginRight: 4,
+  },
+  otpVal: {
+    fontSize: 13,
+    fontFamily: FONTS.displayEB,
+    color: '#312E81',
+    letterSpacing: 2,
+  },
+
+  sectionHeader: {
+    fontSize: 16,
+    fontFamily: FONTS.displayBold,
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+
   modulesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -361,33 +580,56 @@ const styles = StyleSheet.create({
   },
   moduleCard: {
     width: (SCREEN_W - 42) / 2,
-    borderRadius: 16,
+    borderRadius: 18,
     marginBottom: 12,
     overflow: 'hidden',
     ...SHADOWS.sm,
   },
-  moduleGradient: { padding: 14, minHeight: 115, justifyContent: 'space-between' },
+  moduleGradient: {
+    padding: 14,
+    minHeight: 120,
+    justifyContent: 'space-between',
+  },
   moduleIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
+  moduleEmoji: { fontSize: 20 },
   moduleBadge: {
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  moduleBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
-  moduleTitle: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
-  moduleSubtitle: { fontSize: 10, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+  moduleBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontFamily: FONTS.bold,
+  },
+  moduleTitle: {
+    fontSize: 14,
+    fontFamily: FONTS.displayBold,
+    color: '#FFFFFF',
+  },
+  moduleSubtitle: {
+    fontSize: 10,
+    fontFamily: FONTS.regular,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+
   catHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -395,7 +637,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 10,
   },
-  viewAllText: { fontSize: 13, color: '#4F46E5', fontWeight: '700' },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  viewAllText: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+    color: '#4F46E5',
+    marginRight: 2,
+  },
+
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -406,45 +664,166 @@ const styles = StyleSheet.create({
     width: (SCREEN_W - 56) / 4,
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingVertical: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E8E8F0',
+    ...SHADOWS.sm,
   },
   catIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
   },
-  catName: { fontSize: 11, fontWeight: '600', color: '#334155' },
-  featuredRow: { paddingBottom: 10 },
+  catEmoji: { fontSize: 22 },
+  catName: {
+    fontSize: 11,
+    fontFamily: FONTS.semiBold,
+    color: '#334155',
+  },
+
+  featuredRow: { paddingBottom: 12 },
   featuredCard: {
-    width: 140,
+    width: 148,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E8E8F0',
     alignItems: 'center',
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  featuredCardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#4F46E5',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   featuredAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: '#C7D2FE',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
-  featuredAvatarText: { fontSize: 18, fontWeight: '800', color: '#4F46E5' },
-  featuredName: { fontSize: 13, fontWeight: '700', color: '#0F172A', textAlign: 'center' },
-  featuredSpeciality: { fontSize: 11, color: '#64748B', textAlign: 'center', marginTop: 2 },
-  featuredRating: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  featuredRatingText: { fontSize: 11, fontWeight: '700', color: '#0F172A', marginLeft: 3 },
-  featuredExpText: { fontSize: 10, color: '#94A3B8', marginLeft: 4 },
+  featuredAvatarText: {
+    fontSize: 20,
+    fontFamily: FONTS.displayEB,
+    color: '#4F46E5',
+  },
+  featuredName: {
+    fontSize: 13,
+    fontFamily: FONTS.bold,
+    color: '#0F172A',
+    textAlign: 'center',
+  },
+  featuredSpeciality: {
+    fontSize: 11,
+    fontFamily: FONTS.regular,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  featuredRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  featuredRatingStar: { fontSize: 12 },
+  featuredRatingText: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+    color: '#0F172A',
+    marginLeft: 3,
+  },
+  featuredExpText: {
+    fontSize: 10,
+    fontFamily: FONTS.regular,
+    color: '#94A3B8',
+    marginLeft: 4,
+  },
+  featuredVerified: {
+    marginTop: 6,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  featuredVerifiedText: {
+    fontSize: 10,
+    fontFamily: FONTS.bold,
+    color: '#059669',
+  },
+
+  subCard: {
+    width: 160,
+    borderRadius: 18,
+    marginRight: 10,
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  subCardGradient: {
+    padding: 14,
+    minHeight: 160,
+    justifyContent: 'space-between',
+  },
+  subCardEmoji: { fontSize: 28, marginBottom: 6 },
+  subCardTitle: {
+    fontSize: 14,
+    fontFamily: FONTS.displayBold,
+    color: '#FFFFFF',
+  },
+  subCardDesc: {
+    fontSize: 11,
+    fontFamily: FONTS.regular,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
+  },
+  subCardPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 8,
+  },
+  subCardPrice: {
+    fontSize: 18,
+    fontFamily: FONTS.displayEB,
+    color: '#34D399',
+  },
+  subCardPer: {
+    fontSize: 11,
+    fontFamily: FONTS.regular,
+    color: '#A7F3D0',
+    marginLeft: 2,
+  },
+  subCardBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 6,
+  },
+  subCardBadgeText: {
+    fontSize: 10,
+    fontFamily: FONTS.bold,
+    color: '#FFFFFF',
+  },
 });

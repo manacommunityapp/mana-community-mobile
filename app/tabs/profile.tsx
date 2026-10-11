@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRoleSwitcher } from '@/hooks/useRoleSwitcher';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getInitials } from '@/constants/config';
-import { GROWW_THEME } from '@/constants/theme';
+import { THEME } from '@/constants/theme';
 import { profileService } from '@/services/profileService';
 import { eventService } from '@/services/eventService';
 import { marketplaceService } from '@/services/marketplaceService';
@@ -860,6 +860,19 @@ export default function ProfileScreen() {
             iconColor="#059669"
             iconBg="#DCFCE7"
           />
+          {showDiscover && (
+            <MenuItem
+              icon="sparkles-outline"
+              label="Community Discover"
+              sublabel="Neighbor talent, sports buddies, and skills"
+              onPress={() => router.push('/discover' as any)}
+              iconColor="#7C3AED"
+              iconBg="#EDE9FE"
+              badge="AI MATCH"
+              badgeBg="#EDE9FE"
+              badgeColor="#7C3AED"
+            />
+          )}
           <MenuItem
             icon="briefcase-outline"
             label="Pro Network (CPN)"
@@ -1107,7 +1120,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GROWW_THEME.background,
+    backgroundColor: THEME.background,
   },
   loadingContainer: {
     flex: 1,
@@ -1128,7 +1141,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: GROWW_THEME.border,
+    borderBottomColor: THEME.border,
   },
   topBarLeft: {
     flex: 1,
@@ -1137,12 +1150,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: FONTS.displayBold,
     fontWeight: '800',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     letterSpacing: -0.3,
   },
   topBarSubtitle: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     marginTop: 1,
   },
   topBarActions: {

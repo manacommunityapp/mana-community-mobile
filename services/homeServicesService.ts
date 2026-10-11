@@ -52,6 +52,11 @@ export interface HomeServiceBookingDto {
   paymentTransactionId?: string;
   paidAt?: string;
   createdAt?: string;
+  vehicleNumber?: string;
+  beforePhotoUrl?: string;
+  afterPhotoUrl?: string;
+  rating?: number;
+  reviewComment?: string;
 }
 
 export interface HomeServiceBookingRequest {
@@ -702,5 +707,42 @@ export const homeServicesService = {
       worker.verified = verificationStatus === 'VERIFIED';
     }
     return true;
+  },
+
+  async completeJobWithProof(bookingId: string, params: { otp: string; beforePhotoUrl?: string; afterPhotoUrl?: string }): Promise<HomeServiceBookingDto> {
+    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
+    if (!found) throw new Error("Booking not found");
+    if (found.completionOtp && found.completionOtp.trim() !== params.otp.trim()) {
+      throw new Error("Invalid completion PIN/OTP");
+    }
+    found.status = 'COMPLETED';
+    found.completedAt = new Date().toISOString();
+    found.beforePhotoUrl = params.beforePhotoUrl;
+    found.afterPhotoUrl = params.afterPhotoUrl;
+    return found;
+  },
+
+  async rateBooking(bookingId: string, rating: number, comment?: string): Promise<HomeServiceBookingDto> {
+    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
+    if (!found) throw new Error("Booking not found");
+    found.rating = rating;
+    found.reviewComment = comment;
+    return found;
+  },
+
+  async getGatePassForStaff(staffId: string) {
+    const staff = FALLBACK_DOMESTIC_STAFF.find(s => s.id === staffId);
+    return {
+      passId: `GP-${staffId}-${Date.now().toString().slice(-4)}`,
+      staffId,
+      staffName: staff?.name || 'Staff Member',
+      role: staff?.role || 'HELPER',
+      phone: staff?.phone || '',
+      qrToken: `GP-QR-${staffId}-MANA-2026`,
+      allowedTowers: ['Tower A', 'Tower B', 'Tower C', 'Clubhouse'],
+      policeVerified: staff?.policeVerified ?? true,
+      validUntil: '31 Dec 2026',
+      issuedBy: 'Mana Security Administration',
+    };
   },
 };

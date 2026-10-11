@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS, SHADOWS, FONTS } from '@/constants/config';
-import { GROWW_THEME } from '@/constants/theme';;
+import { THEME } from '@/constants/theme';
 import { useQuery } from '@tanstack/react-query';
 import { budgetService } from '@/services/budgetService';
 
@@ -45,7 +45,7 @@ export default function SocietyTreasuryDashboard() {
           }}
           style={s.backBtn}
         >
-          <Ionicons name="arrow-back" size={20} color={GROWW_THEME.textPrimary} />
+          <Ionicons name="arrow-back" size={20} color={THEME.textPrimary} />
         </TouchableOpacity>
         <View style={s.topNavTitleBox}>
           <Text style={s.topNavTitle}>Society Treasury & ERP</Text>
@@ -55,13 +55,13 @@ export default function SocietyTreasuryDashboard() {
           style={s.topNavIconBtn}
           onPress={() => router.push('/finance/budget')}
         >
-          <Ionicons name="pie-chart-outline" size={19} color={GROWW_THEME.brandDark} />
+          <Ionicons name="pie-chart-outline" size={19} color={THEME.brandDark} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         contentContainerStyle={s.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[GROWW_THEME.brand]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[THEME.brand]} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Period Segmented Switcher */}
@@ -79,7 +79,7 @@ export default function SocietyTreasuryDashboard() {
           ))}
         </View>
 
-        {/* Groww Index Metric Carousel */}
+        {/* Index Metric Carousel */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -89,7 +89,7 @@ export default function SocietyTreasuryDashboard() {
             <Text style={s.cardLabel}>Monthly Collections</Text>
             <Text style={s.cardValue}>₹{(totalCollections).toLocaleString('en-IN')}</Text>
             <View style={s.gainPill}>
-              <Ionicons name="trending-up" size={12} color={GROWW_THEME.brandDark} />
+              <Ionicons name="trending-up" size={12} color={THEME.brandDark} />
               <Text style={s.gainPillText}>+8.4% MoM</Text>
             </View>
           </View>
@@ -98,7 +98,7 @@ export default function SocietyTreasuryDashboard() {
             <Text style={s.cardLabel}>Reserve / Sinking Fund</Text>
             <Text style={s.cardValue}>₹{(reserveFund).toLocaleString('en-IN')}</Text>
             <View style={s.gainPill}>
-              <Ionicons name="shield-checkmark" size={12} color={GROWW_THEME.brandDark} />
+              <Ionicons name="shield-checkmark" size={12} color={THEME.brandDark} />
               <Text style={s.gainPillText}>Liquid FD & Sweep</Text>
             </View>
           </View>
@@ -106,7 +106,7 @@ export default function SocietyTreasuryDashboard() {
           <View style={s.metricCard}>
             <Text style={s.cardLabel}>OpEx Incurred</Text>
             <Text style={s.cardValue}>₹{(totalExpenses).toLocaleString('en-IN')}</Text>
-            <View style={[s.gainPill, { backgroundColor: GROWW_THEME.amberLight }]}>
+            <View style={[s.gainPill, { backgroundColor: THEME.amberLight }]}>
               <Text style={[s.gainPillText, { color: '#B45309' }]}>82.3% of Allocation</Text>
             </View>
           </View>
@@ -118,7 +118,7 @@ export default function SocietyTreasuryDashboard() {
           <View style={s.complianceCard}>
             <View style={s.complianceRow}>
               <View style={s.complianceIconBox}>
-                <Ionicons name="document-text-outline" size={18} color={GROWW_THEME.brandDark} />
+                <Ionicons name="document-text-outline" size={18} color={THEME.brandDark} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.complianceTitle}>TDS Deducted (Sec 194C / 194J)</Text>
@@ -132,8 +132,8 @@ export default function SocietyTreasuryDashboard() {
             <View style={s.complianceDivider} />
 
             <View style={s.complianceRow}>
-              <View style={[s.complianceIconBox, { backgroundColor: GROWW_THEME.indigoLight }]}>
-                <Ionicons name="shield-outline" size={18} color={GROWW_THEME.indigo} />
+              <View style={[s.complianceIconBox, { backgroundColor: THEME.indigoLight }]}>
+                <Ionicons name="shield-outline" size={18} color={THEME.indigo} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.complianceTitle}>GST Input Tax Credit (ITC)</Text>
@@ -213,7 +213,7 @@ const s = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: GROWW_THEME.border,
+    borderBottomColor: THEME.border,
   },
   backBtn: {
     width: 36,
@@ -221,7 +221,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
   },
   topNavTitleBox: {
     flex: 1,
@@ -230,12 +230,12 @@ const s = StyleSheet.create({
   topNavTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
   },
   topNavSubtitle: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.regular,
   },
   topNavIconBtn: {
@@ -244,7 +244,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
   },
   scrollContent: {
     padding: 16,
@@ -260,20 +260,20 @@ const s = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   periodChipActive: {
-    backgroundColor: GROWW_THEME.brandLight,
-    borderColor: GROWW_THEME.brandBorder,
+    backgroundColor: THEME.brandLight,
+    borderColor: THEME.brandBorder,
   },
   periodChipText: {
     fontSize: 11.5,
     fontWeight: '600',
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.semiBold,
   },
   periodChipTextActive: {
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
   },
   metricsScroll: {
     gap: 12,
@@ -284,20 +284,20 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 14,
     gap: 6,
     ...SHADOWS.card,
   },
   cardLabel: {
     fontSize: 11.5,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.medium,
   },
   cardValue: {
     fontSize: 19,
     fontWeight: '800',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
     fontVariant: ['tabular-nums'],
   },
@@ -305,7 +305,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 5,
@@ -315,7 +315,7 @@ const s = StyleSheet.create({
   gainPillText: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
     fontFamily: FONTS.semiBold,
   },
   sectionBlock: {
@@ -324,14 +324,14 @@ const s = StyleSheet.create({
   sectionHeading: {
     fontSize: 14.5,
     fontWeight: '700',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   complianceCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 14,
   },
   complianceRow: {
@@ -343,23 +343,23 @@ const s = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 8,
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   complianceTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
   complianceSub: {
     fontSize: 11,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     marginTop: 1,
   },
   statusPillCompliant: {
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -367,11 +367,11 @@ const s = StyleSheet.create({
   statusTextCompliant: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
   },
   complianceDivider: {
     height: 1,
-    backgroundColor: GROWW_THEME.border,
+    backgroundColor: THEME.border,
     marginVertical: 12,
   },
   actionsGrid: {
@@ -384,7 +384,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -400,7 +400,7 @@ const s = StyleSheet.create({
   actionLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontFamily: FONTS.semiBold,
   },
 });

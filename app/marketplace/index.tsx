@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+﻿import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
   TouchableOpacity, ScrollView, ActivityIndicator,
@@ -13,7 +13,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { marketplaceService } from '@/services/marketplaceService';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
-import { GROWW_THEME } from '@/constants/theme';
+import { THEME } from '@/constants/theme';
 import type { MarketplaceCategory, MarketplaceListingDto } from '@/types/api';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -34,6 +34,8 @@ const CATEGORIES: { key: MarketplaceCategory; label: string; emoji: string; colo
 
 const QUICK_ACTIONS = [
   { label: 'Sell Item',     emoji: '📸', bg: '#DCFCE7', color: '#059669', route: '/marketplace/create' },
+  { label: 'Wishlist',      emoji: '❤️', bg: '#FCE7F3', color: '#DB2777', route: '/marketplace/wishlist' },
+  { label: 'Orders & Pass', emoji: '📦', bg: '#EDE9FE', color: '#6366F1', route: '/marketplace/orders' },
   { label: 'Lost & Found',  emoji: '🔍', bg: '#FEF3C7', color: '#D97706', route: '/marketplace/lost-found' },
   { label: 'Giveaways',     emoji: '🎁', bg: '#F0FDFA', color: '#0D9488', route: '/marketplace/donations' },
   { label: 'My Listings',   emoji: '📋', bg: '#EEF2FF', color: '#4F46E5', route: '/marketplace/my-listings' },
@@ -203,7 +205,7 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
           <View style={s.headerLeft}>
             {!isTab && (
               <TouchableOpacity onPress={goHome} style={s.backBtn} activeOpacity={0.7}>
-                <Ionicons name="arrow-back" size={20} color={GROWW_THEME.textPrimary} />
+                <Ionicons name="arrow-back" size={20} color={THEME.textPrimary} />
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }}>
@@ -396,7 +398,7 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GROWW_THEME.background,
+    backgroundColor: THEME.background,
   },
 
   // ── Gradient Header ──
@@ -405,7 +407,7 @@ const s = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: GROWW_THEME.border,
+    borderBottomColor: THEME.border,
   },
   headerTop: {
     flexDirection: 'row',

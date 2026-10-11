@@ -1,4 +1,4 @@
-import { GROWW_THEME } from '@/constants/theme';
+import { THEME } from '@/constants/theme';
 import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
@@ -645,7 +645,7 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* ── Groww Clean White Top Bar ────────────────── */}
+      {/* ── Clean White Top Bar ────────────────── */}
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.welcomeRow}
@@ -805,7 +805,7 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: GROWW_THEME.background },
+  container: { flex: 1, backgroundColor: THEME.background },
 
   // ── Loading ──────────────────────────────────────────────────────
   loadingWrap: {
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     paddingHorizontal: 6,
     paddingVertical: 6,
     gap: 4,
@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: GROWW_THEME.border,
+    borderBottomColor: THEME.border,
     gap: 8,
   },
   welcomeRow: {
@@ -885,19 +885,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: GROWW_THEME.brandLight,
+    backgroundColor: THEME.brandLight,
     borderWidth: 1,
-    borderColor: GROWW_THEME.brandBorder,
+    borderColor: THEME.brandBorder,
   },
   profileAvatarImage: {
     width: 40,
     height: 40,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: GROWW_THEME.brandBorder,
+    borderColor: THEME.brandBorder,
   },
   profileAvatarText: {
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
     fontSize: 16,
     fontWeight: '700',
     fontFamily: FONTS.displayBold,
@@ -905,13 +905,13 @@ const styles = StyleSheet.create({
   welcomeText: {},
   welcomeLabel: {
     fontSize: 11.5,
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.medium,
   },
   welcomeName: {
     fontSize: 17,
     fontWeight: '800',
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     letterSpacing: -0.3,
     fontFamily: FONTS.displayBold,
   },
@@ -924,16 +924,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
     borderRadius: 16,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   communityBadgeEmoji: { fontSize: 11 },
   communityBadgeText: {
-    color: GROWW_THEME.textPrimary,
+    color: THEME.textPrimary,
     fontSize: 11,
     fontWeight: '700',
     fontFamily: FONTS.semiBold,
@@ -942,11 +942,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   headerIconBtnActive: {
     backgroundColor: 'rgba(255,255,255,0.25)',
@@ -990,9 +990,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    backgroundColor: GROWW_THEME.surfaceMuted,
+    backgroundColor: THEME.surfaceMuted,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   notifEmoji: { fontSize: 16 },
   badge: {
@@ -1029,7 +1029,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: Platform.OS === 'ios' ? 9 : 4,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     gap: 8,
   },
   searchEmoji: { fontSize: 14 },
@@ -1256,21 +1256,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
   },
   filterChipActive: {
-    backgroundColor: GROWW_THEME.brandLight,
-    borderColor: GROWW_THEME.brandBorder,
+    backgroundColor: THEME.brandLight,
+    borderColor: THEME.brandBorder,
   },
   filterEmoji: { fontSize: 13 },
   filterText: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: GROWW_THEME.textSecondary,
+    color: THEME.textSecondary,
     fontFamily: FONTS.semiBold,
   },
   filterTextActive: {
-    color: GROWW_THEME.brandDark,
+    color: THEME.brandDark,
     fontWeight: '700',
     fontFamily: FONTS.bold,
   },
@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: GROWW_THEME.border,
+    borderColor: THEME.border,
     ...SHADOWS.card,
     flexDirection: 'row',
     overflow: 'hidden',
