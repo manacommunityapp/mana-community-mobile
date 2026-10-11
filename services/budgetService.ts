@@ -77,7 +77,7 @@ export const budgetService = {
       });
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
     } catch (err) {
-      secureLog.warn('[budgetService] Backend budget API unavailable, using fallback', err);
+      if ((err as any)?.response?.status !== 403) { secureLog.warn('[budgetService] Backend budget API unavailable, using fallback', err); }
     }
     return financialYear
       ? FALLBACK_BUDGETS.filter(b => b.financialYear === financialYear)
