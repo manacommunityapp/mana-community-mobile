@@ -43,7 +43,7 @@ export const deviceSecurity = {
   },
 
   async checkRootIndicators(): Promise<boolean> {
-    if (Platform.OS === 'web') return false;
+    if (Platform.OS === 'web' || __DEV__) return false;
 
     // Check device model / build tags
     if (Platform.OS === 'android') {
