@@ -9,6 +9,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
+import { GROWW_THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 
@@ -665,7 +666,7 @@ export default function VisitorsScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: GROWW_THEME.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -752,8 +753,8 @@ const s = StyleSheet.create({
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center' },
   typeIconBox: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  visitorName: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  visitorPurpose: { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
+  visitorName: { fontSize: 16, fontWeight: '800', color: GROWW_THEME.textPrimary, fontFamily: 'Outfit-Bold', letterSpacing: -0.2 },
+  visitorPurpose: { fontSize: 12, color: GROWW_THEME.textSecondary, marginTop: 2, fontFamily: 'DMSans-Regular' },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 10, fontWeight: '800', fontFamily: 'Outfit-Bold' },
 

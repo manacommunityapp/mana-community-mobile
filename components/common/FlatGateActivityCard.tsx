@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
+import { GROWW_THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 
@@ -415,12 +416,7 @@ export function FlatGateActivityCard() {
               }}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={['#4F46E5', '#6366F1']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={s.submitBtnGrad}
-              >
+              <View style={[s.submitBtnGrad, { backgroundColor: GROWW_THEME.brandDark }]}>
                 {preApproveMutation.isPending ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
@@ -429,7 +425,7 @@ export function FlatGateActivityCard() {
                     <Text style={s.submitBtnText}>Generate Pass & Share Code</Text>
                   </>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
