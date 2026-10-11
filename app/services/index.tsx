@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '@/constants/config';
+import { GROWW_THEME } from '@/constants/theme';
 import {
   homeServicesService,
   HomeHelpWorkerDto,
@@ -62,10 +63,10 @@ const ATT_STATUS_CONFIG: Record<AttendanceStatus, { label: string; color: string
   NOT_MARKED:  { label: 'Not Marked',  color: '#6B7280', bg: '#F1F5F9', icon: 'help-circle' },
 };
 
-const PAYMENT_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  PAID:    { label: 'Paid',    color: '#059669', bg: '#DCFCE7' },
-  DUE:     { label: 'Due',     color: '#D97706', bg: '#FEF3C7' },
-  OVERDUE: { label: 'Overdue', color: '#DC2626', bg: '#FEE2E2' },
+const PAYMENT_CONFIG: Record<string, { label: string; color: string; bg: string; emoji: string }> = {
+  PAID:    { label: 'Paid',    color: '#059669', bg: '#DCFCE7', emoji: '✅' },
+  DUE:     { label: 'Due',     color: '#D97706', bg: '#FEF3C7', emoji: '⏳' },
+  OVERDUE: { label: 'Overdue', color: '#DC2626', bg: '#FEE2E2', emoji: '🔴' },
 };
 
 export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
@@ -241,16 +242,12 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      {/* ── Gradient Header ── */}
-      <LinearGradient
-        colors={['#312E81', '#4F46E5', '#6366F1']}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={s.gradientHeader}
-      >
+      {/* ── Groww Clean Header ── */}
+      <View style={s.cleanHeader}>
         <View style={s.headerRow}>
           {!isTab && (
             <TouchableOpacity onPress={goHome} style={s.headerBackBtn} hitSlop={8}>
-              <Ionicons name="arrow-back" size={20} color="#fff" />
+              <Ionicons name="arrow-back" size={18} color={GROWW_THEME.textPrimary} />
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }}>
@@ -267,14 +264,10 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
               activeOpacity={0.7}
               hitSlop={8}
             >
-              <Ionicons
-                name={isSearchOpen ? 'close-outline' : 'search-outline'}
-                size={19}
-                color="#FFFFFF"
-              />
+              <Text style={{ fontSize: 16 }}>{isSearchOpen ? '✕' : '🔍'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.headerActionBtn} onPress={() => setJobModalVisible(true)} activeOpacity={0.7}>
-              <Ionicons name="add-circle" size={15} color="#fff" />
+              <Text style={{ fontSize: 13 }}>📝</Text>
               <Text style={s.headerActionText}>Post Job</Text>
             </TouchableOpacity>
           </View>
@@ -290,7 +283,9 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           ].map((st, i, arr) => (
             <View key={st.label} style={{ flexDirection: 'row', flex: 1 }}>
               <View style={s.statItem}>
-                <Text style={s.statEmoji}>{st.emoji}</Text>
+                <View style={s.statEmojiHalo}>
+                  <Text style={s.statEmoji}>{st.emoji}</Text>
+                </View>
                 <Text style={s.statValue}>{st.value}</Text>
                 <Text style={s.statLabel}>{st.label}</Text>
               </View>
@@ -299,10 +294,10 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           ))}
         </View>
 
-        {/* Search in Header (Toggled via header search icon) */}
+        {/* Search */}
         {isSearchOpen && (
           <View style={s.headerSearchWrap}>
-            <Ionicons name="search" size={16} color="#94A3B8" />
+            <Text style={{ fontSize: 14 }}>🔍</Text>
             <TextInput
               style={s.headerSearchInput}
               placeholder="Search plumber, electrician, maid, staff…"
@@ -319,7 +314,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             )}
           </View>
         )}
-      </LinearGradient>
+      </View>
 
       {/* ── Tab Bar ── */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabBar}>
@@ -332,6 +327,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
               onPress={() => setActiveTab(tab.key)}
               activeOpacity={0.7}
             >
+              {active && <View style={s.tabDot} />}
               <Text style={s.tabEmoji}>{tab.emoji}</Text>
               <Text style={[s.tabText, active && s.tabTextActive]}>{tab.label}</Text>
             </TouchableOpacity>
@@ -341,7 +337,9 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
       {isLoading && !refreshing && (
         <View style={s.centerBox}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <View style={s.loadingCircle}>
+            <ActivityIndicator size="large" color="#4F46E5" />
+          </View>
           <Text style={s.loadingText}>Loading…</Text>
         </View>
       )}
@@ -353,16 +351,15 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
           ListHeaderComponent={
             <>
-
-
               {/* Category Icon Grid */}
               <View style={s.catSection}>
                 <View style={s.sectionHeaderRow}>
-                  <View style={[s.sectionDot, { backgroundColor: '#6366F1' }]} />
+                  <Text style={{ fontSize: 14 }}>📂</Text>
                   <Text style={s.sectionTitle}>Categories</Text>
+                  <Text style={s.sectionSubRight}>{CATEGORIES.length} types</Text>
                 </View>
                 <View style={s.catGrid}>
                   {CATEGORIES.map((c) => {
@@ -370,14 +367,14 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     return (
                       <TouchableOpacity
                         key={c.value}
-                        style={[s.catItem, { width: CAT_ITEM_W }, active && { backgroundColor: c.bg }]}
+                        style={[s.catItem, { width: CAT_ITEM_W }, active && { backgroundColor: c.bg, borderColor: c.color, borderWidth: 1.5 }]}
                         onPress={() => setSelectedCategory(c.value)}
                         activeOpacity={0.7}
                       >
                         <View style={[s.catIconBox, { backgroundColor: active ? c.color : c.bg }]}>
                           <Text style={s.catEmoji}>{c.emoji}</Text>
                         </View>
-                        <Text style={[s.catLabel, active && { color: c.color, fontWeight: '700' }]} numberOfLines={1}>
+                        <Text style={[s.catLabel, active && { color: c.color, fontWeight: '800', fontFamily: FONTS.semiBold }]} numberOfLines={1}>
                           {c.label}
                         </Text>
                       </TouchableOpacity>
@@ -388,54 +385,58 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
               {/* Providers Section Header */}
               <View style={s.sectionHeaderRow}>
-                <View style={[s.sectionDot, { backgroundColor: '#059669' }]} />
+                <Text style={{ fontSize: 14 }}>⭐</Text>
                 <Text style={s.sectionTitle}>
                   {selectedCategory === 'ALL' ? 'All Providers' : (CATEGORIES.find(c => c.value === selectedCategory)?.label || 'Providers')}
                 </Text>
                 <View style={s.countBadge}>
                   <Text style={s.countBadgeText}>{filteredProviders.length}</Text>
                 </View>
-                <Text style={s.sectionSubRight}>Verified & rated</Text>
+                <Text style={s.sectionSubRight}>Verified & rated ✓</Text>
               </View>
             </>
           }
           renderItem={({ item }) => {
             const catCfg = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[0];
             return (
-              <View style={[s.card, !item.available && { opacity: 0.65 }]}>
+              <View style={[s.card, !item.available && { opacity: 0.6 }]}>
+                <View style={[s.cardAccent, { backgroundColor: catCfg.color }]} />
                 <View style={s.cardTopRow}>
-                  <View style={[s.providerAvatar, { backgroundColor: catCfg.bg }]}>
+                  <View style={[s.providerAvatar, { backgroundColor: catCfg.bg, borderWidth: 2, borderColor: catCfg.color + '30' }]}>
                     <Text style={s.providerAvatarEmoji}>{catCfg.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={s.nameRow}>
                       <Text style={s.cardName} numberOfLines={1}>{item.name}</Text>
                       {item.verified && (
-                        <View style={s.verifiedBadge}>
-                          <Ionicons name="checkmark-circle" size={13} color="#059669" />
+                        <View style={s.verifiedTag}>
+                          <Ionicons name="checkmark-circle" size={12} color="#059669" />
+                          <Text style={s.verifiedTagText}>Verified</Text>
                         </View>
                       )}
                     </View>
                     <Text style={s.cardSpeciality} numberOfLines={1}>{item.speciality}</Text>
                     <View style={s.pillRow}>
                       <View style={s.ratingPill}>
-                        <Ionicons name="star" size={10} color="#F59E0B" />
+                        <Text style={{ fontSize: 10 }}>⭐</Text>
                         <Text style={s.ratingText}>{item.rating}</Text>
                         <Text style={s.ratingCount}>({item.reviewCount})</Text>
                       </View>
                       {item.priceRange && (
                         <View style={s.pricePill}>
+                          <Text style={{ fontSize: 9 }}>💰</Text>
                           <Text style={s.priceText}>{item.priceRange}</Text>
                         </View>
                       )}
                       {item.experience && (
                         <View style={s.expPill}>
+                          <Text style={{ fontSize: 9 }}>📅</Text>
                           <Text style={s.expText}>{item.experience}</Text>
                         </View>
                       )}
                     </View>
                   </View>
-                  <View style={s.availWrap}>
+                  <View style={[s.availWrap, { backgroundColor: item.available ? '#DCFCE7' : '#FEF3C7' }]}>
                     <View style={[s.availDot, { backgroundColor: item.available ? '#059669' : '#F59E0B' }]} />
                     <Text style={[s.availText, { color: item.available ? '#059669' : '#D97706' }]}>
                       {item.available ? 'Free' : 'Busy'}
@@ -445,7 +446,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
                 <View style={s.cardActions}>
                   <TouchableOpacity style={s.callBtn} onPress={() => Linking.openURL(`tel:${item.phone}`)} activeOpacity={0.7}>
-                    <Ionicons name="call" size={14} color="#059669" />
+                    <Text style={{ fontSize: 13 }}>📞</Text>
                     <Text style={s.callBtnText}>Call</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -454,7 +455,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     activeOpacity={0.8}
                   >
                     <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bookBtnGrad}>
-                      <Ionicons name="calendar-outline" size={14} color="#fff" />
+                      <Text style={{ fontSize: 13 }}>📅</Text>
                       <Text style={s.bookBtnText}>Book Visit</Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -464,7 +465,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           }}
           ListEmptyComponent={
             <View style={s.emptyState}>
-              <View style={s.emptyIcon}><Text style={{ fontSize: 32 }}>🔍</Text></View>
+              <View style={s.emptyIconCircle}><Text style={{ fontSize: 36 }}>🔍</Text></View>
               <Text style={s.emptyTitle}>No providers found</Text>
               <Text style={s.emptySub}>Try a different category or search term</Text>
             </View>
@@ -479,7 +480,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
           ListHeaderComponent={
             <>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.roleChips}>
@@ -506,7 +507,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 })}
               </ScrollView>
               <View style={s.sectionHeaderRow}>
-                <View style={[s.sectionDot, { backgroundColor: '#DB2777' }]} />
+                <Text style={{ fontSize: 14 }}>✅</Text>
                 <Text style={s.sectionTitle}>Verified Staff Directory</Text>
                 <View style={s.countBadge}>
                   <Text style={s.countBadgeText}>{domesticStaff.length}</Text>
@@ -517,19 +518,20 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           renderItem={({ item: staff }) => {
             const rcfg = ROLE_CONFIG[staff.role] || ROLE_CONFIG.HELPER;
             return (
-              <View style={[s.card, staff.status === 'ON_LEAVE' && { opacity: 0.65 }]}>
+              <View style={[s.card, staff.status === 'ON_LEAVE' && { opacity: 0.6 }]}>
+                <View style={[s.cardAccent, { backgroundColor: rcfg.color }]} />
                 <View style={s.cardTopRow}>
-                  <View style={[s.staffAvatar, { backgroundColor: rcfg.bg }]}>
+                  <View style={[s.staffAvatar, { backgroundColor: rcfg.bg, borderWidth: 2, borderColor: rcfg.color + '30' }]}>
                     <Text style={{ fontSize: 20 }}>{rcfg.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={s.nameRow}>
                       <Text style={s.cardName}>{staff.name}</Text>
-                      <View style={[s.roleBadge, { backgroundColor: rcfg.bg }]}>
+                      <View style={[s.roleBadge, { backgroundColor: rcfg.bg, borderWidth: 1, borderColor: rcfg.color + '40' }]}>
                         <Text style={[s.roleBadgeText, { color: rcfg.color }]}>{rcfg.label}</Text>
                       </View>
                     </View>
-                    <Text style={s.cardSpeciality}>{staff.shiftTime} · {staff.workingTowers}</Text>
+                    <Text style={s.cardSpeciality}>🕐 {staff.shiftTime} · 🏢 {staff.workingTowers}</Text>
                   </View>
                   <View style={s.salaryCol}>
                     <Text style={s.salaryValue}>₹{staff.monthlySalary.toLocaleString()}</Text>
@@ -545,30 +547,30 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                   ].map((v) => (
                     <View key={v.label} style={[s.verifyChip, v.done && s.verifyChipDone]}>
                       <Text style={{ fontSize: 10 }}>{v.emoji}</Text>
-                      <Text style={[s.verifyChipText, v.done && { color: '#059669' }]}>{v.label}</Text>
-                      {v.done && <Ionicons name="checkmark" size={10} color="#059669" />}
+                      <Text style={[s.verifyChipText, v.done && { color: '#059669', fontWeight: '700' }]}>{v.label}</Text>
+                      {v.done && <Text style={{ fontSize: 9 }}>✓</Text>}
                     </View>
                   ))}
                 </View>
 
                 <View style={s.staffMeta}>
                   <View style={s.metaTag}>
-                    <Ionicons name="star" size={11} color="#F59E0B" />
+                    <Text style={{ fontSize: 11 }}>⭐</Text>
                     <Text style={s.metaTagText}>{staff.rating} ({staff.reviewCount})</Text>
                   </View>
                   <View style={s.metaTag}>
-                    <Ionicons name="ribbon-outline" size={11} color="#7C3AED" />
+                    <Text style={{ fontSize: 11 }}>🏅</Text>
                     <Text style={s.metaTagText}>{staff.experience}</Text>
                   </View>
                   <View style={s.metaTag}>
-                    <Ionicons name="home-outline" size={11} color="#0284C7" />
+                    <Text style={{ fontSize: 11 }}>🏠</Text>
                     <Text style={s.metaTagText}>{staff.workingFlats.length} flats</Text>
                   </View>
                 </View>
 
                 <View style={s.cardActions}>
                   <TouchableOpacity style={s.primaryBtn} onPress={() => Linking.openURL(`tel:${staff.phone}`)} activeOpacity={0.7}>
-                    <Ionicons name="call" size={14} color="#FFFFFF" />
+                    <Text style={{ fontSize: 13 }}>📞</Text>
                     <Text style={s.primaryBtnText}>Call</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={s.outlineBtn} onPress={() => setActiveTab('attendance')} activeOpacity={0.7}>
@@ -581,7 +583,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           }}
           ListEmptyComponent={
             <View style={s.emptyState}>
-              <View style={s.emptyIcon}><Text style={{ fontSize: 32 }}>👥</Text></View>
+              <View style={s.emptyIconCircle}><Text style={{ fontSize: 36 }}>👥</Text></View>
               <Text style={s.emptyTitle}>No Staff Found</Text>
               <Text style={s.emptySub}>Your domestic staff will appear here once registered</Text>
             </View>
@@ -596,12 +598,13 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
           ListHeaderComponent={
             <>
               <View style={s.sectionHeaderRow}>
-                <View style={[s.sectionDot, { backgroundColor: '#0284C7' }]} />
+                <Text style={{ fontSize: 14 }}>📋</Text>
                 <Text style={s.sectionTitle}>Today's Gate Log</Text>
+                <Text style={s.sectionSubRight}>Live updates 🟢</Text>
               </View>
               {attSummary && (
                 <View style={s.attStatsCard}>
@@ -611,11 +614,14 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     { label: 'Out',    value: attSummary.checkedOut, color: '#2563EB', emoji: '🚪' },
                     { label: 'Leave',  value: attSummary.onLeave,   color: '#D97706', emoji: '📅' },
                     { label: 'Absent', value: attSummary.absent,    color: '#DC2626', emoji: '❌' },
-                  ].map((st) => (
-                    <View key={st.label} style={s.attStatItem}>
-                      <Text style={{ fontSize: 14 }}>{st.emoji}</Text>
-                      <Text style={[s.attStatValue, { color: st.color }]}>{st.value}</Text>
-                      <Text style={s.attStatLabel}>{st.label}</Text>
+                  ].map((st, i, arr) => (
+                    <View key={st.label} style={{ flexDirection: 'row', flex: 1 }}>
+                      <View style={s.attStatItem}>
+                        <Text style={{ fontSize: 16 }}>{st.emoji}</Text>
+                        <Text style={[s.attStatValue, { color: st.color }]}>{st.value}</Text>
+                        <Text style={s.attStatLabel}>{st.label}</Text>
+                      </View>
+                      {i < arr.length - 1 && <View style={s.attStatDivider} />}
                     </View>
                   ))}
                 </View>
@@ -628,14 +634,14 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             return (
               <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: aCfg.color }]}>
                 <View style={s.cardTopRow}>
-                  <View style={[s.staffAvatar, { backgroundColor: rCfg.bg }]}>
+                  <View style={[s.staffAvatar, { backgroundColor: rCfg.bg, borderWidth: 2, borderColor: rCfg.color + '30' }]}>
                     <Text style={{ fontSize: 18 }}>{rCfg.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={s.cardName}>{att.staffName}</Text>
-                    <Text style={s.cardSpeciality}>{rCfg.label}</Text>
+                    <Text style={s.cardSpeciality}>{rCfg.emoji} {rCfg.label}</Text>
                   </View>
-                  <View style={[s.statusBadge, { backgroundColor: aCfg.bg }]}>
+                  <View style={[s.statusBadge, { backgroundColor: aCfg.bg, borderWidth: 1, borderColor: aCfg.color + '30' }]}>
                     <Ionicons name={aCfg.icon} size={11} color={aCfg.color} />
                     <Text style={[s.statusBadgeText, { color: aCfg.color }]}>{aCfg.label}</Text>
                   </View>
@@ -644,15 +650,15 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 {(att.checkInTime || att.checkOutTime) && (
                   <View style={s.timeRow}>
                     {att.checkInTime && (
-                      <View style={s.timeChip}>
-                        <Ionicons name="enter-outline" size={12} color="#059669" />
+                      <View style={[s.timeChip, { backgroundColor: '#DCFCE7' }]}>
+                        <Text style={{ fontSize: 11 }}>🟢</Text>
                         <Text style={s.timeText}>In: {att.checkInTime}</Text>
                         {att.checkInGate && <Text style={s.gateText}>({att.checkInGate})</Text>}
                       </View>
                     )}
                     {att.checkOutTime && (
-                      <View style={s.timeChip}>
-                        <Ionicons name="exit-outline" size={12} color="#2563EB" />
+                      <View style={[s.timeChip, { backgroundColor: '#DBEAFE' }]}>
+                        <Text style={{ fontSize: 11 }}>🔵</Text>
                         <Text style={s.timeText}>Out: {att.checkOutTime}</Text>
                         {att.checkOutGate && <Text style={s.gateText}>({att.checkOutGate})</Text>}
                       </View>
@@ -661,14 +667,14 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 )}
 
                 {att.markedBy && (
-                  <Text style={s.markedBy}>Marked by: {att.markedBy}</Text>
+                  <Text style={s.markedBy}>👤 Marked by: {att.markedBy}</Text>
                 )}
               </View>
             );
           }}
           ListEmptyComponent={
             <View style={s.emptyState}>
-              <View style={s.emptyIcon}><Text style={{ fontSize: 32 }}>📋</Text></View>
+              <View style={s.emptyIconCircle}><Text style={{ fontSize: 36 }}>📋</Text></View>
               <Text style={s.emptyTitle}>No Attendance Records</Text>
               <Text style={s.emptySub}>Staff gate entry/exit will be tracked by security</Text>
             </View>
@@ -683,29 +689,32 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
           ListHeaderComponent={
             <>
               <View style={s.salaryBanner}>
-                <LinearGradient colors={['#312E81', '#4F46E5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.salaryBannerGrad}>
+                <LinearGradient colors={['#1E1B4B', '#312E81', '#4F46E5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.salaryBannerGrad}>
                   <View style={s.salaryBannerItem}>
+                    <Text style={{ fontSize: 18 }}>💰</Text>
                     <Text style={s.salaryBannerLabel}>MONTHLY TOTAL</Text>
                     <Text style={s.salaryBannerValue}>₹{pkgStats.totalMonthly.toLocaleString()}</Text>
                   </View>
                   <View style={s.salaryBannerDivider} />
                   <View style={s.salaryBannerItem}>
+                    <Text style={{ fontSize: 18 }}>🔴</Text>
                     <Text style={s.salaryBannerLabel}>OVERDUE</Text>
                     <Text style={[s.salaryBannerValue, { color: '#FCA5A5' }]}>{pkgStats.overdue}</Text>
                   </View>
                   <View style={s.salaryBannerDivider} />
                   <View style={s.salaryBannerItem}>
+                    <Text style={{ fontSize: 18 }}>⏳</Text>
                     <Text style={s.salaryBannerLabel}>DUE SOON</Text>
                     <Text style={[s.salaryBannerValue, { color: '#FDE68A' }]}>{pkgStats.due}</Text>
                   </View>
                 </LinearGradient>
               </View>
               <View style={[s.sectionHeaderRow, { marginTop: 12 }]}>
-                <View style={[s.sectionDot, { backgroundColor: '#D97706' }]} />
+                <Text style={{ fontSize: 14 }}>💳</Text>
                 <Text style={s.sectionTitle}>Staff Packages & Payments</Text>
                 <View style={s.countBadge}>
                   <Text style={s.countBadgeText}>{packages.length}</Text>
@@ -719,16 +728,17 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             return (
               <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: pCfg.color }]}>
                 <View style={s.cardTopRow}>
-                  <View style={[s.staffAvatar, { backgroundColor: rCfg.bg }]}>
+                  <View style={[s.staffAvatar, { backgroundColor: rCfg.bg, borderWidth: 2, borderColor: rCfg.color + '30' }]}>
                     <Text style={{ fontSize: 18 }}>{rCfg.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={s.cardName}>{pkg.staffName}</Text>
-                    <Text style={s.cardSpeciality}>{rCfg.label} · {pkg.flatNumber}</Text>
+                    <Text style={s.cardSpeciality}>{rCfg.emoji} {rCfg.label} · 🏠 {pkg.flatNumber}</Text>
                   </View>
                   <View style={s.salaryCol}>
                     <Text style={s.salaryValue}>₹{pkg.monthlySalary.toLocaleString()}</Text>
-                    <View style={[s.statusBadge, { backgroundColor: pCfg.bg }]}>
+                    <View style={[s.statusBadge, { backgroundColor: pCfg.bg, borderWidth: 1, borderColor: pCfg.color + '30' }]}>
+                      <Text style={{ fontSize: 9 }}>{pCfg.emoji}</Text>
                       <Text style={[s.statusBadgeText, { color: pCfg.color }]}>{pCfg.label}</Text>
                     </View>
                   </View>
@@ -745,12 +755,12 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 <View style={s.pkgMeta}>
                   {pkg.lastPaidDate && (
                     <View style={s.metaTag}>
-                      <Ionicons name="checkmark-circle-outline" size={11} color="#059669" />
+                      <Text style={{ fontSize: 10 }}>✅</Text>
                       <Text style={s.metaTagText}>Paid: {pkg.lastPaidDate}</Text>
                     </View>
                   )}
                   <View style={s.metaTag}>
-                    <Ionicons name="calendar-outline" size={11} color={pCfg.color} />
+                    <Text style={{ fontSize: 10 }}>{pCfg.emoji}</Text>
                     <Text style={[s.metaTagText, { color: pCfg.color, fontWeight: '700' }]}>Next: {pkg.nextDueDate}</Text>
                   </View>
                 </View>
@@ -764,8 +774,10 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     ])}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="wallet-outline" size={14} color="#FFFFFF" />
-                    <Text style={s.payBtnText}>Mark Paid</Text>
+                    <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.payBtnGrad}>
+                      <Text style={{ fontSize: 12 }}>💸</Text>
+                      <Text style={s.payBtnText}>Mark Paid</Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 )}
               </View>
@@ -773,7 +785,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           }}
           ListEmptyComponent={
             <View style={s.emptyState}>
-              <View style={s.emptyIcon}><Text style={{ fontSize: 32 }}>💰</Text></View>
+              <View style={s.emptyIconCircle}><Text style={{ fontSize: 36 }}>💰</Text></View>
               <Text style={s.emptyTitle}>No Packages</Text>
               <Text style={s.emptySub}>Your staff salary packages will appear here</Text>
             </View>
@@ -788,19 +800,19 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
           ListHeaderComponent={
             <View style={s.jobsHeaderRow}>
               <View>
                 <View style={s.sectionHeaderRow}>
-                  <View style={[s.sectionDot, { backgroundColor: '#7C3AED' }]} />
+                  <Text style={{ fontSize: 14 }}>📢</Text>
                   <Text style={s.sectionTitle}>Staff Job Requirements</Text>
                 </View>
-                <Text style={s.sectionSub}>Post what you need, find verified help</Text>
+                <Text style={s.sectionSub}>Post what you need, find verified help ✨</Text>
               </View>
               <TouchableOpacity style={s.postJobBtn} onPress={() => setJobModalVisible(true)} activeOpacity={0.7}>
                 <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.postJobBtnGrad}>
-                  <Ionicons name="add" size={14} color="#FFFFFF" />
+                  <Text style={{ fontSize: 13 }}>➕</Text>
                   <Text style={s.postJobBtnText}>Post Job</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -810,17 +822,20 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             const rCfg = ROLE_CONFIG[job.role] || ROLE_CONFIG.HELPER;
             const statusColor = job.status === 'OPEN' ? '#059669' : job.status === 'FILLED' ? '#2563EB' : '#6B7280';
             const statusBg = job.status === 'OPEN' ? '#DCFCE7' : job.status === 'FILLED' ? '#DBEAFE' : '#F1F5F9';
+            const statusEmoji = job.status === 'OPEN' ? '🟢' : job.status === 'FILLED' ? '🔵' : '⚪';
             return (
               <View style={s.card}>
+                <View style={[s.cardAccent, { backgroundColor: rCfg.color }]} />
                 <View style={s.cardTopRow}>
-                  <View style={[s.staffAvatar, { backgroundColor: rCfg.bg }]}>
+                  <View style={[s.staffAvatar, { backgroundColor: rCfg.bg, borderWidth: 2, borderColor: rCfg.color + '30' }]}>
                     <Text style={{ fontSize: 18 }}>{rCfg.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={s.cardName}>{job.title}</Text>
-                    <Text style={s.cardSpeciality}>{job.tower || ''} {job.flatNumber} · {job.postedBy}</Text>
+                    <Text style={s.cardSpeciality}>🏢 {job.tower || ''} {job.flatNumber} · 👤 {job.postedBy}</Text>
                   </View>
-                  <View style={[s.statusBadge, { backgroundColor: statusBg }]}>
+                  <View style={[s.statusBadge, { backgroundColor: statusBg, borderWidth: 1, borderColor: statusColor + '30' }]}>
+                    <Text style={{ fontSize: 9 }}>{statusEmoji}</Text>
                     <Text style={[s.statusBadgeText, { color: statusColor }]}>{job.status}</Text>
                   </View>
                 </View>
@@ -828,15 +843,15 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 <Text style={s.jobDesc} numberOfLines={2}>{job.description}</Text>
 
                 <View style={s.jobDetails}>
-                  <View style={s.metaTag}>
+                  <View style={[s.metaTag, s.jobDetailChip]}>
                     <Text style={{ fontSize: 11 }}>💰</Text>
                     <Text style={[s.metaTagText, { color: '#059669', fontWeight: '700' }]}>{job.salaryRange}</Text>
                   </View>
-                  <View style={s.metaTag}>
+                  <View style={[s.metaTag, s.jobDetailChip]}>
                     <Text style={{ fontSize: 11 }}>⏰</Text>
                     <Text style={s.metaTagText}>{job.shiftPreference}</Text>
                   </View>
-                  <View style={s.metaTag}>
+                  <View style={[s.metaTag, s.jobDetailChip]}>
                     <Text style={{ fontSize: 11 }}>👥</Text>
                     <Text style={[s.metaTagText, { color: '#4F46E5', fontWeight: '700' }]}>{job.applicantCount} applicants</Text>
                   </View>
@@ -852,18 +867,18 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                   </View>
                 )}
 
-                <Text style={s.postedDate}>Posted {job.postedAt}</Text>
+                <Text style={s.postedDate}>🕐 Posted {job.postedAt}</Text>
               </View>
             );
           }}
           ListEmptyComponent={
             <View style={s.emptyState}>
-              <View style={s.emptyIcon}><Text style={{ fontSize: 32 }}>📢</Text></View>
+              <View style={s.emptyIconCircle}><Text style={{ fontSize: 36 }}>📢</Text></View>
               <Text style={s.emptyTitle}>No Job Posts</Text>
               <Text style={s.emptySub}>Post a requirement to find verified domestic help</Text>
-              <TouchableOpacity style={s.postJobBtn} onPress={() => setJobModalVisible(true)}>
+              <TouchableOpacity style={[s.postJobBtn, { marginTop: 12 }]} onPress={() => setJobModalVisible(true)}>
                 <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.postJobBtnGrad}>
-                  <Ionicons name="add" size={14} color="#FFFFFF" />
+                  <Text style={{ fontSize: 13 }}>➕</Text>
                   <Text style={s.postJobBtnText}>Post Job</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -879,10 +894,10 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
           ListHeaderComponent={
             <View style={s.sectionHeaderRow}>
-              <View style={[s.sectionDot, { backgroundColor: '#0284C7' }]} />
+              <Text style={{ fontSize: 14 }}>🗓️</Text>
               <Text style={s.sectionTitle}>My Service Bookings</Text>
               <View style={s.countBadge}>
                 <Text style={s.countBadgeText}>{bookings.length}</Text>
@@ -893,31 +908,33 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             const isCancelled = bk.status === 'CANCELLED';
             const statusColor = isCancelled ? '#DC2626' : bk.status === 'COMPLETED' ? '#2563EB' : bk.status === 'IN_PROGRESS' ? '#4F46E5' : '#059669';
             const statusBg = isCancelled ? '#FEE2E2' : bk.status === 'COMPLETED' ? '#DBEAFE' : bk.status === 'IN_PROGRESS' ? '#EEF2FF' : '#DCFCE7';
+            const statusEmoji = isCancelled ? '❌' : bk.status === 'COMPLETED' ? '✅' : bk.status === 'IN_PROGRESS' ? '🔄' : '📋';
             return (
-              <View style={[s.card, isCancelled && { opacity: 0.55 }]}>
+              <View style={[s.card, { borderTopWidth: 3, borderTopColor: statusColor }, isCancelled && { opacity: 0.55 }]}>
                 <View style={s.cardTopRow}>
-                  <View style={[s.statusBadge, { backgroundColor: statusBg }]}>
+                  <View style={[s.statusBadge, { backgroundColor: statusBg, borderWidth: 1, borderColor: statusColor + '30' }]}>
+                    <Text style={{ fontSize: 10 }}>{statusEmoji}</Text>
                     <Text style={[s.statusBadgeText, { color: statusColor }]}>{bk.status}</Text>
                   </View>
                   <View style={{ flex: 1 }} />
-                  <Text style={s.bookingId}>{bk.id}</Text>
+                  <Text style={s.bookingId}>#{bk.id}</Text>
                 </View>
-                <Text style={s.cardName}>{bk.providerName}</Text>
-                <Text style={s.cardSpeciality}>{bk.issue}</Text>
+                <Text style={s.cardName}>👤 {bk.providerName}</Text>
+                <Text style={s.cardSpeciality}>🔧 {bk.issue}</Text>
                 <View style={s.bookingMeta}>
-                  <View style={s.metaTag}>
-                    <Ionicons name="calendar-outline" size={11} color="#4F46E5" />
+                  <View style={[s.metaTag, s.bookingMetaChip]}>
+                    <Text style={{ fontSize: 11 }}>📅</Text>
                     <Text style={s.metaTagText}>{bk.date}</Text>
                   </View>
-                  <View style={s.metaTag}>
-                    <Ionicons name="time-outline" size={11} color="#4F46E5" />
+                  <View style={[s.metaTag, s.bookingMetaChip]}>
+                    <Text style={{ fontSize: 11 }}>🕐</Text>
                     <Text style={s.metaTagText}>{bk.timeSlot}</Text>
                   </View>
                 </View>
                 {bk.status === 'CONFIRMED' && (
                   <View style={s.cardActions}>
                     <TouchableOpacity style={s.primaryBtn} onPress={() => Linking.openURL(`tel:${bk.phone}`)} activeOpacity={0.7}>
-                      <Ionicons name="call" size={14} color="#FFFFFF" />
+                      <Text style={{ fontSize: 13 }}>📞</Text>
                       <Text style={s.primaryBtnText}>Call</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -928,6 +945,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                       ])}
                       activeOpacity={0.7}
                     >
+                      <Text style={{ fontSize: 12 }}>❌</Text>
                       <Text style={[s.outlineBtnText, { color: '#DC2626' }]}>Cancel</Text>
                     </TouchableOpacity>
                   </View>
@@ -937,9 +955,15 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           }}
           ListEmptyComponent={
             <View style={s.emptyState}>
-              <View style={s.emptyIcon}><Text style={{ fontSize: 32 }}>🗓️</Text></View>
+              <View style={s.emptyIconCircle}><Text style={{ fontSize: 36 }}>🗓️</Text></View>
               <Text style={s.emptyTitle}>No Bookings</Text>
               <Text style={s.emptySub}>Book a service provider to get started</Text>
+              <TouchableOpacity style={{ marginTop: 12 }} onPress={() => setActiveTab('providers')} activeOpacity={0.7}>
+                <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.emptyCta}>
+                  <Text style={{ fontSize: 13 }}>🛠️</Text>
+                  <Text style={s.emptyCtaText}>Browse Services</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -949,17 +973,18 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       <Modal visible={bookingModalVisible} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
+            <View style={s.modalAccent} />
             <View style={s.modalHeader}>
               <View>
-                <Text style={s.modalTitle}>Book Service Visit</Text>
+                <Text style={s.modalTitle}>📅 Book Service Visit</Text>
                 {selectedProvider && <Text style={s.modalSub}>{selectedProvider.name} · {selectedProvider.category}</Text>}
               </View>
               <TouchableOpacity onPress={() => setBookingModalVisible(false)} style={s.modalClose}>
-                <Ionicons name="close" size={18} color={COLORS.textMuted} />
+                <Text style={{ fontSize: 14 }}>✕</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={s.fieldLabel}>Preferred Day</Text>
+            <Text style={s.fieldLabel}>📆 Preferred Day</Text>
             <View style={s.choiceRow}>
               {['Today', 'Tomorrow', 'Weekend'].map((d) => (
                 <TouchableOpacity key={d} style={[s.choiceChip, bookDate === d && s.choiceChipActive]} onPress={() => setBookDate(d)}>
@@ -968,7 +993,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
               ))}
             </View>
 
-            <Text style={s.fieldLabel}>Time Slot</Text>
+            <Text style={s.fieldLabel}>🕐 Time Slot</Text>
             {['Morning (9 AM - 12 PM)', 'Afternoon (12 PM - 3 PM)', 'Evening (3 PM - 7 PM)'].map((slot) => (
               <TouchableOpacity
                 key={slot}
@@ -979,7 +1004,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
               </TouchableOpacity>
             ))}
 
-            <Text style={s.fieldLabel}>Describe Issue (Optional)</Text>
+            <Text style={s.fieldLabel}>📝 Describe Issue (Optional)</Text>
             <TextInput
               style={[s.fieldInput, { height: 60, textAlignVertical: 'top' }]}
               placeholder="e.g. Bathroom pipe leak…"
@@ -1011,7 +1036,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
               >
                 {bookMutation.isPending ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
                   <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalConfirmGrad}>
-                    <Text style={s.modalConfirmText}>Confirm Booking</Text>
+                    <Text style={s.modalConfirmText}>✅ Confirm Booking</Text>
                   </LinearGradient>
                 )}
               </TouchableOpacity>
@@ -1024,18 +1049,19 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       <Modal visible={jobModalVisible} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
+            <View style={[s.modalAccent, { backgroundColor: '#7C3AED' }]} />
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={s.modalHeader}>
-                <Text style={s.modalTitle}>Post Job Requirement</Text>
+                <Text style={s.modalTitle}>📢 Post Job Requirement</Text>
                 <TouchableOpacity onPress={() => setJobModalVisible(false)} style={s.modalClose}>
-                  <Ionicons name="close" size={18} color={COLORS.textMuted} />
+                  <Text style={{ fontSize: 14 }}>✕</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={s.fieldLabel}>Title *</Text>
+              <Text style={s.fieldLabel}>✏️ Title *</Text>
               <TextInput style={s.fieldInput} value={jobTitle} onChangeText={setJobTitle} placeholder="e.g. Full-time Maid Needed" placeholderTextColor="#94A3B8" />
 
-              <Text style={s.fieldLabel}>Role</Text>
+              <Text style={s.fieldLabel}>👤 Role</Text>
               <View style={[s.choiceRow, { flexWrap: 'wrap' }]}>
                 {(['MAID', 'COOK', 'DRIVER', 'NANNY', 'GARDENER', 'HELPER'] as StaffRole[]).map((r) => {
                   const rcfg = ROLE_CONFIG[r];
@@ -1048,13 +1074,13 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 })}
               </View>
 
-              <Text style={s.fieldLabel}>Description *</Text>
+              <Text style={s.fieldLabel}>📋 Description *</Text>
               <TextInput style={[s.fieldInput, { height: 70, textAlignVertical: 'top' }]} value={jobDesc} onChangeText={setJobDesc} placeholder="Describe what you need…" placeholderTextColor="#94A3B8" multiline />
 
-              <Text style={s.fieldLabel}>Salary Range</Text>
+              <Text style={s.fieldLabel}>💰 Salary Range</Text>
               <TextInput style={s.fieldInput} value={jobSalary} onChangeText={setJobSalary} placeholder="e.g. ₹3,500 – ₹4,500/mo" placeholderTextColor="#94A3B8" />
 
-              <Text style={s.fieldLabel}>Shift Preference</Text>
+              <Text style={s.fieldLabel}>⏰ Shift Preference</Text>
               <TextInput style={s.fieldInput} value={jobShift} onChangeText={setJobShift} placeholder="e.g. Morning (7 AM – 11 AM)" placeholderTextColor="#94A3B8" />
 
               <View style={s.modalBtnRow}>
@@ -1072,7 +1098,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 >
                   {jobMutation.isPending ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
                     <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalConfirmGrad}>
-                      <Text style={s.modalConfirmText}>Post Job</Text>
+                      <Text style={s.modalConfirmText}>📢 Post Job</Text>
                     </LinearGradient>
                   )}
                 </TouchableOpacity>
@@ -1090,17 +1116,26 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 // ═══════════════════════════════════════════════════════════════
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  listContent: { padding: 16, paddingBottom: 40, gap: 10 },
-  centerBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  loadingText: { fontSize: 13, color: COLORS.textMuted, fontFamily: FONTS.regular },
+  safe: { flex: 1, backgroundColor: GROWW_THEME.background },
+  listContent: { padding: 16, paddingBottom: 40, gap: 12 },
+  centerBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  loadingCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: { fontSize: 13, color: COLORS.textMuted, fontFamily: FONTS.medium },
 
   // ── Gradient Header ──────────────────────────────────────────
-  gradientHeader: {
-    paddingTop: 6,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  cleanHeader: {
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: GROWW_THEME.border,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1109,23 +1144,25 @@ const s = StyleSheet.create({
     gap: 10,
   },
   headerBackBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: GROWW_THEME.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: GROWW_THEME.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: GROWW_THEME.textPrimary,
     letterSpacing: -0.3,
     fontFamily: FONTS.displayBold,
   },
   headerSub: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.65)',
+    color: GROWW_THEME.textSecondary,
     marginTop: 2,
     fontFamily: FONTS.regular,
   },
@@ -1135,33 +1172,33 @@ const s = StyleSheet.create({
     gap: 8,
   },
   headerIconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: GROWW_THEME.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: GROWW_THEME.border,
   },
   headerIconBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     borderColor: '#FFFFFF',
   },
   headerSearchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginTop: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    marginTop: 12,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 14,
     paddingHorizontal: 12,
     gap: 8,
     ...SHADOWS.sm,
   },
   headerSearchInput: {
     flex: 1,
-    paddingVertical: 9,
+    paddingVertical: 10,
     fontSize: 13,
     color: COLORS.text,
     fontFamily: FONTS.regular,
@@ -1170,12 +1207,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: GROWW_THEME.brandDark,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   headerActionText: {
     fontSize: 12,
@@ -1189,39 +1224,51 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginTop: 12,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 14,
+    marginTop: 10,
+    backgroundColor: GROWW_THEME.surfaceMuted,
+    borderRadius: 16,
     paddingVertical: 10,
     paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: GROWW_THEME.border,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 1,
+    gap: 2,
+  },
+  statEmojiHalo: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   statEmoji: { fontSize: 14 },
   statValue: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     color: '#FFFFFF',
     fontFamily: FONTS.displayBold,
   },
   statLabel: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: '500',
-    fontFamily: FONTS.regular,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '600',
+    fontFamily: FONTS.medium,
+    letterSpacing: 0.3,
   },
   statDivider: {
     width: 1,
-    height: 28,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    height: 32,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
 
   // ── Tab Bar ──────────────────────────────────────────────────
   tabBar: {
-    gap: 6,
+    gap: 7,
     paddingHorizontal: 16,
     paddingVertical: 10,
     backgroundColor: '#FFFFFF',
@@ -1232,9 +1279,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 12,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1242,8 +1289,15 @@ const s = StyleSheet.create({
   tabPillActive: {
     backgroundColor: '#EEF2FF',
     borderColor: '#C7D2FE',
+    ...SHADOWS.sm,
   },
-  tabEmoji: { fontSize: 12 },
+  tabDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#4F46E5',
+  },
+  tabEmoji: { fontSize: 13 },
   tabText: {
     fontSize: 11.5,
     fontWeight: '600',
@@ -1256,29 +1310,8 @@ const s = StyleSheet.create({
     fontFamily: FONTS.semiBold,
   },
 
-  // ── Search ───────────────────────────────────────────────────
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E8E8F0',
-    marginBottom: 8,
-    ...SHADOWS.sm,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 11,
-    fontSize: 13,
-    color: COLORS.text,
-    fontFamily: FONTS.regular,
-  },
-
   // ── Category Grid ────────────────────────────────────────────
-  catSection: { marginBottom: 8 },
+  catSection: { marginBottom: 10 },
   catGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1290,11 +1323,13 @@ const s = StyleSheet.create({
     gap: 5,
     paddingVertical: 10,
     borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   catIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1312,23 +1347,19 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 8,
-  },
-  sectionDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: COLORS.text,
     fontFamily: FONTS.displayBold,
+    letterSpacing: -0.2,
   },
   sectionSub: {
     fontSize: 11,
     color: COLORS.textMuted,
-    marginLeft: 13,
+    marginLeft: 20,
     fontFamily: FONTS.regular,
   },
   sectionSubRight: {
@@ -1342,10 +1373,12 @@ const s = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   countBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#4F46E5',
     fontFamily: FONTS.semiBold,
   },
@@ -1358,7 +1391,17 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8F0',
     gap: 10,
+    overflow: 'hidden',
     ...SHADOWS.sm,
+  },
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderTopLeftRadius: RADIUS.lg,
+    borderTopRightRadius: RADIUS.lg,
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -1366,24 +1409,24 @@ const s = StyleSheet.create({
     gap: 10,
   },
   providerAvatar: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  providerAvatarEmoji: { fontSize: 22 },
+  providerAvatarEmoji: { fontSize: 24 },
   staffAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 46,
+    height: 46,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   cardName: {
     fontSize: 14,
@@ -1391,11 +1434,26 @@ const s = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONTS.semiBold,
   },
+  verifiedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  verifiedTagText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#059669',
+    fontFamily: FONTS.semiBold,
+  },
   verifiedBadge: { marginTop: 1 },
   cardSpeciality: {
     fontSize: 11,
     color: COLORS.textMuted,
-    marginTop: 1,
+    marginTop: 2,
     fontFamily: FONTS.regular,
   },
 
@@ -1411,29 +1469,47 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     backgroundColor: '#FFFBEB',
-    borderRadius: 20,
+    borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
   },
   ratingText: { fontSize: 11, fontWeight: '800', color: '#D97706', fontFamily: FONTS.semiBold },
-  ratingCount: { fontSize: 9, color: COLORS.textMuted },
+  ratingCount: { fontSize: 9, color: '#B45309' },
   pricePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     backgroundColor: '#EEF2FF',
-    borderRadius: 20,
+    borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   priceText: { fontSize: 10, fontWeight: '700', color: '#4F46E5', fontFamily: FONTS.semiBold },
   expPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     backgroundColor: '#F1F5F9',
-    borderRadius: 20,
+    borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  expText: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
-  availWrap: { alignItems: 'center', gap: 3, paddingTop: 4 },
+  expText: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600', fontFamily: FONTS.medium },
+  availWrap: {
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
   availDot: { width: 8, height: 8, borderRadius: 4 },
-  availText: { fontSize: 9, fontWeight: '700', fontFamily: FONTS.semiBold },
+  availText: { fontSize: 9, fontWeight: '800', fontFamily: FONTS.semiBold },
 
   // Card Actions
   cardActions: {
@@ -1451,7 +1527,7 @@ const s = StyleSheet.create({
     gap: 6,
     backgroundColor: '#ECFDF5',
     borderRadius: RADIUS.md,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#A7F3D0',
   },
@@ -1462,7 +1538,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 9,
+    paddingVertical: 10,
   },
   bookBtnText: { color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: FONTS.semiBold },
   primaryBtn: {
@@ -1473,7 +1549,7 @@ const s = StyleSheet.create({
     gap: 5,
     backgroundColor: '#4F46E5',
     borderRadius: RADIUS.md,
-    paddingVertical: 9,
+    paddingVertical: 10,
     ...SHADOWS.sm,
   },
   primaryBtnText: { color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: FONTS.semiBold },
@@ -1485,37 +1561,38 @@ const s = StyleSheet.create({
     gap: 5,
     backgroundColor: '#F8FAFC',
     borderRadius: RADIUS.md,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#C7D2FE',
   },
   outlineBtnText: { color: '#4F46E5', fontSize: 12, fontWeight: '700', fontFamily: FONTS.semiBold },
   payBtn: {
     alignSelf: 'flex-end',
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+  },
+  payBtnGrad: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#4F46E5',
-    borderRadius: RADIUS.md,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    ...SHADOWS.sm,
+    paddingVertical: 9,
   },
   payBtnText: { color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: FONTS.semiBold },
 
   // Role badges
   roleBadge: {
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   roleBadgeText: { fontSize: 10, fontWeight: '700', fontFamily: FONTS.semiBold },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 8,
   },
   statusBadgeText: { fontSize: 10, fontWeight: '700', fontFamily: FONTS.semiBold },
@@ -1529,14 +1606,17 @@ const s = StyleSheet.create({
   verifyChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     backgroundColor: '#F1F5F9',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   verifyChipDone: {
     backgroundColor: '#DCFCE7',
+    borderColor: '#BBF7D0',
   },
   verifyChipText: {
     fontSize: 10,
@@ -1550,75 +1630,106 @@ const s = StyleSheet.create({
   metaTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaTagText: { fontSize: 10.5, color: COLORS.textMuted, fontFamily: FONTS.regular },
   salaryCol: { alignItems: 'flex-end', gap: 3 },
-  salaryValue: { fontSize: 15, fontWeight: '800', color: '#312E81', fontFamily: FONTS.displayBold },
-  salaryUnit: { fontSize: 9, color: COLORS.textMuted },
+  salaryValue: { fontSize: 16, fontWeight: '900', color: '#312E81', fontFamily: FONTS.displayBold },
+  salaryUnit: { fontSize: 9, color: COLORS.textMuted, fontFamily: FONTS.regular },
 
   // Attendance
   attStatsCard: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.lg,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 6,
     borderWidth: 1,
     borderColor: '#E8E8F0',
-    marginBottom: 10,
+    marginBottom: 12,
     ...SHADOWS.sm,
   },
-  attStatItem: { flex: 1, alignItems: 'center', gap: 2 },
-  attStatValue: { fontSize: 18, fontWeight: '900', fontFamily: FONTS.displayBold },
-  attStatLabel: { fontSize: 9, color: COLORS.textMuted, fontFamily: FONTS.regular },
-  timeRow: { flexDirection: 'row', gap: 16 },
-  timeChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  timeText: { fontSize: 11, fontWeight: '700', color: COLORS.text, fontFamily: FONTS.semiBold },
-  gateText: { fontSize: 10, color: COLORS.textMuted },
-  markedBy: { fontSize: 10, color: COLORS.textMuted, fontFamily: FONTS.regular },
-
-  // Salary banner
-  salaryBanner: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 4 },
-  salaryBannerGrad: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 10,
-  },
-  salaryBannerItem: { flex: 1, alignItems: 'center', gap: 3 },
-  salaryBannerLabel: { fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 },
-  salaryBannerValue: { fontSize: 18, fontWeight: '900', color: '#FFFFFF', fontFamily: FONTS.displayBold },
-  salaryBannerDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.15)' },
-  servicesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  serviceChip: { backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  serviceChipText: { fontSize: 10, color: COLORS.textSecondary, fontFamily: FONTS.regular },
-  pkgMeta: { flexDirection: 'row', gap: 12 },
-
-  // Jobs
-  jobsHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  postJobBtn: { borderRadius: RADIUS.md, overflow: 'hidden' },
-  postJobBtnGrad: {
+  attStatItem: { flex: 1, alignItems: 'center', gap: 3 },
+  attStatDivider: { width: 1, height: 36, backgroundColor: '#E8E8F0', alignSelf: 'center' },
+  attStatValue: { fontSize: 20, fontWeight: '900', fontFamily: FONTS.displayBold },
+  attStatLabel: { fontSize: 9, color: COLORS.textMuted, fontFamily: FONTS.medium, fontWeight: '600' },
+  timeRow: { flexDirection: 'row', gap: 10 },
+  timeChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  timeText: { fontSize: 11, fontWeight: '700', color: COLORS.text, fontFamily: FONTS.semiBold },
+  gateText: { fontSize: 10, color: COLORS.textMuted, fontFamily: FONTS.regular },
+  markedBy: { fontSize: 10, color: COLORS.textMuted, fontFamily: FONTS.regular },
+
+  // Salary banner
+  salaryBanner: { borderRadius: 18, overflow: 'hidden', marginBottom: 4 },
+  salaryBannerGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+  },
+  salaryBannerItem: { flex: 1, alignItems: 'center', gap: 4 },
+  salaryBannerLabel: { fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.5, fontFamily: FONTS.medium },
+  salaryBannerValue: { fontSize: 19, fontWeight: '900', color: '#FFFFFF', fontFamily: FONTS.displayBold },
+  salaryBannerDivider: { width: 1, height: 34, backgroundColor: 'rgba(255,255,255,0.12)' },
+  servicesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  serviceChip: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  serviceChipText: { fontSize: 10, color: COLORS.textSecondary, fontFamily: FONTS.medium, fontWeight: '600' },
+  pkgMeta: { flexDirection: 'row', gap: 14 },
+
+  // Jobs
+  jobsHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  postJobBtn: { borderRadius: RADIUS.md, overflow: 'hidden', ...SHADOWS.sm },
+  postJobBtnGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
   postJobBtnText: { fontSize: 12, fontWeight: '700', color: '#fff', fontFamily: FONTS.semiBold },
-  jobDesc: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 17, fontFamily: FONTS.regular },
-  jobDetails: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
+  jobDesc: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 18, fontFamily: FONTS.regular },
+  jobDetails: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  jobDetailChip: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+  },
   postedDate: { fontSize: 10, color: COLORS.textMuted, fontFamily: FONTS.regular },
 
   // Bookings
-  bookingId: { fontSize: 10, color: COLORS.textMuted, fontFamily: FONTS.regular },
-  bookingMeta: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  bookingId: { fontSize: 10, color: COLORS.textMuted, fontFamily: FONTS.medium, fontWeight: '600' },
+  bookingMeta: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  bookingMetaChip: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
 
   // Role chips
-  roleChips: { gap: 6, marginBottom: 10 },
+  roleChips: { gap: 7, marginBottom: 10 },
   roleChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E8E8F0',
@@ -1626,56 +1737,79 @@ const s = StyleSheet.create({
   roleChipActive: {
     backgroundColor: '#EEF2FF',
     borderColor: '#C7D2FE',
+    ...SHADOWS.sm,
   },
-  roleChipEmoji: { fontSize: 13 },
+  roleChipEmoji: { fontSize: 14 },
   roleChipText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, fontFamily: FONTS.medium },
   roleChipTextActive: { color: '#4F46E5', fontWeight: '700' },
 
   // Empty
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 6 },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 22,
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 8 },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+    borderWidth: 2,
+    borderColor: '#C7D2FE',
   },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, fontFamily: FONTS.displayBold },
-  emptySub: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', paddingHorizontal: 40, fontFamily: FONTS.regular },
+  emptyTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text, fontFamily: FONTS.displayBold },
+  emptySub: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', paddingHorizontal: 40, fontFamily: FONTS.regular, lineHeight: 18 },
+  emptyCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+  },
+  emptyCtaText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF', fontFamily: FONTS.semiBold },
 
   // ── Modals ───────────────────────────────────────────────────
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.6)', justifyContent: 'center', padding: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.65)', justifyContent: 'center', padding: 16 },
   modalCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 22,
     maxHeight: '88%',
+    overflow: 'hidden',
     ...SHADOWS.md,
+  },
+  modalAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: '#4F46E5',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 14,
+    marginBottom: 16,
   },
-  modalTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text, fontFamily: FONTS.displayBold },
-  modalSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontFamily: FONTS.regular },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, fontFamily: FONTS.displayBold },
+  modalSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 3, fontFamily: FONTS.regular },
   modalClose: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.text,
-    marginTop: 12,
+    marginTop: 14,
     marginBottom: 6,
     fontFamily: FONTS.semiBold,
   },
@@ -1685,7 +1819,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8F0',
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
     fontSize: 13,
     color: COLORS.text,
     fontFamily: FONTS.regular,
@@ -1697,28 +1831,28 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: '#E8E8F0',
     backgroundColor: '#F8FAFC',
   },
-  choiceChipActive: { backgroundColor: '#EEF2FF', borderColor: '#4F46E5' },
+  choiceChipActive: { backgroundColor: '#EEF2FF', borderColor: '#4F46E5', borderWidth: 1.5 },
   choiceChipText: { fontSize: 11.5, color: COLORS.textMuted, fontFamily: FONTS.medium },
   choiceChipTextActive: { color: '#4F46E5', fontWeight: '700' },
   slotItem: {
-    paddingVertical: 9,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: '#E8E8F0',
     backgroundColor: '#F8FAFC',
-    marginBottom: 4,
+    marginBottom: 5,
   },
-  slotItemActive: { backgroundColor: '#EEF2FF', borderColor: '#4F46E5' },
+  slotItemActive: { backgroundColor: '#EEF2FF', borderColor: '#4F46E5', borderWidth: 1.5 },
   slotItemText: { fontSize: 12, color: COLORS.textSecondary, fontFamily: FONTS.regular },
   slotItemTextActive: { color: '#4F46E5', fontWeight: '700' },
-  modalBtnRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  modalBtnRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
   modalCancelBtn: {
     flex: 1,
     paddingVertical: 12,
@@ -1727,15 +1861,17 @@ const s = StyleSheet.create({
     borderColor: '#E8E8F0',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
   },
   modalCancelText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary, fontFamily: FONTS.medium },
   modalConfirmBtn: {
     flex: 1.5,
     borderRadius: RADIUS.md,
     overflow: 'hidden',
+    ...SHADOWS.sm,
   },
   modalConfirmGrad: {
-    paddingVertical: 12,
+    paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },

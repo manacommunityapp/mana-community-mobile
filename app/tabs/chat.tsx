@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { chatService } from '@/services/chatService';
 import { ConversationDto, ChatContactDto } from '@/types/api';
+import { GROWW_THEME } from '@/constants/theme';
 import {
   COLORS, SHADOWS, RADIUS, SPACING, FONTS, GRADIENTS,
   getAvatarColor, getInitials,

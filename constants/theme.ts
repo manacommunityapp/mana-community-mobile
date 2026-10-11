@@ -11,6 +11,10 @@ export const GROWW_THEME = {
   surface:      "#FFFFFF",  // Main card surface
   surfaceSubtle:"#F9FAFC",  // Subtle secondary surface
   surfaceMuted: "#F1F4F7",  // Background chip
+  background:   "#F9FAFC",  // Groww light mode base background
+  backgroundAlt:"#F1F4F7",  // Groww secondary background
+  headerBg:     "#FFFFFF",  // Groww signature clean white header
+  headerBorder: "#EBEFF2",  // Hairline bottom header border
   border:       "#EBEFF2",  // 1px hairline border
   borderMedium: "#DFE4E8",
   textPrimary:  "#44475B",  // Soft Charcoal (Groww primary text)

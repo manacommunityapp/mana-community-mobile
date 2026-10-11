@@ -645,13 +645,8 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* ── Gradient Top Bar ────────────────────────── */}
-      <LinearGradient
-        colors={['#312E81', '#4F46E5', '#6366F1']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.topBar}
-      >
+      {/* ── Groww Clean White Top Bar ────────────────── */}
+      <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.welcomeRow}
           onPress={() => router.push('/tabs/profile')}
@@ -721,7 +716,7 @@ export default function FeedScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* ── Search Bar ─────────────────────────────── */}
       {isSearchOpen && (
@@ -810,7 +805,7 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFBFC' },
+  container: { flex: 1, backgroundColor: GROWW_THEME.background },
 
   // ── Loading ──────────────────────────────────────────────────────
   loadingWrap: {
@@ -979,7 +974,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1.5,
     borderWidth: 1.5,
-    borderColor: '#312E81',
+    borderColor: '#FFFFFF',
   },
   emergencyBadgeText: {
     color: '#FFFFFF',
@@ -1012,7 +1007,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: '#312E81',
+    borderColor: '#FFFFFF',
   },
   badgeText: {
     color: '#fff',

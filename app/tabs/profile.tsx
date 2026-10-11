@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRoleSwitcher } from '@/hooks/useRoleSwitcher';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getInitials } from '@/constants/config';
+import { GROWW_THEME } from '@/constants/theme';
 import { profileService } from '@/services/profileService';
 import { eventService } from '@/services/eventService';
 import { marketplaceService } from '@/services/marketplaceService';
@@ -1106,7 +1107,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: GROWW_THEME.background,
   },
   loadingContainer: {
     flex: 1,
@@ -1127,7 +1128,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: GROWW_THEME.border,
   },
   topBarLeft: {
     flex: 1,
@@ -1136,12 +1137,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: FONTS.displayBold,
     fontWeight: '800',
-    color: '#111827',
+    color: GROWW_THEME.textPrimary,
     letterSpacing: -0.3,
   },
   topBarSubtitle: {
     fontSize: 11,
-    color: '#6B7280',
+    color: GROWW_THEME.textSecondary,
     marginTop: 1,
   },
   topBarActions: {

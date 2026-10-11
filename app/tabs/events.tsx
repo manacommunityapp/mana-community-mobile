@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { eventService } from '@/services/eventService';
 import { EventDto, EventType } from '@/types/api';
 import { COLORS, GRADIENTS, SHADOWS, RADIUS, FONTS, SPACING } from '@/constants/config';
+import { GROWW_THEME } from '@/constants/theme';
 import { format, parseISO, isToday, isTomorrow, differenceInDays } from 'date-fns';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -224,14 +225,14 @@ export default function EventsScreen() {
               onPress={() => router.push('/events/my-events')}
               hitSlop={8}
             >
-              <Ionicons name="bookmark-outline" size={18} color="#fff" />
+              <Ionicons name="bookmark-outline" size={18} color={GROWW_THEME.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.heroBtnAccent}
               onPress={() => router.push('/events/create')}
               hitSlop={8}
             >
-              <Ionicons name="add" size={20} color="#4F46E5" />
+              <Ionicons name="add" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>

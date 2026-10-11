@@ -24,14 +24,14 @@ export const COLORS = {
   accent:       "#4F46E5",  // primary indigo
   accentDark:   "#3730A3",  // indigo-800
   accentLight:  "#EEF2FF",  // indigo-50
-  background:   "#F8FAFC",  // modern slate-50 base
-  backgroundAlt:"#F1F5F9",  // slate-100
+  background:   "#F9FAFC",  // Groww light mode base background
+  backgroundAlt:"#F1F4F7",  // Groww secondary background
   surface:      "#FFFFFF",  // white card
   surfaceAlt:   "#F8FAFC",  // soft slate surface
   surfaceCard:  "#FFFFFF",  // card surface
   border:       "rgba(99, 102, 241, 0.14)",  // refined border
   borderLight:  "rgba(99, 102, 241, 0.08)",  // subtle border
-  borderSlate:  "#E2E8F0",  // slate-200 border
+  borderSlate:  "#EBEFF2",  // Groww hairline border
   text:         "#0F172A",  // slate-900 (ultra-crisp)
   textSecondary:"#475569",  // slate-600
   textMuted:    "#64748B",  // slate-500
