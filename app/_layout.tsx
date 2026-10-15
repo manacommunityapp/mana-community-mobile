@@ -175,6 +175,7 @@ function RootLayout() {
             <Stack.Screen name="admin-role" />
             <Stack.Screen name="sports-admin" />
             <Stack.Screen name="event-admin" />
+            <Stack.Screen name="wellness" />
             <Stack.Screen name="settings" />
           </Stack>
         </QueryClientProvider>

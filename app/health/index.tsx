@@ -74,6 +74,22 @@ export default function HealthHubScreen() {
           <Ionicons name="chevron-forward" size={18} color="#0D9488" />
         </TouchableOpacity>
 
+        {/* Health Buddy Banner */}
+        <TouchableOpacity
+          style={styles.aiBanner}
+          onPress={() => router.push("/wellness")}
+          activeOpacity={0.85}
+        >
+          <View style={[styles.aiIconWrap, { backgroundColor: "#D1FAE5" }]}>
+            <Ionicons name="nutrition" size={24} color="#10B981" />
+          </View>
+          <View style={styles.aiTextWrap}>
+            <Text style={[styles.aiTitle, { color: "#059669" }]}>Health Buddy</Text>
+            <Text style={[styles.aiDesc, { color: "#065F46" }]}>AI meal tracking, nutrition goals & community wellness challenges.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#10B981" />
+        </TouchableOpacity>
+
         {/* Quick Hub Grid */}
         <Text style={styles.sectionTitle}>Healthcare Services</Text>
         <View style={styles.grid}>

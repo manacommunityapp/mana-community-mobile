@@ -654,9 +654,17 @@ export default function ProfileScreen() {
             onPress={() => router.push('/health')}
             iconColor="#0D9488"
             iconBg="#CCFBF1"
+          />
+          <MenuItem
+            icon="nutrition-outline"
+            label="Health Buddy"
+            sublabel="AI nutrition, meal tracking & wellness challenges"
+            onPress={() => router.push('/wellness')}
+            iconColor="#10B981"
+            iconBg="#D1FAE5"
             badge="NEW"
-            badgeBg="#CCFBF1"
-            badgeColor="#0F766E"
+            badgeBg="#D1FAE5"
+            badgeColor="#059669"
           />
           <MenuItem
             icon="construct-outline"
