@@ -19,7 +19,8 @@ export interface QuickActionItem {
 
 export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   // Primary Highlighted Services
-  { id: "health",           emoji: "🩺", icon: "medkit-outline",            label: "Health",        route: "/health",                   bg: "#F0FDFA", color: "#0D9488", category: "Safety & Help",   badge: "NEW" },
+  { id: "health",           emoji: "🩺", icon: "medkit-outline",            label: "Health",        route: "/health",                   bg: "#F0FDFA", color: "#0D9488", category: "Safety & Help" },
+  { id: "health_buddy",     emoji: "🥗", icon: "nutrition-outline",         label: "Health Buddy", route: "/wellness",                  bg: "#D1FAE5", color: "#10B981", category: "Safety & Help",   badge: "NEW" },
   { id: "my_money",         emoji: "💰", icon: "wallet-outline",            label: "My Money",      route: "/personal-finance",         bg: "#ECFDF5", color: "#059669", category: "Living & Bills",  badge: "NEW" },
   { id: "dues",             emoji: "💳", icon: "card-outline",              label: "Dues",          route: "/finance",                  bg: "#EEF2FF", color: "#4F46E5", category: "Living & Bills" },
   { id: "society_treasury", emoji: "🏦", icon: "business-outline",          label: "Society ERP",   route: "/finance/society-dashboard",bg: "#EEF2FF", color: "#4F46E5", category: "Living & Bills",  badge: "ERP" },

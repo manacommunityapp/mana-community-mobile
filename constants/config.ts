@@ -85,6 +85,24 @@ export const THEMES = {
     amberGradient: ["#D97706", "#F59E0B"] as const,
     accentLight: "#FEF3C7",
   },
+  wellness: {
+    primary: "#10B981",
+    primaryDark: "#059669",
+    gradient: ["#059669", "#10B981", "#34D399"] as const,
+    bg: "#ECFDF5",
+    bgSubtle: "#F0FDF4",
+    card: "#FFFFFF",
+    accentLight: "#D1FAE5",
+    accentBorder: "#A7F3D0",
+    orange: "#F97316",
+    orangeLight: "#FFF7ED",
+    blue: "#3B82F6",
+    blueLight: "#EFF6FF",
+    purple: "#8B5CF6",
+    purpleLight: "#F5F3FF",
+    rose: "#F43F5E",
+    roseLight: "#FFF1F2",
+  },
 } as const;
 
 // ── Gradient Pairs ─────────────────────────────────────────────
