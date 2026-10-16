@@ -147,7 +147,6 @@ export default function InstaHelpScreen() {
   const [rating, setRating] = useState(0);
   const [sessionId] = useState(() => `SES-${Date.now().toString(36).toUpperCase()}`);
   const [bookingData, setBookingData] = useState<InstaHelpResponse | null>(null);
-  const [bookingError, setBookingError] = useState<string | null>(null);
 
   const resetState = useCallback(() => {
     setSelectedService(null); setSelectedSubtask(''); setSelectedDuration('2h');
@@ -228,7 +227,6 @@ export default function InstaHelpScreen() {
         setEtaRemaining(localHelper.etaMinutes * 60);
         setSessionOtp(apiRes.closureOtp ?? generateSessionOtp(apiRes.bookingRef));
       } catch (err: any) {
-        setBookingError(err?.message ?? 'Could not find a helper. Please try again.');
         setFlowStep('SELECT_DURATION');
         Alert.alert('Booking failed', err?.message ?? 'Could not find a helper. Please try again.');
         return;
