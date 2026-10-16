@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Modal, Animated, Easing, TextInput, Alert, Dimensions,
+  Animated, Easing, TextInput, Alert, Dimensions,
   BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import { instaHelpService, toApiDuration, InstaHelpResponse } from '@/services/instaHelpService';
 
@@ -117,34 +117,6 @@ const TRACKING_STEPS: { step: TrackingStep; label: string; icon: keyof typeof Io
   { step: 'DONE',       label: 'All Done! 🎉',      icon: 'star-outline',        desc: 'Rate your experience' },
 ];
 
-const MOCK_HELPERS: InstaHelper[] = [
-  {
-    id: 'h1', name: 'Lakshmi B.', avatar: 'L', rating: 4.9, reviewCount: 312,
-    experience: '5 yrs', verified: true, policeVerified: true,
-    speciality: 'Speed cleaning specialist',
-    distanceLabel: 'Inside your complex', etaMinutes: 8, badge: '⭐ Top Rated',
-  },
-  {
-    id: 'h2', name: 'Priya K.', avatar: 'P', rating: 4.7, reviewCount: 184,
-    experience: '3 yrs', verified: true, policeVerified: true,
-    speciality: 'South & North Indian cooking',
-    distanceLabel: '~ 0.4 km away', etaMinutes: 14, badge: '✅ Verified',
-  },
-  {
-    id: 'h3', name: 'Sunita R.', avatar: 'S', rating: 4.8, reviewCount: 227,
-    experience: '4 yrs', verified: true, policeVerified: false,
-    speciality: 'Housekeeping & laundry',
-    distanceLabel: 'Inside your complex', etaMinutes: 6,
-  },
-];
-
-function getHelperForService(type: InstaServiceType): InstaHelper {
-  const map: Partial<Record<InstaServiceType, number>> = {
-    CLEANING: 0, COOKING: 1, MAID: 2, LAUNDRY: 2, IRONING: 0, BABYSITTING: 1,
-  };
-  return MOCK_HELPERS[map[type] ?? 0];
-}
-
 function generateSessionOtp(sessionId: string): string {
   let hash = 0;
   for (const ch of sessionId) { hash = ((hash << 5) - hash) + ch.charCodeAt(0); hash |= 0; }
@@ -199,7 +171,7 @@ export default function InstaHelpScreen() {
       ]); break;
       default: break;
     }
-  }, [flowStep, router, resetState]);
+  }, [flowStep, router, resetState, bookingData]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => { handleBack(); return true; });
@@ -288,7 +260,7 @@ export default function InstaHelpScreen() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [flowStep, etaRemaining]);
+  }, [flowStep]);
 
   // ── Auto-advance tracking for demo ────────────────────────────
   useEffect(() => {
@@ -296,12 +268,15 @@ export default function InstaHelpScreen() {
     const steps: TrackingStep[] = ['MATCHED', 'ON_THE_WAY', 'ARRIVED', 'WORKING', 'DONE'];
     let idx = steps.indexOf(trackingStep);
     if (idx >= steps.length - 1) return;
-    const t = setTimeout(() => {
+    const t = setTimeout(async () => {
       idx++;
       setTrackingStep(steps[idx]);
+      if (steps[idx] === 'DONE' && bookingData?.bookingRef) {
+        try { await instaHelpService.completeSession(bookingData.bookingRef); } catch {}
+      }
     }, 6000);
     return () => clearTimeout(t);
-  }, [flowStep, trackingStep]);
+  }, [flowStep, trackingStep, bookingData]);
 
   const spinDeg = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const fmtEta = (sec: number) => {
@@ -662,7 +637,7 @@ export default function InstaHelpScreen() {
               { label: 'Task',     value: selectedSubtask },
               { label: 'Duration', value: DURATION_OPTIONS.find(d => d.value === selectedDuration)?.label ?? selectedDuration },
               { label: 'Price',    value: DURATION_OPTIONS.find(d => d.value === selectedDuration)?.price ?? '—' },
-              { label: 'Session',  value: sessionId },
+              { label: 'Session',  value: bookingData?.bookingRef ?? sessionId },
             ].map(row => (
               <View key={row.label} style={s.bookingDetailRow}>
                 <Text style={s.bookingDetailLabel}>{row.label}</Text>
@@ -744,6 +719,16 @@ export default function InstaHelpScreen() {
               >
                 <Text style={s.otpConfirmBtnText}>✅  Helper Arrived — Start Session</Text>
               </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Compact OTP reminder (during tracking) */}
+          {isTracking && !isDone && (
+            <View style={s.otpReminderCard}>
+              <Ionicons name="key-outline" size={14} color="#7C3AED" />
+              <Text style={s.otpReminderLabel}>Closure OTP:</Text>
+              <Text style={s.otpReminderCode}>{sessionOtp}</Text>
+              <Text style={s.otpReminderHint}>Share with helper to close session</Text>
             </View>
           )}
 
@@ -975,6 +960,12 @@ const s = StyleSheet.create({
   otpDigitText:     { fontSize: 28, fontWeight: '900', color: '#7C3AED' },
   otpConfirmBtn:    { backgroundColor: '#7C3AED', borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
   otpConfirmBtnText:{ fontSize: 14, fontWeight: '800', color: '#FFF' },
+
+  // Compact OTP reminder (during tracking)
+  otpReminderCard:  { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F5F3FF', borderRadius: RADIUS.md, padding: 12, marginTop: 14, borderWidth: 1, borderColor: '#DDD6FE' },
+  otpReminderLabel: { fontSize: 12, fontWeight: '600', color: '#6D28D9' },
+  otpReminderCode:  { fontSize: 14, fontWeight: '900', color: '#7C3AED', letterSpacing: 2 },
+  otpReminderHint:  { fontSize: 11, color: '#7C3AED', flex: 1, textAlign: 'right' },
 
   // Rate card
   rateCard:         { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 20, marginTop: 14, alignItems: 'center', ...SHADOWS.md },
