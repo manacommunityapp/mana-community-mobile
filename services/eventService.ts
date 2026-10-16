@@ -37,8 +37,16 @@ export const eventService = {
     await api.delete(`/events/${id}`);
   },
 
-  register: async (id: number): Promise<EventDto> => {
-    const res = await api.post<EventDto>(`/events/${id}/register`);
+  register: async (id: number, data?: {
+    ticketType?: string;
+    quantity?: number;
+    name?: string;
+    email?: string;
+    phone?: string;
+    notes?: string;
+    agreed?: boolean;
+  }): Promise<EventDto> => {
+    const res = await api.post<EventDto>(`/events/${id}/register`, data ?? {});
     return res.data;
   },
 
