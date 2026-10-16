@@ -1,5 +1,6 @@
 import { personalFinanceService } from '@/services/personalFinanceService';
 import { useState, useCallback, useMemo } from 'react';
+import { usePathname } from 'expo-router';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, ActivityIndicator, Alert, RefreshControl, Linking,
@@ -20,6 +21,7 @@ import {
 const FINANCE_HUBS = [
   { emoji: '🏦', label: 'Treasury',   color: THEME.indigo,   bg: THEME.indigoLight, route: '/finance/society-dashboard' },
   { emoji: '💳', label: 'Pay Dues',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/finance' },
+  { emoji: '⚡', label: 'Pay Bills',  color: '#D97706',            bg: '#FFFBEB',              route: '/bbps' },
   { emoji: '📑', label: 'Budget',     color: '#EA580C',            bg: '#FFF7ED',              route: '/finance/budget' },
   { emoji: '📊', label: 'Reports',    color: '#D97706',            bg: '#FFFBEB',              route: '/finance/society-reports' },
   { emoji: '📋', label: 'Invoices',   color: '#0284C7',            bg: '#E0F2FE',              route: '/finance/invoices' },
@@ -30,6 +32,7 @@ const FINANCE_HUBS = [
 
 export default function MaintenanceDuesScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -227,12 +230,12 @@ export default function MaintenanceDuesScreen() {
           {FINANCE_HUBS.map((item) => (
             <TouchableOpacity
               key={item.label}
-              style={[s.hubPill, item.label === 'Pay Dues' && s.hubPillActive]}
+              style={[s.hubPill, pathname === item.route && s.hubPillActive]}
               onPress={() => router.push(item.route as any)}
               activeOpacity={0.75}
             >
               <Text style={s.hubEmoji}>{item.emoji}</Text>
-              <Text style={[s.hubLabel, item.label === 'Pay Dues' && s.hubLabelActive]}>{item.label}</Text>
+              <Text style={[s.hubLabel, pathname === item.route && s.hubLabelActive]}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
