@@ -335,6 +335,29 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           ))}
         </View>
 
+        {/* ⚡ Insta Help Banner */}
+        <TouchableOpacity
+          style={s.instaHelpBanner}
+          onPress={() => router.push('/services/insta-help')}
+          activeOpacity={0.85}
+        >
+          <LinearGradient colors={['#4F46E5', '#7C3AED']} style={s.instaHelpGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <View style={s.instaHelpLeft}>
+              <View style={s.instaHelpEtaBadge}>
+                <Text style={s.instaHelpEtaText}>⚡ ~15 min</Text>
+              </View>
+              <Text style={s.instaHelpTitle}>Insta Help</Text>
+              <Text style={s.instaHelpSub}>Maid · Cook · Cleaning · More</Text>
+            </View>
+            <View style={s.instaHelpRight}>
+              <Text style={{ fontSize: 32 }}>🏠</Text>
+              <View style={s.instaHelpArrow}>
+                <Ionicons name="arrow-forward" size={16} color="#FFF" />
+              </View>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
         {/* Search */}
         {isSearchOpen && (
           <View style={s.headerSearchWrap}>
@@ -2567,5 +2590,61 @@ const s = StyleSheet.create({
     color: COLORS.textMuted,
     fontFamily: FONTS.medium,
     fontWeight: '600',
+  },
+
+  // ── Insta Help Banner ────────────────────────────────────────
+  instaHelpBanner: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  instaHelpGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  instaHelpLeft: {
+    flex: 1,
+  },
+  instaHelpEtaBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  instaHelpEtaText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  instaHelpTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFF',
+    letterSpacing: -0.3,
+  },
+  instaHelpSub: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  instaHelpRight: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  instaHelpArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
