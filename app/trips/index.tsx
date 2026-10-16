@@ -23,7 +23,7 @@ function transportIconName(transport: string): 'airplane' | 'bus-outline' | 'car
   return 'bus-outline';
 }
 
-function openFlightSearch(trip: TripDto): void {
+function openFlightSearch(trip: TripDto, router: ReturnType<typeof useRouter>): void {
   const dateStr = trip.departureDate.slice(0, 10);
   const [yyyy, mm, dd] = dateStr.split('-');
   const origin = trip.flightOriginIATA || 'BLR';
@@ -34,7 +34,15 @@ function openFlightSearch(trip: TripDto): void {
     `${origin} → ${dest}  ·  ${dd}/${mm}/${yyyy}\n\nChoose your preferred platform:`,
     [
       {
-        text: 'EaseMyTrip (Recommended)',
+        text: '🔍 Search via App',
+        onPress: () =>
+          router.push({
+            pathname: '/trips/flights',
+            params: { origin, destination: dest, date: dateStr },
+          }),
+      },
+      {
+        text: 'EaseMyTrip',
         onPress: () =>
           Linking.openURL(
             `https://www.easemytrip.com/flights.html?org=${origin}&dest=${dest}&dept=${dd}/${mm}/${yyyy}&adt=1&affiliate_id=${CONFIG.FLIGHT_AFFILIATE.EMT_AFFILIATE_ID}`,
@@ -451,7 +459,7 @@ export default function TripsScreen() {
                         <View style={{ flexDirection: 'row', gap: 6 }}>
                           <TouchableOpacity
                             style={styles.findFlightsBtn}
-                            onPress={() => openFlightSearch(trip)}
+                            onPress={() => openFlightSearch(trip, router)}
                             activeOpacity={0.85}
                           >
                             <Ionicons name="airplane" size={14} color="#FFFFFF" />
