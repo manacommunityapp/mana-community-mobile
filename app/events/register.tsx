@@ -68,7 +68,15 @@ export default function EventRegisterScreen() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: () => eventService.register(Number(id)),
+    mutationFn: () => eventService.register(Number(id), {
+      ticketType,
+      quantity,
+      name,
+      email,
+      phone,
+      notes: notes.trim() || undefined,
+      agreed,
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['event', id] });
       qc.invalidateQueries({ queryKey: ['events'] });
