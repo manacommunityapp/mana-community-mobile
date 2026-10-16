@@ -205,6 +205,20 @@ export interface AiMealAnalysisResponse {
   confidence: number;
   followUpQuestions?: string[];
   notes?: string;
+  junkFoodScore?: number;
+  isJunkFood?: boolean;
+}
+
+export type AccountabilityAlertType = 'CALORIE_OVERAGE' | 'MISSED_DAY' | 'JUNK_FOOD' | 'BUDDY_CHANGES';
+
+export interface AccountabilityAlertDto {
+  id: string;
+  alertType: AccountabilityAlertType;
+  partnerName?: string;
+  triggeredAt: string;
+  message: string;
+  isRead: boolean;
+  data?: Record<string, unknown>;
 }
 
 export interface WaterLogDto {

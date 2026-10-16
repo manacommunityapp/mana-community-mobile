@@ -11,9 +11,44 @@ import {
   AccountabilityPartnerDto,
   WellnessProviderDto,
   AiMealAnalysisResponse,
+  AccountabilityAlertDto,
+  AccountabilityAlertType,
   FoodItemDto,
   WaterLogDto,
 } from "../types/wellness";
+
+// Foods with high junk food score — global + Indian street food
+const JUNK_FOOD_KEYWORDS: Record<string, number> = {
+  // Global
+  pizza: 0.9, burger: 0.9, "french fries": 0.9, fries: 0.85, chips: 0.8,
+  hotdog: 0.85, "hot dog": 0.85, donut: 0.9, "doughnut": 0.9,
+  "fried chicken": 0.8, nuggets: 0.85, soda: 0.75, cola: 0.75,
+  candy: 0.85, chocolate: 0.6, cookie: 0.65, cake: 0.65, pastry: 0.7,
+  "ice cream": 0.7, "deep fried": 0.8,
+  // Indian street food
+  "vada pav": 0.8, "pav bhaji": 0.75, samosa: 0.75, "kachori": 0.8,
+  "pani puri": 0.6, "bhel puri": 0.55, "sev puri": 0.65,
+  "aloo tikki": 0.7, "raj kachori": 0.75, "dahi vada": 0.5,
+  "jalebi": 0.85, "gulab jamun": 0.85, "rabri": 0.75,
+  "namkeen": 0.7, "chakli": 0.65, "gathiya": 0.65,
+};
+
+const JUNK_FOOD_THRESHOLD = 0.6;
+
+function computeJunkFoodScore(items: MealItemDto[], text?: string): number {
+  const searchText = [
+    ...items.map(i => i.name.toLowerCase()),
+    text?.toLowerCase() ?? "",
+  ].join(" ");
+
+  let maxScore = 0;
+  for (const [keyword, score] of Object.entries(JUNK_FOOD_KEYWORDS)) {
+    if (searchText.includes(keyword) && score > maxScore) maxScore = score;
+  }
+  return maxScore;
+}
+
+let alertsState: AccountabilityAlertDto[] = [];
 
 // ── Seed Data ──────────────────────────────────────────────────
 
@@ -349,10 +384,12 @@ export const wellnessService = {
       const res = await api.post<AiMealAnalysisResponse>("/nutrition/meals/analyze", { imageBase64, mealType });
       return res.data;
     } catch {
+      const seedItems: MealItemDto[] = [
+        { id: "ai-1", name: "Mixed Thali", quantity: 1, servingUnit: "plate", calories: 650, protein: 22, carbs: 85, fat: 24, fiber: 8, confidence: 0.75, source: "AI_PHOTO" as const },
+      ];
+      const junkFoodScore = computeJunkFoodScore(seedItems);
       return {
-        items: [
-          { id: "ai-1", name: "Mixed Thali", quantity: 1, servingUnit: "plate", calories: 650, protein: 22, carbs: 85, fat: 24, fiber: 8, confidence: 0.75, source: "AI_PHOTO" as const },
-        ],
+        items: seedItems,
         totalCalories: 650,
         totalProtein: 22,
         totalCarbs: 85,
@@ -364,6 +401,8 @@ export const wellnessService = {
           "Did you have rice alongside?"
         ],
         notes: "AI estimate based on photo analysis. Portions are approximate. Please correct if needed.",
+        junkFoodScore,
+        isJunkFood: junkFoodScore >= JUNK_FOOD_THRESHOLD,
       };
     }
   },
@@ -396,6 +435,7 @@ export const wellnessService = {
         fat: acc.fat + item.fat,
       }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
+      const junkFoodScore = computeJunkFoodScore(items, text);
       return {
         items,
         totalCalories: totals.calories,
@@ -404,6 +444,8 @@ export const wellnessService = {
         totalFat: totals.fat,
         confidence: items.reduce((sum, i) => sum + i.confidence, 0) / items.length,
         notes: "AI estimate based on text description. Values are approximate.",
+        junkFoodScore,
+        isJunkFood: junkFoodScore >= JUNK_FOOD_THRESHOLD,
       };
     }
   },
@@ -488,5 +530,51 @@ export const wellnessService = {
 
   getFoodCatalog(): FoodItemDto[] {
     return SEED_FOOD_CATALOG;
+  },
+
+  async getAlerts(): Promise<AccountabilityAlertDto[]> {
+    try {
+      const res = await api.get<AccountabilityAlertDto[]>("/wellness/alerts");
+      return res.data;
+    } catch {
+      return alertsState;
+    }
+  },
+
+  async markAlertRead(alertId: string): Promise<void> {
+    try {
+      await api.put(`/wellness/alerts/${alertId}/read`);
+    } catch {
+      alertsState = alertsState.map(a => a.id === alertId ? { ...a, isRead: true } : a);
+    }
+  },
+
+  async sendAccountabilityAlert(type: AccountabilityAlertType, message: string, data?: Record<string, unknown>): Promise<void> {
+    try {
+      await api.post("/wellness/alerts", { alertType: type, message, data });
+    } catch {
+      const alert: AccountabilityAlertDto = {
+        id: `alert-${Date.now()}`,
+        alertType: type,
+        triggeredAt: new Date().toISOString(),
+        message,
+        isRead: false,
+        data,
+      };
+      alertsState = [alert, ...alertsState];
+    }
+  },
+
+  async checkAndTriggerJunkFoodAlert(analysis: AiMealAnalysisResponse): Promise<void> {
+    if (!analysis.isJunkFood) return;
+    const partners = await this.getPartners();
+    const activePartners = partners.filter(p => p.consentStatus === "ACCEPTED" && p.status === "ACTIVE");
+    if (activePartners.length === 0) return;
+    const foodNames = analysis.items.map(i => i.name).join(", ");
+    await this.sendAccountabilityAlert(
+      "JUNK_FOOD",
+      `Junk food detected in your meal: ${foodNames}. Score: ${Math.round((analysis.junkFoodScore ?? 0) * 100)}%.`,
+      { junkFoodScore: analysis.junkFoodScore, items: foodNames },
+    );
   },
 };
