@@ -28,7 +28,7 @@ export default function AiAssistantScreen() {
         <View style={styles.disclaimerCard}>
           <Ionicons name="information-circle" size={18} color="#0F766E" />
           <Text style={styles.disclaimerText}>
-            <strong>Safe Non-Diagnostic Assistant:</strong> Mana AI does not diagnose illnesses. It helps identify relevant medical specialties and community doctors for clinical care.
+            <Text style={{ fontWeight: "bold" }}>Safe Non-Diagnostic Assistant:</Text>{" "}Mana AI does not diagnose illnesses. It helps identify relevant medical specialties and community doctors for clinical care.
           </Text>
         </View>
 
