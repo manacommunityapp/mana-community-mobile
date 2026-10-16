@@ -18,6 +18,7 @@ import {
   HomeServiceBookingDto,
   DomesticStaffDto,
   StaffAttendanceDto,
+  StaffMonthlyAttendanceDto,
   ServicePackageDto,
   StaffJobPostDto,
   StaffRole,
@@ -69,6 +70,17 @@ const PAYMENT_CONFIG: Record<string, { label: string; color: string; bg: string;
   OVERDUE: { label: 'Overdue', color: '#DC2626', bg: '#FEE2E2', emoji: '🔴' },
 };
 
+const QUICK_ISSUES: Partial<Record<ServiceCategory, string[]>> = {
+  PLUMBING:     ['Leaking tap', 'Blocked drain', 'Water heater issue', 'Low water pressure'],
+  ELECTRICAL:   ['Power outage', 'Switch not working', 'Short circuit', 'Fan / AC repair'],
+  CLEANING:     ['Deep clean', 'Kitchen cleaning', 'Window cleaning', 'Post-renovation clean'],
+  APPLIANCE:    ['AC not cooling', 'Washing machine repair', 'Geyser issue', 'Refrigerator repair'],
+  CARPENTRY:    ['Door repair', 'Shelf fitting', 'Window frame fix', 'Furniture repair'],
+  PAINTING:     ['Room painting', 'Wall touch-up', 'Waterproofing', 'Texture coat'],
+  MAID:         ['Part-time help', 'Full-time maid', 'Cook required', 'Baby care'],
+  PEST_CONTROL: ['Cockroach treatment', 'Termite control', 'Mosquito spray', 'Rodent control'],
+};
+
 export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -84,13 +96,37 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   const [bookIssue, setBookIssue] = useState('');
   const [bookDate, setBookDate] = useState('Today');
   const [bookTimeSlot, setBookTimeSlot] = useState('Morning (9 AM - 12 PM)');
+  const [bookStep, setBookStep] = useState(1);
 
   const [jobModalVisible, setJobModalVisible] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
+
+  const [calendarStaff, setCalendarStaff] = useState<DomesticStaffDto | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth() + 1);
+  const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
+  const [calendarData, setCalendarData] = useState<StaffMonthlyAttendanceDto | null>(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
+  const [providerDetailVisible, setProviderDetailVisible] = useState(false);
+  const [selectedProviderDetail, setSelectedProviderDetail] = useState<HomeHelpWorkerDto | null>(null);
   const [jobRole, setJobRole] = useState<StaffRole>('MAID');
   const [jobDesc, setJobDesc] = useState('');
   const [jobSalary, setJobSalary] = useState('');
   const [jobShift, setJobShift] = useState('');
+
+  const openStaffCalendar = useCallback(async (staff: DomesticStaffDto, year: number, month: number) => {
+    setCalendarStaff(staff);
+    setCalendarYear(year);
+    setCalendarMonth(month);
+    setCalendarData(null);
+    setCalendarLoading(true);
+    try {
+      const data = await homeServicesService.getStaffMonthlyAttendance(staff.id, year, month);
+      setCalendarData(data);
+    } finally {
+      setCalendarLoading(false);
+    }
+  }, []);
 
   const goHome = useCallback(() => {
     if (isTab) return;
@@ -102,13 +138,18 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
     useCallback(() => {
       if (isTab) return;
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        if (bookingModalVisible) { setBookingModalVisible(false); return true; }
+        if (providerDetailVisible) { setProviderDetailVisible(false); return true; }
+        if (calendarStaff) { setCalendarStaff(null); return true; }
+        if (bookingModalVisible) {
+          if (bookStep > 1) { setBookStep(bookStep - 1); return true; }
+          setBookingModalVisible(false); return true;
+        }
         if (jobModalVisible) { setJobModalVisible(false); return true; }
         goHome();
         return true;
       });
       return () => sub.remove();
-    }, [goHome, isTab, bookingModalVisible, jobModalVisible])
+    }, [goHome, isTab, bookingModalVisible, jobModalVisible, bookStep, calendarStaff, providerDetailVisible])
   );
 
   // ── Queries ───────────────────────────────────────────────────
@@ -399,7 +440,11 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           renderItem={({ item }) => {
             const catCfg = CATEGORIES.find((c) => c.value === item.category) || CATEGORIES[0];
             return (
-              <View style={[s.card, !item.available && { opacity: 0.6 }]}>
+              <TouchableOpacity
+                style={[s.card, !item.available && { opacity: 0.6 }]}
+                onPress={() => { setSelectedProviderDetail(item); setProviderDetailVisible(true); }}
+                activeOpacity={0.9}
+              >
                 <View style={[s.cardAccent, { backgroundColor: catCfg.color }]} />
                 <View style={s.cardTopRow}>
                   <View style={[s.providerAvatar, { backgroundColor: catCfg.bg, borderWidth: 2, borderColor: catCfg.color + '30' }]}>
@@ -451,7 +496,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={s.bookBtn}
-                    onPress={() => { setSelectedProvider(item); setBookIssue(''); setBookingModalVisible(true); }}
+                    onPress={() => { setSelectedProvider(item); setBookIssue(''); setBookDate('Today'); setBookTimeSlot('Morning (9 AM - 12 PM)'); setBookStep(1); setBookingModalVisible(true); }}
                     activeOpacity={0.8}
                   >
                     <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bookBtnGrad}>
@@ -460,7 +505,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           }}
           ListEmptyComponent={
@@ -573,9 +618,13 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     <Text style={{ fontSize: 13 }}>📞</Text>
                     <Text style={s.primaryBtnText}>Call</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={s.outlineBtn} onPress={() => setActiveTab('attendance')} activeOpacity={0.7}>
-                    <Ionicons name="finger-print-outline" size={14} color="#4F46E5" />
-                    <Text style={s.outlineBtnText}>Attendance</Text>
+                  <TouchableOpacity
+                    style={s.outlineBtn}
+                    onPress={() => openStaffCalendar(staff, calendarYear, calendarMonth)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="calendar-outline" size={14} color="#4F46E5" />
+                    <Text style={s.outlineBtnText}>Calendar</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -969,78 +1018,440 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
         />
       )}
 
-      {/* ── Booking Modal ── */}
+      {/* ── Booking Wizard Modal (3 steps) ── */}
       <Modal visible={bookingModalVisible} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
             <View style={s.modalAccent} />
+
+            {/* Header row */}
             <View style={s.modalHeader}>
-              <View>
-                <Text style={s.modalTitle}>📅 Book Service Visit</Text>
-                {selectedProvider && <Text style={s.modalSub}>{selectedProvider.name} · {selectedProvider.category}</Text>}
+              <View style={{ flex: 1 }}>
+                <Text style={s.modalTitle}>
+                  {bookStep === 1 ? '🔧 What\'s the issue?' : bookStep === 2 ? '📅 Choose a slot' : '✅ Confirm booking'}
+                </Text>
+                {selectedProvider && (
+                  <Text style={s.modalSub}>{selectedProvider.name} · {selectedProvider.category}</Text>
+                )}
               </View>
               <TouchableOpacity onPress={() => setBookingModalVisible(false)} style={s.modalClose}>
                 <Text style={{ fontSize: 14 }}>✕</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={s.fieldLabel}>📆 Preferred Day</Text>
-            <View style={s.choiceRow}>
-              {['Today', 'Tomorrow', 'Weekend'].map((d) => (
-                <TouchableOpacity key={d} style={[s.choiceChip, bookDate === d && s.choiceChipActive]} onPress={() => setBookDate(d)}>
-                  <Text style={[s.choiceChipText, bookDate === d && s.choiceChipTextActive]}>{d}</Text>
-                </TouchableOpacity>
+            {/* Step dots */}
+            <View style={s.wizardDots}>
+              {[1, 2, 3].map((n) => (
+                <View key={n} style={[s.wizardDot, bookStep >= n && s.wizardDotActive]} />
               ))}
             </View>
 
-            <Text style={s.fieldLabel}>🕐 Time Slot</Text>
-            {['Morning (9 AM - 12 PM)', 'Afternoon (12 PM - 3 PM)', 'Evening (3 PM - 7 PM)'].map((slot) => (
-              <TouchableOpacity
-                key={slot}
-                style={[s.slotItem, bookTimeSlot === slot && s.slotItemActive]}
-                onPress={() => setBookTimeSlot(slot)}
-              >
-                <Text style={[s.slotItemText, bookTimeSlot === slot && s.slotItemTextActive]}>{slot}</Text>
-              </TouchableOpacity>
-            ))}
-
-            <Text style={s.fieldLabel}>📝 Describe Issue (Optional)</Text>
-            <TextInput
-              style={[s.fieldInput, { height: 60, textAlignVertical: 'top' }]}
-              placeholder="e.g. Bathroom pipe leak…"
-              placeholderTextColor="#94A3B8"
-              value={bookIssue}
-              onChangeText={setBookIssue}
-              multiline
-            />
-
-            <View style={s.modalBtnRow}>
-              <TouchableOpacity style={s.modalCancelBtn} onPress={() => setBookingModalVisible(false)}>
-                <Text style={s.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.modalConfirmBtn, bookMutation.isPending && { opacity: 0.6 }]}
-                disabled={bookMutation.isPending}
-                onPress={() => {
-                  if (!selectedProvider) return;
-                  bookMutation.mutate({
-                    workerId: selectedProvider.id,
-                    providerName: selectedProvider.name,
-                    phone: selectedProvider.phone,
-                    category: selectedProvider.category,
-                    slotDate: bookDate,
-                    timeSlot: bookTimeSlot,
-                    requirementsNotes: bookIssue.trim() || `${selectedProvider.category} service`,
-                  });
-                }}
-              >
-                {bookMutation.isPending ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
-                  <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalConfirmGrad}>
-                    <Text style={s.modalConfirmText}>✅ Confirm Booking</Text>
-                  </LinearGradient>
+            {/* ── Step 1: Issue ── */}
+            {bookStep === 1 && (
+              <>
+                {selectedProvider && QUICK_ISSUES[selectedProvider.category as ServiceCategory] && (
+                  <>
+                    <Text style={s.fieldLabel}>⚡ Common issues</Text>
+                    <View style={[s.choiceRow, { flexWrap: 'wrap' }]}>
+                      {QUICK_ISSUES[selectedProvider.category as ServiceCategory]!.map((issue) => (
+                        <TouchableOpacity
+                          key={issue}
+                          style={[s.choiceChip, { marginBottom: 6 }, bookIssue === issue && s.choiceChipActive]}
+                          onPress={() => setBookIssue(bookIssue === issue ? '' : issue)}
+                        >
+                          <Text style={[s.choiceChipText, bookIssue === issue && s.choiceChipTextActive]}>{issue}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
                 )}
-              </TouchableOpacity>
-            </View>
+                <Text style={s.fieldLabel}>📝 Or describe your issue</Text>
+                <TextInput
+                  style={[s.fieldInput, { height: 70, textAlignVertical: 'top' }]}
+                  placeholder="e.g. Bathroom pipe is leaking near the wall…"
+                  placeholderTextColor="#94A3B8"
+                  value={bookIssue}
+                  onChangeText={setBookIssue}
+                  multiline
+                />
+                <View style={s.modalBtnRow}>
+                  <TouchableOpacity style={s.modalCancelBtn} onPress={() => setBookingModalVisible(false)}>
+                    <Text style={s.modalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={s.modalConfirmBtn}
+                    onPress={() => setBookStep(2)}
+                  >
+                    <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalConfirmGrad}>
+                      <Text style={s.modalConfirmText}>Next →</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* ── Step 2: Date & Time ── */}
+            {bookStep === 2 && (
+              <>
+                <Text style={s.fieldLabel}>📆 Preferred Day</Text>
+                <View style={s.choiceRow}>
+                  {['Today', 'Tomorrow', 'Weekend'].map((d) => (
+                    <TouchableOpacity key={d} style={[s.choiceChip, bookDate === d && s.choiceChipActive]} onPress={() => setBookDate(d)}>
+                      <Text style={[s.choiceChipText, bookDate === d && s.choiceChipTextActive]}>{d}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={s.fieldLabel}>🕐 Time Slot</Text>
+                {['Morning (9 AM – 12 PM)', 'Afternoon (12 PM – 3 PM)', 'Evening (3 PM – 7 PM)'].map((slot) => (
+                  <TouchableOpacity
+                    key={slot}
+                    style={[s.slotItem, bookTimeSlot === slot && s.slotItemActive]}
+                    onPress={() => setBookTimeSlot(slot)}
+                  >
+                    <Text style={[s.slotItemText, bookTimeSlot === slot && s.slotItemTextActive]}>{slot}</Text>
+                  </TouchableOpacity>
+                ))}
+                <View style={s.modalBtnRow}>
+                  <TouchableOpacity style={s.modalCancelBtn} onPress={() => setBookStep(1)}>
+                    <Text style={s.modalCancelText}>← Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.modalConfirmBtn} onPress={() => setBookStep(3)}>
+                    <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalConfirmGrad}>
+                      <Text style={s.modalConfirmText}>Review →</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* ── Step 3: Confirmation Summary ── */}
+            {bookStep === 3 && (
+              <>
+                <View style={s.confirmCard}>
+                  {selectedProvider && (
+                    <>
+                      <View style={s.confirmRow}>
+                        <Text style={s.confirmLabel}>Provider</Text>
+                        <Text style={s.confirmValue}>{selectedProvider.name}</Text>
+                      </View>
+                      <View style={s.confirmDivider} />
+                      <View style={s.confirmRow}>
+                        <Text style={s.confirmLabel}>Service</Text>
+                        <Text style={s.confirmValue}>{selectedProvider.category}</Text>
+                      </View>
+                    </>
+                  )}
+                  <View style={s.confirmDivider} />
+                  <View style={s.confirmRow}>
+                    <Text style={s.confirmLabel}>Issue</Text>
+                    <Text style={[s.confirmValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>
+                      {bookIssue.trim() || (selectedProvider ? `${selectedProvider.category} service` : 'General service')}
+                    </Text>
+                  </View>
+                  <View style={s.confirmDivider} />
+                  <View style={s.confirmRow}>
+                    <Text style={s.confirmLabel}>Date</Text>
+                    <Text style={s.confirmValue}>{bookDate}</Text>
+                  </View>
+                  <View style={s.confirmDivider} />
+                  <View style={s.confirmRow}>
+                    <Text style={s.confirmLabel}>Time</Text>
+                    <Text style={s.confirmValue}>{bookTimeSlot}</Text>
+                  </View>
+                  {selectedProvider?.priceRange && (
+                    <>
+                      <View style={s.confirmDivider} />
+                      <View style={s.confirmRow}>
+                        <Text style={s.confirmLabel}>Est. Cost</Text>
+                        <Text style={[s.confirmValue, { color: '#059669', fontWeight: '800' }]}>{selectedProvider.priceRange}</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+                <Text style={[s.modalSub, { marginTop: 8, textAlign: 'center' }]}>
+                  The provider will contact you to confirm the visit.
+                </Text>
+                <View style={s.modalBtnRow}>
+                  <TouchableOpacity style={s.modalCancelBtn} onPress={() => setBookStep(2)}>
+                    <Text style={s.modalCancelText}>← Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.modalConfirmBtn, bookMutation.isPending && { opacity: 0.6 }]}
+                    disabled={bookMutation.isPending}
+                    onPress={() => {
+                      if (!selectedProvider) return;
+                      bookMutation.mutate({
+                        workerId: selectedProvider.id,
+                        providerName: selectedProvider.name,
+                        phone: selectedProvider.phone,
+                        category: selectedProvider.category,
+                        slotDate: bookDate,
+                        timeSlot: bookTimeSlot,
+                        requirementsNotes: bookIssue.trim() || `${selectedProvider.category} service`,
+                      });
+                    }}
+                  >
+                    {bookMutation.isPending ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
+                      <LinearGradient colors={['#059669', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalConfirmGrad}>
+                        <Text style={s.modalConfirmText}>✅ Confirm Booking</Text>
+                      </LinearGradient>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Provider Detail Bottom Sheet ── */}
+      <Modal visible={providerDetailVisible} transparent animationType="slide">
+        <View style={s.sheetOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setProviderDetailVisible(false)} activeOpacity={1} />
+          <View style={s.sheetCard}>
+            {selectedProviderDetail && (() => {
+              const catCfg = CATEGORIES.find((c) => c.value === selectedProviderDetail.category) || CATEGORIES[0];
+              const stars = Math.round(selectedProviderDetail.rating);
+              return (
+                <>
+                  <View style={[s.sheetHandle]} />
+                  {/* Provider header */}
+                  <View style={[s.sheetProviderHeader, { backgroundColor: catCfg.bg }]}>
+                    <View style={[s.sheetAvatar, { backgroundColor: catCfg.bg, borderColor: catCfg.color + '40' }]}>
+                      <Text style={{ fontSize: 32 }}>{catCfg.emoji}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Text style={s.sheetName}>{selectedProviderDetail.name}</Text>
+                        {selectedProviderDetail.verified && (
+                          <View style={s.verifiedTag}>
+                            <Ionicons name="checkmark-circle" size={12} color="#059669" />
+                            <Text style={s.verifiedTagText}>Verified</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[s.cardSpeciality, { marginTop: 2 }]}>{catCfg.label} Specialist</Text>
+                      {selectedProviderDetail.badge && (
+                        <View style={[s.badgeChip, { backgroundColor: catCfg.color }]}>
+                          <Text style={s.badgeChipText}>{selectedProviderDetail.badge}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <TouchableOpacity onPress={() => setProviderDetailVisible(false)} style={s.modalClose}>
+                      <Text style={{ fontSize: 14 }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Rating row */}
+                  <View style={s.sheetRatingRow}>
+                    <View style={s.sheetStars}>
+                      {[1,2,3,4,5].map(n => (
+                        <Text key={n} style={{ fontSize: 16, color: n <= stars ? '#F59E0B' : '#E2E8F0' }}>★</Text>
+                      ))}
+                    </View>
+                    <Text style={s.sheetRatingNum}>{selectedProviderDetail.rating}</Text>
+                    <Text style={s.sheetRatingCount}>({selectedProviderDetail.reviewCount} reviews)</Text>
+                  </View>
+
+                  {/* Info grid */}
+                  <View style={s.sheetInfoGrid}>
+                    {selectedProviderDetail.priceRange && (
+                      <View style={s.sheetInfoTile}>
+                        <Text style={s.sheetInfoEmoji}>💰</Text>
+                        <Text style={s.sheetInfoValue}>{selectedProviderDetail.priceRange}</Text>
+                        <Text style={s.sheetInfoLabel}>Per visit</Text>
+                      </View>
+                    )}
+                    {selectedProviderDetail.experience && (
+                      <View style={s.sheetInfoTile}>
+                        <Text style={s.sheetInfoEmoji}>🏅</Text>
+                        <Text style={s.sheetInfoValue}>{selectedProviderDetail.experience}</Text>
+                        <Text style={s.sheetInfoLabel}>Experience</Text>
+                      </View>
+                    )}
+                    {selectedProviderDetail.flatsServed && (
+                      <View style={s.sheetInfoTile}>
+                        <Text style={s.sheetInfoEmoji}>🏠</Text>
+                        <Text style={s.sheetInfoValue}>{selectedProviderDetail.flatsServed}+</Text>
+                        <Text style={s.sheetInfoLabel}>Flats served</Text>
+                      </View>
+                    )}
+                    <View style={s.sheetInfoTile}>
+                      <Text style={s.sheetInfoEmoji}>🏢</Text>
+                      <Text style={[s.sheetInfoValue, { fontSize: 11 }]} numberOfLines={1}>
+                        {selectedProviderDetail.workingInTowers || 'All Towers'}
+                      </Text>
+                      <Text style={s.sheetInfoLabel}>Towers</Text>
+                    </View>
+                  </View>
+
+                  {/* Speciality */}
+                  {selectedProviderDetail.speciality && (
+                    <>
+                      <Text style={[s.fieldLabel, { marginBottom: 8 }]}>🔧 Speciality</Text>
+                      <Text style={[s.cardSpeciality, { lineHeight: 18 }]}>{selectedProviderDetail.speciality}</Text>
+                    </>
+                  )}
+
+                  {/* Availability */}
+                  <View style={[s.sheetAvailRow, { backgroundColor: selectedProviderDetail.available ? '#DCFCE7' : '#FEF3C7' }]}>
+                    <View style={[s.availDot, { backgroundColor: selectedProviderDetail.available ? '#059669' : '#F59E0B', width: 8, height: 8 }]} />
+                    <Text style={[s.sheetAvailText, { color: selectedProviderDetail.available ? '#059669' : '#D97706' }]}>
+                      {selectedProviderDetail.available ? 'Available for booking today' : 'Currently busy — check back tomorrow'}
+                    </Text>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={s.modalBtnRow}>
+                    <TouchableOpacity style={s.callBtn} onPress={() => Linking.openURL(`tel:${selectedProviderDetail.phone}`)} activeOpacity={0.7}>
+                      <Text style={{ fontSize: 13 }}>📞</Text>
+                      <Text style={s.callBtnText}>Call</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.modalConfirmBtn, !selectedProviderDetail.available && { opacity: 0.5 }]}
+                      disabled={!selectedProviderDetail.available}
+                      onPress={() => {
+                        setProviderDetailVisible(false);
+                        setSelectedProvider(selectedProviderDetail);
+                        setBookIssue('');
+                        setBookDate('Today');
+                        setBookTimeSlot('Morning (9 AM - 12 PM)');
+                        setBookStep(1);
+                        setBookingModalVisible(true);
+                      }}
+                    >
+                      <LinearGradient colors={['#4F46E5', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalConfirmGrad}>
+                        <Text style={s.modalConfirmText}>📅 Book Now</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Monthly Attendance Calendar Modal ── */}
+      <Modal visible={!!calendarStaff} transparent animationType="slide">
+        <View style={s.sheetOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setCalendarStaff(null)} activeOpacity={1} />
+          <View style={[s.sheetCard, { maxHeight: '82%' }]}>
+            <View style={s.sheetHandle} />
+            {calendarStaff && (
+              <>
+                {/* Header */}
+                <View style={s.modalHeader}>
+                  <View>
+                    <Text style={s.modalTitle}>📅 Monthly Attendance</Text>
+                    <Text style={s.modalSub}>{calendarStaff.name}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setCalendarStaff(null)} style={s.modalClose}>
+                    <Text style={{ fontSize: 14 }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Month nav */}
+                <View style={s.calMonthNav}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const d = new Date(calendarYear, calendarMonth - 2);
+                      const y = d.getFullYear(); const m = d.getMonth() + 1;
+                      openStaffCalendar(calendarStaff, y, m);
+                    }}
+                    style={s.calNavBtn}
+                  >
+                    <Ionicons name="chevron-back" size={18} color="#4F46E5" />
+                  </TouchableOpacity>
+                  <Text style={s.calMonthLabel}>
+                    {new Date(calendarYear, calendarMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const now = new Date(); const nowY = now.getFullYear(); const nowM = now.getMonth() + 1;
+                      if (calendarYear > nowY || (calendarYear === nowY && calendarMonth >= nowM)) return;
+                      const d = new Date(calendarYear, calendarMonth);
+                      const y = d.getFullYear(); const m = d.getMonth() + 1;
+                      openStaffCalendar(calendarStaff, y, m);
+                    }}
+                    style={s.calNavBtn}
+                  >
+                    <Ionicons name="chevron-forward" size={18} color="#4F46E5" />
+                  </TouchableOpacity>
+                </View>
+
+                {calendarLoading ? (
+                  <View style={[s.centerBox, { paddingVertical: 40 }]}>
+                    <ActivityIndicator size="large" color="#4F46E5" />
+                  </View>
+                ) : calendarData ? (
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    {/* Summary chips */}
+                    <View style={s.calSummaryRow}>
+                      {[
+                        { label: 'Present', count: calendarData.summary.present, color: '#059669', bg: '#DCFCE7' },
+                        { label: 'Absent', count: calendarData.summary.absent, color: '#DC2626', bg: '#FEE2E2' },
+                        { label: 'Leave', count: calendarData.summary.onLeave, color: '#D97706', bg: '#FEF3C7' },
+                        { label: 'Unknown', count: calendarData.summary.notMarked, color: '#6B7280', bg: '#F1F5F9' },
+                      ].map(item => (
+                        <View key={item.label} style={[s.calSummaryChip, { backgroundColor: item.bg, borderColor: item.color + '40' }]}>
+                          <Text style={[s.calSummaryNum, { color: item.color }]}>{item.count}</Text>
+                          <Text style={[s.calSummaryLabel, { color: item.color }]}>{item.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    {/* Day-of-week headers */}
+                    <View style={s.calWeekRow}>
+                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                        <Text key={d} style={s.calWeekLabel}>{d}</Text>
+                      ))}
+                    </View>
+
+                    {/* Calendar grid */}
+                    <View style={s.calGrid}>
+                      {/* Leading empty cells */}
+                      {Array.from({ length: new Date(calendarYear, calendarMonth - 1, 1).getDay() }).map((_, i) => (
+                        <View key={`empty-${i}`} style={s.calCell} />
+                      ))}
+                      {calendarData.days.map(({ day, status, checkInTime }) => {
+                        const cfg: Record<AttendanceStatus, { color: string; bg: string; char: string }> = {
+                          CHECKED_IN:  { color: '#059669', bg: '#DCFCE7', char: 'P' },
+                          CHECKED_OUT: { color: '#2563EB', bg: '#DBEAFE', char: 'P' },
+                          ABSENT:      { color: '#DC2626', bg: '#FEE2E2', char: 'A' },
+                          ON_LEAVE:    { color: '#D97706', bg: '#FEF3C7', char: 'L' },
+                          NOT_MARKED:  { color: '#9CA3AF', bg: '#F1F5F9', char: '?' },
+                        };
+                        const c = cfg[status];
+                        return (
+                          <View key={day} style={[s.calCell, { backgroundColor: c.bg }]}>
+                            <Text style={[s.calCellDay, { color: c.color }]}>{day}</Text>
+                            <Text style={[s.calCellStatus, { color: c.color }]}>{c.char}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {/* Legend */}
+                    <View style={s.calLegend}>
+                      {[
+                        { char: 'P', label: 'Present', color: '#059669', bg: '#DCFCE7' },
+                        { char: 'A', label: 'Absent',  color: '#DC2626', bg: '#FEE2E2' },
+                        { char: 'L', label: 'On Leave', color: '#D97706', bg: '#FEF3C7' },
+                        { char: '?', label: 'Unknown', color: '#9CA3AF', bg: '#F1F5F9' },
+                      ].map(item => (
+                        <View key={item.char} style={s.calLegendItem}>
+                          <View style={[s.calLegendDot, { backgroundColor: item.bg, borderColor: item.color + '40' }]}>
+                            <Text style={[s.calCellStatus, { color: item.color, fontSize: 9 }]}>{item.char}</Text>
+                          </View>
+                          <Text style={s.calLegendText}>{item.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                ) : null}
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -1876,4 +2287,285 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   modalConfirmText: { fontSize: 13, fontWeight: '800', color: '#fff', fontFamily: FONTS.semiBold },
+
+  // ── Booking Wizard ───────────────────────────────────────────
+  wizardDots: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 16,
+    alignSelf: 'center',
+  },
+  wizardDot: {
+    width: 28,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E2E8F0',
+  },
+  wizardDotActive: {
+    backgroundColor: '#4F46E5',
+  },
+  confirmCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  confirmRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 8,
+  },
+  confirmLabel: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.medium,
+    fontWeight: '600',
+  },
+  confirmValue: {
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: '700',
+    fontFamily: FONTS.semiBold,
+  },
+  confirmDivider: {
+    height: 1,
+    backgroundColor: '#E8E8F0',
+    marginHorizontal: 14,
+  },
+
+  // ── Bottom Sheet (Provider Detail + Calendar) ────────────────
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    justifyContent: 'flex-end',
+  },
+  sheetCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    paddingTop: 10,
+    maxHeight: '90%',
+    ...SHADOWS.md,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#DDE1E9',
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  sheetProviderHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  sheetAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetName: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.text,
+    fontFamily: FONTS.displayBold,
+  },
+  badgeChip: {
+    alignSelf: 'flex-start',
+    marginTop: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  badgeChipText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    fontFamily: FONTS.semiBold,
+  },
+  sheetRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 14,
+  },
+  sheetStars: { flexDirection: 'row', gap: 2 },
+  sheetRatingNum: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+    fontFamily: FONTS.displayBold,
+  },
+  sheetRatingCount: { fontSize: 12, color: COLORS.textMuted, fontFamily: FONTS.regular },
+  sheetInfoGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+    flexWrap: 'wrap',
+  },
+  sheetInfoTile: {
+    flex: 1,
+    minWidth: 70,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    padding: 10,
+    gap: 2,
+  },
+  sheetInfoEmoji: { fontSize: 18 },
+  sheetInfoValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.text,
+    fontFamily: FONTS.displayBold,
+    textAlign: 'center',
+  },
+  sheetInfoLabel: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.medium,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  sheetAvailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  sheetAvailText: { fontSize: 12, fontWeight: '600', fontFamily: FONTS.medium },
+
+  // ── Monthly Calendar ─────────────────────────────────────────
+  calMonthNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  calNavBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  calMonthLabel: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.text,
+    fontFamily: FONTS.displayBold,
+  },
+  calSummaryRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  calSummaryChip: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+  },
+  calSummaryNum: {
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: FONTS.displayBold,
+    lineHeight: 22,
+  },
+  calSummaryLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: FONTS.medium,
+  },
+  calWeekRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  calWeekLabel: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    fontFamily: FONTS.medium,
+  },
+  calGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginBottom: 16,
+  },
+  calCell: {
+    width: `${(100 - 6 * 4 / 3.5) / 7}%` as any,
+    aspectRatio: 1,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 36,
+    flex: 1,
+  },
+  calCellDay: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: FONTS.semiBold,
+    lineHeight: 14,
+  },
+  calCellStatus: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: FONTS.semiBold,
+    lineHeight: 13,
+  },
+  calLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 14,
+    paddingTop: 4,
+    paddingBottom: 8,
+    flexWrap: 'wrap',
+  },
+  calLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  calLegendDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calLegendText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.medium,
+    fontWeight: '600',
+  },
 });

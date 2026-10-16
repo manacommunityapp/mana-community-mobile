@@ -12,6 +12,7 @@ export interface HelpdeskTicketDto {
   id: string;
   ticketNumber: string;
   category: 'PLUMBING' | 'ELECTRICAL' | 'CARPENTRY' | 'SECURITY' | 'LIFT' | 'OTHER';
+  subCategory?: string;
   title: string;
   description: string;
   status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
@@ -25,6 +26,10 @@ export interface HelpdeskTicketDto {
   residentRating?: number;
   residentComment?: string;
   location?: string;
+  locationArea?: string;
+  closureOtp?: string;
+  escalationLevel?: number;
+  escalationNote?: string;
   timeline?: TicketTimelineItem[];
 }
 
@@ -61,6 +66,7 @@ const FALLBACK_TICKETS: HelpdeskTicketDto[] = [
     title: "Water leaking from master bathroom ceiling",
     description: "Continuous water seepage and dripping from bathroom ceiling, likely from the apartment above.",
     category: "PLUMBING",
+    subCategory: "Water Leakage",
     status: "IN_PROGRESS",
     priority: "HIGH",
     assignedTo: "Raju Sharma (Chief Plumber)",
@@ -68,7 +74,9 @@ const FALLBACK_TICKETS: HelpdeskTicketDto[] = [
     createdAt: new Date(Date.now() - 4 * 3600000).toISOString(),
     slaHours: 8,
     slaDeadline: new Date(Date.now() + 4 * 3600000).toISOString(),
+    locationArea: "My Flat",
     location: "Tower A, Flat 1204, Master Bath",
+    escalationLevel: 1,
     timeline: [
       { id: "tl-1", action: "CREATED", note: "Incident logged by resident via app", author: "Resident", timestamp: "09:00 AM" },
       { id: "tl-2", action: "ASSIGNED", note: "Assigned to on-duty plumbing team", author: "Helpdesk AI", timestamp: "09:05 AM" },
@@ -81,17 +89,22 @@ const FALLBACK_TICKETS: HelpdeskTicketDto[] = [
     title: "Lift B-2 making loud grinding noise",
     description: "Elevator B-2 is vibrating heavily between floors 4 and 8. Urgent check needed before someone gets stuck.",
     category: "LIFT",
+    subCategory: "Strange Noise",
     status: "OPEN",
     priority: "URGENT",
     assignedTo: "Otis Elevator AMC Response",
     assignedPhone: "+91-98450-88123",
-    createdAt: new Date(Date.now() - 1 * 3600000).toISOString(),
+    createdAt: new Date(Date.now() - 3 * 3600000).toISOString(),
     slaHours: 2,
-    slaDeadline: new Date(Date.now() + 1 * 3600000).toISOString(),
+    slaDeadline: new Date(Date.now() - 1 * 3600000).toISOString(),
+    locationArea: "Corridor / Staircase",
     location: "Tower B, Passenger Lift 2",
+    escalationLevel: 2,
+    escalationNote: "SLA breached — auto-escalated to Facilities Manager",
     timeline: [
       { id: "tl-4", action: "CREATED", note: "Emergency elevator noise complaint", author: "Resident", timestamp: "11:30 AM" },
       { id: "tl-5", action: "ASSIGNED", note: "Auto-dispatched to Otis emergency support", author: "Helpdesk AI", timestamp: "11:32 AM" },
+      { id: "tl-6", action: "ESCALATED", note: "SLA of 2h breached — escalated to L2: Facilities Manager notified", author: "System", timestamp: "01:32 PM" },
     ],
   },
   {
@@ -120,8 +133,35 @@ const FALLBACK_TICKETS: HelpdeskTicketDto[] = [
 let LOCAL_TICKETS: HelpdeskTicketDto[] = [...FALLBACK_TICKETS];
 
 export const smartHelpdeskService = {
+  /** Auto-escalation: mutates LOCAL_TICKETS in place when SLA is breached */
+  _applyAutoEscalation(): void {
+    const now = Date.now();
+    for (const t of LOCAL_TICKETS) {
+      if ((t.status !== 'OPEN' && t.status !== 'IN_PROGRESS') || !t.slaDeadline) continue;
+      const breachMs = now - new Date(t.slaDeadline).getTime();
+      if (breachMs <= 0) continue;
+      const breachHours = breachMs / 3600000;
+      const newLevel = breachHours > 24 ? 3 : breachHours > 4 ? 2 : 1;
+      if ((t.escalationLevel ?? 1) >= newLevel) continue;
+      t.escalationLevel = newLevel;
+      const escalateTo = newLevel === 3 ? 'MD / Owner notified (L3 Critical)' : 'Facilities Manager notified (L2)';
+      t.escalationNote = `SLA breached by ${Math.floor(breachHours)}h — ${escalateTo}`;
+      t.timeline = [
+        ...(t.timeline ?? []),
+        {
+          id: `esc-${Date.now()}`,
+          action: 'ESCALATED',
+          note: `Auto-escalated to L${newLevel}: ${escalateTo}`,
+          author: 'System',
+          timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        },
+      ];
+    }
+  },
+
   /** 1. Get list of tickets (with optional status filter) */
   async getTickets(status?: string): Promise<HelpdeskTicketDto[]> {
+    this._applyAutoEscalation();
     try {
       const res = await api.get<HelpdeskTicketDto[]>('/helpdesk/tickets', {
         params: status && status !== 'ALL' ? { status } : undefined,
@@ -140,13 +180,40 @@ export const smartHelpdeskService = {
   /** 2. Create new service ticket */
   async createTicket(payload: {
     category: string;
+    subCategory?: string;
     title: string;
     description: string;
     priority?: string;
+    locationArea?: string;
     mediaUrls?: string[];
   }): Promise<HelpdeskTicketDto> {
-    const res = await api.post<HelpdeskTicketDto>('/helpdesk/tickets', payload);
-    return res.data;
+    try {
+      const res = await api.post<HelpdeskTicketDto>('/helpdesk/tickets', payload);
+      const ticket = res.data;
+      LOCAL_TICKETS.unshift(ticket);
+      return ticket;
+    } catch {
+      const newTicket: HelpdeskTicketDto = {
+        id: `tk-${Date.now()}`,
+        ticketNumber: `TKT-${new Date().getFullYear()}-${String(LOCAL_TICKETS.length + 101).padStart(4, '0')}`,
+        category: payload.category as HelpdeskTicketDto['category'],
+        subCategory: payload.subCategory,
+        title: payload.title,
+        description: payload.description,
+        status: 'OPEN',
+        priority: (payload.priority as HelpdeskTicketDto['priority']) || 'MEDIUM',
+        locationArea: payload.locationArea || 'My Flat',
+        mediaUrls: payload.mediaUrls,
+        createdAt: new Date().toISOString(),
+        slaHours: payload.priority === 'URGENT' ? 2 : payload.priority === 'HIGH' ? 8 : payload.priority === 'MEDIUM' ? 24 : 72,
+        slaDeadline: new Date(Date.now() + (payload.priority === 'URGENT' ? 2 : payload.priority === 'HIGH' ? 8 : 24) * 3600000).toISOString(),
+        timeline: [
+          { id: `tl-${Date.now()}`, action: 'CREATED', note: 'Request logged via Mana Community App', author: 'Resident', timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) },
+        ],
+      };
+      LOCAL_TICKETS.unshift(newTicket);
+      return newTicket;
+    }
   },
 
   /** 3. Get single ticket details */
@@ -204,5 +271,26 @@ export const smartHelpdeskService = {
   async getDashboardSummary(): Promise<any> {
     const res = await api.get<any>('/helpdesk/dashboard/resident');
     return res.data;
+  },
+
+  /** 11. Reopen a resolved or closed ticket */
+  async reopenTicket(ticketId: string, reason?: string): Promise<HelpdeskTicketDto> {
+    try {
+      const res = await api.put<HelpdeskTicketDto>(`/helpdesk/tickets/${ticketId}/reopen`, { reason });
+      const found = LOCAL_TICKETS.find(t => t.id === ticketId);
+      if (found) { found.status = 'OPEN'; }
+      return res.data;
+    } catch {
+      const found = LOCAL_TICKETS.find(t => t.id === ticketId);
+      if (found) {
+        found.status = 'OPEN';
+        found.timeline = [
+          ...(found.timeline || []),
+          { id: `tl-${Date.now()}`, action: 'REOPENED', note: reason || 'Ticket reopened by resident — issue not fully resolved.', author: 'Resident', timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) },
+        ];
+        return { ...found };
+      }
+      throw new Error('Ticket not found');
+    }
   },
 };
