@@ -94,6 +94,7 @@ export default function HealthHubScreen() {
         <Text style={styles.sectionTitle}>Healthcare Services</Text>
         <View style={styles.grid}>
           {[
+            { title: "Care Journey", desc: "Track Full Journey", icon: "git-merge", route: "/health/care-journey", color: "#4F46E5", bg: "#EEF2FF" },
             { title: "Find Doctors", desc: "Specialists & Clinic", icon: "medkit", route: "/health/doctors", color: "#0D9488", bg: "#CCFBF1" },
             { title: "Clubhouse Camps", desc: "Screening Drives", icon: "fitness", route: "/health/camps", color: "#059669", bg: "#D1FAE5" },
             { title: "Family Health", desc: "Manage Dependents", icon: "people", route: "/health/family", color: "#6366F1", bg: "#EEF2FF" },
@@ -102,6 +103,7 @@ export default function HealthHubScreen() {
             { title: "Health Vault", desc: "Prescriptions & Reports", icon: "shield-checkmark", route: "/health/records", color: "#0D9488", bg: "#DCFCE7" },
             { title: "Lab Packages", desc: "Home Collection", icon: "flask", route: "/health/labs", color: "#D97706", bg: "#FEF3C7" },
             { title: "Home Care", desc: "Nurses & Physio", icon: "home", route: "/health/homecare", color: "#DB2777", bg: "#FCE7F3" },
+            { title: "Pharmacy", desc: "Medicine Delivery", icon: "medkit", route: "/health/pharmacy", color: "#7C3AED", bg: "#EDE9FE" },
             { title: "Emergency SOS", desc: "Ambulance & 24x7", icon: "warning", route: "/health/emergency", color: "#DC2626", bg: "#FEE2E2" },
           ].map((item, idx) => (
             <TouchableOpacity

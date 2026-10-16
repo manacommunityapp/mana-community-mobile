@@ -17,6 +17,10 @@ export default function HealthLayout() {
       <Stack.Screen name="homecare/index" options={{ title: "🏡 Home Healthcare" }} />
       <Stack.Screen name="emergency" options={{ title: "🚨 Medical Emergency Network" }} />
       <Stack.Screen name="ai-assistant" options={{ title: "🤖 AI Symptom Navigator" }} />
+      <Stack.Screen name="care-journey/index" options={{ title: "Care Journey Tracker" }} />
+      <Stack.Screen name="labs/book" options={{ title: "📅 Book Home Collection" }} />
+      <Stack.Screen name="pharmacy/index" options={{ title: "💊 Medicine Delivery" }} />
+      <Stack.Screen name="appointments/video-room" options={{ title: "Video Consultation", headerShown: false }} />
     </Stack>
   );
 }

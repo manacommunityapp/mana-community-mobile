@@ -101,14 +101,21 @@ export default function AppointmentDetailScreen() {
         </View>
 
         {/* Action / Meeting Link */}
-        {appointment.mode === "VIDEO" && appointment.meetingLink && (
-          <View style={styles.videoCard}>
+        {appointment.mode === "VIDEO" && (
+          <TouchableOpacity
+            style={styles.videoCard}
+            onPress={() => router.push({ pathname: "/health/appointments/video-room", params: { appointmentId: appointment.id } } as any)}
+            activeOpacity={0.85}
+          >
             <Ionicons name="videocam" size={24} color="#0D9488" />
             <View style={{ flex: 1 }}>
               <Text style={styles.videoTitle}>Secure Video Room Ready</Text>
-              <Text style={styles.videoLink}>{appointment.meetingLink}</Text>
+              <Text style={styles.videoLink}>Tap to join your encrypted consultation</Text>
             </View>
-          </View>
+            <View style={styles.joinBtn}>
+              <Text style={styles.joinBtnText}>Join Now</Text>
+            </View>
+          </TouchableOpacity>
         )}
 
         {/* 6-Stage Care Journey Lifecycle */}
@@ -285,6 +292,8 @@ const styles = StyleSheet.create({
   videoCard: { backgroundColor: "#F0FDFA", borderWidth: 1, borderColor: "#99F6E4", padding: 14, borderRadius: 14, flexDirection: "row", gap: 12, alignItems: "center" },
   videoTitle: { fontSize: 13, fontWeight: "bold", color: "#0F766E" },
   videoLink: { fontSize: 11, color: "#0D9488", marginTop: 2 },
+  joinBtn: { backgroundColor: "#0D9488", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  joinBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 12 },
   cardTitle: { fontSize: 15, fontWeight: "bold", color: "#111827" },
   historyRow: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 3 },
   historyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#0D9488" },
