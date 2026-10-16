@@ -47,6 +47,10 @@ export interface TripDto {
   hostPhone?: string;
   itinerary?: ItineraryDayDto[];
   transport: string;
+  flightOriginIATA?: string;
+  flightDestIATA?: string;
+  groupPnr?: string;
+  farePerPerson?: number;
   highlights?: string[];
   transportDetails?: {
     vehicleType: string;
@@ -286,6 +290,62 @@ const FALLBACK_TRIPS: TripDto[] = [
     status: 'UPCOMING',
     imagePlaceholderColor: '#2563EB',
   },
+  {
+    id: 'trip-5',
+    title: 'Goa Beach Retreat — Community Group Flight',
+    category: 'Beach & Coastal',
+    description: 'Fly together to Goa for a 3-day society beach retreat. Group PNR locked at ₹5,200/seat via EaseMyTrip Corporate Desk. Hotel & activities included in the trip pool.',
+    destination: 'Goa',
+    departureDate: '2026-12-19T06:00:00Z',
+    returnDate: '2026-12-21T20:00:00Z',
+    departurePoint: 'Kempegowda International Airport (BLR)',
+    duration: '3 Days / 2 Nights',
+    pickupStops: ['BLR Airport T2 Departure'],
+    totalSeats: 40,
+    bookedSeats: 11,
+    waitlistCount: 0,
+    pricePerPerson: 12500,
+    host: 'Meena Iyer',
+    hostFlat: 'Tower B - 205',
+    hostPhone: '+91 98800 11234',
+    transport: 'GROUP_FLIGHT',
+    flightOriginIATA: 'BLR',
+    flightDestIATA: 'GOI',
+    groupPnr: 'GRP-6E-2847',
+    farePerPerson: 5200,
+    highlights: ['Group PNR Locked @ ₹5,200/seat', 'North Goa Beachside Resort', 'Sunset Cruise & Water Sports'],
+    includes: ['Return flight (group PNR)', '2 nights beachside hotel', 'Breakfast & sunset cruise'],
+    excludes: ['Personal meals & activities', 'Travel insurance'],
+    status: 'UPCOMING',
+    imagePlaceholderColor: '#0EA5E9',
+  },
+  {
+    id: 'trip-6',
+    title: 'Varanasi Kashi Darshan — Spiritual Yatra',
+    category: 'Pilgrimage',
+    description: 'Community pilgrimage to Kashi. Book your own flight via EaseMyTrip and join the group at BHO airport. Hotel & all ghat darshan included in the trip pool.',
+    destination: 'Varanasi (VNS)',
+    departureDate: '2026-11-28T08:00:00Z',
+    returnDate: '2026-11-30T22:00:00Z',
+    departurePoint: 'Lal Bahadur Shastri Airport (VNS) — Arrival',
+    duration: '3 Days / 2 Nights',
+    pickupStops: ['VNS Airport — Group assembly point'],
+    totalSeats: 25,
+    bookedSeats: 8,
+    waitlistCount: 0,
+    pricePerPerson: 4500,
+    host: 'Ramesh Agarwal',
+    hostFlat: 'Tower D - 703',
+    hostPhone: '+91 99001 55678',
+    transport: 'FLIGHT',
+    flightOriginIATA: 'BLR',
+    flightDestIATA: 'VNS',
+    highlights: ['Ganga Aarti at Dashashwamedh Ghat', 'Kashi Vishwanath Temple', 'Dawn Boat Ride on the Ganges'],
+    includes: ['2 nights heritage hotel near ghats', 'All darshan & ghat passes', 'Guided priest walk'],
+    excludes: ['Flights (book separately via EaseMyTrip)', 'Personal snacks'],
+    status: 'UPCOMING',
+    imagePlaceholderColor: '#F59E0B',
+  },
 ];
 
 let LOCAL_BOOKINGS: TripBookingDto[] = [
@@ -333,6 +393,10 @@ function normalizeTrip(t: any): TripDto {
     hostPhone: t.hostPhone,
     itinerary: t.itinerary ?? [],
     transport: t.transport || 'Coach',
+    flightOriginIATA: t.flightOriginIATA,
+    flightDestIATA: t.flightDestIATA,
+    groupPnr: t.groupPnr,
+    farePerPerson: t.farePerPerson,
     highlights: t.highlights ?? [],
     transportDetails: t.transportDetails,
     accommodationDetails: t.accommodationDetails,
