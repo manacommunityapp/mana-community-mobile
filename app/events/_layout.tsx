@@ -5,6 +5,7 @@ export default function EventsLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="create" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="register" options={{ presentation: 'modal' }} />
       <Stack.Screen name="my-events" />
     </Stack>
   );

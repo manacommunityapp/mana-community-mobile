@@ -371,7 +371,13 @@ export default function EventDetailScreen() {
         ) : (
           <TouchableOpacity
             style={s.bottomBtnWrap}
-            onPress={handleRegister}
+            onPress={() => {
+              if (event.isRegistered) {
+                handleRegister();
+              } else {
+                router.push(`/events/register?id=${id}` as any);
+              }
+            }}
             disabled={!canRegister && !event.isRegistered}
             activeOpacity={0.8}
           >
