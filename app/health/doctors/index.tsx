@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Linking, Modal } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { healthService } from "@/services/healthService";
 import { DoctorDto, ProviderCategory, ConsultationMode } from "@/types/health";
@@ -34,9 +34,10 @@ const FEE_OPTIONS = [
 
 export default function HealthcareDirectoryScreen() {
   const router = useRouter();
+  const { specialty } = useLocalSearchParams<{ specialty?: string }>();
   const [providers, setProviders] = useState<DoctorDto[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<ProviderCategory | "ALL">("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(specialty ?? "");
   const [selectedDistance, setSelectedDistance] = useState<number>(999);
   const [selectedFeeIndex, setSelectedFeeIndex] = useState<number>(0);
   const [availableTodayOnly, setAvailableTodayOnly] = useState(false);
