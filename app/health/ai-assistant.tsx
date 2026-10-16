@@ -76,7 +76,7 @@ export default function AiAssistantScreen() {
 
             <TouchableOpacity
               style={styles.findDoctorBtn}
-              onPress={() => router.push("/health/doctors")}
+              onPress={() => router.push({ pathname: "/health/doctors", params: { specialty: result.recommendedSpecialty } } as any)}
             >
               <Text style={styles.findDoctorBtnText}>Find {result.recommendedSpecialty} Doctors →</Text>
             </TouchableOpacity>
