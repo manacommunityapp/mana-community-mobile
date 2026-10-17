@@ -232,6 +232,71 @@ export interface GstTaxSummaryDto {
   tdsDeductedTotal: number;
 }
 
+export interface RecordPaymentDto {
+  invoiceId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: 'UPI' | 'NEFT_RTGS' | 'CHEQUE' | 'CASH' | 'BANK_TRANSFER';
+  referenceNumber?: string;
+  bankAccountId?: string;
+  notes?: string;
+}
+
+export interface RecordPaymentResponseDto {
+  invoice: SocietyInvoiceDto;
+  glEntry: GeneralLedgerEntryDto;
+}
+
+export type VendorBillStatus = 'DRAFT' | 'RECEIVED' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'DISPUTED';
+
+export interface SocietyVendorBillFullDto {
+  id: string;
+  billNumber: string;
+  vendorId: string;
+  vendorName: string;
+  vendorGstin?: string;
+  billDate: string;
+  dueDate: string;
+  invoiceReference?: string;
+  description: string;
+  lineItems: Array<{ description: string; amount: number; gstRate: number }>;
+  grossAmount: number;
+  gstAmount: number;
+  tdsDeducted: number;
+  netPayable: number;
+  paidAmount: number;
+  balanceDue: number;
+  status: VendorBillStatus;
+  approvedBy?: string;
+  approvedAt?: string;
+  paymentUtr?: string;
+  paymentDate?: string;
+  paymentMethod?: string;
+  receiptUrl?: string;
+  agingDays: number;
+  createdAt: string;
+}
+
+export interface CreateVendorBillFullDto {
+  vendorId: string;
+  billNumber: string;
+  billDate: string;
+  dueDate: string;
+  description: string;
+  lineItems: Array<{ description: string; amount: number; gstRate: number }>;
+  tdsRate: number;
+  receiptUrl?: string;
+}
+
+export interface PayVendorBillDto {
+  billId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: 'NEFT_RTGS' | 'CHEQUE' | 'UPI' | 'CASH';
+  utrReference: string;
+  bankAccountId?: string;
+}
+
 // ─── Local Mock Fallbacks ─────────────────────────────────────────────────────
 
 const FALLBACK_SUMMARY: SocietyDashboardSummaryDto = {
@@ -453,6 +518,52 @@ const FALLBACK_LEDGER_ENTRIES: GeneralLedgerEntryDto[] = [
   { id: 'gle-2', entryDate: '2026-10-01', voucherNumber: 'MNT-DEM-OCT', accountCode: '1010', accountName: 'Operating Bank Account (HDFC)', debit: 1250000, credit: 0, description: 'Member maintenance receivables recognition' },
   { id: 'gle-3', entryDate: '2026-10-02', voucherNumber: 'VCH-2026-10-012', accountCode: '4010', accountName: 'Security & Manned Guarding', debit: 130000, credit: 0, description: 'Apex Security monthly billing' },
   { id: 'gle-4', entryDate: '2026-10-02', voucherNumber: 'VCH-2026-10-012', accountCode: '1010', accountName: 'Operating Bank Account (HDFC)', debit: 0, credit: 130000, description: 'Security disbursement' },
+  { id: 'gle-5', entryDate: '2026-10-03', voucherNumber: 'RCP-2026-10-001', accountCode: '1010', accountName: 'Operating Bank Account (HDFC)', debit: 6490, credit: 0, description: 'Payment received: INV-2026-10-001 (A-402 Rajesh Sharma)' },
+  { id: 'gle-6', entryDate: '2026-10-03', voucherNumber: 'RCP-2026-10-001', accountCode: '3010', accountName: 'Monthly Maintenance Collections', debit: 0, credit: 6490, description: 'Invoice cleared: INV-2026-10-001' },
+];
+
+const FALLBACK_VENDOR_BILLS: SocietyVendorBillFullDto[] = [
+  {
+    id: 'vb-1', billNumber: 'APEX/2026/OCT/09', vendorId: 'ven-1',
+    vendorName: 'Apex Security & Guarding Services LLP', vendorGstin: '27AAACA1234F1Z5',
+    billDate: '2026-10-01', dueDate: '2026-10-15',
+    invoiceReference: 'INV-OCT-2026-009', description: '12-guard deployment, Oct 2026 (24×7 gate + patrols)',
+    lineItems: [
+      { description: 'Guard Wages (12 guards × 26 days)', amount: 112500, gstRate: 18 },
+      { description: 'Supervisor & Admin Fee', amount: 7500, gstRate: 18 },
+    ],
+    grossAmount: 130000, gstAmount: 23400, tdsDeducted: 2600,
+    netPayable: 150800, paidAmount: 0, balanceDue: 150800,
+    status: 'APPROVED', approvedBy: 'President Dr. Kulkarni', approvedAt: '2026-10-04',
+    agingDays: 16, createdAt: '2026-10-01',
+  },
+  {
+    id: 'vb-2', billNumber: 'CG/BILL/26-27/011', vendorId: 'ven-2',
+    vendorName: 'CleanGreen Facility Management Pvt Ltd', vendorGstin: '27AABCC9876E1Z2',
+    billDate: '2026-10-01', dueDate: '2026-10-20',
+    description: 'October housekeeping & STP operations',
+    lineItems: [
+      { description: 'Housekeeping Staff (8 workers × 26 days)', amount: 64000, gstRate: 18 },
+      { description: 'STP & Wet Waste Processing', amount: 16000, gstRate: 18 },
+    ],
+    grossAmount: 80000, gstAmount: 14400, tdsDeducted: 1600,
+    netPayable: 92800, paidAmount: 0, balanceDue: 92800,
+    status: 'RECEIVED', agingDays: 16, createdAt: '2026-10-01',
+  },
+  {
+    id: 'vb-3', billNumber: 'SCH-MUM-2026-088', vendorId: 'ven-3',
+    vendorName: 'Schindler Elevators India Pvt Ltd', vendorGstin: '27AAACS4321A1Z9',
+    billDate: '2026-09-01', dueDate: '2026-09-30',
+    description: 'Q2 Comprehensive Lift AMC - 4 passenger lifts',
+    lineItems: [
+      { description: 'AMC Quarterly Service (4 lifts)', amount: 85000, gstRate: 18 },
+    ],
+    grossAmount: 85000, gstAmount: 15300, tdsDeducted: 1700,
+    netPayable: 98600, paidAmount: 98600, balanceDue: 0,
+    status: 'PAID', approvedBy: 'Treasurer Ajay Mehta', approvedAt: '2026-09-15',
+    paymentUtr: 'HDFCR52026091899012', paymentDate: '2026-09-20', paymentMethod: 'NEFT_RTGS',
+    agingDays: 0, createdAt: '2026-09-01',
+  },
 ];
 
 // Helper to attempt paths
@@ -739,5 +850,170 @@ export const societyFinanceService = {
         tdsDeductedTotal: 26000,
       }),
     );
+  },
+
+  // ── Record Payment on Invoice (Vyapar-style: auto-posts GL Dr Bank / Cr Receivables) ──
+  recordInvoicePayment: async (dto: RecordPaymentDto): Promise<RecordPaymentResponseDto> => {
+    for (const path of ['/api/finance/invoices/record-payment', '/api/v1/finance/invoices/record-payment']) {
+      try {
+        const { data } = await api.post<RecordPaymentResponseDto>(path, dto);
+        return data;
+      } catch {
+        // try next
+      }
+    }
+    // Local fallback: mutate the invoice and create a GL pair
+    const inv = FALLBACK_INVOICES.find(i => i.id === dto.invoiceId);
+    if (!inv) throw new Error('Invoice not found');
+
+    const newPaid = Math.min(inv.paidAmount + dto.amount, inv.totalAmount);
+    inv.paidAmount = newPaid;
+    inv.balanceDue = inv.totalAmount - newPaid;
+    inv.status = inv.balanceDue <= 0 ? 'PAID' : inv.status;
+    if (inv.balanceDue <= 0) inv.paidAt = dto.paymentDate;
+    inv.paymentReference = dto.referenceNumber;
+
+    const voucherNo = `RCP-${Date.now()}`;
+    const glDr: GeneralLedgerEntryDto = {
+      id: `gle-dr-${Date.now()}`,
+      entryDate: dto.paymentDate,
+      voucherNumber: voucherNo,
+      accountCode: '1010',
+      accountName: 'Operating Bank Account (HDFC)',
+      debit: dto.amount,
+      credit: 0,
+      description: `Payment received: ${inv.invoiceNumber} (${inv.unitNumber} ${inv.residentName})`,
+      referenceType: 'INVOICE',
+      referenceId: inv.id,
+    };
+    const glCr: GeneralLedgerEntryDto = {
+      id: `gle-cr-${Date.now() + 1}`,
+      entryDate: dto.paymentDate,
+      voucherNumber: voucherNo,
+      accountCode: '3010',
+      accountName: 'Monthly Maintenance Collections',
+      debit: 0,
+      credit: dto.amount,
+      description: `Invoice cleared: ${inv.invoiceNumber}`,
+      referenceType: 'INVOICE',
+      referenceId: inv.id,
+    };
+    FALLBACK_LEDGER_ENTRIES.unshift(glCr);
+    FALLBACK_LEDGER_ENTRIES.unshift(glDr);
+    secureLog.info('GL auto-posted on invoice payment', { voucher: voucherNo, amount: dto.amount });
+
+    return { invoice: inv, glEntry: glDr };
+  },
+
+  // ── Vendor Bills (Payables lifecycle — Vyapar Bills module) ──
+  getVendorBills: async (status?: string): Promise<SocietyVendorBillFullDto[]> => {
+    const qs = status && status !== 'ALL' ? `?status=${status}` : '';
+    return tryPaths<SocietyVendorBillFullDto[]>(
+      [`/api/finance/vendor-bills${qs}`, `/api/v1/finance/vendor-bills${qs}`],
+      () => {
+        if (!status || status === 'ALL') return FALLBACK_VENDOR_BILLS;
+        return FALLBACK_VENDOR_BILLS.filter(b => b.status === status);
+      },
+    );
+  },
+
+  createVendorBill: async (dto: CreateVendorBillFullDto): Promise<SocietyVendorBillFullDto> => {
+    for (const path of ['/api/finance/vendor-bills', '/api/v1/finance/vendor-bills']) {
+      try {
+        const { data } = await api.post<SocietyVendorBillFullDto>(path, dto);
+        return data;
+      } catch {
+        // try next
+      }
+    }
+    const vendor = FALLBACK_VENDORS.find(v => v.id === dto.vendorId);
+    const gross = dto.lineItems.reduce((s, it) => s + it.amount, 0);
+    const gst = Math.round(gross * (dto.lineItems[0]?.gstRate ?? 18) / 100);
+    const tds = Math.round(gross * dto.tdsRate / 100);
+    const newBill: SocietyVendorBillFullDto = {
+      id: `vb-${Date.now()}`,
+      billNumber: dto.billNumber,
+      vendorId: dto.vendorId,
+      vendorName: vendor?.vendorName ?? 'Unknown Vendor',
+      vendorGstin: vendor?.gstin,
+      billDate: dto.billDate,
+      dueDate: dto.dueDate,
+      description: dto.description,
+      lineItems: dto.lineItems,
+      grossAmount: gross,
+      gstAmount: gst,
+      tdsDeducted: tds,
+      netPayable: gross + gst - tds,
+      paidAmount: 0,
+      balanceDue: gross + gst - tds,
+      status: 'RECEIVED',
+      agingDays: 0,
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+    FALLBACK_VENDOR_BILLS.unshift(newBill);
+    return newBill;
+  },
+
+  approveVendorBill: async (billId: string, approverName: string): Promise<SocietyVendorBillFullDto> => {
+    for (const path of [`/api/finance/vendor-bills/${billId}/approve`, `/api/v1/finance/vendor-bills/${billId}/approve`]) {
+      try {
+        const { data } = await api.put<SocietyVendorBillFullDto>(path, { approverName });
+        return data;
+      } catch {}
+    }
+    const bill = FALLBACK_VENDOR_BILLS.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+    bill.status = 'APPROVED';
+    bill.approvedBy = approverName;
+    bill.approvedAt = new Date().toISOString().split('T')[0];
+    return bill;
+  },
+
+  payVendorBill: async (dto: PayVendorBillDto): Promise<SocietyVendorBillFullDto> => {
+    for (const path of ['/api/finance/vendor-bills/pay', '/api/v1/finance/vendor-bills/pay']) {
+      try {
+        const { data } = await api.post<SocietyVendorBillFullDto>(path, dto);
+        return data;
+      } catch {}
+    }
+    const bill = FALLBACK_VENDOR_BILLS.find(b => b.id === dto.billId);
+    if (!bill) throw new Error('Bill not found');
+
+    const newPaid = Math.min(bill.paidAmount + dto.amount, bill.netPayable);
+    bill.paidAmount = newPaid;
+    bill.balanceDue = bill.netPayable - newPaid;
+    bill.status = bill.balanceDue <= 0 ? 'PAID' : 'PARTIALLY_PAID';
+    bill.paymentUtr = dto.utrReference;
+    bill.paymentDate = dto.paymentDate;
+    bill.paymentMethod = dto.paymentMethod;
+
+    // Auto-post GL: Dr Accounts Payable / Cr Bank
+    const voucherNo = `VPY-${Date.now()}`;
+    FALLBACK_LEDGER_ENTRIES.unshift({
+      id: `gle-vp-dr-${Date.now()}`,
+      entryDate: dto.paymentDate,
+      voucherNumber: voucherNo,
+      accountCode: '2030',
+      accountName: 'Vendor Payables',
+      debit: dto.amount,
+      credit: 0,
+      description: `Vendor payment: ${bill.billNumber} (${bill.vendorName})`,
+      referenceType: 'VENDOR_BILL',
+      referenceId: bill.id,
+    });
+    FALLBACK_LEDGER_ENTRIES.unshift({
+      id: `gle-vp-cr-${Date.now() + 1}`,
+      entryDate: dto.paymentDate,
+      voucherNumber: voucherNo,
+      accountCode: '1010',
+      accountName: 'Operating Bank Account (HDFC)',
+      debit: 0,
+      credit: dto.amount,
+      description: `Bank disbursement: ${bill.billNumber}`,
+      referenceType: 'VENDOR_BILL',
+      referenceId: bill.id,
+    });
+    secureLog.info('GL auto-posted on vendor bill payment', { voucher: voucherNo, amount: dto.amount });
+    return bill;
   },
 };

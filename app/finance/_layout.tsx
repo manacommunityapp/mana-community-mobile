@@ -17,6 +17,7 @@ export default function FinanceLayout() {
       <Stack.Screen name="expenses" />
       <Stack.Screen name="ledger" />
       <Stack.Screen name="society-reports" />
+      <Stack.Screen name="vendor-bills" />
     </Stack>
   );
 }
