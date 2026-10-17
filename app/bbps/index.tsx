@@ -6,7 +6,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { THEME, FONTS, SHADOWS } from '@/constants/config';
+import { FONTS, SHADOWS } from '@/constants/config';
+import { THEME } from '@/constants/theme';
 import { billerService, BillerCategory, BillerDto } from '@/services/billerService';
 
 const CATEGORIES: { key: BillerCategory; label: string; icon: string; color: string; bg: string }[] = [
@@ -22,14 +23,14 @@ export default function BBPSBillerPickerScreen() {
   const [activeCategory, setActiveCategory] = useState<BillerCategory>('ELECTRICITY');
   const [search, setSearch] = useState('');
 
-  const { data: billers = [], isLoading } = useQuery({
+  const { data: billers = [], isLoading } = useQuery<BillerDto[]>({
     queryKey: ['bbps-billers', activeCategory],
     queryFn: () => billerService.getBillersByCategory(activeCategory),
     staleTime: 5 * 60 * 1000,
   });
 
-  const filteredBillers = search.trim()
-    ? billers.filter(b =>
+  const filteredBillers: BillerDto[] = search.trim()
+    ? billers.filter((b: BillerDto) =>
         b.name.toLowerCase().includes(search.toLowerCase()) ||
         b.state.toLowerCase().includes(search.toLowerCase())
       )
@@ -134,7 +135,7 @@ export default function BBPSBillerPickerScreen() {
           </View>
         ) : (
           <View style={s.billerList}>
-            {filteredBillers.map((biller, idx) => (
+            {filteredBillers.map((biller: BillerDto, idx: number) => (
               <TouchableOpacity
                 key={biller.id}
                 style={[s.billerRow, idx < filteredBillers.length - 1 && s.billerRowBorder]}

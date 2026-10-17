@@ -177,6 +177,14 @@ function RootLayout() {
             <Stack.Screen name="event-admin" />
             <Stack.Screen name="wellness" />
             <Stack.Screen name="settings" />
+            <Stack.Screen name="health" />
+            <Stack.Screen name="home-services" />
+            <Stack.Screen name="automation" />
+            <Stack.Screen name="access" />
+            <Stack.Screen name="community" />
+            <Stack.Screen name="activity" />
+            <Stack.Screen name="bbps" />
+            <Stack.Screen name="recharge" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

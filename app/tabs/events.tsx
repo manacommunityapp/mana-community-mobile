@@ -43,6 +43,7 @@ const QUICK_ACTIONS = [
   { label: 'My Events',  emoji: '📋', bg: '#ECFDF5', color: '#059669', route: '/events/my-events' },
   { label: 'Calendar',   emoji: '🗓️', bg: '#FEF3C7', color: '#D97706', route: '/events/calendar' },
   { label: 'Passes',     emoji: '🎟️', bg: '#FCE7F3', color: '#DB2777', route: '/events/passes' },
+  { label: 'Desk',       emoji: '🛡️', bg: '#F1F5F9', color: '#0F172A', route: '/event-admin' },
 ];
 
 function EventCard({ event, onPress }: { event: EventDto; onPress: () => void }) {

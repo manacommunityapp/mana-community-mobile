@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { THEME, FONTS, SHADOWS } from '@/constants/config';
+import { FONTS, SHADOWS } from '@/constants/config';
+import { THEME } from '@/constants/theme';
 import { billerService, FetchedBillDto } from '@/services/billerService';
 
 type Step = 'ENTER_ID' | 'BILL_PREVIEW' | 'PAYING';

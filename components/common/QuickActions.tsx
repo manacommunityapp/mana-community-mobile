@@ -19,6 +19,9 @@ export interface QuickActionItem {
 
 export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   // Primary Highlighted Services
+  { id: "mana_pay",         emoji: "⚡", icon: "flash-outline",             label: "Mana Pay",      route: "/bbps",                     bg: "#EFF6FF", color: "#2563EB", category: "Living & Bills",  badge: "BBPS" },
+  { id: "recharge",         emoji: "📱", icon: "phone-portrait-outline",     label: "Recharge",      route: "/recharge",                 bg: "#F0F9FF", color: "#0284C7", category: "Living & Bills",  badge: "NEW" },
+  { id: "insta_help",       emoji: "⚡", icon: "flash-outline",             label: "Insta-Help",    route: "/services/insta-help",      bg: "#FEF3C7", color: "#D97706", category: "Safety & Help",   badge: "15m" },
   { id: "health",           emoji: "🩺", icon: "medkit-outline",            label: "Health",        route: "/health",                   bg: "#F0FDFA", color: "#0D9488", category: "Safety & Help" },
   { id: "health_buddy",     emoji: "🥗", icon: "nutrition-outline",         label: "Health Buddy", route: "/wellness",                  bg: "#D1FAE5", color: "#10B981", category: "Safety & Help",   badge: "NEW" },
   { id: "my_money",         emoji: "💰", icon: "wallet-outline",            label: "My Money",      route: "/personal-finance",         bg: "#ECFDF5", color: "#059669", category: "Living & Bills",  badge: "NEW" },
@@ -27,18 +30,22 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: "budget",           emoji: "📑", icon: "bar-chart-outline",        label: "Budgeting",     route: "/finance/budget",           bg: "#FFF7ED", color: "#EA580C", category: "Living & Bills" },
   { id: "inventory",        emoji: "📦", icon: "cube-outline",              label: "Inventory",     route: "/inventory",                bg: "#FEF3C7", color: "#D97706", category: "Facilities",      badge: "NEW" },
   { id: "amc_maintenance",  emoji: "⚙️", icon: "construct-outline",        label: "AMCs & Assets", route: "/inventory/maintenance",    bg: "#F0FDF4", color: "#16A34A", category: "Facilities",      badge: "AMC" },
+  { id: "automation",       emoji: "🤖", icon: "hardware-chip-outline",     label: "Smart Home",    route: "/automation",               bg: "#EDE9FE", color: "#7C3AED", category: "Facilities",      badge: "IoT" },
+  { id: "submeters",        emoji: "⚡", icon: "speedometer-outline",       label: "Sub-Meters",    route: "/iot/meters",               bg: "#ECFDF5", color: "#059669", category: "Facilities" },
   { id: "projects",         emoji: "🏗️", icon: "hammer-outline",            label: "Projects",      route: "/projects",                 bg: "#F5F3FF", color: "#7C3AED", category: "Living & Bills",  badge: "NEW" },
   { id: "group_buying",     emoji: "👜", icon: "bag-handle-outline",         label: "Group Buy",     route: "/group-buying",             bg: "#ECFDF5", color: "#059669", category: "Commerce & Food" },
   { id: "offers",           emoji: "🛍️", icon: "pricetag-outline",          label: "Offers",        route: "/offers",                   bg: "#FEF3C7", color: "#D97706", category: "Commerce & Food", badge: "NEW" },
   { id: "emergency",        emoji: "🚨", icon: "alert-circle-outline",      label: "Emergency SOS", route: "/emergency",                bg: "#FEE2E2", color: "#DC2626", category: "Safety & Help",   badge: "24x7" },
   { id: "ai_chat",          emoji: "✨", icon: "sparkles-outline",          label: "Mana AI",       route: "/ai-chat",                  bg: "#EEF2FF", color: "#6366F1", category: "Safety & Help",   badge: "AI" },
   { id: "visitors",         emoji: "🛡️", icon: "shield-checkmark-outline", label: "Visitors Gate", route: "/visitors",                 bg: "#CFFAFE", color: "#0891B2", category: "Safety & Help" },
+  { id: "turnstiles",       emoji: "🎟️", icon: "qr-code-outline",           label: "Turnstiles",    route: "/access/turnstiles",        bg: "#E0F2FE", color: "#0284C7", category: "Safety & Help" },
   { id: "sports",           emoji: "🏆", icon: "trophy-outline",            label: "Sports",        route: "/sports",                   bg: "#DCFCE7", color: "#059669", category: "Social & Sports" },
   { id: "commute",          emoji: "🚗", icon: "car-sport-outline",         label: "Commute",       route: "/commute",                  bg: "#CFFAFE", color: "#0284C7", category: "Social & Sports" },
   { id: "governance",       emoji: "🏛️", icon: "business-outline",          label: "Governance",    route: "/governance",               bg: "#EDE9FE", color: "#7C3AED", category: "Social & Sports", badge: "NEW" },
   { id: "academy",          emoji: "🎓", icon: "school-outline",            label: "Academy",       route: "/academy",                  bg: "#F3E8FF", color: "#7C3AED", category: "Social & Sports", badge: "NEW" },
   { id: "cpos",             emoji: "🏠", icon: "home-outline",              label: "Property OS",   route: "/cpos",                     bg: "#DCFCE7", color: "#059669", category: "Living & Bills",  badge: "NEW" },
-  { id: "jobs",             emoji: "💼", icon: "briefcase-outline",         label: "CPN Jobs",      route: "/cpn",                      bg: "#EFF6FF", color: "#2563EB", category: "Social & Sports", badge: "NEW" },
+  { id: "jobs",             emoji: "📢", icon: "megaphone-outline",         label: "Job Board",     route: "/jobs",                     bg: "#F3E8FF", color: "#7C3AED", category: "Social & Sports", badge: "NEW" },
+  { id: "cpn",              emoji: "💼", icon: "briefcase-outline",         label: "Pro Network",   route: "/cpn",                      bg: "#EFF6FF", color: "#2563EB", category: "Social & Sports", badge: "CPN" },
   { id: "helpdesk",         emoji: "🎧", icon: "headset-outline",           label: "Helpdesk",      route: "/helpdesk",                 bg: "#FEF3C7", color: "#D97706", category: "Safety & Help" },
   { id: "services",         emoji: "🛠️", icon: "construct-outline",        label: "Home Services", route: "/services",                 bg: "#FCE7F3", color: "#DB2777", category: "Living & Bills" },
   { id: "parking",          emoji: "🅿️", icon: "car-outline",              label: "Parking Slots", route: "/parking",                  bg: "#E0E7FF", color: "#4338CA", category: "Living & Bills" },
@@ -56,9 +63,13 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
 
 function getBadgeBg(badge?: string): string {
   switch (badge) {
+    case '15m': return '#FEF3C7';
+    case 'BBPS': return '#EDE9FE';
     case 'NEW': return '#DCFCE7';
     case 'ERP': return '#EDE9FE';
     case 'AMC': return '#FEF3C7';
+    case 'IoT': return '#EDE9FE';
+    case 'CPN': return '#EFF6FF';
     case '24x7': return '#FEE2E2';
     case 'AI': return '#EEF2FF';
     default: return '#F1F5F9';
