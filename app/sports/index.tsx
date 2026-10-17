@@ -39,6 +39,7 @@ const HUB_ACTIONS = [
   { id: 'standings',   emoji: '📊', label: 'Standings',    color: '#0891B2', bg: '#CFFAFE', route: '/sports/leaderboard' },
   { id: 'challenge',   emoji: '🎯', label: 'Challenge',    color: '#EA580C', bg: '#FFF7ED', route: '/sports/challenge' },
   { id: 'auction',     emoji: '🏷️', label: 'Auction',      color: '#7C3AED', bg: '#F5F3FF', route: '/auction' },
+  { id: 'admin',       emoji: '🛡️', label: 'Admin Deck',   color: '#0F172A', bg: '#F1F5F9', route: '/sports-admin' },
 ] as const;
 
 const SPORT_EMOJI_MAP: Record<string, string> = {
