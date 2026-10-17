@@ -1,7 +1,9 @@
 import api from './apiClient';
 import { secureLog } from '@/security';
 
-export type BillerCategory = 'ELECTRICITY' | 'WATER' | 'GAS' | 'BROADBAND' | 'DTH';
+export type BillerCategory =
+  | 'ELECTRICITY' | 'WATER' | 'GAS' | 'BROADBAND' | 'DTH'
+  | 'FASTAG' | 'MUNICIPAL_TAX' | 'CREDIT_CARD';
 
 export interface BillerDto {
   id: string;
@@ -38,122 +40,118 @@ export interface BillPaymentResponse {
   amount: number;
 }
 
+// ── Electricity ───────────────────────────────────────────────────────────────
 const FALLBACK_ELECTRICITY_BILLERS: BillerDto[] = [
-  {
-    id: 'BESCOM',
-    name: 'BESCOM – Bangalore Electricity Supply Company',
-    shortName: 'BESCOM',
-    category: 'ELECTRICITY',
-    icon: '⚡',
-    state: 'Karnataka',
-    consumerIdLabel: 'RR Number (Consumer Account No.)',
-    consumerIdHint: 'e.g. 9123456789',
-    consumerIdLength: 10,
-  },
-  {
-    id: 'TSSPDCL',
-    name: 'TSSPDCL – Telangana Southern Power Distribution',
-    shortName: 'TSSPDCL',
-    category: 'ELECTRICITY',
-    icon: '⚡',
-    state: 'Telangana',
-    consumerIdLabel: 'Service Number (CA Number)',
-    consumerIdHint: 'e.g. 0012345678',
-    consumerIdLength: 10,
-  },
-  {
-    id: 'TATA_POWER_MUMBAI',
-    name: 'Tata Power – Mumbai Distribution',
-    shortName: 'Tata Power',
-    category: 'ELECTRICITY',
-    icon: '⚡',
-    state: 'Maharashtra',
-    consumerIdLabel: 'Consumer Number',
-    consumerIdHint: 'e.g. 4001234567',
-    consumerIdLength: 10,
-  },
-  {
-    id: 'ADANI_ELECTRICITY',
-    name: 'Adani Electricity – Mumbai',
-    shortName: 'Adani',
-    category: 'ELECTRICITY',
-    icon: '⚡',
-    state: 'Maharashtra',
-    consumerIdLabel: 'Consumer Account Number',
-    consumerIdHint: 'e.g. 100023456',
-  },
-  {
-    id: 'MSEDCL',
-    name: 'MSEDCL – Maharashtra State Electricity',
-    shortName: 'MSEDCL',
-    category: 'ELECTRICITY',
-    icon: '⚡',
-    state: 'Maharashtra',
-    consumerIdLabel: 'Consumer Number',
-    consumerIdHint: 'e.g. 020012345678',
-  },
-  {
-    id: 'TNEB',
-    name: 'TNEB – Tamil Nadu Electricity Board',
-    shortName: 'TNEB',
-    category: 'ELECTRICITY',
-    icon: '⚡',
-    state: 'Tamil Nadu',
-    consumerIdLabel: 'Consumer Number (EB No.)',
-    consumerIdHint: 'e.g. 001234567890',
-  },
-  {
-    id: 'BSES_RAJDHANI',
-    name: 'BSES Rajdhani – South & West Delhi',
-    shortName: 'BSES Rajdhani',
-    category: 'ELECTRICITY',
-    icon: '⚡',
-    state: 'Delhi',
-    consumerIdLabel: 'Consumer Account Number (CA)',
-    consumerIdHint: 'e.g. 50012345678',
-  },
-  {
-    id: 'BSES_YAMUNA',
-    name: 'BSES Yamuna – East & Central Delhi',
-    shortName: 'BSES Yamuna',
-    category: 'ELECTRICITY',
-    icon: '⚡',
-    state: 'Delhi',
-    consumerIdLabel: 'Consumer Account Number (CA)',
-    consumerIdHint: 'e.g. 30012345678',
-  },
+  { id: 'BESCOM',       name: 'BESCOM – Bangalore Electricity Supply Company', shortName: 'BESCOM',       category: 'ELECTRICITY', icon: '⚡', state: 'Karnataka',    consumerIdLabel: 'RR Number (Consumer Account No.)', consumerIdHint: 'e.g. 9123456789',   consumerIdLength: 10 },
+  { id: 'TSSPDCL',      name: 'TSSPDCL – Telangana Southern Power Distribution', shortName: 'TSSPDCL',    category: 'ELECTRICITY', icon: '⚡', state: 'Telangana',    consumerIdLabel: 'Service Number (CA Number)',       consumerIdHint: 'e.g. 0012345678',   consumerIdLength: 10 },
+  { id: 'TATA_POWER_MUMBAI', name: 'Tata Power – Mumbai Distribution',          shortName: 'Tata Power', category: 'ELECTRICITY', icon: '⚡', state: 'Maharashtra',  consumerIdLabel: 'Consumer Number',                 consumerIdHint: 'e.g. 4001234567',   consumerIdLength: 10 },
+  { id: 'ADANI_ELECTRICITY', name: 'Adani Electricity – Mumbai',                shortName: 'Adani',      category: 'ELECTRICITY', icon: '⚡', state: 'Maharashtra',  consumerIdLabel: 'Consumer Account Number',         consumerIdHint: 'e.g. 100023456' },
+  { id: 'MSEDCL',       name: 'MSEDCL – Maharashtra State Electricity',         shortName: 'MSEDCL',     category: 'ELECTRICITY', icon: '⚡', state: 'Maharashtra',  consumerIdLabel: 'Consumer Number',                 consumerIdHint: 'e.g. 020012345678' },
+  { id: 'TNEB',         name: 'TNEB – Tamil Nadu Electricity Board',            shortName: 'TNEB',       category: 'ELECTRICITY', icon: '⚡', state: 'Tamil Nadu',   consumerIdLabel: 'Consumer Number (EB No.)',        consumerIdHint: 'e.g. 001234567890' },
+  { id: 'BSES_RAJDHANI',name: 'BSES Rajdhani – South & West Delhi',             shortName: 'BSES Rajdhani', category: 'ELECTRICITY', icon: '⚡', state: 'Delhi',    consumerIdLabel: 'Consumer Account Number (CA)',    consumerIdHint: 'e.g. 50012345678' },
+  { id: 'BSES_YAMUNA',  name: 'BSES Yamuna – East & Central Delhi',             shortName: 'BSES Yamuna',  category: 'ELECTRICITY', icon: '⚡', state: 'Delhi',    consumerIdLabel: 'Consumer Account Number (CA)',    consumerIdHint: 'e.g. 30012345678' },
 ];
 
+// ── Gas ───────────────────────────────────────────────────────────────────────
 const FALLBACK_GAS_BILLERS: BillerDto[] = [
-  {
-    id: 'MGL',
-    name: 'MGL – Mahanagar Gas Limited',
-    shortName: 'MGL',
-    category: 'GAS',
-    icon: '🔥',
-    state: 'Maharashtra',
-    consumerIdLabel: 'Business Partner (BP) Number',
-    consumerIdHint: 'e.g. 200012345',
-  },
-  {
-    id: 'IGL',
-    name: 'IGL – Indraprastha Gas Limited',
-    shortName: 'IGL',
-    category: 'GAS',
-    icon: '🔥',
-    state: 'Delhi',
-    consumerIdLabel: 'BP Number',
-    consumerIdHint: 'e.g. 100009876',
-  },
+  { id: 'MGL', name: 'MGL – Mahanagar Gas Limited',     shortName: 'MGL', category: 'GAS', icon: '🔥', state: 'Maharashtra', consumerIdLabel: 'Business Partner (BP) Number', consumerIdHint: 'e.g. 200012345' },
+  { id: 'IGL', name: 'IGL – Indraprastha Gas Limited',  shortName: 'IGL', category: 'GAS', icon: '🔥', state: 'Delhi',       consumerIdLabel: 'BP Number',                    consumerIdHint: 'e.g. 100009876' },
 ];
+
+// ── Water ─────────────────────────────────────────────────────────────────────
+const FALLBACK_WATER_BILLERS: BillerDto[] = [
+  { id: 'BWSSB',      name: 'BWSSB – Bangalore Water Supply',         shortName: 'BWSSB',      category: 'WATER', icon: '💧', state: 'Karnataka',   consumerIdLabel: 'Consumer ID',          consumerIdHint: 'e.g. 1234567890',  consumerIdLength: 10 },
+  { id: 'MCGM_WATER', name: 'MCGM – Mumbai Water Supply',             shortName: 'MCGM',       category: 'WATER', icon: '💧', state: 'Maharashtra', consumerIdLabel: 'Consumer Number',      consumerIdHint: 'e.g. 010123456789' },
+  { id: 'HMWSSB',     name: 'HMWSSB – Hyderabad Metro Water',         shortName: 'HMWSSB',     category: 'WATER', icon: '💧', state: 'Telangana',   consumerIdLabel: 'Service Connection No.', consumerIdHint: 'e.g. HYD2012345' },
+  { id: 'DJB',        name: 'DJB – Delhi Jal Board',                  shortName: 'DJB',        category: 'WATER', icon: '💧', state: 'Delhi',       consumerIdLabel: 'K Number',             consumerIdHint: 'e.g. K-1234567' },
+  { id: 'CMWSSB',     name: 'CMWSSB – Chennai Metro Water',           shortName: 'CMWSSB',     category: 'WATER', icon: '💧', state: 'Tamil Nadu',  consumerIdLabel: 'Consumer ID',          consumerIdHint: 'e.g. 12345678' },
+];
+
+// ── Broadband ─────────────────────────────────────────────────────────────────
+const FALLBACK_BROADBAND_BILLERS: BillerDto[] = [
+  { id: 'JIO_FIBER',         name: 'Jio Fiber – Reliance Jio',            shortName: 'Jio Fiber',  category: 'BROADBAND', icon: '📡', state: 'All India', consumerIdLabel: 'Account Number / Mobile',  consumerIdHint: 'e.g. 10-digit Jio number' },
+  { id: 'AIRTEL_BROADBAND',  name: 'Airtel Xstream Fiber',                shortName: 'Airtel',     category: 'BROADBAND', icon: '📡', state: 'All India', consumerIdLabel: 'Airtel Account Number',     consumerIdHint: 'e.g. 123456789012' },
+  { id: 'ACT_BROADBAND',     name: 'ACT Fibernet',                        shortName: 'ACT',        category: 'BROADBAND', icon: '📡', state: 'Multi',     consumerIdLabel: 'Subscriber ID',             consumerIdHint: 'e.g. ACT12345678' },
+  { id: 'BSNL_BROADBAND',    name: 'BSNL Bharat Fiber / FTTH',            shortName: 'BSNL',       category: 'BROADBAND', icon: '📡', state: 'All India', consumerIdLabel: 'CA Number / Landline Number', consumerIdHint: 'e.g. 01112345678' },
+  { id: 'HATHWAY_BROADBAND', name: 'Hathway Broadband',                   shortName: 'Hathway',    category: 'BROADBAND', icon: '📡', state: 'Multi',     consumerIdLabel: 'Subscriber ID',             consumerIdHint: 'e.g. 1234567890' },
+];
+
+// ── DTH ───────────────────────────────────────────────────────────────────────
+const FALLBACK_DTH_BILLERS: BillerDto[] = [
+  { id: 'TATA_PLAY',  name: 'Tata Play (formerly Tata Sky)',    shortName: 'Tata Play',  category: 'DTH', icon: '📺', state: 'All India', consumerIdLabel: 'Subscriber ID (RM ID)', consumerIdHint: 'e.g. 1234567890',  consumerIdLength: 10 },
+  { id: 'DISH_TV',    name: 'Dish TV',                          shortName: 'Dish TV',    category: 'DTH', icon: '📺', state: 'All India', consumerIdLabel: 'VC Number',             consumerIdHint: 'e.g. 01234567890', consumerIdLength: 11 },
+  { id: 'AIRTEL_DTH', name: 'Airtel Digital TV',                shortName: 'Airtel DTH', category: 'DTH', icon: '📺', state: 'All India', consumerIdLabel: 'Customer ID',           consumerIdHint: 'e.g. 3012345678',  consumerIdLength: 10 },
+  { id: 'SUN_DIRECT', name: 'Sun Direct DTH',                   shortName: 'Sun Direct', category: 'DTH', icon: '📺', state: 'South',     consumerIdLabel: 'Smart Card Number',     consumerIdHint: 'e.g. 1234567890123', consumerIdLength: 13 },
+  { id: 'D2H',        name: 'D2H (Videocon D2H)',               shortName: 'D2H',        category: 'DTH', icon: '📺', state: 'All India', consumerIdLabel: 'Customer ID',           consumerIdHint: 'e.g. 123456789' },
+];
+
+// ── FASTag ────────────────────────────────────────────────────────────────────
+const FALLBACK_FASTAG_BILLERS: BillerDto[] = [
+  { id: 'NHAI_ONE',       name: 'NHAI – National Highways Authority (One FASTag)', shortName: 'NHAI',         category: 'FASTAG', icon: '🚗', state: 'All India', consumerIdLabel: 'Vehicle Registration Number', consumerIdHint: 'e.g. KA01AB1234' },
+  { id: 'HDFC_FASTAG',    name: 'HDFC Bank FASTag',                                shortName: 'HDFC FASTag',  category: 'FASTAG', icon: '🚗', state: 'All India', consumerIdLabel: 'Vehicle Registration Number', consumerIdHint: 'e.g. MH02CD5678' },
+  { id: 'SBI_FASTAG',     name: 'SBI FASTag – State Bank of India',               shortName: 'SBI FASTag',   category: 'FASTAG', icon: '🚗', state: 'All India', consumerIdLabel: 'Vehicle Registration Number', consumerIdHint: 'e.g. DL03EF9012' },
+  { id: 'ICICI_FASTAG',   name: 'ICICI Bank FASTag',                               shortName: 'ICICI FASTag', category: 'FASTAG', icon: '🚗', state: 'All India', consumerIdLabel: 'Vehicle Registration Number', consumerIdHint: 'e.g. TN04GH3456' },
+  { id: 'PAYTM_FASTAG',   name: 'Paytm Payments Bank FASTag',                      shortName: 'Paytm FASTag', category: 'FASTAG', icon: '🚗', state: 'All India', consumerIdLabel: 'Vehicle Registration Number', consumerIdHint: 'e.g. KA05IJ7890' },
+  { id: 'AXIS_FASTAG',    name: 'Axis Bank FASTag',                                shortName: 'Axis FASTag',  category: 'FASTAG', icon: '🚗', state: 'All India', consumerIdLabel: 'Vehicle Registration Number', consumerIdHint: 'e.g. GJ06KL2345' },
+];
+
+// ── Municipal Tax ─────────────────────────────────────────────────────────────
+const FALLBACK_MUNICIPAL_TAX_BILLERS: BillerDto[] = [
+  { id: 'GHMC',  name: 'GHMC – Greater Hyderabad Municipal Corporation', shortName: 'GHMC',  category: 'MUNICIPAL_TAX', icon: '🏛️', state: 'Telangana',   consumerIdLabel: 'PTIN (Property Tax ID No.)',  consumerIdHint: 'e.g. 123456789' },
+  { id: 'BBMP',  name: 'BBMP – Bruhat Bengaluru Mahanagara Palike',      shortName: 'BBMP',  category: 'MUNICIPAL_TAX', icon: '🏛️', state: 'Karnataka',   consumerIdLabel: 'PID Number / Application ID', consumerIdHint: 'e.g. 1234567890' },
+  { id: 'BMC',   name: 'BMC – Brihanmumbai Municipal Corporation',        shortName: 'BMC',   category: 'MUNICIPAL_TAX', icon: '🏛️', state: 'Maharashtra', consumerIdLabel: 'Property Account Number',    consumerIdHint: 'e.g. 0123456789' },
+  { id: 'MCD',   name: 'MCD – Municipal Corporation of Delhi',            shortName: 'MCD',   category: 'MUNICIPAL_TAX', icon: '🏛️', state: 'Delhi',       consumerIdLabel: 'Property ID / UPIC No.',     consumerIdHint: 'e.g. D0123456' },
+  { id: 'PCMC',  name: 'PCMC – Pimpri-Chinchwad Municipal Corporation',   shortName: 'PCMC',  category: 'MUNICIPAL_TAX', icon: '🏛️', state: 'Maharashtra', consumerIdLabel: 'Property Number',            consumerIdHint: 'e.g. PCM/1234/567' },
+  { id: 'NMMC',  name: 'NMMC – Navi Mumbai Municipal Corporation',        shortName: 'NMMC',  category: 'MUNICIPAL_TAX', icon: '🏛️', state: 'Maharashtra', consumerIdLabel: 'Assessment Number',          consumerIdHint: 'e.g. 12345678' },
+  { id: 'CMC_CHENNAI', name: 'Greater Chennai Corporation',               shortName: 'Chennai Corp', category: 'MUNICIPAL_TAX', icon: '🏛️', state: 'Tamil Nadu', consumerIdLabel: 'Zone-Division-Bill No.', consumerIdHint: 'e.g. 1-2-12345678' },
+];
+
+// ── Credit Card ───────────────────────────────────────────────────────────────
+const FALLBACK_CREDIT_CARD_BILLERS: BillerDto[] = [
+  { id: 'HDFC_CC',    name: 'HDFC Bank Credit Card',         shortName: 'HDFC',     category: 'CREDIT_CARD', icon: '💳', state: 'All India', consumerIdLabel: 'Credit Card Number (16 digits)', consumerIdHint: 'e.g. 4111 1111 1111 1111', consumerIdLength: 16 },
+  { id: 'SBI_CC',     name: 'SBI Card – State Bank Credit',  shortName: 'SBI Card', category: 'CREDIT_CARD', icon: '💳', state: 'All India', consumerIdLabel: 'Credit Card Number (16 digits)', consumerIdHint: 'e.g. 5425 2334 3010 9903', consumerIdLength: 16 },
+  { id: 'ICICI_CC',   name: 'ICICI Bank Credit Card',        shortName: 'ICICI',    category: 'CREDIT_CARD', icon: '💳', state: 'All India', consumerIdLabel: 'Credit Card Number (16 digits)', consumerIdHint: 'e.g. 4000 0566 5566 5556', consumerIdLength: 16 },
+  { id: 'AXIS_CC',    name: 'Axis Bank Credit Card',         shortName: 'Axis',     category: 'CREDIT_CARD', icon: '💳', state: 'All India', consumerIdLabel: 'Credit Card Number (16 digits)', consumerIdHint: 'e.g. 5425 2334 3010 9903', consumerIdLength: 16 },
+  { id: 'KOTAK_CC',   name: 'Kotak Mahindra Bank Credit Card', shortName: 'Kotak', category: 'CREDIT_CARD', icon: '💳', state: 'All India', consumerIdLabel: 'Credit Card Number (16 digits)', consumerIdHint: 'e.g. 4111 1111 1111 1111', consumerIdLength: 16 },
+  { id: 'AMEX_CC',    name: 'American Express India',         shortName: 'Amex',    category: 'CREDIT_CARD', icon: '💳', state: 'All India', consumerIdLabel: 'Card Number (15 digits)',        consumerIdHint: 'e.g. 3714 496353 98431',   consumerIdLength: 15 },
+  { id: 'INDUSIND_CC',name: 'IndusInd Bank Credit Card',      shortName: 'IndusInd',category: 'CREDIT_CARD', icon: '💳', state: 'All India', consumerIdLabel: 'Credit Card Number (16 digits)', consumerIdHint: 'e.g. 4111 1111 1111 1111', consumerIdLength: 16 },
+];
+
+const FALLBACK_MAP: Partial<Record<BillerCategory, BillerDto[]>> = {
+  ELECTRICITY:   FALLBACK_ELECTRICITY_BILLERS,
+  GAS:           FALLBACK_GAS_BILLERS,
+  WATER:         FALLBACK_WATER_BILLERS,
+  BROADBAND:     FALLBACK_BROADBAND_BILLERS,
+  DTH:           FALLBACK_DTH_BILLERS,
+  FASTAG:        FALLBACK_FASTAG_BILLERS,
+  MUNICIPAL_TAX: FALLBACK_MUNICIPAL_TAX_BILLERS,
+  CREDIT_CARD:   FALLBACK_CREDIT_CARD_BILLERS,
+};
+
+const BILL_AMOUNT_MAP: Partial<Record<BillerCategory, () => number>> = {
+  ELECTRICITY:   () => 1248 + Math.floor(Math.random() * 800),
+  GAS:           () => 680 + Math.floor(Math.random() * 400),
+  WATER:         () => 320 + Math.floor(Math.random() * 200),
+  BROADBAND:     () => 699 + Math.floor(Math.random() * 400),
+  DTH:           () => 299 + Math.floor(Math.random() * 300),
+  FASTAG:        () => 200 + Math.floor(Math.random() * 300),
+  MUNICIPAL_TAX: () => 4500 + Math.floor(Math.random() * 6000),
+  CREDIT_CARD:   () => 3200 + Math.floor(Math.random() * 12000),
+};
+
+function getAllFallbackBillers(): BillerDto[] {
+  return Object.values(FALLBACK_MAP).flat() as BillerDto[];
+}
 
 function generateFallbackBill(billerId: string, consumerId: string): FetchedBillDto {
-  const biller = FALLBACK_ELECTRICITY_BILLERS.find(b => b.id === billerId)
-    || FALLBACK_GAS_BILLERS.find(b => b.id === billerId);
+  const all = getAllFallbackBillers();
+  const biller = all.find(b => b.id === billerId);
+  const category = biller?.category;
   const now = new Date();
   const due = new Date(now.getFullYear(), now.getMonth(), 20);
   const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const to = new Date(now.getFullYear(), now.getMonth(), 0);
+  const amount = category ? (BILL_AMOUNT_MAP[category]?.() ?? 999) : 999;
 
   return {
     billerId,
@@ -163,8 +161,8 @@ function generateFallbackBill(billerId: string, consumerId: string): FetchedBill
     billNumber: `BILL-${billerId.slice(0, 4)}-${Date.now().toString().slice(-6)}`,
     billDate: from.toISOString().slice(0, 10),
     dueDate: due.toISOString().slice(0, 10),
-    amount: 1248 + Math.floor(Math.random() * 800),
-    units: 180 + Math.floor(Math.random() * 60),
+    amount,
+    units: category === 'ELECTRICITY' ? 180 + Math.floor(Math.random() * 60) : undefined,
     periodFrom: from.toISOString().slice(0, 10),
     periodTo: to.toISOString().slice(0, 10),
     status: 'DUE',
@@ -179,9 +177,7 @@ export const billerService = {
     } catch (err) {
       secureLog.warn(`[billerService] BBPS billers API unavailable for ${category}, using fallback`, err);
     }
-    if (category === 'ELECTRICITY') return FALLBACK_ELECTRICITY_BILLERS;
-    if (category === 'GAS') return FALLBACK_GAS_BILLERS;
-    return [];
+    return FALLBACK_MAP[category] ?? [];
   },
 
   async fetchBill(billerId: string, consumerId: string): Promise<FetchedBillDto> {
@@ -201,13 +197,11 @@ export const billerService = {
     } catch (err) {
       secureLog.warn(`[billerService] BBPS payBill API unavailable, generating local UPI intent`, err);
     }
-
     const pa = 'bbps@setu';
     const pn = encodeURIComponent('Mana Pay BBPS');
     const tr = `MANA${Date.now()}`;
-    const upiBase = `upi://pay?pa=${pa}&pn=${pn}&am=${amount}&cu=INR&tr=${tr}&tn=${encodeURIComponent('Electricity Bill')}`;
     return {
-      upiIntentUrl: upiBase,
+      upiIntentUrl: `upi://pay?pa=${pa}&pn=${pn}&am=${amount}&cu=INR&tr=${tr}&tn=${encodeURIComponent('BBPS Bill Payment')}`,
       phonePeUrl: `phonepe://pay?pa=${pa}&pn=${pn}&am=${amount}&cu=INR&tr=${tr}`,
       transactionRef: tr,
       amount,

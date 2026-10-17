@@ -10,11 +10,14 @@ import { THEME, FONTS, SHADOWS } from '@/constants/config';
 import { billerService, BillerCategory, BillerDto } from '@/services/billerService';
 
 const CATEGORIES: { key: BillerCategory; label: string; icon: string; color: string; bg: string }[] = [
-  { key: 'ELECTRICITY', label: 'Electricity', icon: '⚡', color: '#D97706', bg: '#FFFBEB' },
-  { key: 'GAS',         label: 'Gas',         icon: '🔥', color: '#DC2626', bg: '#FEF2F2' },
-  { key: 'WATER',       label: 'Water',       icon: '💧', color: '#0284C7', bg: '#E0F2FE' },
-  { key: 'BROADBAND',   label: 'Broadband',   icon: '📡', color: '#7C3AED', bg: '#F5F3FF' },
-  { key: 'DTH',         label: 'DTH / Cable', icon: '📺', color: '#0F766E', bg: '#F0FDFA' },
+  { key: 'ELECTRICITY',   label: 'Electricity',    icon: '⚡', color: '#D97706', bg: '#FFFBEB' },
+  { key: 'GAS',           label: 'Gas',            icon: '🔥', color: '#DC2626', bg: '#FEF2F2' },
+  { key: 'WATER',         label: 'Water',          icon: '💧', color: '#0284C7', bg: '#E0F2FE' },
+  { key: 'BROADBAND',     label: 'Broadband',      icon: '📡', color: '#7C3AED', bg: '#F5F3FF' },
+  { key: 'DTH',           label: 'DTH / Cable',    icon: '📺', color: '#0F766E', bg: '#F0FDFA' },
+  { key: 'FASTAG',        label: 'FASTag',         icon: '🚗', color: '#B45309', bg: '#FFFBEB' },
+  { key: 'MUNICIPAL_TAX', label: 'Municipal Tax',  icon: '🏛️', color: '#5B21B6', bg: '#F5F3FF' },
+  { key: 'CREDIT_CARD',   label: 'Credit Card',    icon: '💳', color: '#0369A1', bg: '#F0F9FF' },
 ];
 
 export default function BBPSBillerPickerScreen() {
