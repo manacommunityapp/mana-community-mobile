@@ -45,7 +45,7 @@ export default function PickupPassScreen() {
 Order: ${order.id}
 Product: ${order.title}
 Quantity: ${order.qty}
-Total: ?${order.total}
+Total: ₹${order.total}
 Pickup Location: ${order.pickupPoint ?? 'Clubhouse Desk'}
 QR Code Reference: ${order.qrCode}`,
       });
