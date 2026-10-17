@@ -12,6 +12,14 @@ export const CONFIG = {
   WS_URL:       isDev ? `ws://3.109.145.130:8081/ws` : `wss://api.manacommunity.in/ws`,
   APP_NAME:     "Mana Community",
   VERSION:      "1.0.0",
+
+  // ── Flight affiliate IDs (replace with real IDs once registered) ──
+  // EaseMyTrip: register at b2b.easemytrip.com (affiliate division)
+  // MakeMyTrip: register at commission.makemytrip.com
+  FLIGHT_AFFILIATE: {
+    EMT_AFFILIATE_ID: "MANA_COMMUNITY",
+    MMT_CAMPAIGN_ID:  "affiliate_mana",
+  },
 } as const;
 
 // ── Theme Colors (matches web app Mana indigo palette) ────────

@@ -21,6 +21,7 @@ import QuantityProgressBar from '@/components/group-buying/QuantityProgressBar';
 import PricingModelBadge from '@/components/group-buying/PricingModelBadge';
 import Countdown from '@/components/group-buying/Countdown';
 import QuantitySelector from '@/components/group-buying/QuantitySelector';
+import NeighborJoinFeed from '@/components/group-buying/NeighborJoinFeed';
 import type { GroupDealDto, GroupOrderDto } from '@/types/groupBuying';
 
 export default function DealDetailScreen() {
@@ -45,6 +46,20 @@ export default function DealDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['group-deals'] });
       queryClient.invalidateQueries({ queryKey: ['deal-detail', id] });
       setCreatedOrder(order);
+      setShowConfirmModal(false);
+      const savings = deal ? (deal.mrp - deal.currentTierPrice) * quantity : 0;
+      router.replace({
+        pathname: '/group-buying/join-success/[orderId]',
+        params: {
+          orderId: order.id,
+          dealId: String(id),
+          qty: String(quantity),
+          savings: String(savings.toFixed(0)),
+          dealTitle: deal?.title || '',
+          nextUnits: String(deal?.nextTierUnitsNeeded ?? 0),
+          nextPrice: String(deal?.nextTierPrice ?? 0),
+        },
+      } as any);
     },
     onError: (err: any) => {
       Alert.alert('Error', err?.message || 'Could not join deal. Please try again.');
@@ -205,6 +220,22 @@ export default function DealDetailScreen() {
               <Text style={s.bold}>{deal.currentParticipants}</Text> neighbours already joined
             </Text>
           </View>
+        </View>
+
+        {/* Neighbor Join Feed — social proof */}
+        <View style={s.sectionCard}>
+          <NeighborJoinFeed
+            activities={[
+              { flat: 'A-402', units: 2, minsAgo: 3, tower: 'A' },
+              { flat: 'B-201', units: 1, minsAgo: 8, tower: 'B' },
+              { flat: 'A-805', units: 3, minsAgo: 15, tower: 'A' },
+              { flat: 'C-103', units: 1, minsAgo: 22, tower: 'C' },
+              { flat: 'B-601', units: 2, minsAgo: 31, tower: 'B' },
+            ]}
+            totalParticipants={deal.currentParticipants ?? deal.joinedCount ?? 0}
+            nextTierUnits={deal.nextTierUnitsNeeded ?? undefined}
+            nextTierPrice={deal.nextTierPrice ?? undefined}
+          />
         </View>
 
         {/* Price Tier Ladder */}

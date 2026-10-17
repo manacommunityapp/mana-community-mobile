@@ -1,5 +1,6 @@
 import { personalFinanceService } from '@/services/personalFinanceService';
 import { useState, useCallback, useMemo } from 'react';
+import { usePathname } from 'expo-router';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, ActivityIndicator, Alert, RefreshControl, Linking,
@@ -33,6 +34,7 @@ const FINANCE_HUBS = [
 
 export default function MaintenanceDuesScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -230,12 +232,12 @@ export default function MaintenanceDuesScreen() {
           {FINANCE_HUBS.map((item) => (
             <TouchableOpacity
               key={item.label}
-              style={[s.hubPill, item.label === 'Pay Dues' && s.hubPillActive]}
+              style={[s.hubPill, pathname === item.route && s.hubPillActive]}
               onPress={() => router.push(item.route as any)}
               activeOpacity={0.75}
             >
               <Text style={s.hubEmoji}>{item.emoji}</Text>
-              <Text style={[s.hubLabel, item.label === 'Pay Dues' && s.hubLabelActive]}>{item.label}</Text>
+              <Text style={[s.hubLabel, pathname === item.route && s.hubLabelActive]}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
