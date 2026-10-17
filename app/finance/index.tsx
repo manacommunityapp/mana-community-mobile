@@ -29,6 +29,7 @@ const FINANCE_HUBS = [
   { emoji: '📋', label: 'Invoices',   color: '#0284C7',            bg: '#E0F2FE',              route: '/finance/invoices' },
   { emoji: '👥', label: 'Vendors',    color: '#7C3AED',            bg: '#F5F3FF',              route: '/finance/vendors' },
   { emoji: '✅', label: 'Approvals',  color: '#DC2626',            bg: '#FEF2F2',              route: '/finance/expenses' },
+  { emoji: '🧾', label: 'Vendor Bills', color: '#7C3AED',          bg: '#F5F3FF',              route: '/finance/vendor-bills' },
   { emoji: '💰', label: 'My Money',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/personal-finance' },
 ] as const;
 

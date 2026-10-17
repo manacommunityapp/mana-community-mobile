@@ -21,6 +21,7 @@ import {
   CreateSocietyInvoiceDto,
   InvoiceLineItem,
   InvoiceStatus,
+  RecordPaymentDto,
 } from '@/services/societyFinanceService';
 
 const STATUS_COLORS: Record<InvoiceStatus, string> = {
@@ -42,6 +43,10 @@ export default function SocietyInvoicesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<SocietyInvoiceDto | null>(null);
+  const [paymentModal, setPaymentModal] = useState<SocietyInvoiceDto | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [payRef, setPayRef] = useState('');
+  const [payMethod, setPayMethod] = useState<'UPI' | 'NEFT_RTGS' | 'CHEQUE' | 'CASH'>('UPI');
 
   // Form State
   const [unitNumber, setUnitNumber] = useState('');
@@ -75,6 +80,23 @@ export default function SocietyInvoicesScreen() {
     onError: (err: any) => {
       Alert.alert('Error', err?.message || 'Failed to create invoice.');
     },
+  });
+
+  const recordPaymentMutation = useMutation({
+    mutationFn: societyFinanceService.recordInvoicePayment,
+    onSuccess: ({ invoice, glEntry }) => {
+      queryClient.invalidateQueries({ queryKey: ['society-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['society-gl'] });
+      queryClient.invalidateQueries({ queryKey: ['society-finance-dashboard'] });
+      setPaymentModal(null);
+      setPayAmount('');
+      setPayRef('');
+      Alert.alert(
+        'Payment Recorded',
+        `Invoice ${invoice.invoiceNumber} marked ${invoice.status}.\nGL Voucher: ${glEntry.voucherNumber}\nDr Bank / Cr Collections auto-posted.`
+      );
+    },
+    onError: (err: any) => Alert.alert('Payment Error', err?.message || 'Failed to record payment.'),
   });
 
   const resetForm = () => {
@@ -238,6 +260,15 @@ Please pay through Mana Community App or Bank Transfer.`;
                   <Ionicons name="eye-outline" size={14} color={COLORS.primary} />
                   <Text style={styles.viewBtnText}>View Breakdown</Text>
                 </TouchableOpacity>
+                {inv.status !== 'PAID' && inv.status !== 'CANCELLED' && (
+                  <TouchableOpacity
+                    style={styles.recordPayBtn}
+                    onPress={() => { setPaymentModal(inv); setPayAmount(String(inv.balanceDue)); }}
+                  >
+                    <Ionicons name="flash-outline" size={13} color="#FFFFFF" />
+                    <Text style={styles.recordPayBtnText}>Record Payment</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity style={styles.shareBtn} onPress={() => handleShareInvoice(inv)}>
                   <Ionicons name="logo-whatsapp" size={14} color="#10B981" />
                   <Text style={styles.shareBtnText}>Share</Text>
@@ -328,6 +359,85 @@ Please pay through Mana Community App or Bank Transfer.`;
                 {createMutation.isPending ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveBtnText}>Dispatch Invoice</Text>}
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Record Payment Modal (Vyapar-style: auto GL post) ── */}
+      <Modal visible={!!paymentModal} transparent animationType="slide" onRequestClose={() => setPaymentModal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Record Payment</Text>
+              <TouchableOpacity onPress={() => setPaymentModal(null)}>
+                <Ionicons name="close-circle" size={24} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            {paymentModal && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.payInfoBox}>
+                  <Text style={styles.payInfoUnit}>Flat {paymentModal.unitNumber} — {paymentModal.residentName}</Text>
+                  <Text style={styles.payInfoInv}>{paymentModal.invoiceNumber} · Balance: {formatCurrency(paymentModal.balanceDue)}</Text>
+                </View>
+
+                <Text style={styles.inputLabel}>Amount Received (₹)</Text>
+                <TextInput
+                  style={styles.input} keyboardType="numeric" placeholderTextColor="#94A3B8"
+                  placeholder={String(paymentModal.balanceDue)}
+                  value={payAmount} onChangeText={setPayAmount}
+                />
+
+                <Text style={styles.inputLabel}>Payment Method</Text>
+                <View style={styles.payMethodRow}>
+                  {(['UPI', 'NEFT_RTGS', 'CHEQUE', 'CASH'] as const).map(m => (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.payMethodChip, payMethod === m && styles.payMethodChipActive]}
+                      onPress={() => setPayMethod(m)}
+                    >
+                      <Text style={[styles.payMethodText, payMethod === m && styles.payMethodTextActive]}>{m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.inputLabel}>UTR / Transaction Reference</Text>
+                <TextInput
+                  style={styles.input} placeholderTextColor="#94A3B8"
+                  placeholder="e.g. UPI-GPay-992381 or RTGS ref"
+                  value={payRef} onChangeText={setPayRef} autoCapitalize="characters"
+                />
+
+                <View style={styles.glAutoBanner}>
+                  <Ionicons name="git-branch-outline" size={14} color="#1D4ED8" />
+                  <Text style={styles.glAutoText}>
+                    Auto-GL: Dr Operating Bank (1010) / Cr Maintenance Collections (3010)
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.saveBtn}
+                  disabled={recordPaymentMutation.isPending}
+                  onPress={() => {
+                    if (!payRef.trim()) { Alert.alert('Required', 'Enter a payment reference / UTR.'); return; }
+                    const dto: RecordPaymentDto = {
+                      invoiceId: paymentModal.id,
+                      amount: parseFloat(payAmount) || paymentModal.balanceDue,
+                      paymentDate: new Date().toISOString().split('T')[0],
+                      paymentMethod: payMethod,
+                      referenceNumber: payRef.trim(),
+                    };
+                    recordPaymentMutation.mutate(dto);
+                  }}
+                >
+                  {recordPaymentMutation.isPending ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Confirm & Post GL Entry</Text>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -480,4 +590,28 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.md,
   },
   saveBtnText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
+  recordPayBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: COLORS.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 7,
+  },
+  recordPayBtnText: { fontSize: 11.5, color: '#FFFFFF', fontWeight: 'bold' },
+  payInfoBox: {
+    backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0',
+    borderRadius: RADIUS.md, padding: 12, marginBottom: 4,
+  },
+  payInfoUnit: { fontSize: 14, fontWeight: 'bold', color: '#1E293B' },
+  payInfoInv: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  payMethodRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginVertical: 4 },
+  payMethodChip: {
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  payMethodChipActive: { backgroundColor: COLORS.primary + '18', borderColor: COLORS.primary },
+  payMethodText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+  payMethodTextActive: { color: COLORS.primary, fontWeight: 'bold' },
+  glAutoBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#EFF6FF', padding: 10, borderRadius: 8, marginVertical: 12,
+  },
+  glAutoText: { fontSize: 11.5, color: '#1D4ED8', flex: 1 },
 });
