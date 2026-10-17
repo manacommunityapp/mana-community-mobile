@@ -195,7 +195,7 @@ export default function FoodScreen() {
       items: Array<{ name: string; qty: number; price: number; isVeg?: boolean }>;
       totalAmount: number;
       deliveryAddress?: string;
-      specialInstructions?: string;
+      deliveryInstructions?: string;
     }) => foodService.placeOrder(payload),
     onSuccess: (newOrder) => {
       queryClient.invalidateQueries({ queryKey: ['food'] });
@@ -307,7 +307,7 @@ export default function FoodScreen() {
       deliveryAddress: `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`,
       items: orderItems,
       totalAmount: cartGrandTotal,
-      specialInstructions: specialInstructions.trim() || undefined,
+      deliveryInstructions: specialInstructions.trim() || undefined,
     });
   };
 
