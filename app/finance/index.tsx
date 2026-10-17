@@ -27,6 +27,7 @@ const FINANCE_HUBS = [
   { emoji: '🪙', label: 'Gold',       color: '#B45309',  bg: '#FFFBEB',  route: '/gold' },
   { emoji: '📈', label: 'Mutual Funds',color: '#1D4ED8', bg: '#EFF6FF',  route: '/mutual-funds' },
   { emoji: '🤝', label: 'Split Bill', color: '#16A34A',  bg: '#F0FDF4',  route: '/split-bill' },
+  { emoji: '🎬', label: 'Movies',    color: '#DC2626',  bg: '#FEF2F2',  route: '/movies' },
   { emoji: '📑', label: 'Budget',     color: '#EA580C',  bg: '#FFF7ED',  route: '/finance/budget' },
   { emoji: '📊', label: 'Reports',    color: '#D97706',            bg: '#FFFBEB',              route: '/finance/society-reports' },
   { emoji: '📋', label: 'Invoices',   color: '#0284C7',            bg: '#E0F2FE',              route: '/finance/invoices' },
