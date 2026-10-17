@@ -22,6 +22,7 @@ const FINANCE_HUBS = [
   { emoji: '🏦', label: 'Treasury',   color: THEME.indigo,   bg: THEME.indigoLight, route: '/finance/society-dashboard' },
   { emoji: '💳', label: 'Pay Dues',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/finance' },
   { emoji: '⚡', label: 'Pay Bills',  color: '#D97706',            bg: '#FFFBEB',              route: '/bbps' },
+  { emoji: '📱', label: 'Recharge',   color: '#0284C7',            bg: '#F0F9FF',              route: '/recharge' },
   { emoji: '📑', label: 'Budget',     color: '#EA580C',            bg: '#FFF7ED',              route: '/finance/budget' },
   { emoji: '📊', label: 'Reports',    color: '#D97706',            bg: '#FFFBEB',              route: '/finance/society-reports' },
   { emoji: '📋', label: 'Invoices',   color: '#0284C7',            bg: '#E0F2FE',              route: '/finance/invoices' },
