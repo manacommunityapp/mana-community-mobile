@@ -11,6 +11,7 @@ export default function AppointmentDetailScreen() {
   const [appointment, setAppointment] = useState<HealthAppointmentDto | null>(null);
   const [journey, setJourney] = useState<CareJourneyDto | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [activeReminder, setActiveReminder] = useState<string | null>(null);
   const [comm, setComm] = useState(5);
   const [wait, setWait] = useState(5);
   const [prof, setProf] = useState(5);
@@ -227,6 +228,60 @@ export default function AppointmentDetailScreen() {
           ))}
         </View>
 
+        {/* Appointment Reminders */}
+        {appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED" && (
+          <View style={styles.card}>
+            <View style={styles.reminderHeaderRow}>
+              <Ionicons name="notifications" size={16} color="#0D9488" />
+              <Text style={styles.cardTitle}>Set Appointment Reminder</Text>
+            </View>
+            <Text style={styles.reminderSub}>Get notified before your appointment</Text>
+            <View style={styles.reminderOptionsGrid}>
+              {[
+                { label: "15 min before", value: "15m" },
+                { label: "30 min before", value: "30m" },
+                { label: "1 hour before", value: "1h" },
+                { label: "2 hours before", value: "2h" },
+                { label: "Day before", value: "1d" },
+              ].map(opt => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.reminderChip, activeReminder === opt.value && styles.reminderChipActive]}
+                  onPress={() => {
+                    setActiveReminder(opt.value);
+                    Alert.alert("Reminder Set", `You'll be notified ${opt.label} your appointment with ${appointment.doctorName}.`);
+                  }}
+                >
+                  <Ionicons
+                    name={activeReminder === opt.value ? "alarm" : "alarm-outline"}
+                    size={14}
+                    color={activeReminder === opt.value ? "#FFFFFF" : "#0D9488"}
+                  />
+                  <Text style={[styles.reminderChipText, activeReminder === opt.value && { color: "#FFFFFF" }]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {activeReminder && (
+              <View style={styles.reminderConfirmBanner}>
+                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Text style={styles.reminderConfirmText}>
+                  Reminder active — you'll be notified {
+                    activeReminder === "15m" ? "15 minutes" :
+                    activeReminder === "30m" ? "30 minutes" :
+                    activeReminder === "1h" ? "1 hour" :
+                    activeReminder === "2h" ? "2 hours" : "1 day"
+                  } before
+                </Text>
+                <TouchableOpacity onPress={() => setActiveReminder(null)}>
+                  <Text style={styles.reminderClearText}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Review Action */}
         {!appointment.reviewSubmitted && appointment.status !== "CANCELLED" && (
           <TouchableOpacity
@@ -380,5 +435,16 @@ const styles = StyleSheet.create({
   followUpBadgeText: { fontSize: 10, fontWeight: "700" },
   clinicalGuardrailNote: { fontSize: 10, color: "#475569", marginTop: 2 },
   scheduleFollowUpBtn: { backgroundColor: "#4338CA", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 10, marginTop: 4 },
-  scheduleFollowUpText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" }
+  scheduleFollowUpText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+
+  // Appointment Reminders
+  reminderHeaderRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  reminderSub: { fontSize: 12, color: "#6B7280", marginBottom: 10 },
+  reminderOptionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  reminderChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#0D9488", backgroundColor: "#F0FDFA" },
+  reminderChipActive: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
+  reminderChipText: { fontSize: 12, fontWeight: "600", color: "#0D9488" },
+  reminderConfirmBanner: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#ECFDF5", padding: 10, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: "#A7F3D0" },
+  reminderConfirmText: { flex: 1, fontSize: 12, color: "#065F46", fontWeight: "500" },
+  reminderClearText: { fontSize: 12, color: "#DC2626", fontWeight: "700" }
 });

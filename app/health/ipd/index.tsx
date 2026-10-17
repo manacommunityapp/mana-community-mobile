@@ -23,6 +23,16 @@ const HOSPITALS = [
   "AIIMS", "Manipal Hospital", "Narayana Health", "Community General Hospital"
 ];
 
+const HOSPITAL_BED_DATA: Record<string, Record<WardType, number>> = {
+  "Apollo Hospital":           { GENERAL: 14, SEMI_PRIVATE: 6, PRIVATE: 4, ICU: 3 },
+  "Fortis Healthcare":         { GENERAL: 8,  SEMI_PRIVATE: 4, PRIVATE: 2, ICU: 1 },
+  "Max Super Specialty":       { GENERAL: 12, SEMI_PRIVATE: 5, PRIVATE: 3, ICU: 2 },
+  "AIIMS":                     { GENERAL: 20, SEMI_PRIVATE: 0, PRIVATE: 0, ICU: 4 },
+  "Manipal Hospital":          { GENERAL: 10, SEMI_PRIVATE: 4, PRIVATE: 3, ICU: 2 },
+  "Narayana Health":           { GENERAL: 16, SEMI_PRIVATE: 7, PRIVATE: 5, ICU: 3 },
+  "Community General Hospital":{ GENERAL: 6,  SEMI_PRIVATE: 2, PRIVATE: 1, ICU: 0 },
+};
+
 export default function IpdAdmissionScreen() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -146,17 +156,29 @@ export default function IpdAdmissionScreen() {
             </View>
 
             <Text style={styles.sectionTitle}>Select Hospital</Text>
-            {HOSPITALS.map(h => (
-              <TouchableOpacity
-                key={h}
-                style={[styles.hospitalCard, hospital === h && styles.hospitalCardActive]}
-                onPress={() => setHospital(h)}
-              >
-                <Ionicons name="business" size={18} color={hospital === h ? "#0D9488" : "#6B7280"} />
-                <Text style={[styles.hospitalName, hospital === h && styles.hospitalNameActive]}>{h}</Text>
-                {hospital === h && <Ionicons name="checkmark-circle" size={18} color="#0D9488" />}
-              </TouchableOpacity>
-            ))}
+            {HOSPITALS.map(h => {
+              const bedData = HOSPITAL_BED_DATA[h];
+              const totalBeds = bedData ? Object.values(bedData).reduce((s, n) => s + n, 0) : 0;
+              const bedColor = totalBeds > 10 ? "#059669" : totalBeds > 4 ? "#D97706" : "#DC2626";
+              return (
+                <TouchableOpacity
+                  key={h}
+                  style={[styles.hospitalCard, hospital === h && styles.hospitalCardActive]}
+                  onPress={() => setHospital(h)}
+                >
+                  <Ionicons name="business" size={18} color={hospital === h ? "#0D9488" : "#6B7280"} />
+                  <Text style={[styles.hospitalName, hospital === h && styles.hospitalNameActive]}>{h}</Text>
+                  <View style={{ flex: 1 }} />
+                  <View style={[styles.bedBadge, { backgroundColor: bedColor + "20", borderColor: bedColor }]}>
+                    <Ionicons name="bed-outline" size={11} color={bedColor} />
+                    <Text style={[styles.bedBadgeText, { color: bedColor }]}>
+                      {totalBeds > 0 ? `${totalBeds} beds` : "Full"}
+                    </Text>
+                  </View>
+                  {hospital === h && <Ionicons name="checkmark-circle" size={18} color="#0D9488" />}
+                </TouchableOpacity>
+              );
+            })}
 
             <TouchableOpacity
               style={[styles.nextBtn, (!department || !hospital) && styles.nextBtnDisabled]}
@@ -204,23 +226,35 @@ export default function IpdAdmissionScreen() {
         {step === 3 && (
           <>
             <Text style={styles.sectionTitle}>Ward Preference</Text>
-            {WARD_OPTIONS.map(w => (
-              <TouchableOpacity
-                key={w.type}
-                style={[styles.wardCard, wardType === w.type && styles.wardCardActive]}
-                onPress={() => setWardType(w.type)}
-              >
-                <View style={[styles.wardIcon, { backgroundColor: w.bg }]}>
-                  <Ionicons name={w.icon as any} size={22} color={w.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.wardLabel}>{w.label}</Text>
-                  <Text style={styles.wardDesc}>{w.desc}</Text>
-                  <Text style={[styles.wardPrice, { color: w.color }]}>{w.price}</Text>
-                </View>
-                {wardType === w.type && <Ionicons name="checkmark-circle" size={20} color="#0D9488" />}
-              </TouchableOpacity>
-            ))}
+            {WARD_OPTIONS.map(w => {
+              const bedsAvail = hospital ? (HOSPITAL_BED_DATA[hospital]?.[w.type] ?? 0) : null;
+              const wardBedColor = bedsAvail === null ? "#94A3B8" : bedsAvail > 3 ? "#059669" : bedsAvail > 0 ? "#D97706" : "#DC2626";
+              return (
+                <TouchableOpacity
+                  key={w.type}
+                  style={[styles.wardCard, wardType === w.type && styles.wardCardActive]}
+                  onPress={() => setWardType(w.type)}
+                >
+                  <View style={[styles.wardIcon, { backgroundColor: w.bg }]}>
+                    <Ionicons name={w.icon as any} size={22} color={w.color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.wardLabel}>{w.label}</Text>
+                    <Text style={styles.wardDesc}>{w.desc}</Text>
+                    <Text style={[styles.wardPrice, { color: w.color }]}>{w.price}</Text>
+                  </View>
+                  {bedsAvail !== null && (
+                    <View style={[styles.bedBadge, { backgroundColor: wardBedColor + "20", borderColor: wardBedColor }]}>
+                      <Ionicons name="bed-outline" size={11} color={wardBedColor} />
+                      <Text style={[styles.bedBadgeText, { color: wardBedColor }]}>
+                        {bedsAvail > 0 ? `${bedsAvail} avail` : "Full"}
+                      </Text>
+                    </View>
+                  )}
+                  {wardType === w.type && <Ionicons name="checkmark-circle" size={20} color="#0D9488" />}
+                </TouchableOpacity>
+              );
+            })}
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Expected Admission Date</Text>
@@ -266,9 +300,11 @@ const styles = StyleSheet.create({
   deptChipActive: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
   deptChipText: { fontSize: 12, fontWeight: "600", color: "#374151", fontFamily: FONTS.medium },
   deptChipTextActive: { color: "#FFFFFF" },
+  bedBadge: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
+  bedBadgeText: { fontSize: 10, fontWeight: "700" },
   hospitalCard: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: RADIUS.sm, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
   hospitalCardActive: { borderColor: "#0D9488", backgroundColor: "#F0FDFA" },
-  hospitalName: { flex: 1, fontSize: 13, fontWeight: "600", color: "#374151", fontFamily: FONTS.medium },
+  hospitalName: { fontSize: 13, fontWeight: "600", color: "#374151", fontFamily: FONTS.medium },
   hospitalNameActive: { color: "#0D9488" },
   inputGroup: { gap: 4 },
   inputLabel: { fontSize: 13, fontWeight: "600", color: "#374151", fontFamily: FONTS.semiBold },
