@@ -80,8 +80,10 @@ export const smartMeterService = {
     try {
       const res = await api.get<SmartMeterDto[]>(`/v1/iot/meters/unit/${unitId}`);
       if (res.data && res.data.length > 0) return res.data;
-    } catch (err) {
-      secureLog.warn('SmartMeter: fallback to mock meters', err);
+    } catch (err: any) {
+      if (err?.response?.status !== 404) {
+        secureLog.warn('SmartMeter: fallback to mock meters', err?.message || err);
+      }
     }
     return MOCK_METERS;
   },
@@ -90,7 +92,11 @@ export const smartMeterService = {
     try {
       const res = await api.get<UtilityConsumptionSummary>(`/v1/iot/meters/summary/${unitId}`);
       if (res.data) return res.data;
-    } catch {}
+    } catch (err: any) {
+      if (err?.response?.status !== 404) {
+        secureLog.warn('SmartMeter: fallback to mock summary', err?.message || err);
+      }
+    }
     return {
       unitId,
       unitNumber: 'Flat 504 (Tower B)',
