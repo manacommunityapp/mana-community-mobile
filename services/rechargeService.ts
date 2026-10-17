@@ -1,5 +1,4 @@
 import api from './apiClient';
-import { secureLog } from '@/security';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

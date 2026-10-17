@@ -360,7 +360,7 @@ const s = StyleSheet.create({
     backgroundColor: THEME.surfaceMuted, borderRadius: 8,
     borderWidth: 1, borderColor: THEME.border,
   },
-  recentNumber: { fontSize: 12, fontFamily: FONTS.mono ?? FONTS.medium, color: THEME.textPrimary },
+  recentNumber: { fontSize: 12, fontFamily: FONTS.medium, color: THEME.textPrimary },
   stickyFooter: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 16, paddingTop: 12,
