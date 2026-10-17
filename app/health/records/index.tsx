@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Share } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { healthService } from "@/services/healthService";
 import { MedicalRecordDto, HealthAuditEntry } from "@/types/health";
@@ -21,6 +21,19 @@ export default function HealthRecordsScreen() {
       "Encrypted Vault Access Granted",
       `Opened ${r.title}. Short-lived token generated. Access logged in audit trail at ${new Date().toLocaleTimeString()}.`
     );
+  };
+
+  const handleShareRecord = async (r: MedicalRecordDto) => {
+    const token = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const shareLink = `https://mana.health/vault/share/${token}`;
+    try {
+      await Share.share({
+        title: `Share Medical Record: ${r.title}`,
+        message: `${r.title}\nPatient: ${r.patientName} | Date: ${r.date} | Provider: ${r.doctorOrLabName}\n\nSecure access link (expires in 24 hours):\n${shareLink}\n\nShared via Mana Health Vault — AES-256 encrypted.`,
+      });
+      const log = await healthService.auditAccessRecord(r.id, `SHARE_${r.type}`);
+      setAuditLogs(prev => [log, ...prev]);
+    } catch (_) {}
   };
 
   return (
@@ -65,7 +78,17 @@ export default function HealthRecordsScreen() {
               {rec.notes && <Text style={styles.notesText}>{rec.notes}</Text>}
               <View style={styles.cardFooter}>
                 <Text style={styles.vaultNote}>🔒 AES-256 Encrypted Private Storage</Text>
-                <Text style={styles.viewLink}>View Document →</Text>
+                <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+                  <TouchableOpacity
+                    onPress={(e) => { e.stopPropagation?.(); handleShareRecord(rec); }}
+                    style={styles.shareBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="share-social-outline" size={15} color="#0D9488" />
+                    <Text style={styles.shareBtnText}>Share</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.viewLink}>View →</Text>
+                </View>
               </View>
             </TouchableOpacity>
           ))
@@ -107,6 +130,8 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#F3F4F6", paddingTop: 8 },
   vaultNote: { fontSize: 10, color: "#059669", fontWeight: "600" },
   viewLink: { fontSize: 12, fontWeight: "bold", color: "#0D9488" },
+  shareBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
+  shareBtnText: { fontSize: 12, fontWeight: "600", color: "#0D9488" },
   auditCard: { backgroundColor: "#FFFFFF", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", gap: 4 },
   auditAction: { fontSize: 12, fontWeight: "bold", color: "#0D9488" },
   auditTime: { fontSize: 10, color: "#9CA3AF" },

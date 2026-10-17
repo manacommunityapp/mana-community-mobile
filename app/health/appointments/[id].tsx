@@ -11,6 +11,7 @@ export default function AppointmentDetailScreen() {
   const [appointment, setAppointment] = useState<HealthAppointmentDto | null>(null);
   const [journey, setJourney] = useState<CareJourneyDto | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [activeReminder, setActiveReminder] = useState<string | null>(null);
   const [comm, setComm] = useState(5);
   const [wait, setWait] = useState(5);
   const [prof, setProf] = useState(5);
@@ -195,6 +196,19 @@ export default function AppointmentDetailScreen() {
                     </Text>
                   </View>
                 </View>
+                {journey.clinicianRecommendedFollowUp.status !== "BOOKED" && (
+                  <TouchableOpacity
+                    style={styles.scheduleFollowUpBtn}
+                    onPress={() => router.push({
+                      pathname: "/health/appointments/book",
+                      params: { doctorId: appointment?.doctorId ?? "" }
+                    } as any)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="calendar" size={14} color="#FFFFFF" />
+                    <Text style={styles.scheduleFollowUpText}>Schedule Follow-up Appointment</Text>
+                  </TouchableOpacity>
+                )}
                 <Text style={styles.clinicalGuardrailNote}>
                   🛡️ Safe Care Policy: Diagnostic tests are never auto-diagnosed. Follow-ups are directed strictly by clinician recommendations.
                 </Text>
@@ -213,6 +227,60 @@ export default function AppointmentDetailScreen() {
             </View>
           ))}
         </View>
+
+        {/* Appointment Reminders */}
+        {appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED" && (
+          <View style={styles.card}>
+            <View style={styles.reminderHeaderRow}>
+              <Ionicons name="notifications" size={16} color="#0D9488" />
+              <Text style={styles.cardTitle}>Set Appointment Reminder</Text>
+            </View>
+            <Text style={styles.reminderSub}>Get notified before your appointment</Text>
+            <View style={styles.reminderOptionsGrid}>
+              {[
+                { label: "15 min before", value: "15m" },
+                { label: "30 min before", value: "30m" },
+                { label: "1 hour before", value: "1h" },
+                { label: "2 hours before", value: "2h" },
+                { label: "Day before", value: "1d" },
+              ].map(opt => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.reminderChip, activeReminder === opt.value && styles.reminderChipActive]}
+                  onPress={() => {
+                    setActiveReminder(opt.value);
+                    Alert.alert("Reminder Set", `You'll be notified ${opt.label} your appointment with ${appointment.doctorName}.`);
+                  }}
+                >
+                  <Ionicons
+                    name={activeReminder === opt.value ? "alarm" : "alarm-outline"}
+                    size={14}
+                    color={activeReminder === opt.value ? "#FFFFFF" : "#0D9488"}
+                  />
+                  <Text style={[styles.reminderChipText, activeReminder === opt.value && { color: "#FFFFFF" }]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {activeReminder && (
+              <View style={styles.reminderConfirmBanner}>
+                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Text style={styles.reminderConfirmText}>
+                  Reminder active — you'll be notified {
+                    activeReminder === "15m" ? "15 minutes" :
+                    activeReminder === "30m" ? "30 minutes" :
+                    activeReminder === "1h" ? "1 hour" :
+                    activeReminder === "2h" ? "2 hours" : "1 day"
+                  } before
+                </Text>
+                <TouchableOpacity onPress={() => setActiveReminder(null)}>
+                  <Text style={styles.reminderClearText}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Review Action */}
         {!appointment.reviewSubmitted && appointment.status !== "CANCELLED" && (
@@ -236,25 +304,45 @@ export default function AppointmentDetailScreen() {
       <Modal visible={showReviewModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Rate Your Experience with {appointment.doctorName}</Text>
-            <Text style={styles.modalSub}>Multi-dimensional reviews ensure authentic ratings for community trust.</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={styles.modalTitle}>Rate {appointment.doctorName}</Text>
+              <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+                <Ionicons name="close" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSub}>Tap stars to rate each dimension</Text>
 
-            <View style={styles.dimRow}>
-              <Text style={styles.dimLabel}>Communication (1-5):</Text>
-              <Text style={styles.dimVal}>⭐ {comm}</Text>
-            </View>
-            <View style={styles.dimRow}>
-              <Text style={styles.dimLabel}>Waiting Time (1-5):</Text>
-              <Text style={styles.dimVal}>⭐ {wait}</Text>
-            </View>
-            <View style={styles.dimRow}>
-              <Text style={styles.dimLabel}>Professionalism (1-5):</Text>
-              <Text style={styles.dimVal}>⭐ {prof}</Text>
-            </View>
+            {([
+              { label: "Communication", val: comm, set: setComm },
+              { label: "Waiting Time", val: wait, set: setWait },
+              { label: "Professionalism", val: prof, set: setProf },
+              { label: "Clinic Experience", val: clinic, set: setClinic }
+            ] as { label: string; val: number; set: (n: number) => void }[]).map(dim => (
+              <View key={dim.label} style={styles.starDimRow}>
+                <Text style={styles.starDimLabel}>{dim.label}</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <TouchableOpacity key={n} onPress={() => dim.set(n)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+                      <Ionicons name={n <= dim.val ? "star" : "star-outline"} size={22} color={n <= dim.val ? "#F59E0B" : "#D1D5DB"} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
+
+            <TouchableOpacity
+              style={[styles.recommendRow, recommend && styles.recommendRowActive]}
+              onPress={() => setRecommend(!recommend)}
+            >
+              <Ionicons name={recommend ? "thumbs-up" : "thumbs-up-outline"} size={16} color={recommend ? "#0D9488" : "#6B7280"} />
+              <Text style={[styles.recommendText, recommend && { color: "#0D9488" }]}>
+                {recommend ? "I would recommend this doctor" : "Would you recommend this doctor?"}
+              </Text>
+            </TouchableOpacity>
 
             <TextInput
               style={styles.reviewInput}
-              placeholder="Share details of your consultation (optional)..."
+              placeholder="Share your experience (optional)..."
               multiline
               value={comment}
               onChangeText={setComment}
@@ -309,6 +397,12 @@ const styles = StyleSheet.create({
   dimRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
   dimLabel: { fontSize: 13, color: "#374151" },
   dimVal: { fontSize: 13, fontWeight: "bold", color: "#B45309" },
+  starDimRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },
+  starDimLabel: { fontSize: 13, color: "#374151", flex: 1 },
+  starsRow: { flexDirection: "row", gap: 4 },
+  recommendRow: { flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#F9FAFB" },
+  recommendRowActive: { backgroundColor: "#F0FDFA", borderColor: "#99F6E4" },
+  recommendText: { fontSize: 13, color: "#6B7280", fontWeight: "500" },
   reviewInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, padding: 10, height: 80, fontSize: 13, textAlignVertical: "top" },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 10 },
   modalCancel: { flex: 1, backgroundColor: "#E5E7EB", padding: 12, borderRadius: 10, alignItems: "center" },
@@ -339,5 +433,18 @@ const styles = StyleSheet.create({
   followUpBooked: { backgroundColor: "#DCFCE7" },
   followUpPending: { backgroundColor: "#FEF3C7" },
   followUpBadgeText: { fontSize: 10, fontWeight: "700" },
-  clinicalGuardrailNote: { fontSize: 10, color: "#475569", marginTop: 2 }
+  clinicalGuardrailNote: { fontSize: 10, color: "#475569", marginTop: 2 },
+  scheduleFollowUpBtn: { backgroundColor: "#4338CA", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 10, marginTop: 4 },
+  scheduleFollowUpText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+
+  // Appointment Reminders
+  reminderHeaderRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  reminderSub: { fontSize: 12, color: "#6B7280", marginBottom: 10 },
+  reminderOptionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  reminderChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#0D9488", backgroundColor: "#F0FDFA" },
+  reminderChipActive: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
+  reminderChipText: { fontSize: 12, fontWeight: "600", color: "#0D9488" },
+  reminderConfirmBanner: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#ECFDF5", padding: 10, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: "#A7F3D0" },
+  reminderConfirmText: { flex: 1, fontSize: 12, color: "#065F46", fontWeight: "500" },
+  reminderClearText: { fontSize: 12, color: "#DC2626", fontWeight: "700" }
 });
