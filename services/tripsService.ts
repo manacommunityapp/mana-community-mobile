@@ -393,8 +393,8 @@ function normalizeTrip(t: any): TripDto {
     hostPhone: t.hostPhone,
     itinerary: t.itinerary ?? [],
     transport: t.transport || 'Coach',
-    flightOriginIATA: t.flightOriginIATA,
-    flightDestIATA: t.flightDestIATA,
+    flightOriginIATA: t.flightOriginIATA ?? t.flightOriginIata,  // backend serialises as flightOriginIata
+    flightDestIATA: t.flightDestIATA ?? t.flightDestIata,
     groupPnr: t.groupPnr,
     farePerPerson: t.farePerPerson,
     highlights: t.highlights ?? [],
