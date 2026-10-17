@@ -12,7 +12,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { auctionService } from '@/services/auctionService';
 import { CompactCountdown } from '@/components/auction/CountdownTimer';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/dateUtils';
 import type { AuctionDto } from '@/types/api';
 
 type AuctionTab = 'LIVE' | 'UPCOMING' | 'ENDED';
@@ -91,10 +91,10 @@ function AuctionCard({ auction }: { auction: AuctionDto }) {
         {/* Seller + date */}
         <Text style={ac.meta} numberOfLines={1}>
           {isLive
-            ? `Ends ${format(new Date(auction.endTime), 'h:mm a')}`
+            ? `Ends ${safeFormat(auction.endTime, 'h:mm a')}`
             : auction.status === 'UPCOMING'
-            ? `Starts ${format(new Date(auction.startTime), 'dd MMM, h:mm a')}`
-            : `Ended ${format(new Date(auction.endTime), 'dd MMM')}`
+            ? `Starts ${safeFormat(auction.startTime, 'dd MMM, h:mm a')}`
+            : `Ended ${safeFormat(auction.endTime, 'dd MMM')}`
           } · {auction.sellerName}
         </Text>
       </View>

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/dateUtils';
 import { commuteService } from '@/services/commuteService';
 import { StarRating } from '@/components/commute/StarRating';
 import { COLORS, getInitials } from '@/constants/config';
@@ -159,7 +159,7 @@ export default function RideDetailScreen() {
         <View style={s.card}>
           <Text style={s.cardTitle}>Details</Text>
           <View style={s.detailGrid}>
-            <DetailItem label="Departure" value={format(new Date(ride.departureTime), 'dd MMM yyyy, h:mm a')} />
+            <DetailItem label="Departure" value={safeFormat(ride.departureTime, 'dd MMM yyyy, h:mm a')} />
             <DetailItem label="Seats" value={`${ride.availableSeats} of ${ride.totalSeats} available`} />
             <DetailItem label="Price" value={ride.free ? 'Free' : `₹${ride.pricePerSeat}/seat`} />
             {ride.vehicleType && <DetailItem label="Vehicle" value={ride.vehicleType} />}

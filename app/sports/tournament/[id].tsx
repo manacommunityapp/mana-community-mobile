@@ -10,7 +10,7 @@ import { sportsService } from '@/services/sportsService';
 import { ScoreCard } from '@/components/sports/ScoreCard';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import { COLORS } from '@/constants/config';
-import { format } from 'date-fns';
+import { safeFormat, formatTournamentDateRange } from '@/utils/dateUtils';
 
 const TABS = ['Overview', 'Teams', 'Schedule', 'Standings'] as const;
 type Tab = typeof TABS[number];
@@ -132,9 +132,9 @@ export default function TournamentDetailScreen() {
         <View style={scr.heroInfo}>
           <Text style={scr.heroName}>{tournament.name}</Text>
           <Text style={scr.heroMeta}>
-            {FORMAT_LABEL[tournament.format]} · {tournament.teamSize}v{tournament.teamSize}
+            {(FORMAT_LABEL[tournament.format] ?? tournament.format ?? 'Tournament')} · {tournament.teamSize != null ? `${tournament.teamSize}v${tournament.teamSize}` : 'Open'}
           </Text>
-          <Text style={scr.heroOrg}>Organised by {tournament.organizerName}</Text>
+          <Text style={scr.heroOrg}>Organised by {tournament.organizerName || 'Community'}</Text>
         </View>
       </View>
 
@@ -163,22 +163,28 @@ export default function TournamentDetailScreen() {
             )}
             <View style={scr.card}>
               <Text style={scr.cardTitle}>Details</Text>
-              {([
-                ['📅 Dates',      `${format(new Date(tournament.startDate),'dd MMM')} – ${format(new Date(tournament.endDate),'dd MMM yyyy')}`],
-                ['📋 Format',     FORMAT_LABEL[tournament.format]],
-                ['👥 Team size',  `${tournament.teamSize} players`],
-                ['🏟️ Teams',      `${tournament.registeredTeamsCount} / ${tournament.maxTeams} registered`],
-                tournament.venue ? ['📍 Venue', tournament.venue] : null,
-                tournament.prizes ? ['🏆 Prizes', tournament.prizes] : null,
-                tournament.registrationDeadline
-                  ? ['⏰ Reg. deadline', format(new Date(tournament.registrationDeadline),'dd MMM, h:mm a')]
-                  : null,
-              ] as ([string, string] | null)[]).filter((x): x is [string, string] => x !== null).map(([label, value]) => (
-                <View key={label!} style={scr.detailRow}>
-                  <Text style={scr.detailLabel}>{label}</Text>
-                  <Text style={scr.detailValue}>{value}</Text>
-                </View>
-              ))}
+              {(() => {
+                const startDateVal = (tournament as any).startDate ?? (tournament as any).eventDateStart;
+                const endDateVal = (tournament as any).endDate ?? (tournament as any).eventDateEnd;
+                const regDeadlineVal = (tournament as any).registrationDeadline ?? (tournament as any).registrationDateEnd;
+                const datesFormatted = formatTournamentDateRange(startDateVal, endDateVal);
+                const regDeadlineFormatted = regDeadlineVal ? safeFormat(regDeadlineVal, 'dd MMM, h:mm a') : '';
+
+                return ([
+                  ['📅 Dates',      datesFormatted],
+                  ['📋 Format',     FORMAT_LABEL[tournament.format] ?? tournament.format ?? 'Tournament'],
+                  ['👥 Team size',  tournament.teamSize != null ? `${tournament.teamSize} players` : 'Open'],
+                  ['🏟️ Teams',      `${tournament.registeredTeamsCount ?? 0} / ${tournament.maxTeams ?? '∞'} registered`],
+                  tournament.venue ? ['📍 Venue', tournament.venue] : null,
+                  tournament.prizes ? ['🏆 Prizes', tournament.prizes] : null,
+                  regDeadlineFormatted ? ['⏰ Reg. deadline', regDeadlineFormatted] : null,
+                ] as ([string, string] | null)[]).filter((x): x is [string, string] => x !== null).map(([label, value]) => (
+                  <View key={label!} style={scr.detailRow}>
+                    <Text style={scr.detailLabel}>{label}</Text>
+                    <Text style={scr.detailValue}>{value}</Text>
+                  </View>
+                ));
+              })()}
             </View>
             {tournament.rules && (
               <View style={scr.card}>

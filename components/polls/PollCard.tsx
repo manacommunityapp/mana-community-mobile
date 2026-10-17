@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow, isPast } from 'date-fns';
+import { safeFormatDistanceToNow, safeIsPast } from '@/utils/dateUtils';
 import { pollService } from '@/services/pollService';
 import { AnimatedBar } from './AnimatedBar';
 import { COLORS } from '@/constants/config';
@@ -29,7 +29,7 @@ export function PollCard({ post, currentUserId, compact = true, onVoted }: PollC
 
   const [selected, setSelected] = useState<number[]>(alreadyVotedIds);
   const hasVoted  = alreadyVotedIds.length > 0;
-  const isExpired = poll?.deadline ? isPast(new Date(poll.deadline)) : false;
+  const isExpired = poll?.deadline ? safeIsPast(poll.deadline) : false;
   const isClosed  = !poll?.isActive || isExpired;
   const showResults = hasVoted || isClosed;
 
@@ -79,7 +79,7 @@ export function PollCard({ post, currentUserId, compact = true, onVoted }: PollC
         )}
         {poll.deadline && !isClosed && (
           <Text style={s.deadline}>
-            Closes {formatDistanceToNow(new Date(poll.deadline), { addSuffix: true })}
+            Closes {safeFormatDistanceToNow(poll.deadline, { addSuffix: true })}
           </Text>
         )}
         {poll.isAnonymous && (

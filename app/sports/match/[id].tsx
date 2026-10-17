@@ -10,6 +10,7 @@ import { useLiveScore } from '@/hooks/useLiveScore';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { format, formatDistanceToNow } from 'date-fns';
+import { safeFormat } from '@/utils/dateUtils';
 import { LiveScoringModal } from '@/components/sports/LiveScoringModal';
 import type { MatchDto, MatchEventDto } from '@/types/api';
 
@@ -143,7 +144,7 @@ function EventRow({ ev }: { ev: MatchEventDto }) {
         {ev.playerName && <Text style={er.player}>{ev.playerName}</Text>}
       </View>
       <Text style={er.time}>
-        {ev.minute != null ? `${ev.minute}'` : ev.over ?? format(new Date(ev.timestamp), 'h:mm a')}
+        {ev.minute != null ? `${ev.minute}'` : ev.over ?? (ev.timestamp ? safeFormat(ev.timestamp, 'h:mm a') : '')}
       </Text>
     </View>
   );
@@ -231,7 +232,7 @@ export default function LiveMatchScreen() {
           )}
           {match.status === 'SCHEDULED' && (
             <Text style={scr.scheduledTime}>
-              {format(new Date(match.scheduledAt), 'EEE, dd MMM · h:mm a')}
+              {safeFormat(match.scheduledAt, 'EEE, dd MMM · h:mm a', 'Scheduled')}
             </Text>
           )}
           {match.venue && (
@@ -322,7 +323,7 @@ export default function LiveMatchScreen() {
             <Text style={scr.scheduledEmoji}>⏰</Text>
             <Text style={scr.scheduledTitle}>Match not started yet</Text>
             <Text style={scr.scheduledSub}>
-              Scheduled for {format(new Date(match.scheduledAt), 'EEEE, dd MMMM · h:mm a')}
+              Scheduled for {safeFormat(match.scheduledAt, 'EEEE, dd MMMM · h:mm a', 'upcoming date')}
             </Text>
           </View>
         )}

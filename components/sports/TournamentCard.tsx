@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { format } from 'date-fns';
+import { formatTournamentDateRange } from '@/utils/dateUtils';
 import type { TournamentDto } from '@/types/api';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { Ionicons } from '@expo/vector-icons';
@@ -82,7 +82,7 @@ export function TournamentCard({ tournament: t, compact = false }: TournamentCar
                 <Ionicons name="calendar-outline" size={13} color={COLORS.textMuted} />
               </View>
               <Text style={c.detailText}>
-                {format(new Date(t.startDate), 'dd MMM')} – {format(new Date(t.endDate), 'dd MMM yyyy')}
+                {formatTournamentDateRange((t as any).startDate ?? (t as any).eventDateStart, (t as any).endDate ?? (t as any).eventDateEnd)}
               </Text>
             </View>
             {t.venue && (
@@ -98,7 +98,7 @@ export function TournamentCard({ tournament: t, compact = false }: TournamentCar
                 <Ionicons name="git-branch-outline" size={13} color={COLORS.textMuted} />
               </View>
               <Text style={c.detailText}>
-                {FORMAT_LABEL[t.format] ?? t.format} · {t.teamSize}v{t.teamSize}
+                {FORMAT_LABEL[t.format] ?? t.format ?? 'Tournament'} · {t.teamSize != null ? `${t.teamSize}v${t.teamSize}` : 'Open'}
               </Text>
             </View>
             {t.prizes && (
