@@ -145,7 +145,7 @@ Location: ${order.pickupPoint ?? 'Clubhouse Desk'}`,
           <View style={s.infoRow}>
             <Text style={s.infoLabel}>Date & Time:</Text>
             <Text style={s.infoValue}>
-              {order.pickupDate ?? 'Today'} {order.pickupSlot ? ' ? ' + order.pickupSlot : ' ? 10 AM ? 7 PM'}
+              {order.pickupDate ?? 'Today'} {order.pickupSlot ? ' · ' + order.pickupSlot : ' · 10 AM – 7 PM'}
             </Text>
           </View>
           <View style={s.infoRow}>
@@ -172,7 +172,7 @@ Location: ${order.pickupPoint ?? 'Clubhouse Desk'}`,
                 <View key={col.id} style={s.collectorCard}>
                   <View style={{ flex: 1 }}>
                     <Text style={s.collectorName}>{col.name}</Text>
-                    <Text style={s.collectorRelation}>{col.relationship} ? {col.expiresAt}</Text>
+                    <Text style={s.collectorRelation}>{col.relationship} · {col.expiresAt}</Text>
                   </View>
                   <View style={s.pinWrap}>
                     <Text style={s.pinLabel}>PIN</Text>
