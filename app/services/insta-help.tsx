@@ -841,7 +841,7 @@ const s = StyleSheet.create({
 
   // Service grid
   serviceGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  serviceCard:      { width: (SCREEN_W - 42) / 2, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 16, borderWidth: 1.5, ...SHADOWS.sm, alignItems: 'center' },
+  serviceCard:      { width: (SCREEN_W - 42) / 2, minHeight: 184, justifyContent: 'space-between', backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 16, borderWidth: 1.5, ...SHADOWS.sm, alignItems: 'center' },
   serviceCardEmoji: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   serviceCardLabel: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
   serviceCardDesc:  { fontSize: 11, color: COLORS.textMuted, textAlign: 'center', marginBottom: 10 },
