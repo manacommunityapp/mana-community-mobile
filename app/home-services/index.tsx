@@ -580,14 +580,15 @@ const styles = StyleSheet.create({
   },
   moduleCard: {
     width: (SCREEN_W - 42) / 2,
+    height: 142,
     borderRadius: 18,
     marginBottom: 12,
     overflow: 'hidden',
     ...SHADOWS.sm,
   },
   moduleGradient: {
+    flex: 1,
     padding: 14,
-    minHeight: 120,
     justifyContent: 'space-between',
   },
   moduleIconBox: {

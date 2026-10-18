@@ -336,13 +336,13 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
         </View>
 
         {/* ⚡ Quick Service Banners */}
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12, marginHorizontal: 16 }}>
           <TouchableOpacity
-            style={[s.instaHelpBanner, { flex: 1, marginBottom: 0 }]}
+            style={[s.instaHelpBanner, { flex: 1, marginHorizontal: 0, marginTop: 0, height: 86 }]}
             onPress={() => router.push('/services/insta-help')}
             activeOpacity={0.85}
           >
-            <LinearGradient colors={['#4F46E5', '#7C3AED']} style={s.instaHelpGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <LinearGradient colors={['#4F46E5', '#7C3AED']} style={[s.instaHelpGradient, { flex: 1, paddingVertical: 10 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
               <View style={s.instaHelpLeft}>
                 <View style={s.instaHelpEtaBadge}>
                   <Text style={s.instaHelpEtaText}>⚡ ~15 min</Text>
@@ -362,7 +362,8 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           <TouchableOpacity
             style={{
               width: 124,
-              borderRadius: RADIUS.xl,
+              height: 86,
+              borderRadius: RADIUS.lg,
               backgroundColor: '#0F172A',
               padding: 12,
               justifyContent: 'space-between',
@@ -795,7 +796,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                   <View style={s.salaryBannerItem}>
                     <Text style={{ fontSize: 18 }}>💰</Text>
                     <Text style={s.salaryBannerLabel}>MONTHLY TOTAL</Text>
-                    <Text style={s.salaryBannerValue}>₹{pkgStats.totalMonthly.toLocaleString()}</Text>
+                    <Text style={s.salaryBannerValue} numberOfLines={1} adjustsFontSizeToFit>₹{pkgStats.totalMonthly.toLocaleString()}</Text>
                   </View>
                   <View style={s.salaryBannerDivider} />
                   <View style={s.salaryBannerItem}>
@@ -1577,7 +1578,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: THEME.background },
-  listContent: { padding: 16, paddingBottom: 40, gap: 12 },
+  listContent: { padding: 16, paddingBottom: 90, gap: 12 },
   centerBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   loadingCircle: {
     width: 64,
@@ -1780,8 +1781,10 @@ const s = StyleSheet.create({
   },
   catItem: {
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
     paddingVertical: 10,
+    minHeight: 78,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: 'transparent',
@@ -2003,25 +2006,27 @@ const s = StyleSheet.create({
   bookBtnText: { color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: FONTS.semiBold },
   primaryBtn: {
     flex: 1,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
     backgroundColor: '#4F46E5',
     borderRadius: RADIUS.md,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
     ...SHADOWS.sm,
   },
   primaryBtnText: { color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: FONTS.semiBold },
   outlineBtn: {
     flex: 1,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
     backgroundColor: '#F8FAFC',
     borderRadius: RADIUS.md,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: '#C7D2FE',
   },
@@ -2096,9 +2101,11 @@ const s = StyleSheet.create({
   // Attendance
   attStatsCard: {
     flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 78,
     backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.lg,
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 6,
     borderWidth: 1,
     borderColor: '#E8E8F0',
@@ -2127,7 +2134,8 @@ const s = StyleSheet.create({
   salaryBannerGrad: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 18,
+    minHeight: 82,
+    paddingVertical: 16,
     paddingHorizontal: 10,
   },
   salaryBannerItem: { flex: 1, alignItems: 'center', gap: 4 },
