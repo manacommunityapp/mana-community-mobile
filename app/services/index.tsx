@@ -335,56 +335,6 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           ))}
         </View>
 
-        {/* ⚡ Quick Service Banners */}
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12, marginHorizontal: 16 }}>
-          <TouchableOpacity
-            style={[s.instaHelpBanner, { flex: 1, marginHorizontal: 0, marginTop: 0, height: 86 }]}
-            onPress={() => router.push('/services/insta-help')}
-            activeOpacity={0.85}
-          >
-            <LinearGradient colors={['#4F46E5', '#7C3AED']} style={[s.instaHelpGradient, { flex: 1, paddingVertical: 10 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <View style={s.instaHelpLeft}>
-                <View style={s.instaHelpEtaBadge}>
-                  <Text style={s.instaHelpEtaText}>⚡ ~15 min</Text>
-                </View>
-                <Text style={s.instaHelpTitle}>Insta Help</Text>
-                <Text style={s.instaHelpSub}>Maid · Cook · Repair</Text>
-              </View>
-              <View style={s.instaHelpRight}>
-                <Text style={{ fontSize: 26 }}>🏠</Text>
-                <View style={s.instaHelpArrow}>
-                  <Ionicons name="arrow-forward" size={14} color="#FFF" />
-                </View>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              width: 124,
-              height: 86,
-              borderRadius: RADIUS.lg,
-              backgroundColor: '#0F172A',
-              padding: 12,
-              justifyContent: 'space-between',
-              ...SHADOWS.sm,
-            }}
-            onPress={() => router.push('/home-services/provider-deck')}
-            activeOpacity={0.85}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 20 }}>🛠️</Text>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
-                <Text style={{ color: '#FDE047', fontSize: 9, fontWeight: '700' }}>STAFF</Text>
-              </View>
-            </View>
-            <View>
-              <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>Job Deck</Text>
-              <Text style={{ color: '#94A3B8', fontSize: 10 }}>PIN & Proof</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
         {/* Search */}
         {isSearchOpen && (
           <View style={s.headerSearchWrap}>
@@ -408,7 +358,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       </View>
 
       {/* ── Tab Bar ── */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabBar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={s.tabBar}>
         {TABS.map((tab) => {
           const active = activeTab === tab.key;
           return (
@@ -438,6 +388,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       {/* ════════════════ SERVICES TAB ════════════════ */}
       {activeTab === 'providers' && !isLoading && (
         <FlatList
+          style={{ flex: 1 }}
           data={filteredProviders}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
@@ -445,6 +396,56 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
           ListHeaderComponent={
             <>
+              {/* ⚡ Quick Service Banners */}
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+                <TouchableOpacity
+                  style={[s.instaHelpBanner, { flex: 1, marginHorizontal: 0, marginTop: 0, height: 86 }]}
+                  onPress={() => router.push('/services/insta-help')}
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient colors={['#4F46E5', '#7C3AED']} style={[s.instaHelpGradient, { flex: 1, paddingVertical: 10 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                    <View style={s.instaHelpLeft}>
+                      <View style={s.instaHelpEtaBadge}>
+                        <Text style={s.instaHelpEtaText}>⚡ ~15 min</Text>
+                      </View>
+                      <Text style={s.instaHelpTitle}>Insta Help</Text>
+                      <Text style={s.instaHelpSub}>Maid · Cook · Repair</Text>
+                    </View>
+                    <View style={s.instaHelpRight}>
+                      <Text style={{ fontSize: 26 }}>🏠</Text>
+                      <View style={s.instaHelpArrow}>
+                        <Ionicons name="arrow-forward" size={14} color="#FFF" />
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    width: 124,
+                    height: 86,
+                    borderRadius: RADIUS.lg,
+                    backgroundColor: '#0F172A',
+                    padding: 12,
+                    justifyContent: 'space-between',
+                    ...SHADOWS.sm,
+                  }}
+                  onPress={() => router.push('/home-services/provider-deck')}
+                  activeOpacity={0.85}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 20 }}>🛠️</Text>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
+                      <Text style={{ color: '#FDE047', fontSize: 9, fontWeight: '700' }}>STAFF</Text>
+                    </View>
+                  </View>
+                  <View>
+                    <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>Job Deck</Text>
+                    <Text style={{ color: '#94A3B8', fontSize: 10 }}>PIN & Proof</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
               {/* Category Icon Grid */}
               <View style={s.catSection}>
                 <View style={s.sectionHeaderRow}>
@@ -571,6 +572,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       {/* ════════════════ MY STAFF TAB ════════════════ */}
       {activeTab === 'staff' && !isLoading && (
         <FlatList
+          style={{ flex: 1 }}
           data={domesticStaff}
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
@@ -578,7 +580,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
           ListHeaderComponent={
             <>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.roleChips}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={s.roleChips}>
                 <TouchableOpacity
                   style={[s.roleChip, !selectedRole && s.roleChipActive]}
                   onPress={() => setSelectedRole(null)}
@@ -693,6 +695,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       {/* ════════════════ ATTENDANCE TAB ════════════════ */}
       {activeTab === 'attendance' && !isLoading && (
         <FlatList
+          style={{ flex: 1 }}
           data={attendance}
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
@@ -784,6 +787,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       {/* ════════════════ SALARY / PACKAGES TAB ════════════════ */}
       {activeTab === 'packages' && !isLoading && (
         <FlatList
+          style={{ flex: 1 }}
           data={packages}
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
@@ -895,6 +899,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       {/* ════════════════ JOB BOARD TAB ════════════════ */}
       {activeTab === 'jobs' && !isLoading && (
         <FlatList
+          style={{ flex: 1 }}
           data={jobPosts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
@@ -989,6 +994,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
       {/* ════════════════ BOOKINGS TAB ════════════════ */}
       {activeTab === 'bookings' && !isLoading && (
         <FlatList
+          style={{ flex: 1 }}
           data={bookings}
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
