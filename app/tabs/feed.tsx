@@ -30,7 +30,7 @@ import { TodayAtAGlance, KpiChip } from '@/components/common/TodayAtAGlance';
 import { CommunityHighlightBanner } from '@/components/common/CommunityHighlightBanner';
 
 const SCREEN_W = Dimensions.get('window').width;
-const EVENT_CARD_W = SCREEN_W * 0.68;
+const EVENT_CARD_W = SCREEN_W * 0.62;
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
@@ -94,7 +94,7 @@ function UpcomingEventCard({ event, onPress }: { event: EventDto; onPress: () =>
         <View style={es.attendeeRow}>
           <View style={es.avatarStack}>
             {[0, 1, 2].map(i => (
-              <View key={i} style={[es.miniAvatar, { left: i * 16, backgroundColor: ['#4F46E5','#059669','#0891B2'][i] }]}>
+              <View key={i} style={[es.miniAvatar, { left: i * 13, backgroundColor: ['#4F46E5','#059669','#0891B2'][i] }]}>
                 <Text style={es.miniAvatarText}>{['A','B','C'][i]}</Text>
               </View>
             ))}
@@ -112,86 +112,89 @@ const es = StyleSheet.create({
   card: {
     width: EVENT_CARD_W,
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E8E8F0',
-    ...SHADOWS.md,
+    ...SHADOWS.sm,
   },
   imageArea: {
-    height: 110,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   eventIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eventEmoji: { fontSize: 24 },
+  eventEmoji: { fontSize: 16 },
   dateBadgeWrap: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(0,0,0,0.38)',
   },
   dateBadge: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
     color: '#fff',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
     fontFamily: FONTS.bold,
   },
   body: {
-    padding: 12,
-    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: COLORS.text,
     fontFamily: FONTS.displayBold,
     letterSpacing: -0.2,
+    lineHeight: 17,
   },
   attendeeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   avatarStack: {
     flexDirection: 'row',
-    width: 58,
-    height: 22,
+    width: 44,
+    height: 18,
     position: 'relative',
   },
   miniAvatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: COLORS.surface,
   },
   miniAvatarText: {
     color: '#fff',
-    fontSize: 8,
-    fontFamily: FONTS.bold, fontWeight: '800',
+    fontSize: 7.5,
+    fontFamily: FONTS.bold,
+    fontWeight: '800',
   },
   attendeeCount: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: COLORS.textMuted,
     fontFamily: FONTS.medium,
-    marginLeft: 6,
+    marginLeft: 4,
   },
 });
 
@@ -1163,55 +1166,55 @@ const styles = StyleSheet.create({
 
   // ── Upcoming Events ────────────────────────────────────────────────
   eventsSection: {
-    marginTop: 18,
+    marginTop: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
-  sectionEmoji: { fontSize: 20 },
+  sectionEmoji: { fontSize: 17 },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.3,
     fontFamily: FONTS.displayBold,
   },
   sectionSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textMuted,
     fontFamily: FONTS.regular,
-    marginTop: 1,
+    marginTop: 0.5,
   },
   seeAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     backgroundColor: '#EEF2FF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E0E7FF',
   },
   seeAll: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: COLORS.primary,
     fontFamily: FONTS.bold,
   },
   eventsScroll: {
     paddingHorizontal: 16,
-    gap: 12,
-    paddingBottom: 4,
+    gap: 10,
+    paddingBottom: 2,
   },
 
   // ── Composer Card ──────────────────────────────────────────────────
