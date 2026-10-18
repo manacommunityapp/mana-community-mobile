@@ -185,6 +185,7 @@ function RootLayout() {
             <Stack.Screen name="activity" />
             <Stack.Screen name="bbps" />
             <Stack.Screen name="recharge" />
+            <Stack.Screen name="insurance" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

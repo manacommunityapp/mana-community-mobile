@@ -1,53 +1,65 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { formatTournamentDateRange } from '@/utils/dateUtils';
-import type { TournamentDto } from '@/types/api';
-import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import type { TournamentDto } from '@/types/api';
 
 export const SPORT_EMOJI: Record<string, string> = {
   CRICKET: '🏏', FOOTBALL: '⚽', BADMINTON: '🏸',
   TABLE_TENNIS: '🏓', BASKETBALL: '🏀', VOLLEYBALL: '🏐',
-  CHESS: '♟️', CARROM: '🎯', OTHER: '🏅',
+  CHESS: '♟️', CARROM: '🎯', TENNIS: '🎾', SWIMMING: '🏊',
+  PICKLEBALL: '🏓', OTHER: '🏅',
 };
 
-// ── Sport-specific color accent ───────────────────────────────────────────────
-const SPORT_COLOR: Record<string, { bar: string; bg: string }> = {
-  CRICKET:      { bar: '#059669', bg: '#D1FAE5' },
-  FOOTBALL:     { bar: '#2563EB', bg: '#DBEAFE' },
-  BADMINTON:    { bar: '#7C3AED', bg: '#EDE9FE' },
-  TABLE_TENNIS: { bar: '#D97706', bg: '#FEF3C7' },
-  BASKETBALL:   { bar: '#DC2626', bg: '#FEE2E2' },
-  VOLLEYBALL:   { bar: '#0891B2', bg: '#CFFAFE' },
-  CHESS:        { bar: '#374151', bg: '#F3F4F6' },
-  CARROM:       { bar: '#EA580C', bg: '#FFEDD5' },
-  OTHER:        { bar: COLORS.primary, bg: COLORS.primaryLight },
-};
-
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  UPCOMING:          { label: 'Upcoming',          bg: COLORS.primaryLight, text: COLORS.primary,     icon: 'time-outline' },
-  REGISTRATION_OPEN: { label: 'Registration Open', bg: '#D1FAE5',          text: '#065F46',           icon: 'clipboard-outline' },
-  ONGOING:           { label: 'Ongoing',           bg: '#FEF3C7',          text: '#92400E',           icon: 'play-circle-outline' },
-  COMPLETED:         { label: 'Completed',         bg: COLORS.surfaceAlt,  text: COLORS.textMuted,    icon: 'checkmark-circle-outline' },
-  CANCELLED:         { label: 'Cancelled',         bg: COLORS.errorLight,  text: COLORS.error,        icon: 'close-circle-outline' },
+const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  UPCOMING:          { label: 'Upcoming',    bg: '#EEF2FF', text: '#4F46E5', dot: '#818CF8' },
+  REGISTRATION_OPEN: { label: 'Registering', bg: '#ECFDF5', text: '#065F46', dot: '#10B981' },
+  ONGOING:           { label: 'Live Now',    bg: '#FEE2E2', text: '#DC2626', dot: '#EF4444' },
+  COMPLETED:         { label: 'Completed',   bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
+  CANCELLED:         { label: 'Cancelled',   bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
 };
 
 const FORMAT_LABEL: Record<string, string> = {
-  KNOCKOUT: 'Knockout', ROUND_ROBIN: 'Round Robin',
-  LEAGUE:   'League',   SWISS:       'Swiss',
+  KNOCKOUT: 'Knockout', ROUND_ROBIN: 'Round Robin', LEAGUE: 'League', SWISS: 'Swiss',
 };
+
+function getSportStr(sport: any): string {
+  if (!sport) return 'OTHER';
+  if (typeof sport === 'object') return (sport.name ?? '').toUpperCase();
+  return String(sport).toUpperCase();
+}
 
 interface TournamentCardProps {
   tournament: TournamentDto;
-  compact?:   boolean;
+  compact?: boolean;
 }
 
-export function TournamentCard({ tournament: t, compact = false }: TournamentCardProps) {
-  const router    = useRouter();
-  const cfg       = STATUS_CONFIG[t.status] ?? STATUS_CONFIG.UPCOMING;
-  const sportCfg  = SPORT_COLOR[t.sport] ?? SPORT_COLOR.OTHER;
-  const spotsLeft = t.maxTeams - t.registeredTeamsCount;
-  const fillPct   = Math.min((t.registeredTeamsCount / Math.max(t.maxTeams, 1)) * 100, 100);
+export function TournamentCard({ tournament: t }: TournamentCardProps) {
+  const router   = useRouter();
+  const sportStr = getSportStr(t.sport);
+  const cfg      = STATUS_CONFIG[t.status] ?? STATUS_CONFIG.UPCOMING;
+  const emoji    = SPORT_EMOJI[sportStr] ?? '🏅';
+  const isLive   = t.status === 'ONGOING';
+
+  const dateLabel = (() => {
+    if (!(t as any).startDate) return null;
+    const start = new Date((t as any).startDate);
+    const end   = (t as any).endDate ? new Date((t as any).endDate) : null;
+    const fmt   = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    return end ? `${fmt(start)} – ${fmt(end)}` : fmt(start);
+  })();
+
+  const venueStr = (() => {
+    if (!t.venue) return null;
+    if (typeof t.venue === 'object') {
+      return [(t.venue as any).name, (t.venue as any).area].filter(Boolean).join(', ')
+          || (t.venue as any).address || null;
+    }
+    return String(t.venue);
+  })();
+
+  const maxTeams = t.maxTeams ?? (t as any).maxParticipants ?? 0;
+  const regCount = t.registeredTeamsCount ?? (t as any).currentParticipants ?? 0;
 
   return (
     <TouchableOpacity
@@ -55,93 +67,66 @@ export function TournamentCard({ tournament: t, compact = false }: TournamentCar
       onPress={() => router.push(`/sports/tournament/${t.id}`)}
       activeOpacity={0.82}
     >
-      {/* Sport color accent bar */}
-      <View style={[c.topBar, { backgroundColor: sportCfg.bar }]} />
-
-      <View style={c.inner}>
-        {/* Header row: sport circle + title + status badge */}
-        <View style={c.header}>
-          <View style={[c.sportCircle, { backgroundColor: sportCfg.bg }]}>
-            <Text style={c.sportEmoji}>{SPORT_EMOJI[t.sport] ?? '🏅'}</Text>
-          </View>
-          <View style={c.headerText}>
-            <Text style={c.name} numberOfLines={2}>{t.name}</Text>
-            <Text style={c.organizer}>by {t.organizerName}</Text>
-          </View>
-          <View style={[c.statusBadge, { backgroundColor: cfg.bg }]}>
-            <Ionicons name={cfg.icon} size={10} color={cfg.text} />
-            <Text style={[c.statusText, { color: cfg.text }]}>{cfg.label}</Text>
-          </View>
+      {/* Left sport stripe */}
+      <View style={c.row}>
+        <View style={c.emojiCol}>
+          <Text style={c.emoji}>{emoji}</Text>
         </View>
 
-        {/* Details: only shown when not compact */}
-        {!compact && (
-          <View style={c.details}>
-            <View style={c.detailRow}>
-              <View style={c.detailIconWrap}>
-                <Ionicons name="calendar-outline" size={13} color={COLORS.textMuted} />
-              </View>
-              <Text style={c.detailText}>
-                {formatTournamentDateRange((t as any).startDate ?? (t as any).eventDateStart, (t as any).endDate ?? (t as any).eventDateEnd)}
-              </Text>
+        <View style={c.body}>
+          {/* Name row */}
+          <View style={c.nameRow}>
+            <Text style={c.name} numberOfLines={2}>{t.name}</Text>
+            <View style={[c.badge, { backgroundColor: cfg.bg }]}>
+              {isLive && <View style={[c.dot, { backgroundColor: cfg.dot }]} />}
+              <Text style={[c.badgeText, { color: cfg.text }]}>{cfg.label}</Text>
             </View>
-            {t.venue && (
-              <View style={c.detailRow}>
-                <View style={c.detailIconWrap}>
-                  <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
-                </View>
-                <Text style={c.detailText} numberOfLines={1}>{t.venue}</Text>
-              </View>
-            )}
-            <View style={c.detailRow}>
-              <View style={c.detailIconWrap}>
-                <Ionicons name="git-branch-outline" size={13} color={COLORS.textMuted} />
-              </View>
-              <Text style={c.detailText}>
-                {FORMAT_LABEL[t.format] ?? t.format ?? 'Tournament'} · {t.teamSize != null ? `${t.teamSize}v${t.teamSize}` : 'Open'}
-              </Text>
-            </View>
-            {t.prizes && (
-              <View style={c.detailRow}>
-                <View style={c.detailIconWrap}>
-                  <Ionicons name="trophy-outline" size={13} color={COLORS.warning} />
-                </View>
-                <Text style={[c.detailText, { color: COLORS.warning }]} numberOfLines={1}>
-                  {t.prizes}
-                </Text>
-              </View>
-            )}
           </View>
-        )}
 
-        {/* Footer: progress bar + team count + my-team badge */}
-        <View style={c.footer}>
-          {/* Progress bar */}
-          <View style={c.progressTrack}>
-            <View style={[c.progressFill, { width: `${fillPct}%` as any, backgroundColor: sportCfg.bar }]} />
+          {/* Organizer */}
+          {t.organizerName ? (
+            <Text style={c.organizer} numberOfLines={1}>by {t.organizerName}</Text>
+          ) : null}
+
+          {/* Meta row */}
+          <View style={c.metaRow}>
+            {t.format ? (
+              <View style={c.chip}>
+                <Ionicons name="git-branch-outline" size={9} color={COLORS.textMuted} />
+                <Text style={c.chipText}>{FORMAT_LABEL[t.format] ?? t.format}</Text>
+              </View>
+            ) : null}
+            {dateLabel ? (
+              <View style={c.chip}>
+                <Ionicons name="calendar-outline" size={9} color={COLORS.textMuted} />
+                <Text style={c.chipText}>{dateLabel}</Text>
+              </View>
+            ) : null}
+            {venueStr ? (
+              <View style={c.chip}>
+                <Ionicons name="location-outline" size={9} color={COLORS.textMuted} />
+                <Text style={c.chipText} numberOfLines={1}>{venueStr}</Text>
+              </View>
+            ) : null}
+            {maxTeams > 0 ? (
+              <View style={c.chip}>
+                <Ionicons name="people-outline" size={9} color={COLORS.textMuted} />
+                <Text style={c.chipText}>{regCount}/{maxTeams} teams</Text>
+              </View>
+            ) : null}
           </View>
-          <View style={c.footerRow}>
-            <View style={c.teamsInfo}>
-              <Ionicons name="people-outline" size={13} color={COLORS.textMuted} />
-              <Text style={c.teamsText}>
-                <Text style={{ fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.text }}>{t.registeredTeamsCount}</Text>
-                /{t.maxTeams} teams ({Math.round(fillPct)}%)
-              </Text>
-              {t.status === 'REGISTRATION_OPEN' && spotsLeft > 0 && (
-                <View style={c.spotsChip}>
-                  <Text style={c.spotsText}>{spotsLeft} spots left</Text>
-                </View>
-              )}
-            </View>
-            <View style={c.footerRight}>
-              {t.myTeamRegistered && (
-                <View style={c.registeredBadge}>
-                  <Ionicons name="checkmark-circle" size={12} color="#065F46" />
-                  <Text style={c.registeredText}>Registered</Text>
-                </View>
-              )}
-              <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
-            </View>
+
+          {/* Registered badge or view-details link */}
+          <View style={c.footer}>
+            {t.myTeamRegistered ? (
+              <View style={c.registeredBadge}>
+                <Ionicons name="checkmark-circle" size={11} color="#065F46" />
+                <Text style={c.registeredText}>Your team is in</Text>
+              </View>
+            ) : (
+              <Text style={c.viewLink}>View Details</Text>
+            )}
+            <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
           </View>
         </View>
       </View>
@@ -154,88 +139,47 @@ const c = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(99,102,241,0.12)',
     overflow: 'hidden',
-    ...SHADOWS.sm,
+    ...SHADOWS.card,
   },
-  topBar: { height: 3.5 },
-  inner:  { padding: 14, gap: 10 },
-  // ── Header ────────────────────────────────────────────────────
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+  row: { flexDirection: 'row' },
+
+  emojiCol: {
+    width: 48, alignItems: 'center', justifyContent: 'flex-start',
+    paddingTop: 14, backgroundColor: COLORS.surfaceAlt,
   },
-  sportCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    ...SHADOWS.sm,
+  emoji: { fontSize: 22 },
+
+  body: { flex: 1, padding: 12, gap: 6 },
+
+  nameRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  name: { flex: 1, fontSize: 14, fontWeight: '800', color: COLORS.text, lineHeight: 19 },
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: RADIUS.sm, paddingHorizontal: 7, paddingVertical: 3,
+    alignSelf: 'flex-start', flexShrink: 0,
   },
-  sportEmoji:   { fontSize: 22 },
-  headerText:   { flex: 1, gap: 2 },
-  name:         { fontSize: 15, fontFamily: 'DMSans-Bold', fontWeight: '800', color: COLORS.text, lineHeight: 20 },
-  organizer:    { fontSize: 11.5, color: COLORS.textMuted, fontWeight: '500' },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-    flexShrink: 0,
+  dot: { width: 5, height: 5, borderRadius: 3 },
+  badgeText: { fontSize: 9, fontWeight: '800' },
+
+  organizer: { fontSize: 10.5, color: COLORS.textMuted, fontWeight: '500' },
+
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.sm,
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  statusText:   { fontSize: 10, fontWeight: '700' },
-  // ── Details ───────────────────────────────────────────────────
-  details: {
-    gap: 6,
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: RADIUS.md,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  detailRow:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  detailIconWrap: { width: 18, alignItems: 'center' },
-  detailText:   { fontSize: 12.5, color: COLORS.textMuted, flex: 1, fontWeight: '500' },
-  // ── Footer ────────────────────────────────────────────────────
-  footer:       { gap: 8, paddingTop: 2 },
-  progressTrack: {
-    height: 5,
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: 3,
-    overflow: 'hidden',
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-  },
-  progressFill:  { height: '100%', borderRadius: 3 },
-  footerRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  teamsInfo:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  teamsText:    { fontSize: 11.5, color: COLORS.textMuted },
-  spotsChip: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 0.5,
-    borderColor: '#FDE68A',
-  },
-  spotsText:    { fontSize: 9.5, fontWeight: '800', color: '#92400E' },
-  footerRight:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  chipText: { fontSize: 9.5, fontWeight: '600', color: COLORS.textMuted },
+
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
   registeredBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#D1FAE5',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#ECFDF5', borderRadius: RADIUS.full,
+    paddingHorizontal: 8, paddingVertical: 3,
   },
-  registeredText: { fontSize: 10.5, fontWeight: '800', color: '#065F46' },
+  registeredText: { fontSize: 10, fontWeight: '800', color: '#065F46' },
+  viewLink: { fontSize: 10.5, fontWeight: '700', color: COLORS.primary },
 });

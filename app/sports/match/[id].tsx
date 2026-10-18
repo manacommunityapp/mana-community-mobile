@@ -235,9 +235,14 @@ export default function LiveMatchScreen() {
               {safeFormat(match.scheduledAt, 'EEE, dd MMM · h:mm a', 'Scheduled')}
             </Text>
           )}
-          {match.venue && (
-            <Text style={scr.venue}>📍 {match.venue}</Text>
-          )}
+          {(() => {
+            const venueStr = typeof match.venue === 'object' && match.venue !== null
+              ? [(match.venue as any).name, (match.venue as any).area, (match.venue as any).city].filter(Boolean).join(', ') || (match.venue as any).address || ''
+              : typeof match.venue === 'string' ? match.venue : '';
+            return venueStr ? (
+              <Text style={scr.venue}>📍 {venueStr}</Text>
+            ) : null;
+          })()}
 
           <Animated.View style={[scr.scoreboard, { opacity: flashAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.4] }) }]}>
             <Scoreboard match={match} />

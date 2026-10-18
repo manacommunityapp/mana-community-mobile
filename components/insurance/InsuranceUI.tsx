@@ -29,12 +29,10 @@ export function InsuranceScreen({
     ? <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">{children}</ScrollView>
     : <View style={s.content}>{children}</View>;
   return (
-    <PermissionGuard permission={VIEW_INSURANCE}>
-      <SafeAreaView style={s.safe}>
-        <Header title={title} subtitle={subtitle} showBack onBack={() => router.back()} />
-        {body}
-      </SafeAreaView>
-    </PermissionGuard>
+    <SafeAreaView style={s.safe}>
+      <Header title={title} subtitle={subtitle} showBack onBack={() => router.back()} />
+      {body}
+    </SafeAreaView>
   );
 }
 

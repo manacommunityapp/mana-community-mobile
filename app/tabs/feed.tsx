@@ -25,6 +25,9 @@ import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppBack } from '@/hooks/useAppBack';
 import { ProfileImageModal } from '@/components/common/ProfileImageModal';
+import { ResidentPassCard } from '@/components/common/ResidentPassCard';
+import { TodayAtAGlance, KpiChip } from '@/components/common/TodayAtAGlance';
+import { CommunityHighlightBanner } from '@/components/common/CommunityHighlightBanner';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.68;
@@ -445,7 +448,77 @@ export default function FeedScreen() {
 
   const FinanceBanner = null;
 
-  // ── Quick Stats Row (dynamic) ───────────────────────────────────────
+  // ── KPI chips for the new "Today at a Glance" strip ────────────────
+  const kpiChips = useMemo<KpiChip[]>(() => [
+    {
+      id: 'events',
+      label: 'Events',
+      emoji: '🎉',
+      value: upcomingEvents.length,
+      icon: 'calendar-outline',
+      color: '#4F46E5',
+      bg: '#EEF2FF',
+      iconBg: '#C7D2FE',
+      route: '/tabs/events',
+    },
+    {
+      id: 'health_buddy',
+      label: 'Health Buddy',
+      emoji: '🥗',
+      value: 'Active',
+      icon: 'heart-outline',
+      color: '#059669',
+      bg: '#ECFDF5',
+      iconBg: '#A7F3D0',
+      route: '/wellness',
+    },
+    {
+      id: 'tickets',
+      label: 'Tickets',
+      emoji: '🎧',
+      value: openTickets.length,
+      icon: 'headset-outline',
+      color: '#0891B2',
+      bg: '#ECFEFF',
+      iconBg: '#A5F3FC',
+      route: '/helpdesk',
+    },
+    {
+      id: 'sports',
+      label: 'Live Sports',
+      emoji: '🏆',
+      value: 0,
+      icon: 'trophy-outline',
+      color: '#059669',
+      bg: '#ECFDF5',
+      iconBg: '#A7F3D0',
+      route: '/sports',
+    },
+    {
+      id: 'notifs',
+      label: 'Notifications',
+      emoji: '🔔',
+      value: unreadCount,
+      icon: 'notifications-outline',
+      color: '#2563EB',
+      bg: '#EFF6FF',
+      iconBg: '#BFDBFE',
+      route: '/notifications',
+    },
+    {
+      id: 'visitors',
+      label: 'Gate Log',
+      emoji: '🚪',
+      value: 0,
+      icon: 'shield-checkmark-outline',
+      color: '#0891B2',
+      bg: '#ECFEFF',
+      iconBg: '#A5F3FC',
+      route: '/visitors',
+    },
+  ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
+
+  // ── Quick Stats Row (legacy — kept for other parts if reused) ────────
   const statTiles = useMemo(() => [
     { id: 'events',  label: 'Events',  emoji: '📅', value: upcomingEvents.length,                color: '#4F46E5', labelColor: '#3730A3', bg: '#EEF2FF', route: '/tabs/events' },
     { id: 'polls',   label: 'Polls',   emoji: '📊', value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', route: '/polls' },
@@ -454,57 +527,46 @@ export default function FeedScreen() {
     { id: 'notifs',  label: 'Notifs',  emoji: '🔔', value: unreadCount,                          color: '#2563EB', labelColor: '#1E40AF', bg: '#DBEAFE', route: '/notifications' },
   ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
 
-  const StatsRow = useMemo(() => (
-    <View style={styles.statsContainer}>
-      {statTiles.map(tile => (
-        <TouchableOpacity
-          key={tile.id}
-          style={[styles.statTile, { backgroundColor: tile.bg }]}
-          onPress={() => router.push(tile.route as any)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.statTileTop}>
-            <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
-            <Text style={styles.statEmoji}>{tile.emoji}</Text>
-          </View>
-          <Text style={[styles.statLabel, { color: tile.labelColor }]} numberOfLines={1}>
-            {tile.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  ), [statTiles, router]);
+  // Resident pass card data derived from the auth user
+  const flatNumber   = user?.flatNumber ?? user?.flatNo ?? undefined;
+  const tower        = user?.tower ?? user?.block ?? undefined;
+  const residentId   = user?.id ? `MNA-${String(user.id).padStart(4, '0')}` : 'MNA-0001';
+  const manaPoints   = (user as any)?.manaPoints ?? 0;
 
   const ListHeader = useMemo(() => (
     <View style={styles.headerStack}>
+
+      {/* ── 1. Resident Pass Hero Card (Hidden for now) ── */}
+      {/* <ResidentPassCard
+        residentName={userDisplayName}
+        flatNumber={flatNumber}
+        tower={tower}
+        communityName={communityName || undefined}
+        duesPaid
+        manaPoints={manaPoints}
+        residentId={residentId}
+      /> */}
+
+      {/* ── 2. Today at a Glance KPI Strip (NEW — Figma redesign) ── */}
+      <TodayAtAGlance chips={kpiChips} />
+
       <FlatGateActivityCard />
       {FinanceBanner}
-      {StatsRow}
       <QuickActions />
 
-      {/* Community Announcement Card */}
+      {/* ── 3. Community Highlight Banner (NEW — Figma redesign) ── */}
       {latestAnnouncement && (
-        <View style={styles.announcementCard}>
-          <LinearGradient
-            colors={['#EEF2FF', '#E0E7FF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.announcementGradient}
-          />
-          <View style={styles.announcementIconWrap}>
-            <Text style={styles.announcementEmoji}>📢</Text>
-          </View>
-          <View style={styles.announcementContent}>
-            <Text style={styles.announcementLabel}>COMMUNITY UPDATE</Text>
-            <Text style={styles.announcementTitle} numberOfLines={1}>
-              {latestAnnouncement.content.split('\n')[0]}
-            </Text>
-            <Text style={styles.announcementDesc} numberOfLines={2}>
-              {latestAnnouncement.content}
-            </Text>
-          </View>
-          <Text style={styles.announcementArrow}>{'>'}</Text>
-        </View>
+        <CommunityHighlightBanner
+          eyebrow="COMMUNITY UPDATE"
+          title={latestAnnouncement.content.split('\n')[0]}
+          description={
+            latestAnnouncement.content.includes('\n')
+              ? latestAnnouncement.content.split('\n').slice(1).join(' ').trim()
+              : undefined
+          }
+          decorEmoji="📢"
+          onPress={() => router.push('/tabs/feed')}
+        />
       )}
 
       {/* Upcoming Events */}
@@ -641,7 +703,7 @@ export default function FeedScreen() {
         </ScrollView>
       </View>
     </View>
-  ), [filter, filteredPosts.length, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow, user?.profilePicUrl, user?.profilePhoto]);
+  ), [filter, filteredPosts.length, router, userDisplayName, flatNumber, tower, communityName, manaPoints, residentId, kpiChips, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, user?.profilePicUrl, user?.profilePhoto]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

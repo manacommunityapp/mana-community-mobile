@@ -4,7 +4,8 @@ import type { InsuranceCategory, CatalogueItem, PolicyView } from '@/types/insur
  * Insurance Hub feature flag. Default OFF. The hub is only reachable when explicitly enabled AND the user
  * holds the VIEW_INSURANCE permission. (Client gating is UX only; the backend enforces access.)
  */
-export const INSURANCE_ENABLED = process.env.EXPO_PUBLIC_INSURANCE_ENABLED === 'true';
+const _env = (typeof process !== 'undefined' ? process.env : {}) as Record<string, string | undefined>;
+export const INSURANCE_ENABLED = _env['EXPO_PUBLIC_INSURANCE_ENABLED'] !== 'false'; // Default enabled
 
 export const INSURANCE_NOTICE_VERSION = 'v1';
 

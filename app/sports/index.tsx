@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl,
@@ -15,7 +15,7 @@ import { ScoreCard } from '@/components/sports/ScoreCard';
 import { TournamentCard } from '@/components/sports/TournamentCard';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
-import type { MatchDto, TournamentDto, PlayerProfileDto, LeaderboardEntryDto, AuctionDto, SportType } from '@/types/api';
+import type { MatchDto, TournamentDto, PlayerProfileDto, LeaderboardEntryDto, AuctionDto, SportType, DashboardTournamentCardDto, DashboardEventCardDto } from '@/types/api';
 
 // ── Sport Filter Definitions ───────────────────────────────────────────
 const SPORT_FILTERS = [
@@ -31,15 +31,15 @@ const SPORT_FILTERS = [
 ] as const;
 
 const HUB_ACTIONS = [
-  { id: 'book',        emoji: '🏸', label: 'Book Court',   color: '#059669', bg: '#ECFDF5', route: '/facilities' },
-  { id: 'tournament',  emoji: '🏆', label: 'Tournaments',  color: '#D97706', bg: '#FFFBEB', route: '/sports/tournaments' },
+  { id: 'book',        emoji: '🏸', label: 'Book Court',   color: '#4F46E5', bg: '#EEF2FF', route: '/facilities' },
+  { id: 'tournament',  emoji: '🏆', label: 'Tournaments',  color: '#4338CA', bg: '#EEF2FF', route: '/sports/tournaments' },
   { id: 'match',       emoji: '⚔️', label: 'Find Match',   color: '#2563EB', bg: '#EFF6FF', route: '/sports/matches' },
   { id: 'livescore',   emoji: '📺', label: 'Live Scores',  color: '#DC2626', bg: '#FEF2F2', route: '/sports/matches' },
   { id: 'squad',       emoji: '👥', label: 'My Squads',    color: '#7C3AED', bg: '#F5F3FF', route: '/sports/my-teams' },
   { id: 'standings',   emoji: '📊', label: 'Standings',    color: '#0891B2', bg: '#CFFAFE', route: '/sports/leaderboard' },
-  { id: 'challenge',   emoji: '🎯', label: 'Challenge',    color: '#EA580C', bg: '#FFF7ED', route: '/sports/challenge' },
+  { id: 'challenge',   emoji: '🎯', label: 'Challenge',    color: '#4F46E5', bg: '#EEF2FF', route: '/sports/challenge' },
   { id: 'auction',     emoji: '🏷️', label: 'Auction',      color: '#7C3AED', bg: '#F5F3FF', route: '/auction' },
-  { id: 'admin',       emoji: '🛡️', label: 'Admin Deck',   color: '#0F172A', bg: '#F1F5F9', route: '/sports-admin' },
+  { id: 'admin',       emoji: '🛡️', label: 'Admin Deck',   color: '#475569', bg: '#F1F5F9', route: '/sports-admin' },
 ] as const;
 
 const SPORT_EMOJI_MAP: Record<string, string> = {
@@ -61,8 +61,26 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 // ── Main Screen ────────────────────────────────────────────────────────
 export default function SportsHubScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAnyAdmin, isAdmin, isSuperAdmin, hasRole, hasAnyPermission } = useAuth();
   const [selectedSport, setSelectedSport] = useState<string>('ALL');
+
+  // Check if current user has admin / sports admin privileges
+  const isSportsAdmin = useMemo(() => {
+    return Boolean(
+      isAnyAdmin ||
+      isAdmin ||
+      isSuperAdmin ||
+      hasRole?.('SPORTS_ADMIN', 'ADMIN', 'SUPER_ADMIN', 'COMMUNITY_ADMIN', 'SPORTS_REFEREE') ||
+      hasAnyPermission?.('View Sports Dashboard', 'View Admin', 'Manage Matches', 'Manage Tournaments') ||
+      user?.role?.toUpperCase().includes('ADMIN') ||
+      user?.role === 'SPORTS_ADMIN'
+    );
+  }, [isAnyAdmin, isAdmin, isSuperAdmin, hasRole, hasAnyPermission, user?.role]);
+
+  // Non-admin actions for the grid (Admin Deck moved to top header for admins)
+  const visibleHubActions = useMemo(() => {
+    return HUB_ACTIONS.filter((a) => a.id !== 'admin');
+  }, []);
 
   // 1. Live Matches
   const {
@@ -97,14 +115,25 @@ export default function SportsHubScreen() {
     queryFn: () => sportsService.getTournaments(selectedSport === 'ALL' ? undefined : (selectedSport as SportType), 'ONGOING'),
   });
 
-  // 4. Open Registration Tournaments
+  // 4. Open Registration Tournaments (with sport events grouped)
   const {
-    data: upcomingTournaments,
+    data: openTournamentsDash = [],
     isLoading: loadingUpcoming,
-  } = useQuery({
-    queryKey: ['tournaments-upcoming', selectedSport],
-    queryFn: () => sportsService.getTournaments(selectedSport === 'ALL' ? undefined : (selectedSport as SportType), 'REGISTRATION_OPEN'),
+    refetch: refetchOpenTournaments,
+  } = useQuery<DashboardTournamentCardDto[]>({
+    queryKey: ['tournaments-open-dash'],
+    queryFn: sportsService.getOpenTournaments,
+    staleTime: 30_000,
   });
+
+  const [expandedTournamentIds, setExpandedTournamentIds] = useState<Set<number>>(new Set());
+  const toggleTournamentExpand = useCallback((id: number) => {
+    setExpandedTournamentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
 
   // 5. User Real Profile Stats
   const {
@@ -159,6 +188,7 @@ export default function SportsHubScreen() {
       refetchProfile(),
       refetchFacilities(),
       refetchLeaderboard(),
+      refetchOpenTournaments(),
     ]);
   };
 
@@ -178,7 +208,15 @@ export default function SportsHubScreen() {
   }, [todayMatches, selectedSport]);
 
   const ongoingTournaments = tournamentsPage?.content ?? [];
-  const openRegistration = upcomingTournaments?.content ?? [];
+
+  // Sport-filter open tournaments by sportName in events
+  const openRegistration = useMemo(() => {
+    if (!openTournamentsDash) return [];
+    if (selectedSport === 'ALL') return openTournamentsDash;
+    return openTournamentsDash.filter(t =>
+      t.events?.some(ev => (ev.sportName ?? '').toUpperCase() === selectedSport)
+    );
+  }, [openTournamentsDash, selectedSport]);
 
   // Filter sports facilities
   const sportsFacilities = useMemo(() => {
@@ -245,7 +283,7 @@ export default function SportsHubScreen() {
 
       {/* ── Header ── */}
       <LinearGradient
-        colors={['#064E3B', '#065F46', '#047857']}
+        colors={['#1E1B4B', '#3730A3', '#4F46E5']}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
         style={s.header}
       >
@@ -263,6 +301,18 @@ export default function SportsHubScreen() {
                 <View style={s.liveDot} />
                 <Text style={s.livePillText}>{filteredLive.length} Live</Text>
               </View>
+            )}
+            {isSportsAdmin && (
+              <TouchableOpacity
+                style={s.adminDeckBtn}
+                onPress={() => router.push('/sports-admin' as any)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Admin Deck"
+              >
+                <Ionicons name="shield-checkmark" size={13} color="#FBBF24" />
+                <Text style={s.adminDeckBtnText}>Admin Deck</Text>
+              </TouchableOpacity>
             )}
             <TouchableOpacity style={s.bookBtn} onPress={() => router.push('/facilities')} activeOpacity={0.8}>
               <Ionicons name="add" size={14} color="#fff" />
@@ -295,12 +345,12 @@ export default function SportsHubScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.body}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#059669" />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />}
       >
 
         {/* ── Hub Actions Grid ── */}
         <View style={s.hubGrid}>
-          {HUB_ACTIONS.map((a) => (
+          {visibleHubActions.map((a) => (
             <TouchableOpacity
               key={a.id}
               style={s.hubCard}
@@ -343,7 +393,7 @@ export default function SportsHubScreen() {
         <View style={s.section}>
           <View style={s.rowBetween}>
             <View style={s.row}>
-              <Ionicons name="flash" size={13} color="#059669" />
+              <Ionicons name="flash" size={13} color={COLORS.primary} />
               <Text style={s.sectionTitle}>Court Availability & Venues</Text>
               {sportsFacilities.length > 0 && (
                 <Text style={s.countBadge}>{sportsFacilities.length} Courts</Text>
@@ -355,7 +405,7 @@ export default function SportsHubScreen() {
           </View>
 
           {loadingFacilities ? (
-            <ActivityIndicator color="#059669" size="small" style={{ marginVertical: 8 }} />
+            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 8 }} />
           ) : sportsFacilities.length === 0 ? (
             <TouchableOpacity style={s.emptyFacilitiesCard} onPress={() => router.push('/facilities')}>
               <Text style={{ fontSize: 24 }}>🏟️</Text>
@@ -363,7 +413,7 @@ export default function SportsHubScreen() {
                 <Text style={s.emptyTitle}>Explore Community Amenities</Text>
                 <Text style={s.emptySubtitle}>Tap to check clubhouse courts, pool, and turf slots</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#059669" />
+              <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
             </TouchableOpacity>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hScroll}>
@@ -378,8 +428,8 @@ export default function SportsHubScreen() {
                   >
                     <View style={s.rowBetween}>
                       <Text style={s.courtSport}>{sportEmoji}</Text>
-                      <View style={[s.courtBadge, { backgroundColor: '#ECFDF5' }]}>
-                        <Text style={[s.courtBadgeText, { color: '#059669' }]}>Available</Text>
+                      <View style={[s.courtBadge, { backgroundColor: '#EEF2FF' }]}>
+                        <Text style={[s.courtBadgeText, { color: '#4F46E5' }]}>Available</Text>
                       </View>
                     </View>
                     <Text style={s.courtName} numberOfLines={1}>{court.name}</Text>
@@ -434,7 +484,7 @@ export default function SportsHubScreen() {
           </View>
 
           {loadingToday ? (
-            <ActivityIndicator color="#059669" size="small" style={{ marginTop: 8 }} />
+            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 8 }} />
           ) : filteredToday.length === 0 ? (
             <View style={s.emptyRow}>
               <Text style={s.emptyRowText}>No fixtures today for {selectedSport === 'ALL' ? 'any sport' : selectedSport} · </Text>
@@ -455,41 +505,202 @@ export default function SportsHubScreen() {
           )}
         </View>
 
-        {/* ── Active Tournaments (Real Data) ── */}
+        {/* ── Active Tournaments ── */}
         {(ongoingTournaments.length > 0 || loadingTournaments) && (
           <View style={s.section}>
             <View style={s.rowBetween}>
               <View style={s.row}>
-                <Ionicons name="trophy-outline" size={13} color="#D97706" />
+                <View style={s.liveDotOuter}>
+                  <View style={s.liveDotInner} />
+                </View>
                 <Text style={s.sectionTitle}>Active Tournaments</Text>
+                {ongoingTournaments.length > 0 && (
+                  <View style={s.liveCountBadge}>
+                    <Text style={s.liveCountText}>{ongoingTournaments.length} Live</Text>
+                  </View>
+                )}
               </View>
               <TouchableOpacity onPress={() => router.push('/sports/tournaments')}>
-                <Text style={s.link}>All Tournaments →</Text>
+                <Text style={s.link}>All →</Text>
               </TouchableOpacity>
             </View>
-            {loadingTournaments
-              ? <ActivityIndicator color="#059669" size="small" style={{ marginTop: 8 }} />
-              : ongoingTournaments.map((t: TournamentDto) => <TournamentCard key={t.id} tournament={t} compact />)
-            }
+            {loadingTournaments ? (
+              <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 8 }} />
+            ) : (
+              <View style={s.tournamentList}>
+                {ongoingTournaments.map((t: TournamentDto) => (
+                  <TournamentCard key={t.id} tournament={t} />
+                ))}
+              </View>
+            )}
           </View>
         )}
 
-        {/* ── Open Registrations (Real Data) ── */}
-        {openRegistration.length > 0 && (
-          <View style={s.section}>
-            <View style={s.rowBetween}>
-              <View style={s.row}>
-                <Ionicons name="clipboard-outline" size={13} color="#2563EB" />
-                <Text style={s.sectionTitle}>Open Registrations</Text>
-                <Text style={s.countBadge}>{openRegistration.length}</Text>
-              </View>
-              <TouchableOpacity onPress={() => router.push('/sports/tournaments')}>
-                <Text style={s.link}>Register →</Text>
-              </TouchableOpacity>
+        {/* ── Open Registrations (Sport-grouped, web-style) ── */}
+        <View style={s.section}>
+          <View style={s.rowBetween}>
+            <View style={s.row}>
+              <View style={s.regDot} />
+              <Text style={s.sectionTitle}>Open Registrations</Text>
+              {openRegistration.length > 0 && (
+                <View style={s.regCountBadge}>
+                  <Text style={s.regCountText}>{openRegistration.length} Open</Text>
+                </View>
+              )}
             </View>
-            {openRegistration.map((t: TournamentDto) => <TournamentCard key={t.id} tournament={t} compact />)}
+            <TouchableOpacity onPress={() => router.push('/sports/tournaments')}>
+              <Text style={s.link}>View All →</Text>
+            </TouchableOpacity>
           </View>
-        )}
+
+          {loadingUpcoming ? (
+            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 8 }} />
+          ) : openRegistration.length === 0 ? (
+            <TouchableOpacity
+              style={s.regEmptyCard}
+              onPress={() => router.push('/sports/tournaments')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient colors={['#EEF2FF', '#E0E7FF']} style={s.regEmptyInner}>
+                <Text style={{ fontSize: 28 }}>🏆</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.regEmptyTitle}>No Open Registrations</Text>
+                  <Text style={s.regEmptySubtitle}>Check back soon for upcoming tournaments</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : (
+            <View style={s.tournamentList}>
+              {openRegistration.map((t: DashboardTournamentCardDto) => {
+                const isExpanded = expandedTournamentIds.has(t.id);
+                // Group events by sportName
+                const sportMap = new Map<string, { emoji: string; events: DashboardEventCardDto[] }>();
+                (t.events ?? []).forEach(ev => {
+                  const sport = ev.sportName ?? 'Other';
+                  if (!sportMap.has(sport)) {
+                    sportMap.set(sport, {
+                      emoji: SPORT_EMOJI_MAP[sport.toUpperCase().replace(/\s/g, '_')] ?? '🏅',
+                      events: [],
+                    });
+                  }
+                  sportMap.get(sport)!.events.push(ev);
+                });
+                const sportEntries = Array.from(sportMap.entries());
+                const dateLabel = t.eventDateStart
+                  ? new Date(t.eventDateStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                  + (t.eventDateEnd ? ` – ${new Date(t.eventDateEnd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : '')
+                  : '';
+                const isOpen = (t.registrationStatus ?? '').toUpperCase() === 'REGISTRATION_OPEN';
+                return (
+                  <View key={t.id} style={s.regTournamentCard}>
+                    {/* Tournament header row */}
+                    <TouchableOpacity
+                      style={s.regTournamentHeader}
+                      onPress={() => toggleTournamentExpand(t.id)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={s.regTournamentLeft}>
+                        <View style={s.row}>
+                          <Text style={s.regTournamentName} numberOfLines={1}>{t.name}</Text>
+                          <View style={[s.regStatusPill, isOpen ? s.regStatusOpen : s.regStatusAlmost]}>
+                            <View style={[s.regStatusDot, { backgroundColor: isOpen ? '#10B981' : '#6366F1' }]} />
+                            <Text style={[s.regStatusText, { color: isOpen ? '#065F46' : '#4F46E5' }]}>
+                              {isOpen ? 'Open' : t.registrationStatus ?? 'Register'}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={[s.row, { marginTop: 4, gap: 10 }]}>
+                          {dateLabel ? (
+                            <View style={s.row}>
+                              <Ionicons name="calendar-outline" size={10} color={COLORS.textMuted} />
+                              <Text style={s.regTournamentMeta}>{dateLabel}</Text>
+                            </View>
+                          ) : null}
+                          {sportEntries.length > 0 && (
+                            <View style={s.row}>
+                              <Ionicons name="trophy-outline" size={10} color={COLORS.textMuted} />
+                              <Text style={s.regTournamentMeta}>
+                                {sportEntries.length} sport{sportEntries.length > 1 ? 's' : ''}
+                              </Text>
+                            </View>
+                          )}
+                          {t.communityName && (
+                            <Text style={s.regTournamentMeta} numberOfLines={1}>{t.communityName}</Text>
+                          )}
+                        </View>
+                      </View>
+                      <View style={s.regExpandBtn}>
+                        <Ionicons
+                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={14}
+                          color={COLORS.primary}
+                        />
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Sport groups (expanded) */}
+                    {isExpanded && sportEntries.length > 0 && (
+                      <View style={s.regSportGroups}>
+                        {sportEntries.map(([sport, { emoji, events: evs }], idx) => {
+                          const myReg = evs.find(e => e.myRegistrationId != null);
+                          const isRegistered = Boolean(myReg);
+                          const isClosed = evs.every(e => (e.registrationStatus ?? '').toUpperCase() !== 'REGISTRATION_OPEN');
+                          return (
+                            <View key={sport} style={[
+                              s.regSportRow,
+                              idx < sportEntries.length - 1 && s.regSportRowBorder,
+                              isRegistered && s.regSportRowRegistered,
+                            ]}>
+                              <Text style={s.regSportEmoji}>{emoji}</Text>
+                              <View style={s.regSportInfo}>
+                                <Text style={s.regSportName}>{sport}</Text>
+                                <Text style={s.regSportCats}>
+                                  {evs.length} {evs.length === 1 ? 'category' : 'categories'}
+                                  {evs.some(e => (e.registeredCount ?? 0) > 0)
+                                    ? ` · ${evs.reduce((a, e) => a + (e.registeredCount ?? 0), 0)} registered`
+                                    : ''}
+                                </Text>
+                              </View>
+                              {isRegistered ? (
+                                <View style={s.regConfirmedChip}>
+                                  <Ionicons name="checkmark-circle" size={11} color="#065F46" />
+                                  <Text style={s.regConfirmedText}>Registered</Text>
+                                </View>
+                              ) : (
+                                <TouchableOpacity
+                                  style={[s.regSportBtn, isClosed && s.regSportBtnClosed]}
+                                  disabled={isClosed}
+                                  onPress={() => router.push(`/sports/tournaments`)}
+                                  activeOpacity={0.8}
+                                >
+                                  <Text style={[s.regSportBtnText, isClosed && { color: COLORS.textMuted }]}>
+                                    {isClosed ? 'Closed' : 'Register'}
+                                  </Text>
+                                  {!isClosed && <Ionicons name="arrow-forward" size={10} color="#fff" />}
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+
+                    {/* Tap-to-view-all footer */}
+                    <TouchableOpacity
+                      style={s.regTournamentFooter}
+                      onPress={() => router.push(`/sports/tournaments`)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={s.regViewDetails}>View tournament details</Text>
+                      <Ionicons name="chevron-forward" size={11} color={COLORS.primary} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
 
         {/* ── Open Challenges ── */}
         <View style={s.section}>
@@ -505,8 +716,8 @@ export default function SportsHubScreen() {
           <View style={s.challengeGrid}>
             {[
               { name: 'Badminton Singles Match', by: 'Tower A & B Residents', emoji: '🏸', slots: '1v1 Friendly', color: '#7C3AED', bg: '#F5F3FF' },
-              { name: 'Box Cricket Tournament',  by: 'Society Sports Committee', emoji: '🏏', slots: '6v6 Box', color: '#059669', bg: '#ECFDF5' },
-              { name: 'Table Tennis Knockout',   by: 'Clubhouse Wing', emoji: '🏓', slots: '1v1 Knockout', color: '#D97706', bg: '#FFFBEB' },
+              { name: 'Box Cricket Tournament',  by: 'Society Sports Committee', emoji: '🏏', slots: '6v6 Box', color: '#2563EB', bg: '#EFF6FF' },
+              { name: 'Table Tennis Knockout',   by: 'Clubhouse Wing', emoji: '🏓', slots: '1v1 Knockout', color: '#4F46E5', bg: '#EEF2FF' },
             ].map((ch) => (
               <TouchableOpacity
                 key={ch.name}
@@ -592,7 +803,7 @@ export default function SportsHubScreen() {
         <View style={s.section}>
           <View style={s.rowBetween}>
             <View style={s.row}>
-              <Ionicons name="medal-outline" size={13} color="#D97706" />
+              <Ionicons name="medal-outline" size={13} color="#4F46E5" />
               <Text style={s.sectionTitle}>Top Performers</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/sports/leaderboard')}>
@@ -601,7 +812,7 @@ export default function SportsHubScreen() {
           </View>
 
           {loadingLeaderboard ? (
-            <ActivityIndicator color="#059669" size="small" style={{ marginVertical: 8 }} />
+            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 8 }} />
           ) : topPerformers.length > 0 ? (
             topPerformers.map((p, idx) => {
               const name = p.playerName || p.name || 'Resident Player';
@@ -669,7 +880,7 @@ const s = StyleSheet.create({
   },
   headerMid: { flex: 1 },
   headerTitle: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
-  headerSub: { fontSize: 10, color: '#A7F3D0', marginTop: 1 },
+  headerSub: { fontSize: 10, color: '#C7D2FE', marginTop: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   livePill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -683,6 +894,12 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.full, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
   bookBtnText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  adminDeckBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(251,191,36,0.22)', paddingHorizontal: 9, paddingVertical: 4,
+    borderRadius: RADIUS.full, borderWidth: 1, borderColor: 'rgba(251,191,36,0.5)',
+  },
+  adminDeckBtnText: { fontSize: 11, fontWeight: '800', color: '#FEF08A' },
 
   // Filter bar
   filterBar: {
@@ -695,7 +912,7 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.full, backgroundColor: '#F1F5F9',
     borderWidth: 1, borderColor: '#E2E8F0',
   },
-  filterChipActive: { backgroundColor: '#059669', borderColor: '#047857' },
+  filterChipActive: { backgroundColor: '#4F46E5', borderColor: '#3730A3' },
   filterEmoji: { fontSize: 11 },
   filterLabel: { fontSize: 11, fontWeight: '600', color: '#475569' },
   filterLabelActive: { color: '#fff', fontWeight: '700' },
@@ -713,7 +930,7 @@ const s = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: COLORS.text, letterSpacing: -0.1 },
   playerNameTag: { fontSize: 11, fontWeight: '600', color: COLORS.primary },
-  link: { fontSize: 11, fontWeight: '700', color: '#059669' },
+  link: { fontSize: 11, fontWeight: '700', color: '#4F46E5' },
   hScroll: { gap: 8, paddingVertical: 2 },
 
   // Hub Actions Grid — 4 per row
@@ -750,7 +967,7 @@ const s = StyleSheet.create({
   courtName: { fontSize: 12, fontWeight: '700', color: COLORS.text },
   courtSlot: { fontSize: 9.5, color: COLORS.textMuted, marginLeft: 2, flexShrink: 1 },
   courtFee: { fontSize: 10, fontWeight: '700', color: COLORS.primary, marginTop: 2 },
-  courtFeeFree: { fontSize: 10, fontWeight: '700', color: '#059669', marginTop: 2 },
+  courtFeeFree: { fontSize: 10, fontWeight: '700', color: '#4F46E5', marginTop: 2 },
 
   emptyFacilitiesCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -821,10 +1038,185 @@ const s = StyleSheet.create({
   leaderAvatarText: { fontSize: 12, fontWeight: '700', color: '#4F46E5' },
   leaderName: { fontSize: 12, fontWeight: '700', color: COLORS.text },
   leaderFlat: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
-  winPill: { backgroundColor: '#ECFDF5', borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 3 },
-  winPillText: { fontSize: 11, fontWeight: '800', color: '#059669' },
+  winPill: { backgroundColor: '#EEF2FF', borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 3 },
+  winPillText: { fontSize: 11, fontWeight: '800', color: '#4F46E5' },
   emptyLeaderboardRow: { paddingVertical: 12, alignItems: 'center' },
   emptyLeaderboardText: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center' },
+
+  // ── Registration Cards (Playinga-style) ───────────────────────
+  // ── Active Tournaments ──────────────────────────────────────────
+  liveDotOuter: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: 'rgba(239,68,68,0.2)', alignItems: 'center', justifyContent: 'center',
+  },
+  liveDotInner: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
+  liveCountBadge: {
+    backgroundColor: '#FEE2E2', borderRadius: RADIUS.full,
+    paddingHorizontal: 8, paddingVertical: 2,
+  },
+  liveCountText: { fontSize: 10, fontWeight: '800', color: '#DC2626' },
+  tournamentList: { gap: 12 },
+
+  regDot: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: '#4F46E5',
+  },
+  regCountBadge: {
+    backgroundColor: '#EEF2FF', borderRadius: RADIUS.full,
+    paddingHorizontal: 8, paddingVertical: 2,
+  },
+  regCountText: { fontSize: 10, fontWeight: '800', color: '#4F46E5' },
+  regScroll: { gap: 10, paddingVertical: 4 },
+  regCard: {
+    width: 230,
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.15)',
+    gap: 10,
+    ...SHADOWS.sm,
+  },
+  regCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  regSportBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#EEF2FF', borderRadius: RADIUS.full,
+    paddingHorizontal: 8, paddingVertical: 4,
+  },
+  regSportLabel: { fontSize: 10, fontWeight: '700', color: '#4F46E5', textTransform: 'uppercase' },
+  regStatusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: RADIUS.full, paddingHorizontal: 7, paddingVertical: 3,
+  },
+  regStatusOpen: { backgroundColor: '#ECFDF5' },
+  regStatusAlmost: { backgroundColor: '#FFFBEB' },
+  regStatusFull: { backgroundColor: '#FEF2F2' },
+  regStatusDot: { width: 5, height: 5, borderRadius: 3 },
+  regStatusText: { fontSize: 9, fontWeight: '800' },
+  regCardTitle: { fontSize: 14, fontWeight: '800', color: COLORS.text, lineHeight: 20 },
+  regMeta: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  regMetaChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#EEF2FF', borderRadius: 4,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  regMetaText: { fontSize: 9, fontWeight: '700', color: '#4F46E5', textTransform: 'capitalize' },
+  regSlots: { gap: 5 },
+  regSlotsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  regSlotsLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
+  regSpotsLeft: { fontSize: 10, fontWeight: '700', color: '#4F46E5' },
+  regProgressBg: { height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, overflow: 'hidden' },
+  regProgressFill: { height: 4, borderRadius: 2 },
+  regDeadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  regDeadline: { fontSize: 10, color: COLORS.textMuted },
+  regCTA: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    backgroundColor: '#4F46E5', borderRadius: RADIUS.md,
+    paddingVertical: 9,
+  },
+  regCTADisabled: { backgroundColor: '#E2E8F0' },
+  regCTAText: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  regEmptyCard: { borderRadius: RADIUS.lg, overflow: 'hidden', ...SHADOWS.sm },
+  regEmptyInner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 16,
+  },
+  regEmptyTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  regEmptySubtitle: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+
+  // ── Sport-grouped tournament registration cards ──────────────────────
+  regTournamentCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.12)',
+    overflow: 'hidden',
+    ...SHADOWS.card,
+  },
+  regTournamentHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 12, gap: 10,
+  },
+  regTournamentLeft: { flex: 1, gap: 0 },
+  regTournamentName: { fontSize: 14, fontWeight: '800', color: COLORS.text, flex: 1, marginRight: 6 },
+  regTournamentMeta: { fontSize: 10, color: COLORS.textMuted, fontWeight: '500', marginLeft: 3 },
+  regExpandBtn: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  regSportGroups: {
+    borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.08)',
+    backgroundColor: '#FAFBFF',
+  },
+  regSportRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 11, gap: 10,
+  },
+  regSportRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(99,102,241,0.06)' },
+  regSportRowRegistered: { backgroundColor: '#F0FDF4' },
+  regSportEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
+  regSportInfo: { flex: 1 },
+  regSportName: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  regSportCats: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  regSportBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.full,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  regSportBtnClosed: { backgroundColor: COLORS.surfaceAlt },
+  regSportBtnText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  regConfirmedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#ECFDF5', borderRadius: RADIUS.full,
+    paddingHorizontal: 10, paddingVertical: 5,
+  },
+  regConfirmedText: { fontSize: 10, fontWeight: '800', color: '#065F46' },
+  regTournamentFooter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.08)',
+    paddingVertical: 9,
+  },
+  regViewDetails: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
+
+  // ── Per-Category Cards inside sport groups ──────────────────────
+  regSportSection: { gap: 6, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 },
+  regSportSectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(99,102,241,0.08)',
+    marginBottom: 2,
+  },
+  regSportCount: {
+    backgroundColor: '#EEF2FF', borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  regSportCountText: { fontSize: 9, fontWeight: '700', color: '#4F46E5' },
+
+  catCard: {
+    backgroundColor: '#fff', borderRadius: 10, padding: 10,
+    borderWidth: 1, borderColor: 'rgba(99,102,241,0.10)', gap: 7,
+    marginBottom: 6,
+  },
+  catCardTop: { gap: 5 },
+  catCardName: { fontSize: 13, fontWeight: '800', color: COLORS.text, lineHeight: 18 },
+  catTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  catTag: {
+    backgroundColor: '#EEF2FF', borderRadius: 4, borderWidth: 1, borderColor: '#C7D2FE',
+    paddingHorizontal: 6, paddingVertical: 1.5,
+  },
+  catTagText: { fontSize: 9, fontWeight: '700', color: '#4F46E5' },
+  catCapacity: { gap: 3 },
+  catCapacityRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  catCapacityLabel: { fontSize: 9, color: COLORS.textMuted, fontWeight: '600' },
+  catCapacityCount: { fontSize: 9, fontWeight: '700', color: '#4F46E5' },
+  catProgressBg: { height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, overflow: 'hidden' },
+  catProgressFill: { height: 4, borderRadius: 2 },
+  catRegisteredRow: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#ECFDF5', borderRadius: 7, padding: 6 },
+  catRegisteredText: { fontSize: 10, fontWeight: '700', color: '#059669' },
+  catActionBtn: {
+    backgroundColor: '#4F46E5', borderRadius: 8, paddingVertical: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  catActionBtnDisabled: { backgroundColor: '#F1F5F9' },
+  catActionBtnText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  catActionBtnTextDisabled: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
 
   // CTA Banner
   ctaBanner: { borderRadius: RADIUS.lg, overflow: 'hidden', ...SHADOWS.sm },
