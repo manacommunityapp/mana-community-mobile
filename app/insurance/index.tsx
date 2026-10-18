@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -61,7 +61,17 @@ export default function InsuranceIndexScreen() {
       <DisclosureBanner />
 
       {/* My Policies */}
-      <Text style={s.sectionTitle}>My Policies</Text>
+      <View style={s.sectionHeaderRow}>
+        <Text style={s.sectionTitle}>My Policies</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/insurance/policies' as any)}
+          style={s.addPolicyBtn}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="add" size={15} color={THEME.brand} />
+          <Text style={s.addPolicyText}>Add Policy</Text>
+        </TouchableOpacity>
+      </View>
       {policiesQ.isLoading ? (
         <StateView kind="loading" message="Loading your policies…" />
       ) : policiesQ.isError ? (
@@ -70,6 +80,13 @@ export default function InsuranceIndexScreen() {
         <Card>
           <Text style={s.emptyText}>No policies tracked yet.</Text>
           <Text style={s.emptyHint}>Add a policy to track renewal dates and get assistance.</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/insurance/policies' as any)}
+            style={s.addFirstBtn}
+            activeOpacity={0.8}
+          >
+            <Text style={s.addFirstBtnText}>+ Add your first policy</Text>
+          </TouchableOpacity>
         </Card>
       ) : (
         <>
@@ -129,7 +146,12 @@ export default function InsuranceIndexScreen() {
 }
 
 const s = StyleSheet.create({
-  sectionTitle: { fontFamily: FONTS.displaySemi, fontSize: 15, color: THEME.textPrimary, marginBottom: 10, marginTop: 4 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, marginTop: 4 },
+  sectionTitle: { fontFamily: FONTS.displaySemi, fontSize: 15, color: THEME.textPrimary },
+  addPolicyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: THEME.indigoLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.full },
+  addPolicyText: { fontFamily: FONTS.semiBold, fontSize: 12, color: THEME.brand },
+  addFirstBtn: { backgroundColor: THEME.brand, marginTop: 12, paddingVertical: 8, paddingHorizontal: 14, borderRadius: RADIUS.md, alignSelf: 'flex-start' },
+  addFirstBtnText: { fontFamily: FONTS.semiBold, fontSize: 12, color: '#FFFFFF' },
   emptyText: { fontFamily: FONTS.semiBold, fontSize: 14, color: THEME.textPrimary, marginBottom: 4 },
   emptyHint: { fontFamily: FONTS.regular, fontSize: 13, color: THEME.textSecondary },
   policyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
