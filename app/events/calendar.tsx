@@ -39,6 +39,18 @@ export default function EventCalendarScreen() {
     });
   };
 
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return 'TBD';
+    try {
+      const [h, m] = timeStr.split(':');
+      const hour = parseInt(h);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      return `${hour % 12 || 12}:${m} ${ampm}`;
+    } catch {
+      return timeStr;
+    }
+  };
+
   const selectedDayEvents = getEventsForDay(selectedDate);
 
   return (
@@ -133,7 +145,7 @@ export default function EventCalendarScreen() {
                 activeOpacity={0.7}
               >
                 <View style={s.eventTimeBox}>
-                  <Text style={s.eventTimeText}>{item.startTime || 'TBD'}</Text>
+                  <Text style={s.eventTimeText}>{formatTime(item.startTime)}</Text>
                   <Text style={s.eventTypeBadge}>{item.type || 'EVENT'}</Text>
                 </View>
                 <View style={s.eventRowInfo}>
@@ -167,9 +179,9 @@ const s = StyleSheet.create({
   },
   monthTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text },
   monthArrow: { padding: 6, borderRadius: 8, backgroundColor: '#F1F5F9' },
-  daysRibbonWrap: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 8 },
+  daysRibbonWrap: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 8, flexGrow: 0 },
   dayCard: {
-    width: 52, height: 72, borderRadius: 14, backgroundColor: '#F8FAFC',
+    width: 50, height: 62, borderRadius: 12, backgroundColor: '#F8FAFC',
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0',
   },
   dayCardSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },

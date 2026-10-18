@@ -216,5 +216,5 @@ const s = StyleSheet.create({
   catIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' },
   expDesc: { fontSize: 13, fontWeight: '700', color: COLORS.text },
   expMeta: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  expAmount: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  expAmount: { fontSize: 14, fontWeight: '700', color: '#EF4444', flexShrink: 0 },
 });

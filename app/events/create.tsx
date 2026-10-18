@@ -525,7 +525,7 @@ const st = StyleSheet.create({
     gap: 8,
   },
   typeCard: {
-    width: (SCREEN_W - 32 - 24) / 4,
+    width: Math.floor((SCREEN_W - 88) / 4),
     alignItems: 'center',
     gap: 5,
     paddingVertical: 10,

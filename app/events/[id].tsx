@@ -322,7 +322,7 @@ export default function EventDetailScreen() {
                   <View style={[s.gridIconWrap, { backgroundColor: item.bg }]}>
                     <Text style={s.gridEmoji}>{item.emoji}</Text>
                   </View>
-                  <Text style={s.gridTitle}>{item.title}</Text>
+                  <Text style={s.gridTitle} numberOfLines={2}>{item.title}</Text>
                   <Text style={s.gridSub} numberOfLines={1}>{item.sub}</Text>
                 </TouchableOpacity>
               ))}
@@ -651,8 +651,22 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
   gridEmoji: { fontSize: 22 },
-  gridTitle: { fontSize: 12, fontWeight: '700', color: COLORS.text, textAlign: 'center', fontFamily: FONTS.semiBold },
-  gridSub: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', marginTop: 1, fontFamily: FONTS.regular },
+  gridTitle: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+    fontFamily: FONTS.semiBold,
+    height: 30,
+    lineHeight: 15,
+  },
+  gridSub: {
+    fontSize: 9.5,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginTop: 2,
+    fontFamily: FONTS.regular,
+  },
 
   noteCard: {
     flexDirection: 'row',
