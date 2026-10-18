@@ -105,6 +105,8 @@ export default function HealthHubScreen() {
             { title: "Home Care", desc: "Nurses & Physio", icon: "home", route: "/health/homecare", color: "#DB2777", bg: "#FCE7F3" },
             { title: "Pharmacy", desc: "Medicine Delivery", icon: "medkit", route: "/health/pharmacy", color: "#7C3AED", bg: "#EDE9FE" },
             { title: "Emergency SOS", desc: "Ambulance & 24x7", icon: "warning", route: "/health/emergency", color: "#DC2626", bg: "#FEE2E2" },
+          { title: "Ambulance", desc: "Basic / ALS / ICU", icon: "car", route: "/health/ambulance", color: "#DC2626", bg: "#FEE2E2" },
+          { title: "IPD Admission", desc: "Hospital Stay Booking", icon: "bed", route: "/health/ipd", color: "#7C3AED", bg: "#EDE9FE" },
           ].map((item, idx) => (
             <TouchableOpacity
               key={idx}
