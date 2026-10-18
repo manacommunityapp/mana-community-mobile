@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
   TouchableOpacity, ScrollView, ActivityIndicator,
@@ -200,12 +200,17 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Gradient Header */}
-      <View style={s.cleanHeader}>
+      <LinearGradient
+        colors={['#064E3B', '#065F46', '#059669']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.cleanHeader}
+      >
         <View style={s.headerTop}>
           <View style={s.headerLeft}>
             {!isTab && (
               <TouchableOpacity onPress={goHome} style={s.backBtn} activeOpacity={0.7}>
-                <Ionicons name="arrow-back" size={20} color={THEME.textPrimary} />
+                <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }}>
@@ -287,7 +292,7 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
             )}
           </View>
         )}
-      </View>
+      </LinearGradient>
 
       {/* Listings grid */}
       {isLoading ? (
@@ -405,9 +410,6 @@ const s = StyleSheet.create({
   cleanHeader: {
     paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: THEME.border,
   },
   headerTop: {
     flexDirection: 'row',

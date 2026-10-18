@@ -1701,7 +1701,7 @@ const s = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
@@ -1710,12 +1710,12 @@ const s = StyleSheet.create({
   statValue: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: THEME.textPrimary,
     fontFamily: FONTS.displayBold,
   },
   statLabel: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.55)',
+    color: THEME.textSecondary,
     fontWeight: '600',
     fontFamily: FONTS.medium,
     letterSpacing: 0.3,
@@ -1723,7 +1723,7 @@ const s = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 32,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: THEME.border,
   },
 
   // ── Tab Bar ──────────────────────────────────────────────────
