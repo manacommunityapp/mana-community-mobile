@@ -9,6 +9,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, Alert, BackHandler, Modal,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
@@ -51,7 +52,7 @@ const SAVED_PLACES = [
   { icon: 'business' as const, label: 'Work', sublabel: 'Set work address',   addr: '' },
 ];
 
-// ── Community default coords (replace with GPS) ───────────────────
+// ── Community default coords (fallback when GPS unavailable) ─────
 const DEFAULT_LAT = 17.385;
 const DEFAULT_LNG = 78.4867;
 
@@ -91,6 +92,34 @@ export default function BookRideScreen() {
   const [promoCode, setPromoCode]       = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
 
+  // ── GPS state ──────────────────────────────────────────────────
+  const [pickupLat, setPickupLat] = useState(DEFAULT_LAT);
+  const [pickupLng, setPickupLng] = useState(DEFAULT_LNG);
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  async function handleGps() {
+    setGpsLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Allow location access to auto-detect your position.');
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setPickupLat(pos.coords.latitude);
+      setPickupLng(pos.coords.longitude);
+      const [geo] = await Location.reverseGeocodeAsync(pos.coords);
+      if (geo) {
+        const label = [geo.name, geo.street, geo.district, geo.city].filter(Boolean).join(', ');
+        setPickupAddr(label);
+      }
+    } catch {
+      Alert.alert('GPS error', 'Could not get current location. Please enter it manually.');
+    } finally {
+      setGpsLoading(false);
+    }
+  }
+
   // ── Cancel modal ────────────────────────────────────────────────
   const [showCancelModal, setShowCancelModal] = useState(false);
 
@@ -121,8 +150,8 @@ export default function BookRideScreen() {
         enabled.map(v =>
           mobilityPassengerService.getFareQuote({
             serviceType: v.type,
-            pickupLat: DEFAULT_LAT, pickupLng: DEFAULT_LNG,
-            destLat:   DEFAULT_LAT + 0.05, destLng: DEFAULT_LNG + 0.05,
+            pickupLat: pickupLat, pickupLng: pickupLng,
+            destLat:   pickupLat + 0.05, destLng: pickupLng + 0.05,
           }).then(q => ({ type: v.type, quote: q } as QuotedService)),
         ),
       );
@@ -150,11 +179,11 @@ export default function BookRideScreen() {
     if (!chosen) return;
     bookMutation.mutate({
       serviceType:     selectedType,
-      pickupLat:       DEFAULT_LAT,
-      pickupLng:       DEFAULT_LNG,
+      pickupLat:       pickupLat,
+      pickupLng:       pickupLng,
       pickupAddress:   pickupAddr,
-      destLat:         DEFAULT_LAT + 0.05,
-      destLng:         DEFAULT_LNG + 0.05,
+      destLat:         pickupLat + 0.05,
+      destLng:         pickupLng + 0.05,
       destAddress:     destAddr,
       quoteId:         chosen.quote.quoteId,
       idempotencyKey:  `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -223,9 +252,12 @@ export default function BookRideScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.gpsBtn}
-                onPress={() => Alert.alert('GPS', 'Enable expo-location to auto-detect current position')}
+                onPress={handleGps}
+                disabled={gpsLoading}
               >
-                <Ionicons name="locate" size={18} color={COLORS.primary} />
+                {gpsLoading
+                  ? <ActivityIndicator size={14} color={COLORS.primary} />
+                  : <Ionicons name="locate" size={18} color={COLORS.primary} />}
               </TouchableOpacity>
             </View>
 
