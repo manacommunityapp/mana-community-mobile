@@ -169,17 +169,17 @@ export default function MobilityHubScreen() {
           <View style={s.statsRow}>
             <View style={s.statCard}>
               <Ionicons name="checkmark-circle" size={18} color="#059669" />
-              <Text style={s.statNum}>{stats.completedTrips}</Text>
+              <Text style={s.statNum}>{stats.completedTrips ?? 0}</Text>
               <Text style={s.statLabel}>Trips</Text>
             </View>
             <View style={s.statCard}>
               <Ionicons name="wallet" size={18} color="#4F46E5" />
-              <Text style={s.statNum}>₹{stats.totalSpent.toFixed(0)}</Text>
+              <Text style={s.statNum}>₹{(Number(stats.totalSpent) || 0).toFixed(0)}</Text>
               <Text style={s.statLabel}>Spent</Text>
             </View>
             <View style={s.statCard}>
               <Ionicons name="close-circle" size={18} color="#EF4444" />
-              <Text style={s.statNum}>{stats.cancelledTrips}</Text>
+              <Text style={s.statNum}>{stats.cancelledTrips ?? 0}</Text>
               <Text style={s.statLabel}>Cancelled</Text>
             </View>
           </View>

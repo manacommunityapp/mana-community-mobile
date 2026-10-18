@@ -233,7 +233,7 @@ export default function TrackScreen() {
         {/* Fare */}
         <View style={s.fareRow}>
           <Text style={s.fareLabel}>Estimated fare</Text>
-          <Text style={s.fareAmount}>₹{(trip.finalFare ?? trip.fareQuote.total).toFixed(2)}</Text>
+          <Text style={s.fareAmount}>₹{(trip.finalFare ?? trip.fareQuote?.total ?? 0).toFixed(2)}</Text>
         </View>
 
         {/* Actions */}

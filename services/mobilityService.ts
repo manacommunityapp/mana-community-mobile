@@ -1,4 +1,5 @@
 import api from './apiClient';
+import { secureLog } from '@/security';
 import type {
   MobilityTripDto, MobilityFareQuoteDto, MobilityDriverDto,
   MobilityDriverDocumentDto, MobilityVehicleDto, DriverEarningsSummaryDto,
@@ -22,8 +23,12 @@ export const mobilityPassengerService = {
   },
 
   async getActiveTrip(): Promise<MobilityTripDto | null> {
-    const res = await api.get<MobilityTripDto | null>('/mobility/trips/active');
-    return res.data;
+    try {
+      const res = await api.get<MobilityTripDto | null>('/mobility/trips/active');
+      return res.data;
+    } catch {
+      return null;
+    }
   },
 
   async getTrip(id: number): Promise<MobilityTripDto> {
@@ -53,8 +58,29 @@ export const mobilityPassengerService = {
   },
 
   async getStats(): Promise<MobilityStatsDto> {
-    const res = await api.get<MobilityStatsDto>('/mobility/stats');
-    return res.data;
+    try {
+      const res = await api.get<MobilityStatsDto>('/mobility/stats');
+      if (res.data) {
+        return {
+          activeTrips: res.data.activeTrips ?? 0,
+          completedTrips: res.data.completedTrips ?? 0,
+          cancelledTrips: res.data.cancelledTrips ?? 0,
+          totalSpent: Number(res.data.totalSpent) || 0,
+          currency: res.data.currency || 'INR',
+        };
+      }
+    } catch (err: any) {
+      if (err?.response?.status !== 404) {
+        secureLog.warn('MobilityService: getStats fallback', err?.message || err);
+      }
+    }
+    return {
+      activeTrips: 0,
+      completedTrips: 0,
+      cancelledTrips: 0,
+      totalSpent: 0,
+      currency: 'INR',
+    };
   },
 
   async getServiceZones(): Promise<MobilityServiceZoneDto[]> {

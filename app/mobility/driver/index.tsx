@@ -263,8 +263,8 @@ export default function DriverDashboardScreen() {
             </View>
 
             <View style={s.offerMeta}>
-              <Text style={s.offerFare}>₹{pendingOffer.fareAmount.toFixed(2)}</Text>
-              <Text style={s.offerDist}>{pendingOffer.distanceKm.toFixed(1)} km</Text>
+              <Text style={s.offerFare}>₹{(pendingOffer.fareAmount ?? 0).toFixed(2)}</Text>
+              <Text style={s.offerDist}>{(pendingOffer.distanceKm ?? 0).toFixed(1)} km</Text>
             </View>
 
             <View style={s.offerActions}>
@@ -359,16 +359,16 @@ export default function DriverDashboardScreen() {
                 { label: 'This month', amount: earnings.monthEarnings },
               ].map(({ label, amount }) => (
                 <View key={label} style={s.earningCard}>
-                  <Text style={s.earningAmount}>₹{amount.toFixed(0)}</Text>
+                  <Text style={s.earningAmount}>₹{(amount ?? 0).toFixed(0)}</Text>
                   <Text style={s.earningLabel}>{label}</Text>
                 </View>
               ))}
             </View>
-            {earnings.pendingSettlement > 0 && (
+            {(earnings.pendingSettlement ?? 0) > 0 && (
               <View style={s.settlementRow}>
                 <Ionicons name="wallet-outline" size={14} color={COLORS.warning} />
                 <Text style={s.settlementText}>
-                  ₹{earnings.pendingSettlement.toFixed(2)} pending settlement
+                  ₹{(earnings.pendingSettlement ?? 0).toFixed(2)} pending settlement
                 </Text>
               </View>
             )}
