@@ -30,6 +30,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: "ai_chat",          emoji: "✨", icon: "sparkles-outline",          label: "Mana AI",       route: "/ai-chat",                  bg: "#EEF2FF", color: "#6366F1", category: "Safety & Help",   badge: "AI" },
   { id: "safety",           emoji: "🛡️", icon: "shield-half-outline",      label: "Safety Center", route: "/safety",                   bg: "#0F172A", color: "#0F172A", category: "Safety & Help",   badge: "NEW" },
   { id: "insurance",        emoji: "🛡️", icon: "shield-checkmark-outline", label: "Mana Insurance", route: "/insurance",               bg: "#EFF6FF", color: "#2563EB", category: "Safety & Help",   badge: "NEW" },
+  { id: "home_services",    emoji: "🏠", icon: "hammer-outline",           label: "Home Services",  route: "/home-services",           bg: "#FEF9C3", color: "#A16207", category: "Safety & Help",   badge: "NEW" },
 
   // Living & Bills
   { id: "dues",             emoji: "💳", icon: "card-outline",              label: "Dues",          route: "/finance",                  bg: "#EEF2FF", color: "#4F46E5", category: "Living & Bills" },
@@ -69,6 +70,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: "lost_found",       emoji: "🔍", icon: "search-outline",           label: "Lost & Found",  route: "/marketplace/lost-found",   bg: "#FEF2F2", color: "#DC2626", category: "Commerce & Food" },
   { id: "donations",        emoji: "🎁", icon: "gift-outline",             label: "Give Away",     route: "/marketplace/donations",    bg: "#FDF2F8", color: "#DB2777", category: "Commerce & Food" },
   { id: "food",             emoji: "🍽️", icon: "restaurant-outline",       label: "Food & Kitchen",route: "/food",                     bg: "#FFE4E6", color: "#E11D48", category: "Commerce & Food" },
+  { id: "auctions",         emoji: "🔨", icon: "hammer-outline",           label: "Auctions",      route: "/auction",                  bg: "#FEF3C7", color: "#B45309", category: "Commerce & Food", badge: "NEW" },
 ];
 
 const CATEGORIES: Array<QuickActionItem["category"]> = [

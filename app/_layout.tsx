@@ -186,6 +186,12 @@ function RootLayout() {
             <Stack.Screen name="bbps" />
             <Stack.Screen name="recharge" />
             <Stack.Screen name="insurance" />
+            <Stack.Screen name="ai-chat" />
+            <Stack.Screen name="commerce" />
+            <Stack.Screen name="intelligence" />
+            <Stack.Screen name="iot" />
+            <Stack.Screen name="personal-finance" />
+            <Stack.Screen name="projects" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
