@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  Alert, BackHandler, Linking,
+  Alert, BackHandler, Linking, Share, Modal, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -30,13 +30,30 @@ const ACTIVE_STATUSES: MobilityRideStatus[] = [
   'REQUESTED', 'SEARCHING', 'ASSIGNED', 'DRIVER_ARRIVING', 'ARRIVED', 'PICKED_UP', 'IN_PROGRESS',
 ];
 
+const CANCEL_REASONS = [
+  'Booked by mistake',
+  'Waiting too long for driver',
+  'Change of plans',
+  'Wrong location entered',
+  'Found another ride',
+  'Other',
+];
+
+const FEEDBACK_TAGS = [
+  'Safe driving', 'Clean vehicle', 'On time', 'Friendly',
+  'Smooth ride', 'Professional',
+];
+
 export default function TrackScreen() {
   const router      = useRouter();
   const { id }      = useLocalSearchParams<{ id: string }>();
   const tripId      = Number(id);
   const queryClient = useQueryClient();
-  const [showRating, setShowRating] = useState(false);
-  const [rating, setRating]         = useState(0);
+  const [showRating, setShowRating]         = useState(false);
+  const [rating, setRating]                 = useState(0);
+  const [selectedTags, setSelectedTags]     = useState<string[]>([]);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason]     = useState<string | null>(null);
 
   const { data: trip, isLoading, error } = useQuery({
     queryKey: ['mobility-trip', tripId],
@@ -65,7 +82,7 @@ export default function TrackScreen() {
   }, [trip?.status]);
 
   const cancelMutation = useMutation({
-    mutationFn: () => mobilityPassengerService.cancelRide(tripId, { reason: 'Cancelled by passenger' }),
+    mutationFn: (reason: string) => mobilityPassengerService.cancelRide(tripId, { reason }),
     onSuccess:  () => { queryClient.invalidateQueries({ queryKey: ['mobility-trip', tripId] }); },
     onError:    () => Alert.alert('Error', 'Could not cancel trip. Please try again.'),
   });
@@ -80,15 +97,21 @@ export default function TrackScreen() {
     onError: () => Alert.alert('Error', 'Could not submit rating.'),
   });
 
-  function handleCancel() {
-    Alert.alert(
-      'Cancel trip?',
-      'Are you sure you want to cancel this trip?',
-      [
-        { text: 'No', style: 'cancel' },
-        { text: 'Yes, cancel', style: 'destructive', onPress: () => cancelMutation.mutate() },
-      ],
-    );
+  function handleShareTrip() {
+    Share.share({
+      message: `I'm on my way! Track my Mana Mobility trip #${trip?.tripRef ?? tripId} — from ${trip?.pickup.address} to ${trip?.destination.address}.`,
+    });
+  }
+
+  function handleCancelPress() {
+    setCancelReason(null);
+    setShowCancelModal(true);
+  }
+
+  function confirmCancel() {
+    if (!cancelReason) return;
+    setShowCancelModal(false);
+    cancelMutation.mutate(cancelReason);
   }
 
   if (isLoading) {
@@ -134,6 +157,11 @@ export default function TrackScreen() {
             <View style={s.liveDot} />
             <Text style={s.liveText}>Live</Text>
           </View>
+        )}
+        {isLive && (
+          <TouchableOpacity hitSlop={8} onPress={handleShareTrip}>
+            <Ionicons name="share-social-outline" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
         )}
       </View>
 
@@ -213,14 +241,14 @@ export default function TrackScreen() {
           <View style={s.actions}>
             <TouchableOpacity
               style={s.sosBtn}
-              onPress={() => Alert.alert('SOS', 'Emergency SOS feature — connects to safety team')}
+              onPress={() => Alert.alert('SOS', 'Emergency SOS — connects to safety team.\n\nFor genuine emergencies call 112.')}
             >
               <Ionicons name="warning" size={16} color="#fff" />
               <Text style={s.sosBtnText}>SOS</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.cancelBtn, cancelMutation.isPending && s.btnDisabled]}
-              onPress={handleCancel}
+              onPress={handleCancelPress}
               disabled={cancelMutation.isPending}
             >
               {cancelMutation.isPending
@@ -231,6 +259,43 @@ export default function TrackScreen() {
           </View>
         )}
       </View>
+
+      {/* ── Cancel reason modal ─────────────────────────────── */}
+      <Modal visible={showCancelModal} transparent animationType="slide" onRequestClose={() => setShowCancelModal(false)}>
+        <TouchableOpacity
+          style={s.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowCancelModal(false)}
+        />
+        <View style={s.cancelSheet}>
+          <View style={s.cancelSheetHandle} />
+          <Text style={s.cancelSheetTitle}>Why are you cancelling?</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {CANCEL_REASONS.map((r) => (
+              <TouchableOpacity
+                key={r}
+                style={[s.cancelReasonRow, cancelReason === r && s.cancelReasonSelected]}
+                onPress={() => setCancelReason(r)}
+                activeOpacity={0.85}
+              >
+                <Text style={[s.cancelReasonText, cancelReason === r && s.cancelReasonTextSelected]}>{r}</Text>
+                {cancelReason === r && <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity
+            style={[s.confirmCancelBtn, !cancelReason && s.btnDisabled]}
+            onPress={confirmCancel}
+            disabled={!cancelReason}
+            activeOpacity={0.85}
+          >
+            <Text style={s.confirmCancelText}>Confirm Cancellation</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.keepRideBtn} onPress={() => setShowCancelModal(false)}>
+            <Text style={s.keepRideText}>Keep my ride</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       {/* Rating overlay */}
       {showRating && (
@@ -248,6 +313,26 @@ export default function TrackScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            {rating >= 4 && (
+              <View style={s.tagsWrap}>
+                {FEEDBACK_TAGS.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    style={[s.feedbackTag, selectedTags.includes(tag) && s.feedbackTagSelected]}
+                    onPress={() =>
+                      setSelectedTags(prev =>
+                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag],
+                      )
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[s.feedbackTagText, selectedTags.includes(tag) && s.feedbackTagTextSelected]}>
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
             <TouchableOpacity
               style={[s.submitRating, rating === 0 && s.btnDisabled]}
               onPress={() => rateMutation.mutate(rating)}
@@ -387,4 +472,40 @@ const s = StyleSheet.create({
   },
   submitRatingText:    { color: '#fff', fontFamily: FONTS.bold, fontSize: 15 },
   skipRating:          { fontSize: 13, color: COLORS.textMuted, fontFamily: FONTS.regular, paddingTop: 4 },
+
+  tagsWrap:            { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  feedbackTag:         {
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: 12, paddingVertical: 6, backgroundColor: COLORS.surfaceAlt,
+  },
+  feedbackTagSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
+  feedbackTagText:     { fontSize: 12, fontFamily: FONTS.semiBold, color: COLORS.textMuted },
+  feedbackTagTextSelected: { color: COLORS.primary },
+
+  modalBackdrop:       { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)' },
+  cancelSheet:         {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, gap: 0, maxHeight: '75%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 12,
+  },
+  cancelSheetHandle:   {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginBottom: 16,
+  },
+  cancelSheetTitle:    { fontSize: 17, fontFamily: FONTS.displayBold, color: COLORS.text, marginBottom: 12 },
+  cancelReasonRow:     {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  cancelReasonSelected: { },
+  cancelReasonText:    { fontSize: 14, fontFamily: FONTS.regular, color: COLORS.text },
+  cancelReasonTextSelected: { fontFamily: FONTS.semiBold, color: COLORS.primary },
+  confirmCancelBtn:    {
+    backgroundColor: COLORS.error, borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center', marginTop: 16,
+  },
+  confirmCancelText:   { color: '#fff', fontFamily: FONTS.bold, fontSize: 15 },
+  keepRideBtn:         { paddingVertical: 12, alignItems: 'center' },
+  keepRideText:        { fontSize: 14, color: COLORS.textMuted, fontFamily: FONTS.semiBold },
 });

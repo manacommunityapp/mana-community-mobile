@@ -101,6 +101,20 @@ function TripCard({ trip }: { trip: MobilityTripDto }) {
           <Text style={s.activeText}>Trip in progress — tap to track</Text>
         </View>
       )}
+
+      {trip.status === 'COMPLETED' && (
+        <TouchableOpacity
+          style={s.rebookBtn}
+          onPress={() => router.push({
+            pathname: '/mobility/book' as any,
+            params: { dest: trip.destination.address },
+          })}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="refresh-outline" size={13} color={COLORS.primary} />
+          <Text style={s.rebookBtnText}>Re-book</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
@@ -215,6 +229,12 @@ const s = StyleSheet.create({
   activeText:  { fontSize: 11.5, color: '#059669', fontFamily: FONTS.semiBold },
 
   footerNote:  { textAlign: 'center', color: COLORS.textMuted, fontSize: 12, fontFamily: FONTS.regular, padding: 12 },
+  rebookBtn:   {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-end',
+    backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.md,
+    paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.primary + '30',
+  },
+  rebookBtnText: { fontSize: 12, fontFamily: FONTS.bold, color: COLORS.primary },
 
   centered:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   errorText:   { color: COLORS.error, fontFamily: FONTS.semiBold, fontSize: 15 },
