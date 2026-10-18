@@ -192,6 +192,7 @@ function RootLayout() {
             <Stack.Screen name="iot" />
             <Stack.Screen name="personal-finance" />
             <Stack.Screen name="projects" />
+            <Stack.Screen name="mobility" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
