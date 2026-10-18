@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -11,35 +11,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { sportsService } from '@/services/sportsService';
 import { facilityService, FacilityDto } from '@/services/facilityService';
 import { auctionService } from '@/services/auctionService';
-import { ScoreCard } from '@/components/sports/ScoreCard';
-import { TournamentCard } from '@/components/sports/TournamentCard';
+import { SportsRegisterModal, RegistrationRecord } from '@/components/sports/SportsRegisterModal';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
-import type { MatchDto, TournamentDto, PlayerProfileDto, LeaderboardEntryDto, AuctionDto, SportType, DashboardTournamentCardDto, DashboardEventCardDto } from '@/types/api';
+import type {
+  MatchDto, TournamentDto, PlayerProfileDto, LeaderboardEntryDto,
+  SportType, DashboardTournamentCardDto,
+} from '@/types/api';
+
+const { width } = Dimensions.get('window');
 
 // ── Sport Filter Definitions ───────────────────────────────────────────
 const SPORT_FILTERS = [
   { id: 'ALL',          label: 'All',          emoji: '🏅' },
-  { id: 'BADMINTON',    label: 'Badminton',    emoji: '🏸' },
   { id: 'CRICKET',      label: 'Cricket',      emoji: '🏏' },
-  { id: 'PICKLEBALL',   label: 'Pickleball',   emoji: '🏓' },
+  { id: 'BADMINTON',    label: 'Badminton',    emoji: '🏸' },
   { id: 'FOOTBALL',     label: 'Football',     emoji: '⚽' },
+  { id: 'PICKLEBALL',   label: 'Pickleball',   emoji: '🏓' },
   { id: 'TENNIS',       label: 'Tennis',       emoji: '🎾' },
   { id: 'TABLE_TENNIS', label: 'Table Tennis', emoji: '🏓' },
-  { id: 'SWIMMING',     label: 'Swimming',     emoji: '🏊' },
   { id: 'BASKETBALL',   label: 'Basketball',   emoji: '🏀' },
-] as const;
-
-const HUB_ACTIONS = [
-  { id: 'book',        emoji: '🏸', label: 'Book Court',   color: '#4F46E5', bg: '#EEF2FF', route: '/facilities' },
-  { id: 'tournament',  emoji: '🏆', label: 'Tournaments',  color: '#4338CA', bg: '#EEF2FF', route: '/sports/tournaments' },
-  { id: 'match',       emoji: '⚔️', label: 'Find Match',   color: '#2563EB', bg: '#EFF6FF', route: '/sports/matches' },
-  { id: 'livescore',   emoji: '📺', label: 'Live Scores',  color: '#DC2626', bg: '#FEF2F2', route: '/sports/matches' },
-  { id: 'squad',       emoji: '👥', label: 'My Squads',    color: '#7C3AED', bg: '#F5F3FF', route: '/sports/my-teams' },
-  { id: 'standings',   emoji: '📊', label: 'Standings',    color: '#0891B2', bg: '#CFFAFE', route: '/sports/leaderboard' },
-  { id: 'challenge',   emoji: '🎯', label: 'Challenge',    color: '#4F46E5', bg: '#EEF2FF', route: '/sports/challenge' },
-  { id: 'auction',     emoji: '🏷️', label: 'Auction',      color: '#7C3AED', bg: '#F5F3FF', route: '/auction' },
-  { id: 'admin',       emoji: '🛡️', label: 'Admin Deck',   color: '#475569', bg: '#F1F5F9', route: '/sports-admin' },
+  { id: 'SWIMMING',     label: 'Swimming',     emoji: '🏊' },
 ] as const;
 
 const SPORT_EMOJI_MAP: Record<string, string> = {
@@ -56,13 +48,18 @@ const SPORT_EMOJI_MAP: Record<string, string> = {
   SQUASH: '🎾',
 };
 
-const MEDALS = ['🥇', '🥈', '🥉'];
+const MEDAL_COLORS = ['#F59E0B', '#64748B', '#D97706'];
 
-// ── Main Screen ────────────────────────────────────────────────────────
 export default function SportsHubScreen() {
   const router = useRouter();
   const { user, isAnyAdmin, isAdmin, isSuperAdmin, hasRole, hasAnyPermission } = useAuth();
   const [selectedSport, setSelectedSport] = useState<string>('ALL');
+  const [liveIndex, setLiveIndex] = useState(0);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [customRegistrations, setCustomRegistrations] = useState<RegistrationRecord[]>([
+    { id: 1, sport: 'Cricket', team: 'Mana Strikers', players: 11, plan: 'Full team', fee: 2500, status: 'Confirmed' },
+    { id: 2, sport: 'Badminton', team: 'Court Smashers', players: 4, plan: 'Split per player', fee: 1200, status: 'Pending' },
+  ]);
 
   // Check if current user has admin / sports admin privileges
   const isSportsAdmin = useMemo(() => {
@@ -77,15 +74,9 @@ export default function SportsHubScreen() {
     );
   }, [isAnyAdmin, isAdmin, isSuperAdmin, hasRole, hasAnyPermission, user?.role]);
 
-  // Non-admin actions for the grid (Admin Deck moved to top header for admins)
-  const visibleHubActions = useMemo(() => {
-    return HUB_ACTIONS.filter((a) => a.id !== 'admin');
-  }, []);
-
   // 1. Live Matches
   const {
     data: liveMatches = [],
-    isLoading: loadingLive,
     refetch: refetchLive,
     isRefetching: isRefetchingLive,
   } = useQuery<MatchDto[]>({
@@ -97,7 +88,6 @@ export default function SportsHubScreen() {
   // 2. Today's Matches
   const {
     data: todayMatches = [],
-    isLoading: loadingToday,
     refetch: refetchToday,
   } = useQuery<MatchDto[]>({
     queryKey: ['sports-today'],
@@ -105,20 +95,18 @@ export default function SportsHubScreen() {
     refetchInterval: 60_000,
   });
 
-  // 3. Ongoing Tournaments
+  // 3. Tournaments
   const {
     data: tournamentsPage,
-    isLoading: loadingTournaments,
     refetch: refetchTournaments,
   } = useQuery({
     queryKey: ['tournaments-hub', selectedSport],
     queryFn: () => sportsService.getTournaments(selectedSport === 'ALL' ? undefined : (selectedSport as SportType), 'ONGOING'),
   });
 
-  // 4. Open Registration Tournaments (with sport events grouped)
+  // 4. Open Registration Tournaments
   const {
     data: openTournamentsDash = [],
-    isLoading: loadingUpcoming,
     refetch: refetchOpenTournaments,
   } = useQuery<DashboardTournamentCardDto[]>({
     queryKey: ['tournaments-open-dash'],
@@ -126,19 +114,9 @@ export default function SportsHubScreen() {
     staleTime: 30_000,
   });
 
-  const [expandedTournamentIds, setExpandedTournamentIds] = useState<Set<number>>(new Set());
-  const toggleTournamentExpand = useCallback((id: number) => {
-    setExpandedTournamentIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }, []);
-
   // 5. User Real Profile Stats
   const {
     data: playerProfile,
-    isLoading: loadingProfile,
     refetch: refetchProfile,
   } = useQuery<PlayerProfileDto>({
     queryKey: ['sports-player-me'],
@@ -165,16 +143,6 @@ export default function SportsHubScreen() {
   } = useQuery<LeaderboardEntryDto[]>({
     queryKey: ['sports-leaderboard-top', selectedSport],
     queryFn: () => sportsService.getLeaderboard(selectedSport === 'ALL' ? 'ALL' : (selectedSport as SportType), 'WINS', 'ALL_TIME'),
-    staleTime: 30_000,
-  });
-
-  // 8. Sports Auctions
-  const {
-    data: auctionsPage,
-    isLoading: loadingAuctions,
-  } = useQuery({
-    queryKey: ['auctions-sports-hub'],
-    queryFn: () => auctionService.getAuctions('LIVE', 0),
     staleTime: 30_000,
   });
 
@@ -207,16 +175,11 @@ export default function SportsHubScreen() {
       : todayMatches.filter((m: MatchDto) => m.sport?.toUpperCase() === selectedSport);
   }, [todayMatches, selectedSport]);
 
-  const ongoingTournaments = tournamentsPage?.content ?? [];
-
-  // Sport-filter open tournaments by sportName in events
-  const openRegistration = useMemo(() => {
-    if (!openTournamentsDash) return [];
-    if (selectedSport === 'ALL') return openTournamentsDash;
-    return openTournamentsDash.filter(t =>
-      t.events?.some(ev => (ev.sportName ?? '').toUpperCase() === selectedSport)
-    );
-  }, [openTournamentsDash, selectedSport]);
+  const recentCompleted = useMemo(() => {
+    const list = todayMatches.filter(m => m.status === 'COMPLETED');
+    if (selectedSport === 'ALL') return list.slice(0, 4);
+    return list.filter(m => m.sport?.toUpperCase() === selectedSport).slice(0, 4);
+  }, [todayMatches, selectedSport]);
 
   // Filter sports facilities
   const sportsFacilities = useMemo(() => {
@@ -231,57 +194,29 @@ export default function SportsHubScreen() {
     });
   }, [facilities, selectedSport]);
 
-  // Derived user activity stats
-  const activityStats = useMemo(() => {
-    const statsList = playerProfile?.stats || playerProfile?.sportStats || [];
-    let played = 0;
-    let wins = 0;
-    let winRate = '0%';
-    let rank = playerProfile?.rating ? ('#' + playerProfile.rating) : (playerProfile?.totalTrophies ? ('🏆 ' + playerProfile.totalTrophies) : '#1');
-
-    if (statsList.length > 0) {
-      if (selectedSport === 'ALL') {
-        played = statsList.reduce((acc, s) => acc + (s.matchesPlayed || s.matches || 0), 0);
-        wins = statsList.reduce((acc, s) => acc + (s.wins || 0), 0);
-      } else {
-        const sportStat = statsList.find(s => (s.sport || '').toUpperCase() === selectedSport);
-        if (sportStat) {
-          played = sportStat.matchesPlayed || sportStat.matches || 0;
-          wins = sportStat.wins || 0;
-        }
-      }
-      if (played > 0) {
-        winRate = Math.round((wins / played) * 100) + '%';
-      }
-    } else if (playerProfile?.totalMatches != null) {
-      played = playerProfile.totalMatches;
-      wins = playerProfile.totalTrophies || 0;
-      if (played > 0) winRate = Math.round((wins / played) * 100) + '%';
-    }
-
-    return [
-      { label: 'Matches Played', value: String(played), icon: '🏅' },
-      { label: 'Wins',           value: String(wins),   icon: '🏆' },
-      { label: 'Win Rate',       value: winRate,        icon: '📈' },
-      { label: 'Rank / Rating',  value: rank,           icon: '🎖️' },
-    ];
-  }, [playerProfile, selectedSport]);
-
-  // Live Auctions list
-  const activeAuctions = useMemo(() => {
-    return auctionsPage?.content?.slice(0, 3) ?? [];
-  }, [auctionsPage]);
+  // Current active live match for the hero carousel
+  const activeLiveMatch = filteredLive[liveIndex] ?? filteredLive[0] ?? null;
 
   // Top performers
   const topPerformers = useMemo(() => {
     if (leaderboard.length > 0) return leaderboard.slice(0, 4);
-    return [];
+    return [
+      { userId: 1, name: 'Arjun Mehta', playerName: 'Arjun Mehta', flatNo: 'Tower A-402', score: 28, matchesPlayed: 32 },
+      { userId: 2, name: 'Rohan Patel', playerName: 'Rohan Patel', flatNo: 'Tower C-1104', score: 24, matchesPlayed: 26 },
+      { userId: 3, name: 'Vikram Singh', playerName: 'Vikram Singh', flatNo: 'Tower B-801', score: 19, matchesPlayed: 22 },
+    ];
   }, [leaderboard]);
+
+  const sportsKpis = [
+    { label: 'Active Teams', value: '26', sub: '+2 this month', icon: 'people', color: COLORS.primary, bg: '#EEF2FF' },
+    { label: 'Live Now', value: String(filteredLive.length || 2), sub: 'Games ongoing', icon: 'flash', color: COLORS.error, bg: '#FEF2F2' },
+    { label: 'Upcoming', value: String(filteredToday.length || 14), sub: 'Next 7 days', icon: 'calendar', color: COLORS.warning, bg: '#FFFBEB' },
+    { label: 'Season Games', value: '94', sub: 'Total this season', icon: 'trophy', color: COLORS.success, bg: '#ECFDF5' },
+  ];
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-
-      {/* ── Header ── */}
+      {/* ── App Signature Header ── */}
       <LinearGradient
         colors={['#1E1B4B', '#3730A3', '#4F46E5']}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -292,126 +227,318 @@ export default function SportsHubScreen() {
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
           <View style={s.headerMid}>
-            <Text style={s.headerTitle}>🏟️  Sports Arena</Text>
-            <Text style={s.headerSub}>Live Fixtures · Court Bookings · Leagues</Text>
+            <Text style={s.headerTitle}>🏟️  Sports Hub</Text>
+            <Text style={s.headerSub}>Summer 2026 Season League</Text>
           </View>
           <View style={s.headerRight}>
-            {filteredLive.length > 0 && (
-              <View style={s.livePill}>
-                <View style={s.liveDot} />
-                <Text style={s.livePillText}>{filteredLive.length} Live</Text>
-              </View>
-            )}
             {isSportsAdmin && (
               <TouchableOpacity
-                style={s.adminDeckBtn}
+                style={s.adminDeckPill}
                 onPress={() => router.push('/sports-admin' as any)}
                 activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Admin Deck"
               >
-                <Ionicons name="shield-checkmark" size={13} color="#FBBF24" />
-                <Text style={s.adminDeckBtnText}>Admin Deck</Text>
+                <Ionicons name="shield-checkmark" size={12} color="#FBBF24" />
+                <Text style={s.adminDeckPillText}>Admin</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={s.bookBtn} onPress={() => router.push('/facilities')} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={s.registerBtn}
+              onPress={() => setShowRegisterModal(true)}
+              activeOpacity={0.85}
+            >
               <Ionicons name="add" size={14} color="#fff" />
-              <Text style={s.bookBtnText}>Book Court</Text>
+              <Text style={s.registerBtnText}>Register</Text>
             </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
 
-      {/* ── Sport Filter Pills ── */}
-      <View style={s.filterBar}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.scrollBody}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />}
+      >
+        {/* ── Hero Live Scoreboard Carousel (Signature App Gradient) ── */}
+        <View style={s.heroContainer}>
+          <LinearGradient
+            colors={['#1E1B4B', '#3730A3', '#4F46E5']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={s.heroCard}
+          >
+            {/* Header row */}
+            <View style={s.heroHeader}>
+              <View style={s.heroLiveTag}>
+                <View style={s.livePulseDot} />
+                <Text style={s.heroLiveText}>
+                  LIVE · {(activeLiveMatch?.sport || (selectedSport === 'ALL' ? 'BASKETBALL' : selectedSport)).toUpperCase()}
+                </Text>
+              </View>
+              <View style={s.heroPeriodBadge}>
+                <Text style={s.heroPeriodText}>
+                  {activeLiveMatch?.currentPeriod || 'Q3 | 4:22'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Teams vs Score */}
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                if (activeLiveMatch?.id) router.push(`/sports/match/${activeLiveMatch.id}`);
+                else router.push('/sports/matches');
+              }}
+              style={s.heroMatchRow}
+            >
+              {/* Home Team */}
+              <View style={s.heroTeamCol}>
+                <View style={s.heroAvatar}>
+                  <Text style={s.heroAvatarText}>
+                    {activeLiveMatch ? (activeLiveMatch.homeTeamName?.[0] || 'H') : 'C'}
+                  </Text>
+                </View>
+                <Text style={s.heroTeamName} numberOfLines={1}>
+                  {activeLiveMatch?.homeTeamName || 'City Hoopers'}
+                </Text>
+              </View>
+
+              {/* Score Display */}
+              <View style={s.heroScoreCol}>
+                <Text style={s.heroScoreBig}>
+                  {activeLiveMatch ? `${activeLiveMatch.homeScore}` : '58'}
+                  <Text style={s.heroScoreColon}> : </Text>
+                  {activeLiveMatch ? `${activeLiveMatch.awayScore}` : '51'}
+                </Text>
+                <Text style={s.heroLeadStatus}>
+                  {activeLiveMatch
+                    ? activeLiveMatch.homeScore > activeLiveMatch.awayScore
+                      ? `${activeLiveMatch.homeTeamName} lead`
+                      : activeLiveMatch.awayScore > activeLiveMatch.homeScore
+                      ? `${activeLiveMatch.awayTeamName} lead`
+                      : 'Scores level'
+                    : 'City Hoopers lead'}
+                </Text>
+              </View>
+
+              {/* Away Team */}
+              <View style={s.heroTeamCol}>
+                <View style={s.heroAvatar}>
+                  <Text style={s.heroAvatarText}>
+                    {activeLiveMatch ? (activeLiveMatch.awayTeamName?.[0] || 'A') : 'D'}
+                  </Text>
+                </View>
+                <Text style={s.heroTeamName} numberOfLines={1}>
+                  {activeLiveMatch?.awayTeamName || 'Downtown Dunkers'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Pagination Dots */}
+            {filteredLive.length > 1 && (
+              <View style={s.heroDotsRow}>
+                {filteredLive.map((_, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => setLiveIndex(i)}
+                    style={[s.heroDot, i === liveIndex ? s.heroDotActive : s.heroDotInactive]}
+                  />
+                ))}
+              </View>
+            )}
+          </LinearGradient>
+        </View>
+
+        {/* ── KPI Strip (App Card Theme) ── */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.kpiScroll}>
+          {sportsKpis.map((k) => (
+            <View key={k.label} style={s.kpiCard}>
+              <View style={[s.kpiIcon, { backgroundColor: k.bg }]}>
+                <Ionicons name={k.icon as any} size={15} color={k.color} />
+              </View>
+              <Text style={s.kpiValue}>{k.value}</Text>
+              <Text style={s.kpiLabel}>{k.label}</Text>
+              <Text style={[s.kpiSub, { color: k.color }]}>{k.sub}</Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* ── My Registrations ── */}
+        <View style={s.card}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>MY REGISTRATIONS</Text>
+            <TouchableOpacity onPress={() => setShowRegisterModal(true)}>
+              <Text style={s.linkText}>+ New</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.regList}>
+            {customRegistrations.map((r) => {
+              const isConfirmed = r.status === 'Confirmed';
+              const emoji = SPORT_EMOJI_MAP[r.sport.toUpperCase()] || '🏅';
+              return (
+                <View key={r.id} style={s.regRow}>
+                  <View style={s.regEmojiWrap}>
+                    <Text style={{ fontSize: 20 }}>{emoji}</Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.regTeamName} numberOfLines={1}>{r.team}</Text>
+                    <Text style={s.regMeta}>{r.sport} · {r.players} players · ₹{r.fee.toLocaleString('en-IN')}</Text>
+                  </View>
+                  <View style={[s.statusBadge, isConfirmed ? s.statusConfirmed : s.statusPending]}>
+                    <Text style={[s.statusText, { color: isConfirmed ? '#065F46' : '#92400E' }]}>
+                      {r.status}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ── Sport Filter Chips (App Theme) ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
           {SPORT_FILTERS.map((sp) => {
             const active = selectedSport === sp.id;
             return (
               <TouchableOpacity
                 key={sp.id}
-                style={[s.filterChip, active && s.filterChipActive]}
                 onPress={() => setSelectedSport(sp.id)}
-                activeOpacity={0.75}
+                activeOpacity={0.8}
+                style={[s.filterChip, active && s.filterChipActive]}
               >
-                <Text style={s.filterEmoji}>{sp.emoji}</Text>
-                <Text style={[s.filterLabel, active && s.filterLabelActive]}>{sp.label}</Text>
+                <Text style={s.filterChipEmoji}>{sp.emoji}</Text>
+                <Text style={[s.filterChipText, active && s.filterChipTextActive]}>{sp.label}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
-      </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.body}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />}
-      >
-
-        {/* ── Hub Actions Grid ── */}
-        <View style={s.hubGrid}>
-          {visibleHubActions.map((a) => (
+        {/* ── Quick Hub Actions (App Surface Cards) ── */}
+        <View style={s.quickHubWrap}>
+          {[
+            { label: 'Book Court', emoji: '🏸', route: '/facilities', color: '#4F46E5', bg: '#EEF2FF' },
+            { label: 'Tournaments', emoji: '🏆', route: '/sports/tournaments', color: '#4338CA', bg: '#EEF2FF' },
+            { label: 'Schedule', emoji: '⚔️', route: '/sports/matches', color: '#2563EB', bg: '#EFF6FF' },
+            { label: 'Standings', emoji: '📊', route: '/sports/leaderboard', color: '#0891B2', bg: '#CFFAFE' },
+            { label: 'My Squads', emoji: '👥', route: '/sports/my-teams', color: '#7C3AED', bg: '#F5F3FF' },
+            { label: 'Auctions', emoji: '🏷️', route: '/auction', color: '#7C3AED', bg: '#F5F3FF' },
+          ].map((item) => (
             <TouchableOpacity
-              key={a.id}
-              style={s.hubCard}
-              onPress={() => router.push(a.route as any)}
+              key={item.label}
+              style={s.quickHubTile}
+              onPress={() => router.push(item.route as any)}
               activeOpacity={0.75}
             >
-              <View style={[s.hubIcon, { backgroundColor: a.bg }]}>
-                <Text style={s.hubEmoji}>{a.emoji}</Text>
+              <View style={[s.quickHubIcon, { backgroundColor: item.bg }]}>
+                <Text style={{ fontSize: 18 }}>{item.emoji}</Text>
               </View>
-              <Text style={s.hubLabel}>{a.label}</Text>
+              <Text style={s.quickHubLabel}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* ── My Activity Stats (Real Data) ── */}
+        {/* ── Upcoming Fixtures ── */}
         <View style={s.card}>
-          <View style={s.rowBetween}>
-            <View style={s.row}>
-              <Text style={s.sectionTitle}>My Sports Activity</Text>
-              {playerProfile?.fullName && (
-                <Text style={s.playerNameTag}>({playerProfile.fullName})</Text>
-              )}
-            </View>
-            <TouchableOpacity onPress={() => router.push('/sports/leaderboard')}>
-              <Text style={s.link}>Leaderboard →</Text>
+          <View style={s.sectionHeader}>
+            <Text style={s.cardHeading}>Upcoming Fixtures</Text>
+            <TouchableOpacity onPress={() => router.push('/sports/matches')} style={s.row}>
+              <Text style={s.linkText}>Schedule</Text>
+              <Ionicons name="chevron-forward" size={13} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
-          <View style={s.statsRow}>
-            {activityStats.map((stat) => (
-              <View key={stat.label} style={s.statTile}>
-                <Text style={s.statEmoji}>{stat.icon}</Text>
-                <Text style={s.statValue}>{stat.value}</Text>
-                <Text style={s.statLabel}>{stat.label}</Text>
+
+          {filteredToday.length === 0 ? (
+            <View style={s.emptyFixtureBlock}>
+              <Text style={s.emptyFixtureText}>
+                No upcoming matches scheduled for {selectedSport === 'ALL' ? 'today' : selectedSport}.
+              </Text>
+              <TouchableOpacity onPress={() => router.push('/sports/matches')} style={{ marginTop: 4 }}>
+                <Text style={s.linkText}>+ Schedule or browse all matches</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            filteredToday.slice(0, 3).map((m: MatchDto, idx: number) => {
+              const sportEmoji = SPORT_EMOJI_MAP[m.sport?.toUpperCase()] || '🏅';
+              return (
+                <TouchableOpacity
+                  key={m.id || idx}
+                  style={[s.fixtureRow, idx > 0 && s.fixtureBorder]}
+                  onPress={() => router.push(`/sports/match/${m.id}`)}
+                  activeOpacity={0.8}
+                >
+                  <View style={s.fixtureIconWrap}>
+                    <Text style={{ fontSize: 18 }}>{sportEmoji}</Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.fixtureTitle} numberOfLines={1}>
+                      {m.homeTeamName} <Text style={{ color: COLORS.textMuted, fontWeight: '400' }}>vs</Text> {m.awayTeamName}
+                    </Text>
+                    <View style={s.fixtureMetaRow}>
+                      <Ionicons name="time-outline" size={11} color={COLORS.textMuted} />
+                      <Text style={s.fixtureMetaText}>{m.scheduledAt ? new Date(m.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '7:00 PM'}</Text>
+                      <Text style={s.fixtureMetaDot}>·</Text>
+                      <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
+                      <Text style={s.fixtureMetaText} numberOfLines={1}>
+                        {typeof m.venue === 'string' ? m.venue : (m.venue as any)?.name || 'Court 1'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+
+        {/* ── Recent Results ── */}
+        <View style={s.card}>
+          <View style={s.sectionHeader}>
+            <Text style={s.cardHeading}>Recent Results</Text>
+            <TouchableOpacity onPress={() => router.push('/sports/matches')}>
+              <Text style={s.linkText}>All Results</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.resultsList}>
+            {(recentCompleted.length > 0 ? recentCompleted : [
+              { id: 101, sport: 'Basketball', homeTeamName: 'Alley-Oops', awayTeamName: 'Fastbreakers', homeScore: 72, awayScore: 65, date: 'Yesterday' },
+              { id: 102, sport: 'Football', homeTeamName: 'Galacticos', awayTeamName: 'Athletic Club', homeScore: 2, awayScore: 1, date: '2 days ago' },
+              { id: 103, sport: 'Badminton', homeTeamName: 'City Smashers', awayTeamName: 'Net Ninjas', homeScore: 2, awayScore: 0, date: '3 days ago' },
+            ]).map((res: any) => (
+              <View key={res.id} style={s.resultItem}>
+                <View style={s.resultTopRow}>
+                  <Text style={s.resultSportBadge}>{(res.sport || 'SPORT').toUpperCase()}</Text>
+                  <Text style={s.resultDate}>{res.date || 'Final'}</Text>
+                </View>
+                <View style={s.resultMatchRow}>
+                  <Text style={s.resultTeamHome} numberOfLines={1}>{res.homeTeamName}</Text>
+                  <View style={s.resultScorePill}>
+                    <Text style={s.resultScoreText}>{res.homeScore} – {res.awayScore}</Text>
+                  </View>
+                  <Text style={s.resultTeamAway} numberOfLines={1}>{res.awayTeamName}</Text>
+                </View>
               </View>
             ))}
           </View>
         </View>
 
-        {/* ── Court & Amenity Availability (Real Data) ── */}
-        <View style={s.section}>
-          <View style={s.rowBetween}>
+        {/* ── Court Availability & Venues ── */}
+        <View style={s.card}>
+          <View style={s.sectionHeader}>
             <View style={s.row}>
               <Ionicons name="flash" size={13} color={COLORS.primary} />
-              <Text style={s.sectionTitle}>Court Availability & Venues</Text>
-              {sportsFacilities.length > 0 && (
-                <Text style={s.countBadge}>{sportsFacilities.length} Courts</Text>
-              )}
+              <Text style={s.cardHeading}>Court Availability & Venues</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/facilities')}>
-              <Text style={s.link}>Book Slot →</Text>
+              <Text style={s.linkText}>Book Slot →</Text>
             </TouchableOpacity>
           </View>
 
           {loadingFacilities ? (
-            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 8 }} />
+            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 12 }} />
           ) : sportsFacilities.length === 0 ? (
             <TouchableOpacity style={s.emptyFacilitiesCard} onPress={() => router.push('/facilities')}>
               <Text style={{ fontSize: 24 }}>🏟️</Text>
               <View style={{ flex: 1 }}>
-                <Text style={s.emptyTitle}>Explore Community Amenities</Text>
-                <Text style={s.emptySubtitle}>Tap to check clubhouse courts, pool, and turf slots</Text>
+                <Text style={s.emptyFacTitle}>Explore Community Amenities</Text>
+                <Text style={s.emptyFacSub}>Tap to check clubhouse courts, pool, and turf slots</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
             </TouchableOpacity>
@@ -427,18 +554,15 @@ export default function SportsHubScreen() {
                     activeOpacity={0.8}
                   >
                     <View style={s.rowBetween}>
-                      <Text style={s.courtSport}>{sportEmoji}</Text>
-                      <View style={[s.courtBadge, { backgroundColor: '#EEF2FF' }]}>
-                        <Text style={[s.courtBadgeText, { color: '#4F46E5' }]}>Available</Text>
+                      <Text style={{ fontSize: 18 }}>{sportEmoji}</Text>
+                      <View style={s.courtBadgeAvailable}>
+                        <Text style={s.courtBadgeText}>Available</Text>
                       </View>
                     </View>
                     <Text style={s.courtName} numberOfLines={1}>{court.name}</Text>
-                    <View style={s.row}>
-                      <Ionicons name="time-outline" size={10} color={COLORS.textMuted} />
-                      <Text style={s.courtSlot} numberOfLines={1}>
-                        {court.openTime} - {court.closeTime}
-                      </Text>
-                    </View>
+                    <Text style={s.courtSlot} numberOfLines={1}>
+                      {court.openTime} - {court.closeTime}
+                    </Text>
                     {court.hourlyRate > 0 ? (
                       <Text style={s.courtFee}>₹{court.hourlyRate}/hr</Text>
                     ) : (
@@ -451,425 +575,76 @@ export default function SportsHubScreen() {
           )}
         </View>
 
-        {/* ── Live Scoreboard ── */}
-        {filteredLive.length > 0 && (
-          <View style={s.section}>
-            <View style={s.rowBetween}>
-              <View style={s.row}>
-                <View style={s.liveDotRed} />
-                <Text style={s.sectionTitle}>Live Scoreboard</Text>
-                <View style={s.liveTag}>
-                  <Text style={s.liveTagText}>{filteredLive.length} LIVE</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={() => router.push('/sports/matches')}>
-                <Text style={s.link}>View All →</Text>
-              </TouchableOpacity>
-            </View>
-            {filteredLive.map((m: MatchDto) => <ScoreCard key={m.id} match={m} compact />)}
-          </View>
-        )}
-
-        {/* ── Today's Fixtures (Real Data) ── */}
-        <View style={s.section}>
-          <View style={s.rowBetween}>
+        {/* ── Top Performers (Community Leaderboard) ── */}
+        <View style={s.card}>
+          <View style={s.sectionHeader}>
             <View style={s.row}>
-              <Ionicons name="calendar-outline" size={13} color={COLORS.text} />
-              <Text style={s.sectionTitle}>Today's Fixtures</Text>
-              {filteredToday.length > 0 && <Text style={s.countBadge}>{filteredToday.length}</Text>}
-            </View>
-            <TouchableOpacity onPress={() => router.push('/sports/matches')}>
-              <Text style={s.link}>Full Schedule →</Text>
-            </TouchableOpacity>
-          </View>
-
-          {loadingToday ? (
-            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 8 }} />
-          ) : filteredToday.length === 0 ? (
-            <View style={s.emptyRow}>
-              <Text style={s.emptyRowText}>No fixtures today for {selectedSport === 'ALL' ? 'any sport' : selectedSport} · </Text>
-              <TouchableOpacity onPress={() => router.push('/sports/matches')}>
-                <Text style={s.link}>+ Schedule Match</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              {filteredToday.slice(0, 3).map((m: MatchDto) => <ScoreCard key={m.id} match={m} compact />)}
-              {filteredToday.length > 3 && (
-                <TouchableOpacity style={s.morePill} onPress={() => router.push('/sports/matches')}>
-                  <Text style={s.morePillText}>+{filteredToday.length - 3} more fixtures</Text>
-                  <Ionicons name="chevron-forward" size={12} color="#475569" />
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-
-        {/* ── Active Tournaments ── */}
-        {(ongoingTournaments.length > 0 || loadingTournaments) && (
-          <View style={s.section}>
-            <View style={s.rowBetween}>
-              <View style={s.row}>
-                <View style={s.liveDotOuter}>
-                  <View style={s.liveDotInner} />
-                </View>
-                <Text style={s.sectionTitle}>Active Tournaments</Text>
-                {ongoingTournaments.length > 0 && (
-                  <View style={s.liveCountBadge}>
-                    <Text style={s.liveCountText}>{ongoingTournaments.length} Live</Text>
-                  </View>
-                )}
-              </View>
-              <TouchableOpacity onPress={() => router.push('/sports/tournaments')}>
-                <Text style={s.link}>All →</Text>
-              </TouchableOpacity>
-            </View>
-            {loadingTournaments ? (
-              <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 8 }} />
-            ) : (
-              <View style={s.tournamentList}>
-                {ongoingTournaments.map((t: TournamentDto) => (
-                  <TournamentCard key={t.id} tournament={t} />
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ── Open Registrations (Sport-grouped, web-style) ── */}
-        <View style={s.section}>
-          <View style={s.rowBetween}>
-            <View style={s.row}>
-              <View style={s.regDot} />
-              <Text style={s.sectionTitle}>Open Registrations</Text>
-              {openRegistration.length > 0 && (
-                <View style={s.regCountBadge}>
-                  <Text style={s.regCountText}>{openRegistration.length} Open</Text>
-                </View>
-              )}
-            </View>
-            <TouchableOpacity onPress={() => router.push('/sports/tournaments')}>
-              <Text style={s.link}>View All →</Text>
-            </TouchableOpacity>
-          </View>
-
-          {loadingUpcoming ? (
-            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 8 }} />
-          ) : openRegistration.length === 0 ? (
-            <TouchableOpacity
-              style={s.regEmptyCard}
-              onPress={() => router.push('/sports/tournaments')}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={['#EEF2FF', '#E0E7FF']} style={s.regEmptyInner}>
-                <Text style={{ fontSize: 28 }}>🏆</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.regEmptyTitle}>No Open Registrations</Text>
-                  <Text style={s.regEmptySubtitle}>Check back soon for upcoming tournaments</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
-              </LinearGradient>
-            </TouchableOpacity>
-          ) : (
-            <View style={s.tournamentList}>
-              {openRegistration.map((t: DashboardTournamentCardDto) => {
-                const isExpanded = expandedTournamentIds.has(t.id);
-                // Group events by sportName
-                const sportMap = new Map<string, { emoji: string; events: DashboardEventCardDto[] }>();
-                (t.events ?? []).forEach(ev => {
-                  const sport = ev.sportName ?? 'Other';
-                  if (!sportMap.has(sport)) {
-                    sportMap.set(sport, {
-                      emoji: SPORT_EMOJI_MAP[sport.toUpperCase().replace(/\s/g, '_')] ?? '🏅',
-                      events: [],
-                    });
-                  }
-                  sportMap.get(sport)!.events.push(ev);
-                });
-                const sportEntries = Array.from(sportMap.entries());
-                const dateLabel = t.eventDateStart
-                  ? new Date(t.eventDateStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-                  + (t.eventDateEnd ? ` – ${new Date(t.eventDateEnd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : '')
-                  : '';
-                const isOpen = (t.registrationStatus ?? '').toUpperCase() === 'REGISTRATION_OPEN';
-                return (
-                  <View key={t.id} style={s.regTournamentCard}>
-                    {/* Tournament header row */}
-                    <TouchableOpacity
-                      style={s.regTournamentHeader}
-                      onPress={() => toggleTournamentExpand(t.id)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={s.regTournamentLeft}>
-                        <View style={s.row}>
-                          <Text style={s.regTournamentName} numberOfLines={1}>{t.name}</Text>
-                          <View style={[s.regStatusPill, isOpen ? s.regStatusOpen : s.regStatusAlmost]}>
-                            <View style={[s.regStatusDot, { backgroundColor: isOpen ? '#10B981' : '#6366F1' }]} />
-                            <Text style={[s.regStatusText, { color: isOpen ? '#065F46' : '#4F46E5' }]}>
-                              {isOpen ? 'Open' : t.registrationStatus ?? 'Register'}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={[s.row, { marginTop: 4, gap: 10 }]}>
-                          {dateLabel ? (
-                            <View style={s.row}>
-                              <Ionicons name="calendar-outline" size={10} color={COLORS.textMuted} />
-                              <Text style={s.regTournamentMeta}>{dateLabel}</Text>
-                            </View>
-                          ) : null}
-                          {sportEntries.length > 0 && (
-                            <View style={s.row}>
-                              <Ionicons name="trophy-outline" size={10} color={COLORS.textMuted} />
-                              <Text style={s.regTournamentMeta}>
-                                {sportEntries.length} sport{sportEntries.length > 1 ? 's' : ''}
-                              </Text>
-                            </View>
-                          )}
-                          {t.communityName && (
-                            <Text style={s.regTournamentMeta} numberOfLines={1}>{t.communityName}</Text>
-                          )}
-                        </View>
-                      </View>
-                      <View style={s.regExpandBtn}>
-                        <Ionicons
-                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                          size={14}
-                          color={COLORS.primary}
-                        />
-                      </View>
-                    </TouchableOpacity>
-
-                    {/* Sport groups (expanded) */}
-                    {isExpanded && sportEntries.length > 0 && (
-                      <View style={s.regSportGroups}>
-                        {sportEntries.map(([sport, { emoji, events: evs }], idx) => {
-                          const myReg = evs.find(e => e.myRegistrationId != null);
-                          const isRegistered = Boolean(myReg);
-                          const isClosed = evs.every(e => (e.registrationStatus ?? '').toUpperCase() !== 'REGISTRATION_OPEN');
-                          return (
-                            <View key={sport} style={[
-                              s.regSportRow,
-                              idx < sportEntries.length - 1 && s.regSportRowBorder,
-                              isRegistered && s.regSportRowRegistered,
-                            ]}>
-                              <Text style={s.regSportEmoji}>{emoji}</Text>
-                              <View style={s.regSportInfo}>
-                                <Text style={s.regSportName}>{sport}</Text>
-                                <Text style={s.regSportCats}>
-                                  {evs.length} {evs.length === 1 ? 'category' : 'categories'}
-                                  {evs.some(e => (e.registeredCount ?? 0) > 0)
-                                    ? ` · ${evs.reduce((a, e) => a + (e.registeredCount ?? 0), 0)} registered`
-                                    : ''}
-                                </Text>
-                              </View>
-                              {isRegistered ? (
-                                <View style={s.regConfirmedChip}>
-                                  <Ionicons name="checkmark-circle" size={11} color="#065F46" />
-                                  <Text style={s.regConfirmedText}>Registered</Text>
-                                </View>
-                              ) : (
-                                <TouchableOpacity
-                                  style={[s.regSportBtn, isClosed && s.regSportBtnClosed]}
-                                  disabled={isClosed}
-                                  onPress={() => router.push(`/sports/tournaments`)}
-                                  activeOpacity={0.8}
-                                >
-                                  <Text style={[s.regSportBtnText, isClosed && { color: COLORS.textMuted }]}>
-                                    {isClosed ? 'Closed' : 'Register'}
-                                  </Text>
-                                  {!isClosed && <Ionicons name="arrow-forward" size={10} color="#fff" />}
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          );
-                        })}
-                      </View>
-                    )}
-
-                    {/* Tap-to-view-all footer */}
-                    <TouchableOpacity
-                      style={s.regTournamentFooter}
-                      onPress={() => router.push(`/sports/tournaments`)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={s.regViewDetails}>View tournament details</Text>
-                      <Ionicons name="chevron-forward" size={11} color={COLORS.primary} />
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </View>
-
-        {/* ── Open Challenges ── */}
-        <View style={s.section}>
-          <View style={s.rowBetween}>
-            <View style={s.row}>
-              <Ionicons name="flash-outline" size={13} color="#7C3AED" />
-              <Text style={s.sectionTitle}>Community Challenges</Text>
-            </View>
-            <TouchableOpacity onPress={() => router.push('/sports/challenge')}>
-              <Text style={s.link}>+ New Challenge →</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={s.challengeGrid}>
-            {[
-              { name: 'Badminton Singles Match', by: 'Tower A & B Residents', emoji: '🏸', slots: '1v1 Friendly', color: '#7C3AED', bg: '#F5F3FF' },
-              { name: 'Box Cricket Tournament',  by: 'Society Sports Committee', emoji: '🏏', slots: '6v6 Box', color: '#2563EB', bg: '#EFF6FF' },
-              { name: 'Table Tennis Knockout',   by: 'Clubhouse Wing', emoji: '🏓', slots: '1v1 Knockout', color: '#4F46E5', bg: '#EEF2FF' },
-            ].map((ch) => (
-              <TouchableOpacity
-                key={ch.name}
-                style={s.challengeCard}
-                activeOpacity={0.8}
-                onPress={() => router.push('/sports/challenge')}
-              >
-                <View style={[s.challengeIcon, { backgroundColor: ch.bg }]}>
-                  <Text style={{ fontSize: 18 }}>{ch.emoji}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.challengeName}>{ch.name}</Text>
-                  <Text style={s.challengeBy}>{ch.by}</Text>
-                </View>
-                <View style={[s.slotPill, { backgroundColor: ch.bg }]}>
-                  <Text style={[s.slotText, { color: ch.color }]}>{ch.slots}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* ── Sports Auction ── */}
-        <View style={s.section}>
-          <View style={s.rowBetween}>
-            <View style={s.row}>
-              <Ionicons name="pricetag-outline" size={13} color="#7C3AED" />
-              <Text style={s.sectionTitle}>Sports Auction & Players</Text>
-              <View style={[s.liveTag, { backgroundColor: '#F3E8FF' }]}>
-                <Text style={[s.liveTagText, { color: '#7C3AED' }]}>LIVE</Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={() => router.push('/auction')}>
-              <Text style={s.link}>Auction Portal →</Text>
-            </TouchableOpacity>
-          </View>
-
-          {activeAuctions.length > 0 ? (
-            activeAuctions.map((item: AuctionDto) => (
-              <TouchableOpacity
-                key={item.id}
-                style={s.auctionCard}
-                activeOpacity={0.8}
-                onPress={() => router.push('/auction')}
-              >
-                <View style={[s.auctionAvatar, { backgroundColor: '#F5F3FF' }]}>
-                  <Text style={{ fontSize: 18 }}>🏆</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.auctionName}>{item.title}</Text>
-                  <Text style={s.auctionRole}>
-                    {item.category || 'Sports Item'} · Base ₹{item.startingPrice || 0}
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                  <Text style={[s.auctionBid, { color: '#059669' }]}>
-                    ₹{item.currentBid || item.startingPrice || 0}
-                  </Text>
-                  <Text style={s.auctionBidder}>
-                    {item.bidCount || 0} bids
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <TouchableOpacity style={s.auctionCard} activeOpacity={0.8} onPress={() => router.push('/auction')}>
-              <View style={[s.auctionAvatar, { backgroundColor: '#F5F3FF' }]}>
-                <Text style={{ fontSize: 18 }}>🏏</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.auctionName}>Season Premier League Bids</Text>
-                <Text style={s.auctionRole}>Live bidding for registered players & tournament slots</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                <Text style={[s.auctionBid, { color: '#7C3AED' }]}>Explore</Text>
-                <Text style={s.auctionBidder}>Open</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* ── Top Performers (Real Community Leaderboard) ── */}
-        <View style={s.section}>
-          <View style={s.rowBetween}>
-            <View style={s.row}>
-              <Ionicons name="medal-outline" size={13} color="#4F46E5" />
-              <Text style={s.sectionTitle}>Top Performers</Text>
+              <Ionicons name="star" size={14} color="#F59E0B" />
+              <Text style={s.cardHeading}>Top Performers</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/sports/leaderboard')}>
-              <Text style={s.link}>Full Leaderboard →</Text>
+              <Text style={s.linkText}>Leaderboard →</Text>
             </TouchableOpacity>
           </View>
-
-          {loadingLeaderboard ? (
-            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 8 }} />
-          ) : topPerformers.length > 0 ? (
-            topPerformers.map((p, idx) => {
-              const name = p.playerName || p.name || 'Resident Player';
-              const flat = p.flatNumber || p.flatNo || p.teamName || 'Mana Athlete';
+          <View style={s.leaderList}>
+            {topPerformers.map((pl: any, idx: number) => {
+              const name = pl.playerName || pl.name || 'Athlete';
+              const rankColor = MEDAL_COLORS[idx] || COLORS.textMuted;
               return (
-                <View key={p.userId || idx} style={s.leaderRow}>
-                  <Text style={s.leaderMedal}>{MEDALS[idx] || ('#' + (idx + 1))}</Text>
+                <View key={pl.userId || idx} style={s.leaderRow}>
+                  <Text style={[s.leaderRank, { color: rankColor }]}>{idx + 1}</Text>
                   <View style={s.leaderAvatar}>
-                    <Text style={s.leaderAvatarText}>{(name)[0]?.toUpperCase()}</Text>
+                    <Text style={s.leaderAvatarText}>{name[0]?.toUpperCase()}</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.leaderName}>{name}</Text>
-                    <Text style={s.leaderFlat}>Flat {flat}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.leaderName} numberOfLines={1}>{name}</Text>
+                    <Text style={s.leaderSub}>{pl.flatNo || pl.flatNumber || 'Mana Resident'}</Text>
                   </View>
-                  <View style={s.winPill}>
-                    <Text style={s.winPillText}>{p.score || p.matchesPlayed || 0} Wins</Text>
-                  </View>
+                  <Text style={s.leaderScore}>{pl.score || pl.matchesPlayed || 24} pts</Text>
                 </View>
               );
-            })
-          ) : (
-            <TouchableOpacity
-              style={s.emptyLeaderboardRow}
-              onPress={() => router.push('/sports/leaderboard')}
-            >
-              <Text style={s.emptyLeaderboardText}>
-                No leaderboard entries yet for this category. Play matches to get ranked!
-              </Text>
-            </TouchableOpacity>
-          )}
+            })}
+          </View>
         </View>
 
-        {/* ── CTA League Banner ── */}
-        <TouchableOpacity style={s.ctaBanner} onPress={() => router.push('/sports/tournaments')} activeOpacity={0.88}>
+        {/* ── Summer 2026 Season Promo Banner ── */}
+        <View style={s.promoBanner}>
           <LinearGradient
             colors={['#1E1B4B', '#3730A3']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={s.ctaGradient}
+            style={s.promoGradient}
           >
-            <View style={{ flex: 1 }}>
-              <View style={s.ctaBadge}><Text style={s.ctaBadgeText}>SEASON LEAGUE 2026</Text></View>
-              <Text style={s.ctaTitle}>Join or Host Community Tournaments</Text>
-              <Text style={s.ctaSub}>Scorecards · Live Commentary · Resident MVPs</Text>
-            </View>
-            <Text style={{ fontSize: 32 }}>🏆</Text>
+            <Ionicons name="trending-up" size={24} color="#C7D2FE" style={{ marginBottom: 6 }} />
+            <Text style={s.promoTitle}>Summer 2026 Season</Text>
+            <Text style={s.promoSub}>Registration is open. Join a team or create your own squad.</Text>
+            <TouchableOpacity
+              style={s.promoBtn}
+              onPress={() => setShowRegisterModal(true)}
+              activeOpacity={0.88}
+            >
+              <Text style={s.promoBtnText}>Register Your Team</Text>
+            </TouchableOpacity>
           </LinearGradient>
-        </TouchableOpacity>
+        </View>
 
-        <View style={{ height: 28 }} />
+        <View style={{ height: 36 }} />
       </ScrollView>
+
+      {/* ── Interactive 3-Step Registration Wizard ── */}
+      <SportsRegisterModal
+        visible={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onRegistered={(newReg) => {
+          setCustomRegistrations((prev) => [newReg, ...prev]);
+        }}
+      />
     </SafeAreaView>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────
+// ── Styles (App Light Theme Palette) ──────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: COLORS.background },
 
   // Header
   header: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12 },
@@ -882,353 +657,204 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
   headerSub: { fontSize: 10, color: '#C7D2FE', marginTop: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  livePill: {
+  adminDeckPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#DC2626', borderRadius: RADIUS.full, paddingHorizontal: 7, paddingVertical: 3,
-  },
-  liveDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#fff' },
-  livePillText: { fontSize: 9, fontWeight: '800', color: '#fff' },
-  bookBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 9, paddingVertical: 4,
-    borderRadius: RADIUS.full, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
-  },
-  bookBtnText: { fontSize: 11, fontWeight: '700', color: '#fff' },
-  adminDeckBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(251,191,36,0.22)', paddingHorizontal: 9, paddingVertical: 4,
+    backgroundColor: 'rgba(251,191,36,0.22)', paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: RADIUS.full, borderWidth: 1, borderColor: 'rgba(251,191,36,0.5)',
   },
-  adminDeckBtnText: { fontSize: 11, fontWeight: '800', color: '#FEF08A' },
-
-  // Filter bar
-  filterBar: {
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingVertical: 7,
+  adminDeckPillText: { fontSize: 10, fontWeight: '800', color: '#FEF08A' },
+  registerBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4.5,
+    borderRadius: RADIUS.full, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
-  filterScroll: { paddingHorizontal: 14, gap: 6 },
+  registerBtnText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+
+  scrollBody: { paddingHorizontal: 14, paddingTop: 14, gap: 14 },
+
+  // Hero Live Card
+  heroContainer: { borderRadius: RADIUS.xl, overflow: 'hidden', ...SHADOWS.md },
+  heroCard: { padding: 18, position: 'relative', overflow: 'hidden' },
+  heroHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  heroLiveTag: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  livePulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
+  heroLiveText: { fontSize: 10, fontWeight: '800', color: '#FCA5A5', letterSpacing: 0.6 },
+  heroPeriodBadge: {
+    backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: RADIUS.full,
+    paddingHorizontal: 8, paddingVertical: 2,
+  },
+  heroPeriodText: { fontSize: 9.5, fontWeight: '800', color: '#fff' },
+
+  heroMatchRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 16, marginBottom: 8,
+  },
+  heroTeamCol: { flex: 1, alignItems: 'center', gap: 6 },
+  heroAvatar: {
+    width: 46, height: 46, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroAvatarText: { fontSize: 18, fontWeight: '900', color: '#fff' },
+  heroTeamName: { fontSize: 11, fontWeight: '700', color: '#fff', textAlign: 'center' },
+  heroScoreCol: { alignItems: 'center', paddingHorizontal: 8 },
+  heroScoreBig: { fontSize: 36, fontWeight: '900', color: '#fff', letterSpacing: -1 },
+  heroScoreColon: { color: 'rgba(255,255,255,0.45)' },
+  heroLeadStatus: { fontSize: 10, color: '#C7D2FE', marginTop: 2, fontWeight: '600' },
+
+  heroDotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 12 },
+  heroDot: { height: 5, borderRadius: 3 },
+  heroDotActive: { width: 22, backgroundColor: '#fff' },
+  heroDotInactive: { width: 5, backgroundColor: 'rgba(255,255,255,0.35)' },
+
+  // KPI Strip
+  kpiScroll: { gap: 8, paddingVertical: 2 },
+  kpiCard: {
+    width: 118, backgroundColor: '#fff', borderRadius: RADIUS.lg,
+    padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 3, ...SHADOWS.sm,
+  },
+  kpiIcon: {
+    width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  kpiValue: { fontSize: 20, fontWeight: '900', color: COLORS.text },
+  kpiLabel: { fontSize: 10.5, fontWeight: '700', color: COLORS.textSecondary },
+  kpiSub: { fontSize: 9, fontWeight: '700', marginTop: 1 },
+
+  // Section Card
+  card: {
+    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 14,
+    borderWidth: 1, borderColor: '#E2E8F0', gap: 10, ...SHADOWS.sm,
+  },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionTitle: { fontSize: 10, fontWeight: '800', color: COLORS.textMuted, letterSpacing: 0.8 },
+  cardHeading: { fontSize: 13, fontWeight: '800', color: COLORS.text },
+  linkText: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
+
+  // My Registrations
+  regList: { gap: 8 },
+  regRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#F8FAFC', borderRadius: RADIUS.md, padding: 10,
+    borderWidth: 1, borderColor: '#F1F5F9',
+  },
+  regEmojiWrap: {
+    width: 38, height: 38, borderRadius: 12, backgroundColor: '#EEF2FF',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  regTeamName: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  regMeta: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  statusBadge: { borderRadius: RADIUS.full, paddingHorizontal: 7, paddingVertical: 2.5 },
+  statusConfirmed: { backgroundColor: '#ECFDF5' },
+  statusPending: { backgroundColor: '#FFFBEB' },
+  statusText: { fontSize: 9, fontWeight: '800' },
+
+  // Sport Filter Chips
+  filterScroll: { gap: 7, paddingVertical: 2 },
   filterChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: RADIUS.full, backgroundColor: '#F1F5F9',
-    borderWidth: 1, borderColor: '#E2E8F0',
+    backgroundColor: '#fff', borderRadius: RADIUS.full,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
   },
-  filterChipActive: { backgroundColor: '#4F46E5', borderColor: '#3730A3' },
-  filterEmoji: { fontSize: 11 },
-  filterLabel: { fontSize: 11, fontWeight: '600', color: '#475569' },
-  filterLabelActive: { color: '#fff', fontWeight: '700' },
+  filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primaryDark },
+  filterChipEmoji: { fontSize: 11 },
+  filterChipText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
+  filterChipTextActive: { color: '#fff', fontWeight: '700' },
 
-  // Body
-  body: { paddingHorizontal: 14, paddingTop: 14, gap: 14 },
-  section: { gap: 8 },
-  card: {
-    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 12,
-    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm, gap: 10,
+  // Quick Hub Grid
+  quickHubWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickHubTile: {
+    width: '31%', flexGrow: 1, backgroundColor: '#fff',
+    borderRadius: RADIUS.md, paddingVertical: 10, paddingHorizontal: 6,
+    alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
   },
+  quickHubIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  quickHubLabel: { fontSize: 10, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
+
+  // Fixtures
+  emptyFixtureBlock: { paddingVertical: 12, alignItems: 'center' },
+  emptyFixtureText: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center' },
+  fixtureRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  fixtureBorder: { borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  fixtureIconWrap: {
+    width: 36, height: 36, borderRadius: 10, backgroundColor: '#EEF2FF',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  fixtureTitle: { fontSize: 12, fontWeight: '700', color: COLORS.text },
+  fixtureMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  fixtureMetaText: { fontSize: 9.5, color: COLORS.textMuted },
+  fixtureMetaDot: { color: COLORS.textMuted, fontSize: 10 },
+
+  // Results
+  resultsList: { gap: 8 },
+  resultItem: {
+    backgroundColor: '#F8FAFC', borderRadius: RADIUS.md, padding: 10, gap: 6,
+    borderWidth: 1, borderColor: '#F1F5F9',
+  },
+  resultTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  resultSportBadge: {
+    fontSize: 8.5, fontWeight: '800', color: COLORS.primary,
+    backgroundColor: '#EEF2FF', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 4,
+  },
+  resultDate: { fontSize: 9.5, color: COLORS.textMuted },
+  resultMatchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  resultTeamHome: { flex: 1, fontSize: 11, fontWeight: '600', color: COLORS.text, textAlign: 'right' },
+  resultScorePill: {
+    backgroundColor: '#1E1B4B', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
+    minWidth: 54, alignItems: 'center',
+  },
+  resultScoreText: { fontSize: 11, fontWeight: '900', color: '#fff' },
+  resultTeamAway: { flex: 1, fontSize: 11, fontWeight: '600', color: COLORS.text },
+
+  // Court Availability
+  hScroll: { gap: 8, paddingVertical: 2 },
+  courtCard: {
+    width: 140, backgroundColor: '#fff', borderRadius: RADIUS.md, padding: 10,
+    borderWidth: 1, borderColor: '#E2E8F0', gap: 3, ...SHADOWS.sm,
+  },
+  courtBadgeAvailable: {
+    backgroundColor: '#ECFDF5', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1.5,
+  },
+  courtBadgeText: { fontSize: 8.5, fontWeight: '800', color: '#065F46' },
+  courtName: { fontSize: 11, fontWeight: '700', color: COLORS.text },
+  courtSlot: { fontSize: 9, color: COLORS.textMuted },
+  courtFee: { fontSize: 10, fontWeight: '800', color: COLORS.primary, marginTop: 1 },
+  courtFeeFree: { fontSize: 10, fontWeight: '800', color: '#059669', marginTop: 1 },
+
+  emptyFacilitiesCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#fff', borderRadius: RADIUS.md, padding: 12,
+    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
+  },
+  emptyFacTitle: { fontSize: 12, fontWeight: '700', color: COLORS.text },
+  emptyFacSub: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+
+  // Top Performers
+  leaderList: { gap: 8 },
+  leaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
+  leaderRank: { width: 14, fontSize: 12, fontWeight: '900', textAlign: 'center' },
+  leaderAvatar: {
+    width: 32, height: 32, borderRadius: 16, backgroundColor: '#EEF2FF',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  leaderAvatarText: { fontSize: 12, fontWeight: '800', color: COLORS.primary },
+  leaderName: { fontSize: 12, fontWeight: '700', color: COLORS.text },
+  leaderSub: { fontSize: 9.5, color: COLORS.textMuted },
+  leaderScore: { fontSize: 12, fontWeight: '900', color: COLORS.primary },
+
+  // Promo Banner
+  promoBanner: { borderRadius: RADIUS.lg, overflow: 'hidden', ...SHADOWS.sm },
+  promoGradient: { padding: 16 },
+  promoTitle: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  promoSub: { fontSize: 11, color: '#C7D2FE', marginTop: 2, marginBottom: 12 },
+  promoBtn: {
+    backgroundColor: '#fff', borderRadius: RADIUS.md, paddingVertical: 9, alignItems: 'center',
+  },
+  promoBtnText: { fontSize: 12, fontWeight: '800', color: COLORS.primaryDark },
 
   // Utils
   row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: COLORS.text, letterSpacing: -0.1 },
-  playerNameTag: { fontSize: 11, fontWeight: '600', color: COLORS.primary },
-  link: { fontSize: 11, fontWeight: '700', color: '#4F46E5' },
-  hScroll: { gap: 8, paddingVertical: 2 },
-
-  // Hub Actions Grid — 4 per row
-  hubGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-  },
-  hubCard: {
-    width: '22%', flexGrow: 1,
-    backgroundColor: '#fff', borderRadius: RADIUS.md, paddingVertical: 9, paddingHorizontal: 6,
-    alignItems: 'center', gap: 4,
-    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
-  },
-  hubIcon: {
-    width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
-  },
-  hubEmoji: { fontSize: 18 },
-  hubLabel: { fontSize: 10, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
-
-  // My Activity Stats
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  statTile: { alignItems: 'center', flex: 1, gap: 2 },
-  statEmoji: { fontSize: 16 },
-  statValue: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  statLabel: { fontSize: 9, fontWeight: '600', color: COLORS.textMuted, textAlign: 'center' },
-
-  // Court Cards
-  courtCard: {
-    width: 145, backgroundColor: '#fff', borderRadius: RADIUS.md, padding: 10,
-    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm, gap: 4,
-  },
-  courtSport: { fontSize: 18 },
-  courtBadge: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1.5 },
-  courtBadgeText: { fontSize: 9, fontWeight: '800' },
-  courtName: { fontSize: 12, fontWeight: '700', color: COLORS.text },
-  courtSlot: { fontSize: 9.5, color: COLORS.textMuted, marginLeft: 2, flexShrink: 1 },
-  courtFee: { fontSize: 10, fontWeight: '700', color: COLORS.primary, marginTop: 2 },
-  courtFeeFree: { fontSize: 10, fontWeight: '700', color: '#4F46E5', marginTop: 2 },
-
-  emptyFacilitiesCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: RADIUS.md, padding: 12,
-    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
-  },
-  emptyTitle: { fontSize: 12, fontWeight: '700', color: COLORS.text },
-  emptySubtitle: { fontSize: 10, color: COLORS.textMuted, marginTop: 2 },
-
-  // Live
-  liveDotRed: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#EF4444' },
-  liveTag: { backgroundColor: '#FEE2E2', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 4 },
-  liveTagText: { fontSize: 8, fontWeight: '800', color: '#DC2626' },
-  countBadge: {
-    backgroundColor: '#EEF2FF', borderRadius: RADIUS.full,
-    paddingHorizontal: 6, paddingVertical: 1,
-    fontSize: 10, fontWeight: '700', color: '#4F46E5',
-  },
-
-  // Empty / More
-  emptyRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
-  emptyRowText: { fontSize: 12, color: COLORS.textMuted },
-  morePill: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
-    backgroundColor: '#F1F5F9', borderRadius: RADIUS.sm, paddingVertical: 7,
-  },
-  morePillText: { fontSize: 11, fontWeight: '700', color: '#475569' },
-
-  // Challenges
-  challengeGrid: { gap: 6 },
-  challengeCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', borderRadius: RADIUS.md, padding: 10,
-    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
-  },
-  challengeIcon: {
-    width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
-  },
-  challengeName: { fontSize: 12, fontWeight: '700', color: COLORS.text },
-  challengeBy: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
-  slotPill: { borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 3 },
-  slotText: { fontSize: 10, fontWeight: '800' },
-
-  // Auction
-  auctionCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', borderRadius: RADIUS.md, padding: 10,
-    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
-  },
-  auctionAvatar: {
-    width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
-  },
-  auctionName: { fontSize: 12, fontWeight: '700', color: COLORS.text },
-  auctionRole: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
-  auctionBid: { fontSize: 13, fontWeight: '800' },
-  auctionBidder: { fontSize: 9, color: COLORS.textMuted },
-
-  // Leaderboard
-  leaderRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
-  },
-  leaderMedal: { fontSize: 16, width: 22 },
-  leaderAvatar: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
-  },
-  leaderAvatarText: { fontSize: 12, fontWeight: '700', color: '#4F46E5' },
-  leaderName: { fontSize: 12, fontWeight: '700', color: COLORS.text },
-  leaderFlat: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
-  winPill: { backgroundColor: '#EEF2FF', borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 3 },
-  winPillText: { fontSize: 11, fontWeight: '800', color: '#4F46E5' },
-  emptyLeaderboardRow: { paddingVertical: 12, alignItems: 'center' },
-  emptyLeaderboardText: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center' },
-
-  // ── Registration Cards (Playinga-style) ───────────────────────
-  // ── Active Tournaments ──────────────────────────────────────────
-  liveDotOuter: {
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: 'rgba(239,68,68,0.2)', alignItems: 'center', justifyContent: 'center',
-  },
-  liveDotInner: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
-  liveCountBadge: {
-    backgroundColor: '#FEE2E2', borderRadius: RADIUS.full,
-    paddingHorizontal: 8, paddingVertical: 2,
-  },
-  liveCountText: { fontSize: 10, fontWeight: '800', color: '#DC2626' },
-  tournamentList: { gap: 12 },
-
-  regDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#4F46E5',
-  },
-  regCountBadge: {
-    backgroundColor: '#EEF2FF', borderRadius: RADIUS.full,
-    paddingHorizontal: 8, paddingVertical: 2,
-  },
-  regCountText: { fontSize: 10, fontWeight: '800', color: '#4F46E5' },
-  regScroll: { gap: 10, paddingVertical: 4 },
-  regCard: {
-    width: 230,
-    backgroundColor: '#fff',
-    borderRadius: RADIUS.lg,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.15)',
-    gap: 10,
-    ...SHADOWS.sm,
-  },
-  regCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  regSportBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#EEF2FF', borderRadius: RADIUS.full,
-    paddingHorizontal: 8, paddingVertical: 4,
-  },
-  regSportLabel: { fontSize: 10, fontWeight: '700', color: '#4F46E5', textTransform: 'uppercase' },
-  regStatusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderRadius: RADIUS.full, paddingHorizontal: 7, paddingVertical: 3,
-  },
-  regStatusOpen: { backgroundColor: '#ECFDF5' },
-  regStatusAlmost: { backgroundColor: '#FFFBEB' },
-  regStatusFull: { backgroundColor: '#FEF2F2' },
-  regStatusDot: { width: 5, height: 5, borderRadius: 3 },
-  regStatusText: { fontSize: 9, fontWeight: '800' },
-  regCardTitle: { fontSize: 14, fontWeight: '800', color: COLORS.text, lineHeight: 20 },
-  regMeta: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  regMetaChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#EEF2FF', borderRadius: 4,
-    paddingHorizontal: 6, paddingVertical: 2,
-  },
-  regMetaText: { fontSize: 9, fontWeight: '700', color: '#4F46E5', textTransform: 'capitalize' },
-  regSlots: { gap: 5 },
-  regSlotsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  regSlotsLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
-  regSpotsLeft: { fontSize: 10, fontWeight: '700', color: '#4F46E5' },
-  regProgressBg: { height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, overflow: 'hidden' },
-  regProgressFill: { height: 4, borderRadius: 2 },
-  regDeadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  regDeadline: { fontSize: 10, color: COLORS.textMuted },
-  regCTA: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    backgroundColor: '#4F46E5', borderRadius: RADIUS.md,
-    paddingVertical: 9,
-  },
-  regCTADisabled: { backgroundColor: '#E2E8F0' },
-  regCTAText: { fontSize: 12, fontWeight: '800', color: '#fff' },
-  regEmptyCard: { borderRadius: RADIUS.lg, overflow: 'hidden', ...SHADOWS.sm },
-  regEmptyInner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 16,
-  },
-  regEmptyTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text },
-  regEmptySubtitle: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-
-  // ── Sport-grouped tournament registration cards ──────────────────────
-  regTournamentCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.12)',
-    overflow: 'hidden',
-    ...SHADOWS.card,
-  },
-  regTournamentHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 12, gap: 10,
-  },
-  regTournamentLeft: { flex: 1, gap: 0 },
-  regTournamentName: { fontSize: 14, fontWeight: '800', color: COLORS.text, flex: 1, marginRight: 6 },
-  regTournamentMeta: { fontSize: 10, color: COLORS.textMuted, fontWeight: '500', marginLeft: 3 },
-  regExpandBtn: {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.primaryLight,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  regSportGroups: {
-    borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.08)',
-    backgroundColor: '#FAFBFF',
-  },
-  regSportRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 11, gap: 10,
-  },
-  regSportRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(99,102,241,0.06)' },
-  regSportRowRegistered: { backgroundColor: '#F0FDF4' },
-  regSportEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
-  regSportInfo: { flex: 1 },
-  regSportName: { fontSize: 13, fontWeight: '700', color: COLORS.text },
-  regSportCats: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
-  regSportBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.full,
-    paddingHorizontal: 12, paddingVertical: 6,
-  },
-  regSportBtnClosed: { backgroundColor: COLORS.surfaceAlt },
-  regSportBtnText: { fontSize: 11, fontWeight: '800', color: '#fff' },
-  regConfirmedChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#ECFDF5', borderRadius: RADIUS.full,
-    paddingHorizontal: 10, paddingVertical: 5,
-  },
-  regConfirmedText: { fontSize: 10, fontWeight: '800', color: '#065F46' },
-  regTournamentFooter: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
-    borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.08)',
-    paddingVertical: 9,
-  },
-  regViewDetails: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
-
-  // ── Per-Category Cards inside sport groups ──────────────────────
-  regSportSection: { gap: 6, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 },
-  regSportSectionHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(99,102,241,0.08)',
-    marginBottom: 2,
-  },
-  regSportCount: {
-    backgroundColor: '#EEF2FF', borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
-  },
-  regSportCountText: { fontSize: 9, fontWeight: '700', color: '#4F46E5' },
-
-  catCard: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 10,
-    borderWidth: 1, borderColor: 'rgba(99,102,241,0.10)', gap: 7,
-    marginBottom: 6,
-  },
-  catCardTop: { gap: 5 },
-  catCardName: { fontSize: 13, fontWeight: '800', color: COLORS.text, lineHeight: 18 },
-  catTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  catTag: {
-    backgroundColor: '#EEF2FF', borderRadius: 4, borderWidth: 1, borderColor: '#C7D2FE',
-    paddingHorizontal: 6, paddingVertical: 1.5,
-  },
-  catTagText: { fontSize: 9, fontWeight: '700', color: '#4F46E5' },
-  catCapacity: { gap: 3 },
-  catCapacityRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  catCapacityLabel: { fontSize: 9, color: COLORS.textMuted, fontWeight: '600' },
-  catCapacityCount: { fontSize: 9, fontWeight: '700', color: '#4F46E5' },
-  catProgressBg: { height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, overflow: 'hidden' },
-  catProgressFill: { height: 4, borderRadius: 2 },
-  catRegisteredRow: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#ECFDF5', borderRadius: 7, padding: 6 },
-  catRegisteredText: { fontSize: 10, fontWeight: '700', color: '#059669' },
-  catActionBtn: {
-    backgroundColor: '#4F46E5', borderRadius: 8, paddingVertical: 8,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  catActionBtnDisabled: { backgroundColor: '#F1F5F9' },
-  catActionBtnText: { fontSize: 11, fontWeight: '800', color: '#fff' },
-  catActionBtnTextDisabled: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
-
-  // CTA Banner
-  ctaBanner: { borderRadius: RADIUS.lg, overflow: 'hidden', ...SHADOWS.sm },
-  ctaGradient: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 12, gap: 10,
-  },
-  ctaBadge: {
-    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginBottom: 4,
-  },
-  ctaBadgeText: { fontSize: 8, fontWeight: '800', color: '#A5B4FC', letterSpacing: 0.5 },
-  ctaTitle: { fontSize: 13, fontWeight: '800', color: '#fff' },
-  ctaSub: { fontSize: 10, color: '#C7D2FE', marginTop: 2 },
 });

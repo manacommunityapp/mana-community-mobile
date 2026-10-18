@@ -575,7 +575,8 @@ export interface CommunitySettingsDto {
 // ── Sports ─────────────────────────────────────────────────────
 export type SportType =
   | 'CRICKET' | 'FOOTBALL' | 'BADMINTON' | 'TABLE_TENNIS'
-  | 'BASKETBALL' | 'VOLLEYBALL' | 'CHESS' | 'CARROM' | 'OTHER';
+  | 'BASKETBALL' | 'VOLLEYBALL' | 'CHESS' | 'CARROM'
+  | 'TENNIS' | 'PICKLEBALL' | 'SWIMMING' | 'OTHER';
 
 export type TournamentFormat  = 'KNOCKOUT' | 'ROUND_ROBIN' | 'LEAGUE' | 'SWISS';
 export type TournamentStatus  = 'UPCOMING' | 'REGISTRATION_OPEN' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
@@ -661,6 +662,7 @@ export interface MatchDto {
   homeWickets?:     number;
   awayOvers?:       string;
   awayWickets?:     number;
+  winnerTeamName?:  string;
 }
 
 export interface MatchEventDto {
@@ -739,6 +741,38 @@ export interface GenericScoreRequest {
   pointsAwarded?: number;
   playerId?:      number;
   matchMinute?:   number;
+}
+
+// ── Sports Community Challenges ────────────────────────────────
+export type SportsChallengeStatus = 'OPEN' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
+
+export interface SportsChallengeDto {
+  id:              number;
+  title:           string;
+  sport:           SportType;
+  creatorId:       number;
+  creatorName:     string;
+  creatorFlat?:    string;
+  format:          string; // e.g. "1v1 Friendly", "2v2 Doubles", "6v6 Box"
+  venue?:          string; // e.g. "Clubhouse Court 1"
+  scheduledTime?:  string; // e.g. "Today 6:30 PM", "Tomorrow 7:00 AM"
+  status:          SportsChallengeStatus;
+  challengerName?: string;
+  challengerFlat?: string;
+  emoji?:          string;
+  color?:          string;
+  bg?:             string;
+  notes?:          string;
+  createdAt:       string;
+}
+
+export interface CreateSportsChallengeRequest {
+  title:          string;
+  sport:          SportType;
+  format:         string;
+  venue?:         string;
+  scheduledTime?: string;
+  notes?:         string;
 }
 
 // ── Sports Dashboard & Event Registrations ──────────────────────

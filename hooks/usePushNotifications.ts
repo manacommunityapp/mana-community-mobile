@@ -136,7 +136,12 @@ export function resolveRoute(data: Record<string, unknown>): string | null {
     // Sports
     case 'SPORTS_MATCH':
     case 'SPORTS_RESULT':
-      return '/tabs/sports';
+    case 'SPORTS_TOURNAMENT':
+    case 'SPORTS_CHALLENGE':
+      if (data.matchId) return `/sports/match/${data.matchId}`;
+      if (data.tournamentId) return `/sports/tournament/${data.tournamentId}`;
+      if (data.challengeId) return '/sports/challenge';
+      return '/sports';
 
     // Marketplace & Auction
     case 'AUCTION_BID':

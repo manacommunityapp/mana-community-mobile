@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { format, formatDistanceToNow } from 'date-fns';
 import { safeFormat } from '@/utils/dateUtils';
+import { shareMatch } from '@/utils/sportsShare';
 import { LiveScoringModal } from '@/components/sports/LiveScoringModal';
 import type { MatchDto, MatchEventDto } from '@/types/api';
 
@@ -210,14 +211,24 @@ export default function LiveMatchScreen() {
           <Text style={scr.sport}>{SPORT_EMOJI[match.sport]} {match.tournamentName}</Text>
           {match.round && <Text style={scr.round}>{match.round}</Text>}
         </View>
-        {isLive && (
-          <View style={scr.liveBadge}>
-            <View style={scr.liveDot} />
-            <Text style={scr.liveText}>LIVE</Text>
-            {!connected && <Text style={scr.reconnect}> ·Reconnecting</Text>}
-          </View>
-        )}
-        {isDone && <Text style={scr.doneBadge}>FT</Text>}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {isLive && (
+            <View style={scr.liveBadge}>
+              <View style={scr.liveDot} />
+              <Text style={scr.liveText}>LIVE</Text>
+              {!connected && <Text style={scr.reconnect}> ·Reconnecting</Text>}
+            </View>
+          )}
+          {isDone && <Text style={scr.doneBadge}>FT</Text>}
+          <TouchableOpacity
+            onPress={() => shareMatch(match)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={scr.topShareBtn}
+            accessibilityLabel="Share match summary"
+          >
+            <Ionicons name="share-social-outline" size={17} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[1]}>
@@ -320,6 +331,12 @@ export default function LiveMatchScreen() {
               <Text style={scr.actionBtnText}>⭐ Rate Players</Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            style={scr.actionBtn}
+            onPress={() => shareMatch(match)}
+          >
+            <Text style={scr.actionBtnText}>📤 Share Match</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Scheduled info */}
@@ -356,6 +373,7 @@ const scr = StyleSheet.create({
   topMid:         { flex: 1, gap: 1 },
   sport:          { fontSize: 13, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   round:          { fontSize: 11, color: COLORS.textMuted },
+  topShareBtn:    { padding: 6, borderRadius: 8, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   liveBadge:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   liveDot:        { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.error },
   liveText:       { fontSize: 11, fontWeight: '800', color: COLORS.error },

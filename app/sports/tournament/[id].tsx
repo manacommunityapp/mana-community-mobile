@@ -13,6 +13,7 @@ import { ScoreCard } from '@/components/sports/ScoreCard';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import { COLORS } from '@/constants/config';
 import { safeFormat, formatTournamentDateRange } from '@/utils/dateUtils';
+import { shareTournament } from '@/utils/sportsShare';
 import type { DashboardEventCardDto } from '@/types/api';
 
 const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings'] as const;
@@ -276,6 +277,14 @@ export default function TournamentDetailScreen() {
         {tournament.myTeamRegistered && (
           <View style={scr.registeredBadge}><Text style={scr.registeredText}>Registered</Text></View>
         )}
+        <TouchableOpacity
+          onPress={() => shareTournament(tournament)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={scr.headerShareBtn}
+          accessibilityLabel="Share tournament"
+        >
+          <Ionicons name="share-social-outline" size={18} color="#fff" />
+        </TouchableOpacity>
       </LinearGradient>
 
       {/* Hero banner */}
@@ -543,6 +552,10 @@ const scr = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#F8FAFC' },
   header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
   backBtn:        {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
+  },
+  headerShareBtn: {
     width: 32, height: 32, borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
   },
