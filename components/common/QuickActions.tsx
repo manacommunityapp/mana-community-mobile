@@ -54,6 +54,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   // Social & Sports
   { id: "sports",           emoji: "🏆", icon: "trophy-outline",            label: "Sports",        route: "/sports",                   bg: "#DCFCE7", color: "#059669", category: "Social & Sports" },
   { id: "events",           emoji: "📅", icon: "calendar-outline",         label: "Events & Passes",route: "/tabs/events",              bg: "#EEF2FF", color: "#4F46E5", category: "Social & Sports" },
+  { id: "mobility",         emoji: "🚖", icon: "navigate-circle-outline",   label: "Mobility Hub",  route: "/mobility",                 bg: "#DBEAFE", color: "#2563EB", category: "Social & Sports", badge: "NEW" },
   { id: "commute",          emoji: "🚗", icon: "car-sport-outline",         label: "Commute",       route: "/commute",                  bg: "#CFFAFE", color: "#0284C7", category: "Social & Sports" },
   { id: "governance",       emoji: "🏛️", icon: "business-outline",          label: "Governance",    route: "/governance",               bg: "#EDE9FE", color: "#7C3AED", category: "Social & Sports", badge: "NEW" },
   { id: "academy",          emoji: "🎓", icon: "school-outline",            label: "Academy",       route: "/academy",                  bg: "#F3E8FF", color: "#9333EA", category: "Social & Sports", badge: "NEW" },

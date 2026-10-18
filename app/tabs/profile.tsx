@@ -852,6 +852,14 @@ export default function ProfileScreen() {
             />
           )}
           <MenuItem
+            icon="navigate-circle-outline"
+            label="Mobility Hub"
+            sublabel="Carpool, group rides & on-demand"
+            onPress={() => router.push('/mobility' as any)}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
+          />
+          <MenuItem
             icon="car-sport-outline"
             label="Commute Carpool"
             sublabel="Rideshare with neighbors"
