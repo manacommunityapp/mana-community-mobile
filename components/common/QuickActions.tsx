@@ -22,7 +22,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   // Safety & Help
   { id: "emergency",        emoji: "🚨", icon: "alert-circle-outline",      label: "Emergency SOS", route: "/emergency",                bg: "#FEE2E2", color: "#DC2626", category: "Safety & Help",   badge: "24x7" },
   { id: "visitors",         emoji: "🛡️", icon: "shield-checkmark-outline", label: "Visitors Gate", route: "/visitors",                 bg: "#CFFAFE", color: "#0891B2", category: "Safety & Help" },
-  { id: "turnstiles",       emoji: "🎟️", icon: "qr-code-outline",           label: "Turnstiles",    route: "/access/turnstiles",        bg: "#E0F2FE", color: "#0284C7", category: "Safety & Help" },
+  { id: "turnstiles",       emoji: "🚪", icon: "hardware-chip-outline",     label: "Smart Gates",   route: "/access/turnstiles",        bg: "#E0F2FE", color: "#0284C7", category: "Safety & Help",   badge: "BIOMETRIC" },
   { id: "helpdesk",         emoji: "🎧", icon: "headset-outline",           label: "Helpdesk",      route: "/helpdesk",                 bg: "#FEF3C7", color: "#D97706", category: "Safety & Help" },
   { id: "insta_help",       emoji: "⚡", icon: "flash-outline",             label: "Insta-Help",    route: "/services/insta-help",      bg: "#FEF3C7", color: "#D97706", category: "Safety & Help",   badge: "15m" },
   { id: "health",           emoji: "🩺", icon: "medkit-outline",            label: "Health",        route: "/health",                   bg: "#F0FDFA", color: "#0D9488", category: "Safety & Help" },
