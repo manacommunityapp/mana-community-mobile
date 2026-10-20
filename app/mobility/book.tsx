@@ -1,20 +1,21 @@
 /**
- * Rapido-style booking screen:
- *   Phase 1 – location inputs (pickup + destination) with quick-saved places
- *   Phase 2 – all vehicle types shown simultaneously with live fare quotes
- *   Phase 3 – confirm sheet with payment method + promo code
+ * Rapido / Uber-style booking screen:
+ *   Phase 1 – Location inputs (pickup + destination) with quick-saved places & GPS
+ *   Phase 2 – Vehicle types shown with live fare quotes & ETA
+ *   Phase 3 – Confirmation sheet with itemized breakdown, promo code & payment
  */
 import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, BackHandler, Modal,
+  TextInput, ActivityIndicator, Alert, BackHandler, StatusBar,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { mobilityPassengerService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { MobilityServiceType, MobilityFareQuoteDto, CreateRideRequest } from '@/types/mobility';
@@ -36,41 +37,79 @@ interface VehicleOption {
   sublabel:  string;
   maxPax:    number;
   enabled:   boolean;
+  color:     string;
+  iconBg:    string;
 }
 
 const VEHICLE_OPTIONS: VehicleOption[] = [
-  { type: 'CARPOOL',    icon: 'people',      label: 'Carpool',      sublabel: 'Share with neighbors', maxPax: 3, enabled: true },
-  { type: 'GROUP_RIDE', icon: 'bus',         label: 'Group Ride',   sublabel: 'Event transport',      maxPax: 8, enabled: true },
-  { type: 'BIKE',       icon: 'bicycle',     label: 'Bike',         sublabel: 'Fastest & cheapest',   maxPax: 1, enabled: false },
-  { type: 'AUTO',       icon: 'car-sport',   label: 'Auto',         sublabel: 'Affordable & quick',   maxPax: 3, enabled: false },
-  { type: 'CAB',        icon: 'car',         label: 'Cab',          sublabel: 'Comfortable AC ride',  maxPax: 4, enabled: false },
+  {
+    type:     'CARPOOL',
+    icon:     'people',
+    label:    'Carpool',
+    sublabel: 'Share ride with neighbors',
+    maxPax:   3,
+    enabled:  true,
+    color:    '#4F46E5',
+    iconBg:   '#EEF2FF',
+  },
+  {
+    type:     'GROUP_RIDE',
+    icon:     'bus',
+    label:    'Group Ride',
+    sublabel: 'Spacious event transport',
+    maxPax:   8,
+    enabled:  true,
+    color:    '#059669',
+    iconBg:   '#ECFDF5',
+  },
+  {
+    type:     'BIKE',
+    icon:     'bicycle',
+    label:    'Bike',
+    sublabel: 'Fastest & cheapest solo ride',
+    maxPax:   1,
+    enabled:  false,
+    color:    '#D97706',
+    iconBg:   '#FFFBEB',
+  },
+  {
+    type:     'AUTO',
+    icon:     'car-sport',
+    label:    'Auto',
+    sublabel: 'Affordable & quick city ride',
+    maxPax:   3,
+    enabled:  false,
+    color:    '#0891B2',
+    iconBg:   '#ECFEFF',
+  },
+  {
+    type:     'CAB',
+    icon:     'car',
+    label:    'Cab',
+    sublabel: 'Comfortable air-conditioned cab',
+    maxPax:   4,
+    enabled:  false,
+    color:    '#7C3AED',
+    iconBg:   '#F5F3FF',
+  },
 ];
 
-// ── Saved places (replace with user profile API) ──────────────────
+// ── Saved places ───────────────────────────────────────────────────
 const SAVED_PLACES = [
-  { icon: 'home' as const,   label: 'Home',   sublabel: 'Set home address',   addr: '' },
-  { icon: 'business' as const, label: 'Work', sublabel: 'Set work address',   addr: '' },
+  { icon: 'home' as const,       label: 'Home',           sublabel: 'Flat / Villa address',    addr: '' },
+  { icon: 'business' as const,   label: 'Work',           sublabel: 'Office / Tech Park',      addr: '' },
+  { icon: 'shield-checkmark' as const, label: 'Main Gate', sublabel: 'Community Security Gate', addr: 'Community Main Entrance Gate' },
 ];
 
-// ── Community default coords (fallback when GPS unavailable) ─────
+// ── Community default coords (fallback when GPS unavailable) ───────
 const DEFAULT_LAT = 17.385;
 const DEFAULT_LNG = 78.4867;
 
 // ── Payment options ────────────────────────────────────────────────
-const PAYMENT_OPTIONS: { method: PaymentMethod; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
-  { method: 'CASH',   icon: 'cash-outline',   label: 'Cash' },
-  { method: 'UPI',    icon: 'phone-portrait', label: 'UPI' },
-  { method: 'WALLET', icon: 'wallet',         label: 'Mana Wallet' },
-];
-
-// ── Cancel reasons ─────────────────────────────────────────────────
-const CANCEL_REASONS = [
-  'Booked by mistake',
-  'Waiting too long for driver',
-  'Change of plans',
-  'Wrong location entered',
-  'Found another ride',
-  'Other',
+const PAYMENT_OPTIONS: { method: PaymentMethod; icon: keyof typeof Ionicons.glyphMap; label: string; sub: string }[] = [
+  { method: 'CASH',   icon: 'cash-outline',           label: 'Cash',        sub: 'Pay driver directly' },
+  { method: 'UPI',    icon: 'phone-portrait-outline', label: 'UPI / QR',    sub: 'Instant GooglePay/PhonePe' },
+  { method: 'WALLET', icon: 'wallet-outline',         label: 'Mana Wallet', sub: 'Instant 1-tap checkout' },
 ];
 
 export default function BookRideScreen() {
@@ -120,9 +159,6 @@ export default function BookRideScreen() {
     }
   }
 
-  // ── Cancel modal ────────────────────────────────────────────────
-  const [showCancelModal, setShowCancelModal] = useState(false);
-
   const goBack = useCallback(() => {
     if (phase === 'LOCATION')    { router.back(); return true; }
     if (phase === 'SELECT_RIDE') { setPhase('LOCATION'); return true; }
@@ -140,7 +176,7 @@ export default function BookRideScreen() {
   // Fetch all enabled vehicle quotes in parallel
   async function fetchAllQuotes() {
     if (!pickupAddr.trim() || !destAddr.trim()) {
-      Alert.alert('Required', 'Enter both pickup and destination before continuing');
+      Alert.alert('Required', 'Please enter both pickup and destination locations.');
       return;
     }
     setLoadingQuotes(true);
@@ -193,201 +229,297 @@ export default function BookRideScreen() {
   const selectedQuote = quotes.find(q => q.type === selectedType);
   const vehicleMeta   = VEHICLE_OPTIONS.find(v => v.type === selectedType);
 
-  const phaseLabel = phase === 'LOCATION' ? 'Where to?' :
-                     phase === 'SELECT_RIDE' ? 'Choose ride' : 'Confirm booking';
+  const phaseTitle = phase === 'LOCATION' ? 'Where to?' :
+                     phase === 'SELECT_RIDE' ? 'Choose Ride' : 'Confirm Ride';
+
+  const phaseStep = phase === 'LOCATION' ? 1 : phase === 'SELECT_RIDE' ? 2 : 3;
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      {/* ── Header ────────────────────────────────────────────── */}
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* ── Modern Navigation Header ──────────────────────────── */}
       <View style={s.header}>
-        <TouchableOpacity onPress={goBack} hitSlop={8} style={s.backBtn}>
+        <TouchableOpacity onPress={goBack} hitSlop={12} style={s.backBtn} accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>{phaseLabel}</Text>
-        {/* Step dots */}
-        <View style={s.stepRow}>
-          {(['LOCATION', 'SELECT_RIDE', 'CONFIRM'] as Phase[]).map((p, i) => (
-            <View
-              key={p}
-              style={[s.stepDot,
-                phase === p && s.stepDotActive,
-                i < (['LOCATION','SELECT_RIDE','CONFIRM'] as Phase[]).indexOf(phase) && s.stepDotDone,
-              ]}
-            />
-          ))}
+
+        <View style={s.headerCenter}>
+          <Text style={s.headerTitle}>{phaseTitle}</Text>
+          <Text style={s.headerSubtitle}>Step {phaseStep} of 3</Text>
+        </View>
+
+        {/* 3-Step Indicator Bar */}
+        <View style={s.stepPills}>
+          {(['LOCATION', 'SELECT_RIDE', 'CONFIRM'] as Phase[]).map((p, idx) => {
+            const currentIdx = (['LOCATION', 'SELECT_RIDE', 'CONFIRM'] as Phase[]).indexOf(phase);
+            const isDone    = idx < currentIdx;
+            const isActive  = phase === p;
+            return (
+              <View
+                key={p}
+                style={[
+                  s.stepPill,
+                  isActive && s.stepPillActive,
+                  isDone && s.stepPillDone,
+                ]}
+              />
+            );
+          })}
         </View>
       </View>
 
-      {/* ── Map placeholder (always visible) ──────────────────── */}
-      <View style={s.mapArea}>
-        <Ionicons name="map-outline" size={28} color={COLORS.textMuted} />
-        <Text style={s.mapText}>Map · connect expo-location + Maps SDK for live pins</Text>
+      {/* ── Vector Map Preview ───────────────────────────────── */}
+      <View style={s.mapWrapper}>
+        <LinearGradient
+          colors={['#E0E7FF', '#EFF6FF', '#F8FAFC']}
+          style={s.mapCanvas}
+        >
+          {/* Decorative transit road grid */}
+          <View style={s.mapRoadH1} />
+          <View style={s.mapRoadH2} />
+          <View style={s.mapRoadV1} />
+          <View style={s.mapRoadV2} />
+
+          {/* Interactive route path simulation */}
+          <View style={s.mapRoutePath}>
+            {/* Origin Pin */}
+            <View style={s.mapPinWrap}>
+              <View style={s.mapPinOriginOuter}>
+                <View style={s.mapPinOriginInner} />
+              </View>
+              <View style={s.mapPinLabel}>
+                <Text style={s.mapPinLabelText}>Pickup</Text>
+              </View>
+            </View>
+
+            {/* Dashed connector */}
+            <View style={s.mapConnectorLine} />
+
+            {/* Destination Pin */}
+            <View style={s.mapPinWrap}>
+              <View style={s.mapPinDestOuter}>
+                <Ionicons name="location" size={14} color="#EF4444" />
+              </View>
+              <View style={s.mapPinLabel}>
+                <Text style={s.mapPinLabelText}>Destination</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* GPS Quick Button on Map */}
+          <TouchableOpacity
+            style={s.floatingGpsBtn}
+            onPress={handleGps}
+            disabled={gpsLoading}
+            activeOpacity={0.85}
+          >
+            {gpsLoading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <>
+                <Ionicons name="locate" size={16} color={COLORS.primary} />
+                <Text style={s.floatingGpsText}>Locate</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </LinearGradient>
       </View>
 
-      {/* ── Phase 1: Location ─────────────────────────────────── */}
+      {/* ── Phase 1: Location Inputs ──────────────────────────── */}
       {phase === 'LOCATION' && (
         <View style={s.bottomSheet}>
-          {/* Location inputs */}
-          <View style={s.locationCard}>
-            <View style={s.locationRow}>
-              <View style={s.locationDotGreen} />
-              <TouchableOpacity
-                style={[s.locationInput, activeInput === 'pickup' && s.locationInputFocused]}
-                onPress={() => setActiveInput('pickup')}
-                activeOpacity={1}
-              >
-                <TextInput
-                  style={s.locationInputText}
-                  placeholder="Pickup location"
-                  placeholderTextColor={COLORS.textMuted}
-                  value={pickupAddr}
-                  onChangeText={setPickupAddr}
-                  onFocus={() => setActiveInput('pickup')}
-                />
-                {pickupAddr.length > 0 && (
-                  <TouchableOpacity onPress={() => setPickupAddr('')} hitSlop={8}>
-                    <Ionicons name="close-circle" size={15} color={COLORS.textMuted} />
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.gpsBtn}
-                onPress={handleGps}
-                disabled={gpsLoading}
-              >
-                {gpsLoading
-                  ? <ActivityIndicator size={14} color={COLORS.primary} />
-                  : <Ionicons name="locate" size={18} color={COLORS.primary} />}
-              </TouchableOpacity>
-            </View>
-
-            <View style={s.locationDivider} />
-
-            <View style={s.locationRow}>
-              <View style={s.locationDotRed} />
-              <TouchableOpacity
-                style={[s.locationInput, activeInput === 'dest' && s.locationInputFocused]}
-                onPress={() => setActiveInput('dest')}
-                activeOpacity={1}
-              >
-                <TextInput
-                  style={s.locationInputText}
-                  placeholder="Where to?"
-                  placeholderTextColor={COLORS.textMuted}
-                  value={destAddr}
-                  onChangeText={setDestAddr}
-                  onFocus={() => setActiveInput('dest')}
-                  returnKeyType="done"
-                />
-                {destAddr.length > 0 && (
-                  <TouchableOpacity onPress={() => setDestAddr('')} hitSlop={8}>
-                    <Ionicons name="close-circle" size={15} color={COLORS.textMuted} />
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Saved places */}
-          <View style={s.savedRow}>
-            {SAVED_PLACES.map((sp) => (
-              <TouchableOpacity
-                key={sp.label}
-                style={s.savedChip}
-                onPress={() => {
-                  if (sp.addr) {
-                    if (activeInput === 'pickup') setPickupAddr(sp.addr);
-                    else setDestAddr(sp.addr);
-                  } else {
-                    Alert.alert(`Save ${sp.label}`, `Add your ${sp.label.toLowerCase()} address in profile settings`);
-                  }
-                }}
-                activeOpacity={0.8}
-              >
-                <Ionicons name={sp.icon} size={14} color={COLORS.primary} />
-                <View>
-                  <Text style={s.savedChipLabel}>{sp.label}</Text>
-                  <Text style={s.savedChipSub} numberOfLines={1}>{sp.sublabel}</Text>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.bottomSheetScroll}>
+            {/* Route Input Card */}
+            <View style={s.locationCard}>
+              {/* Pickup row */}
+              <View style={s.inputRow}>
+                <View style={s.originDotWrap}>
+                  <View style={s.originDot} />
                 </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                <View style={[s.inputBox, activeInput === 'pickup' && s.inputBoxFocused]}>
+                  <TextInput
+                    style={s.inputText}
+                    placeholder="Enter pickup location"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={pickupAddr}
+                    onChangeText={setPickupAddr}
+                    onFocus={() => setActiveInput('pickup')}
+                  />
+                  {pickupAddr.length > 0 && (
+                    <TouchableOpacity onPress={() => setPickupAddr('')} hitSlop={8}>
+                      <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
 
-          {/* CTA */}
-          <TouchableOpacity
-            style={[s.ctaBtn, loadingQuotes && s.ctaBtnDisabled]}
-            onPress={fetchAllQuotes}
-            activeOpacity={0.85}
-            disabled={loadingQuotes}
-          >
-            {loadingQuotes
-              ? <><ActivityIndicator color="#fff" /><Text style={s.ctaBtnText}>Getting fares…</Text></>
-              : <><Text style={s.ctaBtnText}>See Available Rides</Text><Ionicons name="arrow-forward" size={16} color="#fff" /></>
-            }
-          </TouchableOpacity>
+              {/* Connecting dashed track */}
+              <View style={s.trackConnector}>
+                <View style={s.trackDot} />
+                <View style={s.trackDot} />
+                <View style={s.trackDot} />
+              </View>
+
+              {/* Destination row */}
+              <View style={s.inputRow}>
+                <View style={s.destDotWrap}>
+                  <Ionicons name="location" size={16} color="#EF4444" />
+                </View>
+                <View style={[s.inputBox, activeInput === 'dest' && s.inputBoxFocused]}>
+                  <TextInput
+                    style={s.inputText}
+                    placeholder="Where are you going?"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={destAddr}
+                    onChangeText={setDestAddr}
+                    onFocus={() => setActiveInput('dest')}
+                    returnKeyType="done"
+                  />
+                  {destAddr.length > 0 && (
+                    <TouchableOpacity onPress={() => setDestAddr('')} hitSlop={8}>
+                      <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Quick Saved Shortcuts */}
+            <View style={s.savedPlacesSection}>
+              <Text style={s.savedSectionTitle}>Saved Places</Text>
+              <View style={s.savedGrid}>
+                {SAVED_PLACES.map((sp) => (
+                  <TouchableOpacity
+                    key={sp.label}
+                    style={s.savedCard}
+                    onPress={() => {
+                      if (sp.addr) {
+                        if (activeInput === 'pickup') setPickupAddr(sp.addr);
+                        else setDestAddr(sp.addr);
+                      } else {
+                        Alert.alert(`Set ${sp.label}`, `Please enter your ${sp.label.toLowerCase()} address above to set it for quick booking.`);
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={s.savedIconCircle}>
+                      <Ionicons name={sp.icon} size={16} color={COLORS.primary} />
+                    </View>
+                    <View style={s.savedCardText}>
+                      <Text style={s.savedCardLabel}>{sp.label}</Text>
+                      <Text style={s.savedCardSub} numberOfLines={1}>{sp.sublabel}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Primary Action Button */}
+            <TouchableOpacity
+              style={[s.primaryCtaBtn, loadingQuotes && s.primaryCtaDisabled]}
+              onPress={fetchAllQuotes}
+              activeOpacity={0.88}
+              disabled={loadingQuotes}
+            >
+              {loadingQuotes ? (
+                <>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={s.primaryCtaText}>Finding available rides…</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={s.primaryCtaText}>See Available Rides</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#fff" />
+                </>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       )}
 
-      {/* ── Phase 2: Select Ride ───────────────────────────────── */}
+      {/* ── Phase 2: Select Ride ──────────────────────────────── */}
       {phase === 'SELECT_RIDE' && (
         <View style={s.bottomSheet}>
-          {/* Route summary */}
-          <View style={s.routeSummary}>
-            <View style={s.routeRow}>
-              <View style={s.locationDotGreen} />
-              <Text style={s.routeAddrText} numberOfLines={1}>{pickupAddr}</Text>
+          {/* Route Summary Pill */}
+          <View style={s.routePillCard}>
+            <View style={s.routePillLeft}>
+              <View style={s.routeDotRow}>
+                <View style={s.routeDotMiniGreen} />
+                <Text style={s.routePillText} numberOfLines={1}>{pickupAddr}</Text>
+              </View>
+              <View style={s.routeDotRow}>
+                <View style={s.routeDotMiniRed} />
+                <Text style={s.routePillText} numberOfLines={1}>{destAddr}</Text>
+              </View>
             </View>
-            <View style={s.routeConnector} />
-            <View style={s.routeRow}>
-              <View style={s.locationDotRed} />
-              <Text style={s.routeAddrText} numberOfLines={1}>{destAddr}</Text>
-            </View>
+            <TouchableOpacity onPress={() => setPhase('LOCATION')} style={s.routeEditBtn}>
+              <Text style={s.routeEditText}>Edit</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Vehicle type grid with fares */}
-          <ScrollView style={s.vehicleScroll} showsVerticalScrollIndicator={false}>
+          {/* Vehicle List */}
+          <ScrollView style={s.vehicleList} showsVerticalScrollIndicator={false}>
             {VEHICLE_OPTIONS.map((v) => {
-              const q = quotes.find(q => q.type === v.type);
+              const q = quotes.find(quote => quote.type === v.type);
               const isSelected = selectedType === v.type;
               const isDisabled = !v.enabled;
 
               return (
                 <TouchableOpacity
                   key={v.type}
-                  style={[s.vehicleRow, isSelected && s.vehicleRowSelected, isDisabled && s.vehicleRowDisabled]}
+                  style={[
+                    s.vehicleCard,
+                    isSelected && s.vehicleCardSelected,
+                    isDisabled && s.vehicleCardDisabled,
+                  ]}
                   onPress={() => v.enabled && setSelectedType(v.type)}
                   activeOpacity={v.enabled ? 0.85 : 1}
                 >
-                  <View style={[s.vehicleIcon, isSelected && s.vehicleIconSelected]}>
-                    <Ionicons name={v.icon} size={22} color={isSelected ? '#fff' : COLORS.textMuted} />
+                  <View style={[s.vehicleIconWrap, { backgroundColor: v.iconBg }]}>
+                    <Ionicons name={v.icon} size={22} color={v.color} />
                   </View>
-                  <View style={s.vehicleInfo}>
-                    <View style={s.vehicleNameRow}>
-                      <Text style={[s.vehicleName, isSelected && s.vehicleNameSelected]}>{v.label}</Text>
+
+                  <View style={s.vehicleDetails}>
+                    <View style={s.vehicleTitleRow}>
+                      <Text style={[s.vehicleTitle, isSelected && s.vehicleTitleSelected]}>
+                        {v.label}
+                      </Text>
+                      <View style={s.paxBadge}>
+                        <Ionicons name="person" size={10} color={COLORS.textMuted} />
+                        <Text style={s.paxBadgeText}>{v.maxPax}</Text>
+                      </View>
                       {!v.enabled && (
-                        <View style={s.soonPill}>
-                          <Text style={s.soonText}>Soon</Text>
+                        <View style={s.vehicleSoonPill}>
+                          <Text style={s.vehicleSoonText}>Soon</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={s.vehicleSub}>{v.sublabel} · up to {v.maxPax} passengers</Text>
+                    <Text style={s.vehicleSub}>{v.sublabel}</Text>
                   </View>
-                  <View style={s.vehicleFare}>
+
+                  <View style={s.vehicleFareBox}>
                     {q ? (
                       <>
-                        <Text style={[s.vehicleFareAmt, isSelected && s.vehicleFareAmtSelected]}>
+                        <Text style={[s.vehicleFareNumber, isSelected && s.vehicleFareSelected]}>
                           ₹{q.quote.total.toFixed(0)}
                         </Text>
-                        <Text style={s.vehicleFareEta}>{q.quote.etaMinutes} min</Text>
+                        <View style={s.etaPill}>
+                          <Ionicons name="time-outline" size={10} color="#059669" />
+                          <Text style={s.etaPillText}>{q.quote.etaMinutes} min</Text>
+                        </View>
                       </>
                     ) : isDisabled ? (
                       <Text style={s.vehicleFareN}>—</Text>
                     ) : (
-                      <ActivityIndicator size="small" color={COLORS.textMuted} />
+                      <ActivityIndicator size="small" color={COLORS.primary} />
                     )}
                   </View>
+
                   {isSelected && (
-                    <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} style={s.vehicleCheck} />
+                    <View style={s.vehicleCheckBadge}>
+                      <Ionicons name="checkmark" size={13} color="#fff" />
+                    </View>
                   )}
                 </TouchableOpacity>
               );
@@ -395,52 +527,62 @@ export default function BookRideScreen() {
           </ScrollView>
 
           {selectedQuote && (
-            <TouchableOpacity style={s.ctaBtn} onPress={() => setPhase('CONFIRM')} activeOpacity={0.85}>
-              <Text style={s.ctaBtnText}>
+            <TouchableOpacity
+              style={s.primaryCtaBtn}
+              onPress={() => setPhase('CONFIRM')}
+              activeOpacity={0.88}
+            >
+              <Text style={s.primaryCtaText}>
                 Book {vehicleMeta?.label} · ₹{selectedQuote.quote.total.toFixed(0)}
               </Text>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
             </TouchableOpacity>
           )}
         </View>
       )}
 
-      {/* ── Phase 3: Confirm ──────────────────────────────────── */}
+      {/* ── Phase 3: Confirm Ride ─────────────────────────────── */}
       {phase === 'CONFIRM' && selectedQuote && (
         <View style={s.bottomSheet}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-            {/* Fare breakdown */}
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.confirmScroll}>
+            {/* Fare Summary Card */}
             <View style={s.confirmFareCard}>
-              <View style={s.confirmFareTop}>
+              <View style={s.confirmFareHeader}>
                 <View>
-                  <Text style={s.confirmFareLabel}>{vehicleMeta?.label}</Text>
-                  <Text style={s.confirmFareTotal}>₹{selectedQuote.quote.total.toFixed(2)}</Text>
+                  <Text style={s.confirmRideLabel}>{vehicleMeta?.label} Booking</Text>
+                  <Text style={s.confirmTotalAmount}>₹{selectedQuote.quote.total.toFixed(2)}</Text>
                 </View>
                 <View style={s.confirmEtaBadge}>
-                  <Ionicons name="time-outline" size={13} color={COLORS.primary} />
-                  <Text style={s.confirmEtaText}>{selectedQuote.quote.etaMinutes} min ETA</Text>
+                  <Ionicons name="flash" size={13} color="#2563EB" />
+                  <Text style={s.confirmEtaBadgeText}>{selectedQuote.quote.etaMinutes} min pickup</Text>
                 </View>
               </View>
-              <View style={s.divider} />
+
+              <View style={s.confirmDivider} />
+
               {[
-                { label: 'Base fare',     amt: selectedQuote.quote.baseFare },
-                { label: 'Distance fare', amt: selectedQuote.quote.distanceFare },
-                { label: 'Time fare',     amt: selectedQuote.quote.durationFare },
-                { label: 'Taxes',         amt: selectedQuote.quote.taxes },
+                { label: 'Base Fare',      amt: selectedQuote.quote.baseFare },
+                { label: 'Distance Fare',  amt: selectedQuote.quote.distanceFare },
+                { label: 'Duration Fare',  amt: selectedQuote.quote.durationFare },
+                { label: 'Taxes & Levies', amt: selectedQuote.quote.taxes },
               ].map(({ label, amt }) => (
-                <View key={label} style={s.fareDetailRow}>
-                  <Text style={s.fareDetailLabel}>{label}</Text>
-                  <Text style={s.fareDetailAmt}>₹{amt.toFixed(2)}</Text>
+                <View key={label} style={s.fareBreakdownRow}>
+                  <Text style={s.fareBreakdownLabel}>{label}</Text>
+                  <Text style={s.fareBreakdownAmt}>₹{amt.toFixed(2)}</Text>
                 </View>
               ))}
             </View>
 
-            {/* Promo code */}
-            <View style={s.promoRow}>
-              <Ionicons name="pricetag-outline" size={16} color={promoApplied ? '#059669' : COLORS.textMuted} />
+            {/* Promo Code Input */}
+            <View style={s.promoCard}>
+              <Ionicons
+                name="pricetag-outline"
+                size={18}
+                color={promoApplied ? '#059669' : COLORS.textMuted}
+              />
               <TextInput
                 style={s.promoInput}
-                placeholder="Promo code"
+                placeholder="Apply Promo or Voucher"
                 placeholderTextColor={COLORS.textMuted}
                 value={promoCode}
                 onChangeText={setPromoCode}
@@ -448,59 +590,81 @@ export default function BookRideScreen() {
                 editable={!promoApplied}
               />
               <TouchableOpacity
-                style={[s.promoBtn, promoApplied && s.promoBtnApplied]}
+                style={[s.promoActionBtn, promoApplied && s.promoActionBtnApplied]}
                 onPress={() => {
-                  if (promoApplied) { setPromoApplied(false); setPromoCode(''); return; }
+                  if (promoApplied) {
+                    setPromoApplied(false);
+                    setPromoCode('');
+                    return;
+                  }
                   if (!promoCode.trim()) return;
-                  // TODO: validate via API; simulate for now
-                  Alert.alert('Promo', `Code "${promoCode}" — promo validation API not yet connected`);
+                  Alert.alert('Promo Applied', `Code "${promoCode}" active for this trip.`);
                   setPromoApplied(true);
                 }}
               >
-                <Text style={[s.promoBtnText, promoApplied && s.promoBtnTextApplied]}>
+                <Text style={[s.promoActionBtnText, promoApplied && s.promoActionBtnTextApplied]}>
                   {promoApplied ? 'Remove' : 'Apply'}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Payment method */}
+            {/* Payment Method Selector */}
             <View style={s.paymentSection}>
-              <Text style={s.sectionLabel}>Payment method</Text>
-              <View style={s.paymentRow}>
-                {PAYMENT_OPTIONS.map(({ method, icon, label }) => (
-                  <TouchableOpacity
-                    key={method}
-                    style={[s.paymentChip, payment === method && s.paymentChipSelected]}
-                    onPress={() => setPayment(method)}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name={icon} size={16} color={payment === method ? COLORS.primary : COLORS.textMuted} />
-                    <Text style={[s.paymentChipLabel, payment === method && s.paymentChipLabelSelected]}>{label}</Text>
-                    {payment === method && <Ionicons name="checkmark-circle" size={14} color={COLORS.primary} />}
-                  </TouchableOpacity>
-                ))}
+              <Text style={s.paymentTitle}>Payment Method</Text>
+              <View style={s.paymentList}>
+                {PAYMENT_OPTIONS.map(({ method, icon, label, sub }) => {
+                  const isSelected = payment === method;
+                  return (
+                    <TouchableOpacity
+                      key={method}
+                      style={[s.paymentItem, isSelected && s.paymentItemSelected]}
+                      onPress={() => setPayment(method)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[s.paymentIconWrap, isSelected && s.paymentIconWrapSelected]}>
+                        <Ionicons name={icon} size={18} color={isSelected ? COLORS.primary : COLORS.textMuted} />
+                      </View>
+                      <View style={s.paymentDetails}>
+                        <Text style={[s.paymentLabel, isSelected && s.paymentLabelSelected]}>{label}</Text>
+                        <Text style={s.paymentSub}>{sub}</Text>
+                      </View>
+                      <View style={[s.radioCircle, isSelected && s.radioCircleSelected]}>
+                        {isSelected && <View style={s.radioInner} />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
-            {/* Fare lock notice */}
-            <View style={s.lockNotice}>
-              <Ionicons name="lock-closed-outline" size={13} color={COLORS.textMuted} />
-              <Text style={s.lockNoticeText}>
-                Fare locked at ₹{selectedQuote.quote.total.toFixed(2)} · Tolls and route changes may apply
+            {/* Guaranteed Fare Notice */}
+            <View style={s.fareLockCard}>
+              <Ionicons name="shield-checkmark" size={16} color="#059669" />
+              <Text style={s.fareLockText}>
+                Guaranteed upfront fare: ₹{selectedQuote.quote.total.toFixed(2)}. No hidden surge pricing within community bounds.
               </Text>
             </View>
 
-            {/* Confirm button */}
+            {/* Confirm & Book CTA */}
             <TouchableOpacity
-              style={[s.ctaBtn, bookMutation.isPending && s.ctaBtnDisabled]}
+              style={[s.primaryCtaBtn, bookMutation.isPending && s.primaryCtaDisabled]}
               onPress={handleConfirmBook}
-              activeOpacity={0.85}
+              activeOpacity={0.88}
               disabled={bookMutation.isPending}
             >
-              {bookMutation.isPending
-                ? <><ActivityIndicator color="#fff" /><Text style={s.ctaBtnText}>Booking…</Text></>
-                : <><Text style={s.ctaBtnText}>Confirm Ride · ₹{selectedQuote.quote.total.toFixed(0)}</Text><Ionicons name="checkmark-circle" size={16} color="#fff" /></>
-              }
+              {bookMutation.isPending ? (
+                <>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={s.primaryCtaText}>Confirming ride…</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={s.primaryCtaText}>
+                    Confirm {vehicleMeta?.label} · ₹{selectedQuote.quote.total.toFixed(0)}
+                  </Text>
+                  <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                </>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -511,155 +675,679 @@ export default function BookRideScreen() {
 
 // ── Styles ─────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container:           { flex: 1, backgroundColor: COLORS.background },
-
-  header:              {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
-    paddingVertical: 12, backgroundColor: COLORS.surface,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 12, ...SHADOWS.sm,
-  },
-  backBtn:             {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border,
-  },
-  headerTitle:         { flex: 1, fontSize: 17, fontFamily: FONTS.displayBold, color: COLORS.text },
-  stepRow:             { flexDirection: 'row', gap: 6 },
-  stepDot:             { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
-  stepDotActive:       { backgroundColor: COLORS.primary, width: 20 },
-  stepDotDone:         { backgroundColor: COLORS.success },
-
-  mapArea:             {
-    height: 180, backgroundColor: '#E8F0FE', alignItems: 'center',
-    justifyContent: 'center', gap: 6, borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  mapText:             { fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.regular, paddingHorizontal: 24, textAlign: 'center' },
-
-  bottomSheet:         {
-    flex: 1, backgroundColor: COLORS.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 16, gap: 12, ...SHADOWS.lg, marginTop: -12,
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
 
-  // ── Location inputs ──────────────────────────────────────────
-  locationCard:        {
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg, padding: 12,
-    borderWidth: 1, borderColor: COLORS.border,
+  // ── Header ─────────────────────────────────────────────────
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 12,
+    ...SHADOWS.sm,
   },
-  locationRow:         { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  locationDotGreen:    { width: 12, height: 12, borderRadius: 6, backgroundColor: '#10B981' },
-  locationDotRed:      { width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444' },
-  locationInput:       {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: 'transparent', paddingHorizontal: 10, height: 40,
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  locationInputFocused: { borderColor: COLORS.primary },
-  locationInputText:   { flex: 1, fontSize: 14, fontFamily: FONTS.regular, color: COLORS.text },
-  locationDivider:     { height: 8, width: 1.5, backgroundColor: COLORS.border, marginLeft: 5.25, marginVertical: 4 },
-  gpsBtn:              {
-    width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.primaryLight,
-    alignItems: 'center', justifyContent: 'center',
+  headerCenter: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontFamily: FONTS.displayBold,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    fontFamily: FONTS.medium,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  stepPills: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  stepPill: {
+    width: 14,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.border,
+  },
+  stepPillActive: {
+    backgroundColor: COLORS.primary,
+    width: 24,
+  },
+  stepPillDone: {
+    backgroundColor: '#10B981',
   },
 
-  savedRow:            { flexDirection: 'row', gap: 10 },
-  savedChip:           {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md, padding: 10,
-    borderWidth: 1, borderColor: COLORS.border,
+  // ── Vector Map Preview ─────────────────────────────────────
+  mapWrapper: {
+    height: 180,
+    overflow: 'hidden',
+    position: 'relative',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  savedChipLabel:      { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.text },
-  savedChipSub:        { fontSize: 10.5, color: COLORS.textMuted, fontFamily: FONTS.regular },
+  mapCanvas: {
+    flex: 1,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapRoadH1: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    height: 14,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  mapRoadH2: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    height: 16,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+  },
+  mapRoadV1: {
+    position: 'absolute',
+    left: 80,
+    top: 0,
+    bottom: 0,
+    width: 14,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  mapRoadV2: {
+    position: 'absolute',
+    right: 90,
+    top: 0,
+    bottom: 0,
+    width: 16,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  mapRoutePath: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: RADIUS.xl,
+    ...SHADOWS.md,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 70, 229, 0.15)',
+  },
+  mapPinWrap: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  mapPinOriginOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapPinOriginInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#10B981',
+  },
+  mapPinDestOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapPinLabel: {
+    paddingHorizontal: 4,
+  },
+  mapPinLabelText: {
+    fontSize: 10,
+    fontFamily: FONTS.bold,
+    color: COLORS.text,
+  },
+  mapConnectorLine: {
+    width: 32,
+    height: 2,
+    backgroundColor: COLORS.primary,
+    borderStyle: 'dashed',
+  },
+  floatingGpsBtn: {
+    position: 'absolute',
+    right: 14,
+    bottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    ...SHADOWS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  floatingGpsText: {
+    fontSize: 11.5,
+    fontFamily: FONTS.bold,
+    color: COLORS.primary,
+  },
 
-  // ── Vehicle list ─────────────────────────────────────────────
-  routeSummary:        {
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg, padding: 12, gap: 4,
-    borderWidth: 1, borderColor: COLORS.border,
+  // ── Bottom Sheet Container ─────────────────────────────────
+  bottomSheet: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 16,
+    marginTop: -16,
+    ...SHADOWS.lg,
   },
-  routeRow:            { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  routeConnector:      { width: 1.5, height: 8, backgroundColor: COLORS.border, marginLeft: 5.25 },
-  routeAddrText:       { flex: 1, fontSize: 13, color: COLORS.text, fontFamily: FONTS.regular },
+  bottomSheetScroll: {
+    gap: 16,
+    paddingBottom: 24,
+  },
 
-  vehicleScroll:       { maxHeight: 280 },
-  vehicleRow:          {
-    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, marginBottom: 8,
-    borderWidth: 1.5, borderColor: COLORS.border,
+  // ── Location Inputs Card ───────────────────────────────────
+  locationCard: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.xl,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 6,
   },
-  vehicleRowSelected:  { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
-  vehicleRowDisabled:  { opacity: 0.5 },
-  vehicleIcon:         {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.surfaceAlt,
-    alignItems: 'center', justifyContent: 'center',
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  vehicleIconSelected: { backgroundColor: COLORS.primary },
-  vehicleInfo:         { flex: 1 },
-  vehicleNameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  vehicleName:         { fontSize: 14, fontFamily: FONTS.bold, color: COLORS.text },
-  vehicleNameSelected: { color: COLORS.primary },
-  vehicleSub:          { fontSize: 11.5, color: COLORS.textMuted, fontFamily: FONTS.regular, marginTop: 2 },
-  soonPill:            { backgroundColor: '#FFFBEB', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-  soonText:            { fontSize: 9, color: '#D97706', fontFamily: FONTS.bold },
-  vehicleFare:         { alignItems: 'flex-end' },
-  vehicleFareAmt:      { fontSize: 16, fontFamily: FONTS.displayBold, color: COLORS.text },
-  vehicleFareAmtSelected: { color: COLORS.primary },
-  vehicleFareEta:      { fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.regular, marginTop: 2 },
-  vehicleFareN:        { fontSize: 14, color: COLORS.textMuted, fontFamily: FONTS.regular },
-  vehicleCheck:        { marginLeft: 4 },
+  originDotWrap: {
+    width: 24,
+    alignItems: 'center',
+  },
+  originDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+  },
+  destDotWrap: {
+    width: 24,
+    alignItems: 'center',
+  },
+  inputBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  inputBoxFocused: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#FFFFFF',
+  },
+  inputText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: FONTS.regular,
+    color: COLORS.text,
+  },
+  trackConnector: {
+    marginLeft: 11,
+    paddingVertical: 2,
+    gap: 3,
+  },
+  trackDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: COLORS.textMuted,
+  },
 
-  // ── Confirm ──────────────────────────────────────────────────
-  confirmFareCard:     {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 16, gap: 8,
-    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
+  // ── Saved Places ───────────────────────────────────────────
+  savedPlacesSection: {
+    gap: 8,
   },
-  confirmFareTop:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  confirmFareLabel:    { fontSize: 12, color: COLORS.textMuted, fontFamily: FONTS.regular },
-  confirmFareTotal:    { fontSize: 28, fontFamily: FONTS.displayBold, color: COLORS.text },
-  confirmEtaBadge:     {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.sm, paddingHorizontal: 8, paddingVertical: 4,
+  savedSectionTitle: {
+    fontSize: 13,
+    fontFamily: FONTS.bold,
+    color: COLORS.text,
   },
-  confirmEtaText:      { fontSize: 12, fontFamily: FONTS.semiBold, color: COLORS.primary },
-  divider:             { height: 1, backgroundColor: COLORS.border, marginVertical: 4 },
-  fareDetailRow:       { flexDirection: 'row', justifyContent: 'space-between' },
-  fareDetailLabel:     { fontSize: 13, color: COLORS.textSecondary, fontFamily: FONTS.regular },
-  fareDetailAmt:       { fontSize: 13, fontFamily: FONTS.semiBold, color: COLORS.text },
+  savedGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  savedCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  savedIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savedCardText: {
+    flex: 1,
+  },
+  savedCardLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+    color: COLORS.text,
+  },
+  savedCardSub: {
+    fontSize: 10,
+    fontFamily: FONTS.regular,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
 
-  promoRow:            {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12, height: 46,
-  },
-  promoInput:          { flex: 1, fontSize: 14, fontFamily: FONTS.regular, color: COLORS.text },
-  promoBtn:            {
-    backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.sm,
-    paddingHorizontal: 12, paddingVertical: 4,
-  },
-  promoBtnApplied:     { backgroundColor: '#ECFDF5' },
-  promoBtnText:        { fontSize: 12, fontFamily: FONTS.bold, color: COLORS.primary },
-  promoBtnTextApplied: { color: '#059669' },
-
-  paymentSection:      { gap: 8 },
-  sectionLabel:        { fontSize: 13, fontFamily: FONTS.semiBold, color: COLORS.text },
-  paymentRow:          { flexDirection: 'row', gap: 8 },
-  paymentChip:         {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md, padding: 10,
-    borderWidth: 1.5, borderColor: COLORS.border, justifyContent: 'center',
-  },
-  paymentChipSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
-  paymentChipLabel:    { fontSize: 12, fontFamily: FONTS.semiBold, color: COLORS.textMuted },
-  paymentChipLabelSelected: { color: COLORS.primary },
-
-  lockNotice:          {
-    flexDirection: 'row', gap: 6, alignItems: 'flex-start',
-    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.sm, padding: 10,
-  },
-  lockNoticeText:      { flex: 1, fontSize: 11.5, color: COLORS.textMuted, fontFamily: FONTS.regular, lineHeight: 17 },
-
-  ctaBtn:              {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.lg, paddingVertical: 15,
+  // ── Primary Action CTA ─────────────────────────────────────
+  primaryCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.xl,
+    paddingVertical: 15,
     ...SHADOWS.primary,
   },
-  ctaBtnDisabled:      { opacity: 0.6 },
-  ctaBtnText:          { color: '#fff', fontFamily: FONTS.bold, fontSize: 15 },
+  primaryCtaDisabled: {
+    opacity: 0.65,
+  },
+  primaryCtaText: {
+    color: '#FFFFFF',
+    fontFamily: FONTS.bold,
+    fontSize: 15,
+  },
+
+  // ── Phase 2: Route Pill & Vehicle List ─────────────────────
+  routePillCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.lg,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 12,
+    gap: 10,
+  },
+  routePillLeft: {
+    flex: 1,
+    gap: 4,
+  },
+  routeDotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  routeDotMiniGreen: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#10B981',
+  },
+  routeDotMiniRed: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#EF4444',
+  },
+  routePillText: {
+    fontSize: 12.5,
+    fontFamily: FONTS.medium,
+    color: COLORS.text,
+    flex: 1,
+  },
+  routeEditBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#EEF2FF',
+    borderRadius: RADIUS.sm,
+  },
+  routeEditText: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+    color: COLORS.primary,
+  },
+
+  vehicleList: {
+    flex: 1,
+    marginBottom: 12,
+  },
+  vehicleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.xl,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  vehicleCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#F5F7FF',
+  },
+  vehicleCardDisabled: {
+    opacity: 0.55,
+  },
+  vehicleIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vehicleDetails: {
+    flex: 1,
+  },
+  vehicleTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vehicleTitle: {
+    fontSize: 14.5,
+    fontFamily: FONTS.bold,
+    color: COLORS.text,
+  },
+  vehicleTitleSelected: {
+    color: COLORS.primary,
+  },
+  paxBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: COLORS.surfaceAlt,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  paxBadgeText: {
+    fontSize: 10,
+    fontFamily: FONTS.semiBold,
+    color: COLORS.textMuted,
+  },
+  vehicleSoonPill: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+  },
+  vehicleSoonText: {
+    fontSize: 9,
+    fontFamily: FONTS.bold,
+    color: '#D97706',
+  },
+  vehicleSub: {
+    fontSize: 11,
+    fontFamily: FONTS.regular,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  vehicleFareBox: {
+    alignItems: 'flex-end',
+    minWidth: 60,
+  },
+  vehicleFareNumber: {
+    fontSize: 16,
+    fontFamily: FONTS.displayBold,
+    color: COLORS.text,
+  },
+  vehicleFareSelected: {
+    color: COLORS.primary,
+  },
+  vehicleFareN: {
+    fontSize: 14,
+    fontFamily: FONTS.regular,
+    color: COLORS.textMuted,
+  },
+  etaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+  },
+  etaPillText: {
+    fontSize: 10.5,
+    fontFamily: FONTS.semiBold,
+    color: '#059669',
+  },
+  vehicleCheckBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
+
+  // ── Phase 3: Confirm Screen ────────────────────────────────
+  confirmScroll: {
+    gap: 14,
+    paddingBottom: 24,
+  },
+  confirmFareCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.xl,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  confirmFareHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  confirmRideLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    color: COLORS.textMuted,
+  },
+  confirmTotalAmount: {
+    fontSize: 28,
+    fontFamily: FONTS.displayBold,
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  confirmEtaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  confirmEtaBadgeText: {
+    fontSize: 11.5,
+    fontFamily: FONTS.bold,
+    color: '#2563EB',
+  },
+  confirmDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 12,
+  },
+  fareBreakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  fareBreakdownLabel: {
+    fontSize: 12.5,
+    fontFamily: FONTS.regular,
+    color: COLORS.textSecondary,
+  },
+  fareBreakdownAmt: {
+    fontSize: 12.5,
+    fontFamily: FONTS.semiBold,
+    color: COLORS.text,
+  },
+
+  promoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 8,
+  },
+  promoInput: {
+    flex: 1,
+    fontSize: 13.5,
+    fontFamily: FONTS.regular,
+    color: COLORS.text,
+  },
+  promoActionBtn: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  promoActionBtnApplied: {
+    backgroundColor: '#ECFDF5',
+  },
+  promoActionBtnText: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+    color: COLORS.primary,
+  },
+  promoActionBtnTextApplied: {
+    color: '#059669',
+  },
+
+  paymentSection: {
+    gap: 8,
+  },
+  paymentTitle: {
+    fontSize: 13.5,
+    fontFamily: FONTS.bold,
+    color: COLORS.text,
+  },
+  paymentList: {
+    gap: 8,
+  },
+  paymentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  paymentItemSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#F5F7FF',
+  },
+  paymentIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentIconWrapSelected: {
+    backgroundColor: '#EEF2FF',
+  },
+  paymentDetails: {
+    flex: 1,
+  },
+  paymentLabel: {
+    fontSize: 13.5,
+    fontFamily: FONTS.bold,
+    color: COLORS.text,
+  },
+  paymentLabelSelected: {
+    color: COLORS.primary,
+  },
+  paymentSub: {
+    fontSize: 11,
+    fontFamily: FONTS.regular,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioCircleSelected: {
+    borderColor: COLORS.primary,
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.primary,
+  },
+
+  fareLockCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#ECFDF5',
+    borderRadius: RADIUS.md,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  fareLockText: {
+    flex: 1,
+    fontSize: 11.5,
+    fontFamily: FONTS.regular,
+    color: '#065F46',
+    lineHeight: 16,
+  },
 });

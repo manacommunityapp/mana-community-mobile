@@ -42,9 +42,9 @@ export default function SportsChallengesScreen() {
   // Form State
   const [title, setTitle] = useState('');
   const [sport, setSport] = useState<SportType>('BADMINTON');
-  const [format, setFormat] = useState('1v1 Friendly');
-  const [venue, setVenue] = useState('Clubhouse Court 1');
-  const [scheduledTime, setScheduledTime] = useState('Today 7:00 PM');
+  const [format, setFormat] = useState('');
+  const [venue, setVenue] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
   const [notes, setNotes] = useState('');
 
   const { data: challenges = [], isLoading, refetch, isRefetching } = useQuery({
@@ -82,9 +82,9 @@ export default function SportsChallengesScreen() {
   function resetForm() {
     setTitle('');
     setSport('BADMINTON');
-    setFormat('1v1 Friendly');
-    setVenue('Clubhouse Court 1');
-    setScheduledTime('Today 7:00 PM');
+    setFormat('');
+    setVenue('');
+    setScheduledTime('');
     setNotes('');
   }
 
@@ -96,9 +96,9 @@ export default function SportsChallengesScreen() {
     createMutation.mutate({
       title: title.trim(),
       sport,
-      format,
-      venue: venue.trim(),
-      scheduledTime: scheduledTime.trim(),
+      format: format.trim() || 'Friendly Match',
+      venue: venue.trim() || 'Community Arena',
+      scheduledTime: scheduledTime.trim() || 'Upcoming',
       notes: notes.trim() || undefined,
     });
   }

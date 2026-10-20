@@ -56,10 +56,7 @@ export default function SportsHubScreen() {
   const [selectedSport, setSelectedSport] = useState<string>('ALL');
   const [liveIndex, setLiveIndex] = useState(0);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [customRegistrations, setCustomRegistrations] = useState<RegistrationRecord[]>([
-    { id: 1, sport: 'Cricket', team: 'Mana Strikers', players: 11, plan: 'Full team', fee: 2500, status: 'Confirmed' },
-    { id: 2, sport: 'Badminton', team: 'Court Smashers', players: 4, plan: 'Split per player', fee: 1200, status: 'Pending' },
-  ]);
+  const [customRegistrations, setCustomRegistrations] = useState<RegistrationRecord[]>([]);
 
   // Check if current user has admin / sports admin privileges
   const isSportsAdmin = useMemo(() => {
@@ -146,6 +143,16 @@ export default function SportsHubScreen() {
     staleTime: 30_000,
   });
 
+  // 8. User Real Event Registrations
+  const {
+    data: myRegistrationsApi = [],
+    refetch: refetchRegistrations,
+  } = useQuery({
+    queryKey: ['sports-my-registrations'],
+    queryFn: sportsService.getMyRegistrations,
+    staleTime: 30_000,
+  });
+
   // ── Refetch All ───────────────────────────────────────────────────────
   const isRefreshing = isRefetchingLive;
   const handleRefresh = async () => {
@@ -157,6 +164,7 @@ export default function SportsHubScreen() {
       refetchFacilities(),
       refetchLeaderboard(),
       refetchOpenTournaments(),
+      refetchRegistrations(),
     ]);
   };
 
@@ -199,19 +207,30 @@ export default function SportsHubScreen() {
 
   // Top performers
   const topPerformers = useMemo(() => {
-    if (leaderboard.length > 0) return leaderboard.slice(0, 4);
-    return [
-      { userId: 1, name: 'Arjun Mehta', playerName: 'Arjun Mehta', flatNo: 'Tower A-402', score: 28, matchesPlayed: 32 },
-      { userId: 2, name: 'Rohan Patel', playerName: 'Rohan Patel', flatNo: 'Tower C-1104', score: 24, matchesPlayed: 26 },
-      { userId: 3, name: 'Vikram Singh', playerName: 'Vikram Singh', flatNo: 'Tower B-801', score: 19, matchesPlayed: 22 },
-    ];
+    return leaderboard.slice(0, 4);
   }, [leaderboard]);
 
+  // Merged registrations (backend API + active session submissions)
+  const allRegistrations = useMemo(() => {
+    const apiRecords: RegistrationRecord[] = (myRegistrationsApi || []).map((r: any) => ({
+      id: String(r.id),
+      tournament: r.eventName || 'Tournament',
+      sport: r.sportName || 'Sport',
+      team: r.playerName || user?.name || user?.fullName || 'Resident Team',
+      status: (r.status === 'CONFIRMED' || r.status === 'APPROVED' ? 'Confirmed' : 'Pending') as 'Confirmed' | 'Pending',
+      players: r.matchType === 'DOUBLES' ? 2 : 1,
+      plan: 'Community Registration',
+      fee: 0,
+    }));
+    const existingIds = new Set(apiRecords.map((a) => a.id));
+    return [...customRegistrations.filter((c) => !existingIds.has(c.id)), ...apiRecords];
+  }, [myRegistrationsApi, customRegistrations, user?.name, user?.fullName]);
+
   const sportsKpis = [
-    { label: 'Active Teams', value: '26', sub: '+2 this month', icon: 'people', color: COLORS.primary, bg: '#EEF2FF' },
-    { label: 'Live Now', value: String(filteredLive.length || 2), sub: 'Games ongoing', icon: 'flash', color: COLORS.error, bg: '#FEF2F2' },
-    { label: 'Upcoming', value: String(filteredToday.length || 14), sub: 'Next 7 days', icon: 'calendar', color: COLORS.warning, bg: '#FFFBEB' },
-    { label: 'Season Games', value: '94', sub: 'Total this season', icon: 'trophy', color: COLORS.success, bg: '#ECFDF5' },
+    { label: 'Tournaments', value: String(openTournamentsDash.length), sub: 'Open for entry', icon: 'trophy', color: COLORS.success, bg: '#ECFDF5' },
+    { label: 'Live Now', value: String(filteredLive.length), sub: 'Games ongoing', icon: 'flash', color: COLORS.error, bg: '#FEF2F2' },
+    { label: 'Upcoming', value: String(filteredToday.length), sub: 'Next 7 days', icon: 'calendar', color: COLORS.warning, bg: '#FFFBEB' },
+    { label: 'Facilities', value: String(sportsFacilities.length), sub: 'Available to book', icon: 'football', color: COLORS.primary, bg: '#EEF2FF' },
   ];
 
   return (
@@ -265,83 +284,133 @@ export default function SportsHubScreen() {
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={s.heroCard}
           >
-            {/* Header row */}
-            <View style={s.heroHeader}>
-              <View style={s.heroLiveTag}>
-                <View style={s.livePulseDot} />
-                <Text style={s.heroLiveText}>
-                  LIVE · {(activeLiveMatch?.sport || (selectedSport === 'ALL' ? 'BASKETBALL' : selectedSport)).toUpperCase()}
-                </Text>
-              </View>
-              <View style={s.heroPeriodBadge}>
-                <Text style={s.heroPeriodText}>
-                  {activeLiveMatch?.currentPeriod || 'Q3 | 4:22'}
-                </Text>
-              </View>
-            </View>
-
-            {/* Teams vs Score */}
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => {
-                if (activeLiveMatch?.id) router.push(`/sports/match/${activeLiveMatch.id}`);
-                else router.push('/sports/matches');
-              }}
-              style={s.heroMatchRow}
-            >
-              {/* Home Team */}
-              <View style={s.heroTeamCol}>
-                <View style={s.heroAvatar}>
-                  <Text style={s.heroAvatarText}>
-                    {activeLiveMatch ? (activeLiveMatch.homeTeamName?.[0] || 'H') : 'C'}
-                  </Text>
+            {activeLiveMatch ? (
+              <>
+                {/* Header row */}
+                <View style={s.heroHeader}>
+                  <View style={s.heroLiveTag}>
+                    <View style={s.livePulseDot} />
+                    <Text style={s.heroLiveText}>
+                      LIVE · {(activeLiveMatch.sport || (selectedSport === 'ALL' ? 'MATCH' : selectedSport)).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={s.heroPeriodBadge}>
+                    <Text style={s.heroPeriodText}>
+                      {activeLiveMatch.currentPeriod || 'LIVE'}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={s.heroTeamName} numberOfLines={1}>
-                  {activeLiveMatch?.homeTeamName || 'City Hoopers'}
-                </Text>
-              </View>
 
-              {/* Score Display */}
-              <View style={s.heroScoreCol}>
-                <Text style={s.heroScoreBig}>
-                  {activeLiveMatch ? `${activeLiveMatch.homeScore}` : '58'}
-                  <Text style={s.heroScoreColon}> : </Text>
-                  {activeLiveMatch ? `${activeLiveMatch.awayScore}` : '51'}
-                </Text>
-                <Text style={s.heroLeadStatus}>
-                  {activeLiveMatch
-                    ? activeLiveMatch.homeScore > activeLiveMatch.awayScore
-                      ? `${activeLiveMatch.homeTeamName} lead`
-                      : activeLiveMatch.awayScore > activeLiveMatch.homeScore
-                      ? `${activeLiveMatch.awayTeamName} lead`
-                      : 'Scores level'
-                    : 'City Hoopers lead'}
-                </Text>
-              </View>
+                {/* Teams vs Score */}
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => router.push(`/sports/match/${activeLiveMatch.id}`)}
+                  style={s.heroMatchRow}
+                >
+                  {/* Home Team */}
+                  <View style={s.heroTeamCol}>
+                    <View style={s.heroAvatar}>
+                      <Text style={s.heroAvatarText}>
+                        {activeLiveMatch.homeTeamName?.[0] || 'H'}
+                      </Text>
+                    </View>
+                    <Text style={s.heroTeamName} numberOfLines={1}>
+                      {activeLiveMatch.homeTeamName || 'Home'}
+                    </Text>
+                  </View>
 
-              {/* Away Team */}
-              <View style={s.heroTeamCol}>
-                <View style={s.heroAvatar}>
-                  <Text style={s.heroAvatarText}>
-                    {activeLiveMatch ? (activeLiveMatch.awayTeamName?.[0] || 'A') : 'D'}
-                  </Text>
+                  {/* Score Display */}
+                  <View style={s.heroScoreCol}>
+                    <Text style={s.heroScoreBig}>
+                      {activeLiveMatch.homeScore ?? 0}
+                      <Text style={s.heroScoreColon}> : </Text>
+                      {activeLiveMatch.awayScore ?? 0}
+                    </Text>
+                    <Text style={s.heroLeadStatus}>
+                      {activeLiveMatch.homeScore > activeLiveMatch.awayScore
+                        ? `${activeLiveMatch.homeTeamName} lead`
+                        : activeLiveMatch.awayScore > activeLiveMatch.homeScore
+                        ? `${activeLiveMatch.awayTeamName} lead`
+                        : 'Scores level'}
+                    </Text>
+                  </View>
+
+                  {/* Away Team */}
+                  <View style={s.heroTeamCol}>
+                    <View style={s.heroAvatar}>
+                      <Text style={s.heroAvatarText}>
+                        {activeLiveMatch.awayTeamName?.[0] || 'A'}
+                      </Text>
+                    </View>
+                    <Text style={s.heroTeamName} numberOfLines={1}>
+                      {activeLiveMatch.awayTeamName || 'Away'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Pagination Dots */}
+                {filteredLive.length > 1 && (
+                  <View style={s.heroDotsRow}>
+                    {filteredLive.map((_, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        onPress={() => setLiveIndex(i)}
+                        style={[s.heroDot, i === liveIndex ? s.heroDotActive : s.heroDotInactive]}
+                      />
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : filteredToday.length > 0 ? (
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => router.push('/sports/matches')}
+                style={{ paddingVertical: 6, gap: 10 }}
+              >
+                <View style={s.heroHeader}>
+                  <View style={[s.heroLiveTag, { backgroundColor: 'rgba(251, 191, 36, 0.2)' }]}>
+                    <Text style={[s.heroLiveText, { color: '#FDE047' }]}>
+                      TODAY'S FIXTURE · {(filteredToday[0].sport || (selectedSport === 'ALL' ? 'MATCH' : selectedSport)).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={s.heroPeriodBadge}>
+                    <Text style={s.heroPeriodText}>
+                      {filteredToday[0].scheduledAt ? new Date(filteredToday[0].scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={s.heroTeamName} numberOfLines={1}>
-                  {activeLiveMatch?.awayTeamName || 'Downtown Dunkers'}
+                <View style={s.heroMatchRow}>
+                  <View style={s.heroTeamCol}>
+                    <View style={s.heroAvatar}>
+                      <Text style={s.heroAvatarText}>{filteredToday[0].homeTeamName?.[0] || 'H'}</Text>
+                    </View>
+                    <Text style={s.heroTeamName} numberOfLines={1}>{filteredToday[0].homeTeamName}</Text>
+                  </View>
+                  <View style={s.heroScoreCol}>
+                    <Text style={[s.heroScoreBig, { fontSize: 20, letterSpacing: 0.5 }]}>VS</Text>
+                    <Text style={s.heroLeadStatus}>{filteredToday[0].venue || 'Community Arena'}</Text>
+                  </View>
+                  <View style={s.heroTeamCol}>
+                    <View style={s.heroAvatar}>
+                      <Text style={s.heroAvatarText}>{filteredToday[0].awayTeamName?.[0] || 'A'}</Text>
+                    </View>
+                    <Text style={s.heroTeamName} numberOfLines={1}>{filteredToday[0].awayTeamName}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ paddingVertical: 14, alignItems: 'center', gap: 6 }}>
+                <Text style={{ fontSize: 24 }}>🏟️</Text>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>No Live Matches Right Now</Text>
+                <Text style={{ fontSize: 11, color: '#C7D2FE', textAlign: 'center', maxWidth: 280 }}>
+                  Check upcoming fixtures and community tournaments scheduled for your community.
                 </Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Pagination Dots */}
-            {filteredLive.length > 1 && (
-              <View style={s.heroDotsRow}>
-                {filteredLive.map((_, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => setLiveIndex(i)}
-                    style={[s.heroDot, i === liveIndex ? s.heroDotActive : s.heroDotInactive]}
-                  />
-                ))}
+                <TouchableOpacity
+                  onPress={() => router.push('/sports/matches')}
+                  style={{ marginTop: 6, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: RADIUS.full }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>View Match Schedule →</Text>
+                </TouchableOpacity>
               </View>
             )}
           </LinearGradient>
@@ -369,28 +438,36 @@ export default function SportsHubScreen() {
               <Text style={s.linkText}>+ New</Text>
             </TouchableOpacity>
           </View>
-          <View style={s.regList}>
-            {customRegistrations.map((r) => {
-              const isConfirmed = r.status === 'Confirmed';
-              const emoji = SPORT_EMOJI_MAP[r.sport.toUpperCase()] || '🏅';
-              return (
-                <View key={r.id} style={s.regRow}>
-                  <View style={s.regEmojiWrap}>
-                    <Text style={{ fontSize: 20 }}>{emoji}</Text>
+          {allRegistrations.length === 0 ? (
+            <View style={s.emptyBox}>
+              <Ionicons name="clipboard-outline" size={24} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No Tournament Registrations Yet</Text>
+              <Text style={s.emptySub}>Register for upcoming tournaments to track your participation here.</Text>
+            </View>
+          ) : (
+            <View style={s.regList}>
+              {allRegistrations.map((r) => {
+                const isConfirmed = r.status === 'Confirmed';
+                const emoji = SPORT_EMOJI_MAP[r.sport.toUpperCase()] || '🏅';
+                return (
+                  <View key={r.id} style={s.regRow}>
+                    <View style={s.regEmojiWrap}>
+                      <Text style={{ fontSize: 20 }}>{emoji}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={s.regTeamName} numberOfLines={1}>{r.team}</Text>
+                      <Text style={s.regMeta}>{r.sport}{r.players ? ` · ${r.players} players` : ''}{r.fee > 0 ? ` · ₹${r.fee.toLocaleString('en-IN')}` : ''}</Text>
+                    </View>
+                    <View style={[s.statusBadge, isConfirmed ? s.statusConfirmed : s.statusPending]}>
+                      <Text style={[s.statusText, { color: isConfirmed ? '#065F46' : '#92400E' }]}>
+                        {r.status}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={s.regTeamName} numberOfLines={1}>{r.team}</Text>
-                    <Text style={s.regMeta}>{r.sport} · {r.players} players · ₹{r.fee.toLocaleString('en-IN')}</Text>
-                  </View>
-                  <View style={[s.statusBadge, isConfirmed ? s.statusConfirmed : s.statusPending]}>
-                    <Text style={[s.statusText, { color: isConfirmed ? '#065F46' : '#92400E' }]}>
-                      {r.status}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* ── Sport Filter Chips (App Theme) ── */}
@@ -496,27 +573,31 @@ export default function SportsHubScreen() {
               <Text style={s.linkText}>All Results</Text>
             </TouchableOpacity>
           </View>
-          <View style={s.resultsList}>
-            {(recentCompleted.length > 0 ? recentCompleted : [
-              { id: 101, sport: 'Basketball', homeTeamName: 'Alley-Oops', awayTeamName: 'Fastbreakers', homeScore: 72, awayScore: 65, date: 'Yesterday' },
-              { id: 102, sport: 'Football', homeTeamName: 'Galacticos', awayTeamName: 'Athletic Club', homeScore: 2, awayScore: 1, date: '2 days ago' },
-              { id: 103, sport: 'Badminton', homeTeamName: 'City Smashers', awayTeamName: 'Net Ninjas', homeScore: 2, awayScore: 0, date: '3 days ago' },
-            ]).map((res: any) => (
-              <View key={res.id} style={s.resultItem}>
-                <View style={s.resultTopRow}>
-                  <Text style={s.resultSportBadge}>{(res.sport || 'SPORT').toUpperCase()}</Text>
-                  <Text style={s.resultDate}>{res.date || 'Final'}</Text>
-                </View>
-                <View style={s.resultMatchRow}>
-                  <Text style={s.resultTeamHome} numberOfLines={1}>{res.homeTeamName}</Text>
-                  <View style={s.resultScorePill}>
-                    <Text style={s.resultScoreText}>{res.homeScore} – {res.awayScore}</Text>
+          {recentCompleted.length === 0 ? (
+            <View style={s.emptyBox}>
+              <Ionicons name="trophy-outline" size={24} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No Completed Matches Today</Text>
+              <Text style={s.emptySub}>Results will appear here as matches wrap up.</Text>
+            </View>
+          ) : (
+            <View style={s.resultsList}>
+              {recentCompleted.map((res: any) => (
+                <View key={res.id} style={s.resultItem}>
+                  <View style={s.resultTopRow}>
+                    <Text style={s.resultSportBadge}>{(res.sport || 'SPORT').toUpperCase()}</Text>
+                    <Text style={s.resultDate}>{res.date || (res.completedAt ? new Date(res.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Final')}</Text>
                   </View>
-                  <Text style={s.resultTeamAway} numberOfLines={1}>{res.awayTeamName}</Text>
+                  <View style={s.resultMatchRow}>
+                    <Text style={s.resultTeamHome} numberOfLines={1}>{res.homeTeamName}</Text>
+                    <View style={s.resultScorePill}>
+                      <Text style={s.resultScoreText}>{res.homeScore} – {res.awayScore}</Text>
+                    </View>
+                    <Text style={s.resultTeamAway} numberOfLines={1}>{res.awayTeamName}</Text>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* ── Court Availability & Venues ── */}
@@ -586,25 +667,34 @@ export default function SportsHubScreen() {
               <Text style={s.linkText}>Leaderboard →</Text>
             </TouchableOpacity>
           </View>
-          <View style={s.leaderList}>
-            {topPerformers.map((pl: any, idx: number) => {
-              const name = pl.playerName || pl.name || 'Athlete';
-              const rankColor = MEDAL_COLORS[idx] || COLORS.textMuted;
-              return (
-                <View key={pl.userId || idx} style={s.leaderRow}>
-                  <Text style={[s.leaderRank, { color: rankColor }]}>{idx + 1}</Text>
-                  <View style={s.leaderAvatar}>
-                    <Text style={s.leaderAvatarText}>{name[0]?.toUpperCase()}</Text>
+          {topPerformers.length === 0 ? (
+            <View style={s.emptyBox}>
+              <Ionicons name="ribbon-outline" size={24} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No Rankings Recorded Yet</Text>
+              <Text style={s.emptySub}>Play tournament matches to earn points on the leaderboard.</Text>
+            </View>
+          ) : (
+            <View style={s.leaderList}>
+              {topPerformers.map((pl: any, idx: number) => {
+                const name = pl.playerName || pl.name || 'Athlete';
+                const rankColor = MEDAL_COLORS[idx] || COLORS.textMuted;
+                const score = pl.score ?? pl.points ?? pl.matchesWon ?? pl.matchesPlayed ?? 0;
+                return (
+                  <View key={pl.userId || idx} style={s.leaderRow}>
+                    <Text style={[s.leaderRank, { color: rankColor }]}>{idx + 1}</Text>
+                    <View style={s.leaderAvatar}>
+                      <Text style={s.leaderAvatarText}>{name[0]?.toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={s.leaderName} numberOfLines={1}>{name}</Text>
+                      <Text style={s.leaderSub}>{pl.flatNo || pl.flatNumber || 'Mana Resident'}</Text>
+                    </View>
+                    <Text style={s.leaderScore}>{score} pts</Text>
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={s.leaderName} numberOfLines={1}>{name}</Text>
-                    <Text style={s.leaderSub}>{pl.flatNo || pl.flatNumber || 'Mana Resident'}</Text>
-                  </View>
-                  <Text style={s.leaderScore}>{pl.score || pl.matchesPlayed || 24} pts</Text>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* ── Summer 2026 Season Promo Banner ── */}
@@ -853,6 +943,11 @@ const s = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: RADIUS.md, paddingVertical: 9, alignItems: 'center',
   },
   promoBtnText: { fontSize: 12, fontWeight: '800', color: COLORS.primaryDark },
+
+  // Empty state
+  emptyBox: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16, gap: 6 },
+  emptyTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
+  emptySub: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 16 },
 
   // Utils
   row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
