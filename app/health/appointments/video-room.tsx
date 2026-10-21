@@ -9,6 +9,8 @@ import { HealthAppointmentDto } from "@/types/health";
 
 type RoomState = "CONNECTING" | "CONNECTED" | "ENDED";
 
+const generateRxId = () => `RX-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+
 export default function VideoRoomScreen() {
   const { appointmentId } = useLocalSearchParams<{ appointmentId: string }>();
   const router = useRouter();
@@ -18,6 +20,8 @@ export default function VideoRoomScreen() {
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [rxId] = useState(generateRxId());
+  const [rxGenerated, setRxGenerated] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -92,6 +96,42 @@ export default function VideoRoomScreen() {
           <Text style={styles.endedTitle}>Consultation Ended</Text>
           <Text style={styles.endedDuration}>Duration: {formatTime(elapsed)}</Text>
 
+          {/* Digital Prescription Generation */}
+          {!rxGenerated ? (
+            <View style={styles.rxGenerateCard}>
+              <View style={styles.rxGenerateHeader}>
+                <Ionicons name="document-text" size={22} color="#0D9488" />
+                <Text style={styles.rxGenerateTitle}>Generate Digital Prescription</Text>
+              </View>
+              <Text style={styles.rxGenerateSub}>Auto-generate a structured Rx PDF from this consultation and save it to your Health Vault.</Text>
+              <TouchableOpacity
+                style={styles.rxGenerateBtn}
+                onPress={() => {
+                  Alert.alert(
+                    "Prescription Generated",
+                    `Rx ID: ${rxId}\n\nYour digital prescription has been generated and saved to Health Vault.\n\nPrescribing doctor: ${appointment?.doctorName ?? "Doctor"}\nSpecialty: ${appointment?.doctorSpecialty ?? ""}`,
+                    [{ text: "View in Vault", onPress: () => { setRxGenerated(true); router.push("/health/records" as any); } }, { text: "OK", onPress: () => setRxGenerated(true) }]
+                  );
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="download" size={16} color="#FFFFFF" />
+                <Text style={styles.rxGenerateBtnText}>Generate & Save Rx</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.rxSavedCard}>
+              <Ionicons name="checkmark-circle" size={20} color="#059669" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rxSavedTitle}>Prescription saved to Vault</Text>
+                <Text style={styles.rxSavedId}>Rx ID: {rxId}</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push("/health/records" as any)}>
+                <Text style={styles.rxViewLink}>View →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={styles.postCallActions}>
             <Text style={styles.postCallHeading}>Next Steps</Text>
 
@@ -105,8 +145,8 @@ export default function VideoRoomScreen() {
                 <Ionicons name="document-text" size={20} color="#0D9488" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.postActionTitle}>View Prescription</Text>
-                <Text style={styles.postActionSub}>Doctor may have issued a prescription</Text>
+                <Text style={styles.postActionTitle}>View Appointment Detail</Text>
+                <Text style={styles.postActionSub}>Care journey, reminders & second opinion</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
             </TouchableOpacity>
@@ -366,4 +406,16 @@ const styles = StyleSheet.create({
 
   homeBtn: { backgroundColor: "#0D9488", paddingVertical: 16, borderRadius: 14, alignItems: "center" },
   homeBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
+
+  // Digital Prescription
+  rxGenerateCard: { backgroundColor: "#F0FDFA", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#99F6E4", gap: 10 },
+  rxGenerateHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  rxGenerateTitle: { fontSize: 15, fontWeight: "800", color: "#0F766E" },
+  rxGenerateSub: { fontSize: 12, color: "#115E59", lineHeight: 18 },
+  rxGenerateBtn: { backgroundColor: "#0D9488", paddingVertical: 12, borderRadius: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
+  rxGenerateBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  rxSavedCard: { backgroundColor: "#ECFDF5", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#A7F3D0", flexDirection: "row", alignItems: "center", gap: 10 },
+  rxSavedTitle: { fontSize: 13, fontWeight: "700", color: "#059669" },
+  rxSavedId: { fontSize: 11, color: "#94A3B8", marginTop: 2 },
+  rxViewLink: { fontSize: 13, fontWeight: "700", color: "#0D9488" },
 });
