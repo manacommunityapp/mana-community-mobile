@@ -9,6 +9,7 @@ export default function ExperiencesLayout() {
       <Stack.Screen name="create" />
       <Stack.Screen name="organizer" />
       <Stack.Screen name="partners" />
+      <Stack.Screen name="buddy" />
     </Stack>
   );
 }

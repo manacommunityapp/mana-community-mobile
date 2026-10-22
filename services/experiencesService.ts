@@ -1156,7 +1156,213 @@ export const experiencesService = {
     if (sport) result = result.filter(s => s.sport.toLowerCase().includes(sport.toLowerCase()));
     return result;
   },
+
+  // ── P4 Mana Buddy AI ────────────────────────────────────────────────────────
+
+  async getUserInterests(): Promise<InterestTag[]> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/buddy/interests`);
+      if (r.ok) return r.json();
+    } catch {}
+    return ['CRICKET', 'MOVIES', 'YOGA'];
+  },
+
+  async saveUserInterests(interests: InterestTag[]): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/v1/experiences/buddy/interests`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interests }),
+      });
+    } catch {}
+  },
+
+  async getBuddyRecommendations(interests: InterestTag[]): Promise<BuddyRecommendation[]> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/buddy/recommendations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interests }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (Array.isArray(d) && d.length > 0) return d;
+      }
+    } catch {}
+    const all = await experiencesService.getExperiences();
+    const tagToCategory: Partial<Record<InterestTag, ExperienceCategory>> = {
+      CRICKET: 'SPORTS', SWIMMING: 'SPORTS', BADMINTON: 'SPORTS',
+      FOOTBALL: 'SPORTS', TENNIS: 'SPORTS', CYCLING: 'SPORTS',
+      YOGA: 'WORKSHOPS', FITNESS: 'WORKSHOPS', DANCE: 'WORKSHOPS',
+      MEDITATION: 'WORKSHOPS', COOKING: 'WORKSHOPS', PHOTOGRAPHY: 'WORKSHOPS',
+      ART_CRAFTS: 'WORKSHOPS', READING: 'WORKSHOPS',
+      MOVIES: 'MOVIES', MUSIC: 'LIVE_EVENTS', THEATRE: 'LIVE_EVENTS',
+      COMEDY: 'LIVE_EVENTS', TREKKING: 'OUTINGS', TRAVEL: 'OUTINGS',
+      GAMING: 'ONLINE', KIDS_ACTIVITIES: 'KIDS_FAMILY',
+    };
+    const reasons: Record<string, string> = {
+      SPORTS: 'Matches your sports interest',
+      WORKSHOPS: 'Based on your wellness & hobby picks',
+      MOVIES: 'Top pick for movie lovers',
+      LIVE_EVENTS: 'Trending in your community',
+      OUTINGS: 'Great for your adventurous spirit',
+      ONLINE: 'Popular with residents like you',
+      KIDS_FAMILY: 'Perfect for family time',
+    };
+    const categories = new Set(interests.map(i => tagToCategory[i]).filter(Boolean));
+    const matched = all.filter(e => categories.has(e.category)).slice(0, 5);
+    return matched.map(e => ({
+      experience: e,
+      reason: reasons[e.category] ?? 'Recommended for you',
+      match_score: Math.floor(70 + Math.random() * 28),
+    }));
+  },
+
+  async buildItinerary(interests: InterestTag[], weekend: 'THIS' | 'NEXT'): Promise<ItineraryItem[]> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/buddy/itinerary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interests, weekend }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (Array.isArray(d) && d.length > 0) return d;
+      }
+    } catch {}
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const daysToSat = weekend === 'THIS' ? (6 - dayOfWeek + 7) % 7 || 7 : (6 - dayOfWeek + 7) % 7 + 7;
+    const sat = new Date(now); sat.setDate(now.getDate() + daysToSat);
+    const sun = new Date(sat); sun.setDate(sat.getDate() + 1);
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    return [
+      { experience_id: 'exp-001', experience_title: 'Saturday Morning Yoga', emoji: '🧘', backdrop_color: '#059669', date: fmt(sat), start_time: '07:00', venue: 'Club Lawn', venue_area: 'Phase 1', is_free: true, notes: 'Bring your mat' },
+      { experience_id: 'exp-003', experience_title: 'Community Cricket Match', emoji: '🏏', backdrop_color: '#0891B2', date: fmt(sat), start_time: '10:00', venue: 'Sports Complex', venue_area: 'Block D', price: 150, is_free: false, notes: 'Gear provided' },
+      { experience_id: 'exp-005', experience_title: 'Bollywood Movie Night', emoji: '🎬', backdrop_color: '#7C3AED', date: fmt(sat), start_time: '19:00', venue: 'Community Hall', venue_area: 'Main Block', price: 200, is_free: false, notes: 'Popcorn included 🍿' },
+      { experience_id: 'exp-002', experience_title: 'Sunday Photography Walk', emoji: '📸', backdrop_color: '#D97706', date: fmt(sun), start_time: '06:30', venue: 'Garden Walk', venue_area: 'East Wing', is_free: true, notes: 'Golden hour shoot' },
+      { experience_id: 'exp-004', experience_title: 'Cooking Workshop: North Indian', emoji: '👨‍🍳', backdrop_color: '#DB2777', date: fmt(sun), start_time: '11:00', venue: 'Community Kitchen', venue_area: 'Block B', price: 350, is_free: false, notes: 'Ingredients included' },
+    ];
+  },
+
+  async getInterestMatches(): Promise<InterestMatch[]> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/buddy/matches`);
+      if (r.ok) return r.json();
+    } catch {}
+    return MOCK_INTEREST_MATCHES;
+  },
+
+  async sendBuddyMessage(text: string): Promise<BuddyMessage> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/buddy/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      });
+      if (r.ok) return r.json();
+    } catch {}
+    const lower = text.toLowerCase();
+    let response = "I'd love to help! Try asking me to suggest experiences, plan your weekend, or find residents with similar interests. 😊";
+    if (lower.includes('weekend') || lower.includes('plan')) {
+      response = "Great idea! I can plan a personalised weekend for you based on your interests. Tap 'Plan My Weekend' above to generate your itinerary! 🗓️";
+    } else if (lower.includes('budget') || lower.includes('free') || lower.includes('cheap')) {
+      response = "I found several free and budget-friendly experiences this week — Yoga in the Club Lawn, Photography Walk, and the Open Mic Night. Want me to add these to your itinerary? 🎯";
+    } else if (lower.includes('family') || lower.includes('kid')) {
+      response = "There are 3 family-friendly events this weekend: a Kids' Art Workshop, Family Movie Night, and a Nature Walk suitable for all ages. Which sounds fun? 👨‍👩‍👧";
+    } else if (lower.includes('sport') || lower.includes('cricket') || lower.includes('badminton')) {
+      response = "Your community has a Cricket match on Saturday at 10am and Badminton coaching on Sunday at 8am. Both have spots available! Want me to book? 🏏";
+    }
+    return {
+      id: `msg-${Date.now()}`,
+      role: 'buddy',
+      text: response,
+      created_at: new Date().toISOString(),
+    };
+  },
 };
+
+// ── P4 Types ─────────────────────────────────────────────────────────────────
+
+export type InterestTag =
+  | 'CRICKET' | 'SWIMMING' | 'BADMINTON' | 'FOOTBALL' | 'TENNIS' | 'CYCLING'
+  | 'YOGA' | 'FITNESS' | 'DANCE' | 'MEDITATION'
+  | 'MOVIES' | 'MUSIC' | 'THEATRE' | 'COMEDY'
+  | 'COOKING' | 'PHOTOGRAPHY' | 'ART_CRAFTS' | 'READING'
+  | 'TREKKING' | 'TRAVEL' | 'GAMING' | 'KIDS_ACTIVITIES';
+
+export interface ItineraryItem {
+  experience_id: string;
+  experience_title: string;
+  emoji: string;
+  backdrop_color: string;
+  date: string;
+  start_time: string;
+  venue: string;
+  venue_area: string;
+  price?: number;
+  is_free: boolean;
+  notes?: string;
+}
+
+export interface BuddyMessage {
+  id: string;
+  role: 'user' | 'buddy';
+  text: string;
+  suggestions?: Experience[];
+  itinerary?: ItineraryItem[];
+  created_at: string;
+}
+
+export interface BuddyRecommendation {
+  experience: Experience;
+  reason: string;
+  match_score: number;
+}
+
+export interface InterestMatch {
+  resident_name: string;
+  resident_initials: string;
+  flat: string;
+  shared_interests: InterestTag[];
+  match_score: number;
+  open_to_group: boolean;
+}
+
+export const INTEREST_META: Record<InterestTag, { label: string; emoji: string; category: string }> = {
+  CRICKET:         { label: 'Cricket',        emoji: '🏏', category: 'Sports' },
+  SWIMMING:        { label: 'Swimming',       emoji: '🏊', category: 'Sports' },
+  BADMINTON:       { label: 'Badminton',      emoji: '🏸', category: 'Sports' },
+  FOOTBALL:        { label: 'Football',       emoji: '⚽', category: 'Sports' },
+  TENNIS:          { label: 'Tennis',         emoji: '🎾', category: 'Sports' },
+  CYCLING:         { label: 'Cycling',        emoji: '🚴', category: 'Sports' },
+  YOGA:            { label: 'Yoga',           emoji: '🧘', category: 'Wellness' },
+  FITNESS:         { label: 'Fitness',        emoji: '💪', category: 'Wellness' },
+  DANCE:           { label: 'Dance',          emoji: '💃', category: 'Wellness' },
+  MEDITATION:      { label: 'Meditation',     emoji: '🌿', category: 'Wellness' },
+  MOVIES:          { label: 'Movies',         emoji: '🎬', category: 'Entertainment' },
+  MUSIC:           { label: 'Music',          emoji: '🎵', category: 'Entertainment' },
+  THEATRE:         { label: 'Theatre',        emoji: '🎭', category: 'Entertainment' },
+  COMEDY:          { label: 'Comedy',         emoji: '😂', category: 'Entertainment' },
+  COOKING:         { label: 'Cooking',        emoji: '👨‍🍳', category: 'Hobbies' },
+  PHOTOGRAPHY:     { label: 'Photography',    emoji: '📸', category: 'Hobbies' },
+  ART_CRAFTS:      { label: 'Art & Crafts',   emoji: '🎨', category: 'Hobbies' },
+  READING:         { label: 'Reading',        emoji: '📚', category: 'Hobbies' },
+  TREKKING:        { label: 'Trekking',       emoji: '🥾', category: 'Adventure' },
+  TRAVEL:          { label: 'Travel',         emoji: '✈️', category: 'Adventure' },
+  GAMING:          { label: 'Gaming',         emoji: '🎮', category: 'Adventure' },
+  KIDS_ACTIVITIES: { label: 'Kids Activities', emoji: '🧒', category: 'Family' },
+};
+
+const MOCK_INTEREST_MATCHES: InterestMatch[] = [
+  { resident_name: 'Arjun Mehta',   resident_initials: 'AM', flat: 'A-304', shared_interests: ['CRICKET', 'BADMINTON', 'CYCLING'], match_score: 92, open_to_group: true },
+  { resident_name: 'Priya Sharma',  resident_initials: 'PS', flat: 'B-102', shared_interests: ['YOGA', 'MEDITATION', 'PHOTOGRAPHY'], match_score: 88, open_to_group: true },
+  { resident_name: 'Rohit Nair',    resident_initials: 'RN', flat: 'C-501', shared_interests: ['FOOTBALL', 'GAMING', 'MOVIES'], match_score: 81, open_to_group: false },
+  { resident_name: 'Kavya Reddy',   resident_initials: 'KR', flat: 'A-207', shared_interests: ['DANCE', 'MUSIC', 'COOKING'], match_score: 76, open_to_group: true },
+  { resident_name: 'Sanjay Iyer',   resident_initials: 'SI', flat: 'D-403', shared_interests: ['TREKKING', 'CYCLING', 'PHOTOGRAPHY'], match_score: 71, open_to_group: true },
+];
+
+// P4 service methods are mixed into experiencesService below
 
 // ── Category Meta ────────────────────────────────────────────────────────────
 

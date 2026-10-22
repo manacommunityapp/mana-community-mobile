@@ -272,6 +272,9 @@ export default function ExperiencesScreen() {
             <TouchableOpacity onPress={() => router.push('/experiences/partners')}>
               <Ionicons name="storefront-outline" size={22} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/experiences/buddy')}>
+              <Ionicons name="sparkles-outline" size={22} color="rgba(255,255,255,0.85)" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push('/experiences/organizer')}>
               <Ionicons name="bar-chart-outline" size={22} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>
@@ -442,10 +445,34 @@ export default function ExperiencesScreen() {
             );
           })()}
 
+          {/* Mana Buddy AI CTA */}
+          <TouchableOpacity
+            onPress={() => router.push('/experiences/buddy')}
+            style={{ marginHorizontal: 16, marginTop: 24, borderRadius: 16, overflow: 'hidden' }}
+          >
+            <LinearGradient colors={['#0F172A', '#4338CA']} style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 24 }}>🤖</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <Text style={{ fontFamily: FONTS.bold, fontSize: 15, color: '#fff' }}>Mana Buddy AI</Text>
+                  <View style={{ backgroundColor: '#F59E0B', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
+                    <Text style={{ fontFamily: FONTS.bold, fontSize: 9, color: '#fff' }}>NEW</Text>
+                  </View>
+                </View>
+                <Text style={{ fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                  AI itinerary planner · Find your tribe · Chat
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.7)" />
+            </LinearGradient>
+          </TouchableOpacity>
+
           {/* Partners CTA */}
           <TouchableOpacity
             onPress={() => router.push('/experiences/partners')}
-            style={{ marginHorizontal: 16, marginTop: 20, borderRadius: 16, overflow: 'hidden' }}
+            style={{ marginHorizontal: 16, marginTop: 12, borderRadius: 16, overflow: 'hidden' }}
           >
             <LinearGradient colors={['#1E3A5F', '#2D5986']} style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
