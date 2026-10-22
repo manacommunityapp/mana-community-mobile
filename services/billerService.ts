@@ -3,7 +3,8 @@ import { secureLog } from '@/security';
 
 export type BillerCategory =
   | 'ELECTRICITY' | 'WATER' | 'GAS' | 'BROADBAND' | 'DTH'
-  | 'FASTAG' | 'MUNICIPAL_TAX' | 'CREDIT_CARD';
+  | 'FASTAG' | 'MUNICIPAL_TAX' | 'CREDIT_CARD'
+  | 'EDUCATION' | 'LPG' | 'LANDLINE';
 
 export interface BillerDto {
   id: string;
@@ -106,6 +107,32 @@ const FALLBACK_MUNICIPAL_TAX_BILLERS: BillerDto[] = [
   { id: 'CMC_CHENNAI', name: 'Greater Chennai Corporation',               shortName: 'Chennai Corp', category: 'MUNICIPAL_TAX', icon: '🏛️', state: 'Tamil Nadu', consumerIdLabel: 'Zone-Division-Bill No.', consumerIdHint: 'e.g. 1-2-12345678' },
 ];
 
+// ── Education ────────────────────────────────────────────────────────────────
+const FALLBACK_EDUCATION_BILLERS: BillerDto[] = [
+  { id: 'CBSE_FEES',   name: 'CBSE – Board Examination Fees',        shortName: 'CBSE',        category: 'EDUCATION', icon: '🎓', state: 'All India', consumerIdLabel: 'Roll Number / Registration No.', consumerIdHint: 'e.g. 2024012345' },
+  { id: 'DU_FEES',     name: 'Delhi University – Fee Payment',        shortName: 'Delhi Univ', category: 'EDUCATION', icon: '🎓', state: 'Delhi',     consumerIdLabel: 'Student ID / Enrollment No.',   consumerIdHint: 'e.g. 22DU01234' },
+  { id: 'BITS_FEES',   name: 'BITS Pilani – Fee Portal',              shortName: 'BITS',        category: 'EDUCATION', icon: '🎓', state: 'All India', consumerIdLabel: 'Student ID',                    consumerIdHint: 'e.g. 2022A1PS1234P' },
+  { id: 'AMITY_FEES',  name: 'Amity University – Online Fee',         shortName: 'Amity',       category: 'EDUCATION', icon: '🎓', state: 'All India', consumerIdLabel: 'Enrollment Number',             consumerIdHint: 'e.g. A2022-123456' },
+  { id: 'VTU_FEES',    name: 'VTU – Visvesvaraya Technological',      shortName: 'VTU',         category: 'EDUCATION', icon: '🎓', state: 'Karnataka', consumerIdLabel: 'USN (University Seat Number)',  consumerIdHint: 'e.g. 1AB22CS001' },
+  { id: 'SCHOOL_FEES', name: 'School Fee Payment (Generic)',           shortName: 'School Fees', category: 'EDUCATION', icon: '🎓', state: 'All India', consumerIdLabel: 'Admission / Student Roll No.',  consumerIdHint: 'e.g. 2024-1234' },
+];
+
+// ── LPG ───────────────────────────────────────────────────────────────────────
+const FALLBACK_LPG_BILLERS: BillerDto[] = [
+  { id: 'HP_GAS',      name: 'HP Gas – Hindustan Petroleum LPG',      shortName: 'HP Gas',   category: 'LPG', icon: '🟢', state: 'All India', consumerIdLabel: 'Consumer Number / HP Gas ID', consumerIdHint: 'e.g. 123456789' },
+  { id: 'BHARAT_GAS',  name: 'Bharat Gas – BPCL LPG',                 shortName: 'Bharat',  category: 'LPG', icon: '🔵', state: 'All India', consumerIdLabel: 'Consumer Number (17-digit)', consumerIdHint: 'e.g. 12345678901234567' },
+  { id: 'INDANE_GAS',  name: 'Indane Gas – Indian Oil LPG',            shortName: 'Indane',  category: 'LPG', icon: '🔴', state: 'All India', consumerIdLabel: 'Consumer Number / IOCL ID', consumerIdHint: 'e.g. 1234567890' },
+];
+
+// ── Landline ──────────────────────────────────────────────────────────────────
+const FALLBACK_LANDLINE_BILLERS: BillerDto[] = [
+  { id: 'BSNL_LAND',  name: 'BSNL Landline Bill Payment',             shortName: 'BSNL',    category: 'LANDLINE', icon: '☎️', state: 'All India', consumerIdLabel: 'Telephone Number (STD+Number)',  consumerIdHint: 'e.g. 01123456789' },
+  { id: 'MTNL_DEL',   name: 'MTNL Delhi Landline',                    shortName: 'MTNL Delhi', category: 'LANDLINE', icon: '☎️', state: 'Delhi',  consumerIdLabel: 'Telephone Number',               consumerIdHint: 'e.g. 01123456789' },
+  { id: 'MTNL_MUM',   name: 'MTNL Mumbai Landline',                   shortName: 'MTNL Mumbai', category: 'LANDLINE', icon: '☎️', state: 'Maharashtra', consumerIdLabel: 'Telephone Number',         consumerIdHint: 'e.g. 02223456789' },
+  { id: 'AIRTEL_LAND',name: 'Airtel Landline / Fixed Line',            shortName: 'Airtel',  category: 'LANDLINE', icon: '☎️', state: 'All India', consumerIdLabel: 'Account Number / Phone No.',    consumerIdHint: 'e.g. 01123456789' },
+  { id: 'ACT_LAND',   name: 'ACT Fibernet (Fixed Line)',               shortName: 'ACT',     category: 'LANDLINE', icon: '☎️', state: 'Multi',     consumerIdLabel: 'Subscriber ID',                 consumerIdHint: 'e.g. ACT12345678' },
+];
+
 // ── Credit Card ───────────────────────────────────────────────────────────────
 const FALLBACK_CREDIT_CARD_BILLERS: BillerDto[] = [
   { id: 'HDFC_CC',    name: 'HDFC Bank Credit Card',         shortName: 'HDFC',     category: 'CREDIT_CARD', icon: '💳', state: 'All India', consumerIdLabel: 'Credit Card Number (16 digits)', consumerIdHint: 'e.g. 4111 1111 1111 1111', consumerIdLength: 16 },
@@ -126,6 +153,9 @@ const FALLBACK_MAP: Partial<Record<BillerCategory, BillerDto[]>> = {
   FASTAG:        FALLBACK_FASTAG_BILLERS,
   MUNICIPAL_TAX: FALLBACK_MUNICIPAL_TAX_BILLERS,
   CREDIT_CARD:   FALLBACK_CREDIT_CARD_BILLERS,
+  EDUCATION:     FALLBACK_EDUCATION_BILLERS,
+  LPG:           FALLBACK_LPG_BILLERS,
+  LANDLINE:      FALLBACK_LANDLINE_BILLERS,
 };
 
 const BILL_AMOUNT_MAP: Partial<Record<BillerCategory, () => number>> = {
@@ -137,6 +167,9 @@ const BILL_AMOUNT_MAP: Partial<Record<BillerCategory, () => number>> = {
   FASTAG:        () => 200 + Math.floor(Math.random() * 300),
   MUNICIPAL_TAX: () => 4500 + Math.floor(Math.random() * 6000),
   CREDIT_CARD:   () => 3200 + Math.floor(Math.random() * 12000),
+  EDUCATION:     () => 15000 + Math.floor(Math.random() * 25000),
+  LPG:           () => 850 + Math.floor(Math.random() * 200),
+  LANDLINE:      () => 320 + Math.floor(Math.random() * 300),
 };
 
 function getAllFallbackBillers(): BillerDto[] {

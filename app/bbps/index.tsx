@@ -18,6 +18,9 @@ const CATEGORIES: { key: BillerCategory; label: string; icon: string; color: str
   { key: 'FASTAG',        label: 'FASTag',         icon: '🚗', color: '#B45309', bg: '#FFFBEB' },
   { key: 'MUNICIPAL_TAX', label: 'Municipal Tax',  icon: '🏛️', color: '#5B21B6', bg: '#F5F3FF' },
   { key: 'CREDIT_CARD',   label: 'Credit Card',    icon: '💳', color: '#0369A1', bg: '#F0F9FF' },
+  { key: 'EDUCATION',     label: 'Education',      icon: '🎓', color: '#7C3AED', bg: '#EDE9FE' },
+  { key: 'LPG',           label: 'LPG Cylinder',   icon: '🟢', color: '#16A34A', bg: '#F0FDF4' },
+  { key: 'LANDLINE',      label: 'Landline',        icon: '☎️', color: '#0284C7', bg: '#E0F2FE' },
 ];
 
 export default function BBPSBillerPickerScreen() {
