@@ -107,6 +107,13 @@ export default function HealthHubScreen() {
             { title: "Emergency SOS", desc: "Ambulance & 24x7", icon: "warning", route: "/health/emergency", color: "#DC2626", bg: "#FEE2E2" },
           { title: "Ambulance", desc: "Basic / ALS / ICU", icon: "car", route: "/health/ambulance", color: "#DC2626", bg: "#FEE2E2" },
           { title: "IPD Admission", desc: "Hospital Stay Booking", icon: "bed", route: "/health/ipd", color: "#7C3AED", bg: "#EDE9FE" },
+          { title: "Surgery Care", desc: "Cost Est · Care Buddy", icon: "cut", route: "/health/surgery", color: "#DC2626", bg: "#FEE2E2" },
+          { title: "Dental Care", desc: "Dentist · Packages", icon: "sad", route: "/health/dental", color: "#2563EB", bg: "#DBEAFE" },
+          { title: "ABHA Health ID", desc: "National Digital ID", icon: "card", route: "/health/abha", color: "#059669", bg: "#D1FAE5" },
+          { title: "Cancer Care", desc: "Oncology · 2nd Opinion", icon: "ribbon", route: "/health/cancer", color: "#7C3AED", bg: "#EDE9FE" },
+          { title: "Mental Health", desc: "Therapy · Psychiatry", icon: "heart", route: "/health/mental-health", color: "#7C3AED", bg: "#EDE9FE" },
+          { title: "Hospitals", desc: "Cashless · Network Finder", icon: "business", route: "/health/hospitals", color: "#0D9488", bg: "#CCFBF1" },
+          { title: "Mana Gold", desc: "Premium Membership", icon: "star", route: "/health/gold", color: "#B45309", bg: "#FEF3C7" },
           ].map((item, idx) => (
             <TouchableOpacity
               key={idx}

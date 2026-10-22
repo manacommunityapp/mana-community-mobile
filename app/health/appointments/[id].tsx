@@ -282,6 +282,29 @@ export default function AppointmentDetailScreen() {
           </View>
         )}
 
+        {/* Second Opinion */}
+        {appointment.status === "COMPLETED" && (
+          <View style={styles.card}>
+            <View style={styles.soHeaderRow}>
+              <View style={styles.soIconWrap}>
+                <Ionicons name="chatbubbles" size={18} color="#7C3AED" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Get a Second Opinion</Text>
+                <Text style={styles.soSubText}>Not 100% sure about your diagnosis? Ask another specialist.</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.soBtn}
+              onPress={() => router.push("/health/cancer" as any)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="people" size={16} color="#FFFFFF" />
+              <Text style={styles.soBtnText}>Find Second Opinion Specialist</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Review Action */}
         {!appointment.reviewSubmitted && appointment.status !== "CANCELLED" && (
           <TouchableOpacity
@@ -436,6 +459,13 @@ const styles = StyleSheet.create({
   clinicalGuardrailNote: { fontSize: 10, color: "#475569", marginTop: 2 },
   scheduleFollowUpBtn: { backgroundColor: "#4338CA", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 10, marginTop: 4 },
   scheduleFollowUpText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+
+  // Second Opinion
+  soHeaderRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  soIconWrap: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#EDE9FE", justifyContent: "center", alignItems: "center" },
+  soSubText: { fontSize: 12, color: "#6B7280", marginTop: 2 },
+  soBtn: { backgroundColor: "#7C3AED", paddingVertical: 12, borderRadius: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
+  soBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
 
   // Appointment Reminders
   reminderHeaderRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
