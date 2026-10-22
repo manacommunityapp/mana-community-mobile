@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/config";
 import { healthGuardService } from "@/services/healthGuardService";
+import type { EmergencyIncidentDto } from "@/types/healthguard";
 
 type Availability = "AVAILABLE" | "BUSY" | "OFFLINE";
 
@@ -44,20 +45,27 @@ export default function ResponderPage() {
   const [profile, setProfile] = useState<ResponderProfile | null>(null);
   const [communityCount, setCommunityCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ skills: "", certifications: "", phoneNumber: "" });
+  const [activeIncidents, setActiveIncidents] = useState<EmergencyIncidentDto[]>([]);
 
-  useEffect(() => {
-    Promise.all([
+  const load = useCallback(async () => {
+    const [p, count, history] = await Promise.all([
       healthGuardService.getMyResponderProfile().catch(() => null),
       healthGuardService.getAvailableRespondersCount().catch(() => 0),
-    ]).then(([p, count]) => {
-      setProfile(p);
-      setCommunityCount(count as number);
-      if (p) setForm({ skills: p.skills ?? "", certifications: p.certifications ?? "", phoneNumber: p.phoneNumber ?? "" });
-    }).finally(() => setLoading(false));
+      healthGuardService.getIncidentHistory().catch(() => [] as EmergencyIncidentDto[]),
+    ]);
+    setProfile(p as ResponderProfile | null);
+    setCommunityCount(count as number);
+    if (p) setForm({ skills: (p as ResponderProfile).skills ?? "", certifications: (p as ResponderProfile).certifications ?? "", phoneNumber: (p as ResponderProfile).phoneNumber ?? "" });
+    setActiveIncidents((history as EmergencyIncidentDto[]).filter(i => i.status === "ACTIVE" || i.status === "ACKNOWLEDGED").slice(0, 5));
+    setLoading(false);
+    setRefreshing(false);
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const handleRegister = async () => {
     if (!form.skills.trim()) {
@@ -120,7 +128,11 @@ export default function ResponderPage() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#3B82F6" />}
+      >
         {/* Community count */}
         <View style={styles.statsCard}>
           <Ionicons name="people" size={22} color="#3B82F6" />
@@ -267,6 +279,36 @@ export default function ResponderPage() {
             </TouchableOpacity>
           </View>
         )}
+        {/* Active community incidents feed */}
+        {profile?.availabilityStatus === "AVAILABLE" && (
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>Active Community Incidents</Text>
+              <TouchableOpacity onPress={() => router.push('/healthguard/incidents')}>
+                <Text style={styles.viewAll}>View all</Text>
+              </TouchableOpacity>
+            </View>
+            {activeIncidents.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Ionicons name="shield-checkmark" size={32} color="#10B981" />
+                <Text style={styles.emptyText}>All clear — no active incidents nearby</Text>
+              </View>
+            ) : (
+              activeIncidents.map(inc => (
+                <View key={inc.id} style={styles.incidentRow}>
+                  <View style={[styles.incidentDot, { backgroundColor: inc.status === "ACTIVE" ? "#ef4444" : "#f59e0b" }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.incidentDesc} numberOfLines={1}>{inc.description || "Manual SOS"}</Text>
+                    <Text style={styles.incidentMeta}>
+                      {inc.status} · {inc.triggeredAt ? new Date(inc.triggeredAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : ""}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary ?? "#9CA3AF"} />
+                </View>
+              ))
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -332,4 +374,12 @@ const styles = StyleSheet.create({
   emptyBox: { alignItems: "center", paddingVertical: SPACING.md, gap: SPACING.sm },
   emptyTitle: { fontSize: 17, fontWeight: "700", color: COLORS.text, textAlign: "center" },
   emptyText: { fontSize: 13, color: COLORS.textSecondary ?? "#6B7280", textAlign: "center", lineHeight: 18 },
+  viewAll: { fontSize: 13, color: "#3B82F6", fontWeight: "600" },
+  incidentRow: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.sm,
+    paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.border ?? "#E5E7EB",
+  },
+  incidentDot: { width: 8, height: 8, borderRadius: 4 },
+  incidentDesc: { fontSize: 13, fontWeight: "600", color: COLORS.text },
+  incidentMeta: { fontSize: 11, color: COLORS.textSecondary ?? "#6B7280", marginTop: 2 },
 });
