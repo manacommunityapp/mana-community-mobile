@@ -193,6 +193,7 @@ function RootLayout() {
             <Stack.Screen name="personal-finance" />
             <Stack.Screen name="projects" />
             <Stack.Screen name="mobility" />
+            <Stack.Screen name="experiences" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
