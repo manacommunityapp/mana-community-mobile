@@ -7,6 +7,7 @@ export default function ExperiencesLayout() {
       <Stack.Screen name="[id]" />
       <Stack.Screen name="my-bookings" />
       <Stack.Screen name="create" />
+      <Stack.Screen name="organizer" />
     </Stack>
   );
 }

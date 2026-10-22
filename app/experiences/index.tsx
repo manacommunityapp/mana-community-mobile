@@ -269,6 +269,9 @@ export default function ExperiencesScreen() {
             <TouchableOpacity onPress={() => router.push('/experiences/my-bookings')}>
               <Ionicons name="ticket-outline" size={22} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/experiences/organizer')}>
+              <Ionicons name="bar-chart-outline" size={22} color="rgba(255,255,255,0.85)" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push('/experiences/create')}>
               <Ionicons name="add-circle-outline" size={22} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>

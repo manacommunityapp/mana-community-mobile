@@ -43,6 +43,11 @@ export interface Experience {
   image_url?: string;
 }
 
+export interface FamilyMember {
+  name: string;
+  age?: number;
+}
+
 export interface ExperienceBooking {
   booking_id: string;
   experience_id: string;
@@ -50,10 +55,14 @@ export interface ExperienceBooking {
   category: ExperienceCategory;
   emoji: string;
   backdrop_color: string;
-  ticket_type: 'GENERAL' | 'FAMILY' | 'GROUP';
+  ticket_type: 'GENERAL' | 'FAMILY' | 'GROUP' | 'VIP';
   attendee_count: number;
   total_amount: number;
+  original_amount?: number;
+  discount_amount?: number;
+  coupon_code?: string;
   status: BookingStatus;
+  refund_status?: 'NONE' | 'REQUESTED' | 'APPROVED' | 'PROCESSED';
   booked_at: string;
   qr_data: string;
   qr_pass_code: string;
@@ -62,15 +71,83 @@ export interface ExperienceBooking {
   start_time: string;
   payment_ref?: string;
   upi_intent_url?: string;
+  family_members?: FamilyMember[];
 }
 
 export interface BookingRequest {
   experience_id: string;
-  ticket_type: 'GENERAL' | 'FAMILY' | 'GROUP';
+  ticket_type: 'GENERAL' | 'FAMILY' | 'GROUP' | 'VIP';
   attendee_count: number;
   attendee_name: string;
   attendee_phone: string;
   is_group_booking: boolean;
+  coupon_code?: string;
+  family_members?: FamilyMember[];
+}
+
+// ── P2 Types ─────────────────────────────────────────────────────────────────
+
+export interface CouponResult {
+  valid: boolean;
+  code: string;
+  discount_type: 'PERCENT' | 'FLAT';
+  discount_value: number;
+  discount_amount: number;
+  final_amount: number;
+  message: string;
+}
+
+export interface WaitlistEntry {
+  waitlist_id: string;
+  experience_id: string;
+  position: number;
+  name: string;
+  phone: string;
+  joined_at: string;
+}
+
+export interface OrganizerAttendee {
+  booking_id: string;
+  name: string;
+  phone: string;
+  ticket_type: string;
+  attendee_count: number;
+  amount_paid: number;
+  status: BookingStatus;
+  booked_at: string;
+  checked_in: boolean;
+  checked_in_at?: string;
+  coupon_used?: string;
+  refund_status?: 'NONE' | 'REQUESTED' | 'APPROVED' | 'PROCESSED';
+}
+
+export interface OrganizerReport {
+  experience_id: string;
+  experience_title: string;
+  emoji: string;
+  backdrop_color: string;
+  start_date: string;
+  venue: string;
+  capacity: number;
+  registered_count: number;
+  checked_in_count: number;
+  gross_revenue: number;
+  platform_fee: number;
+  net_settlement: number;
+  refunds_total: number;
+  ticket_breakdown: { type: string; count: number; revenue: number }[];
+  coupon_usage_count: number;
+  attendees: OrganizerAttendee[];
+}
+
+export interface RefundRequest {
+  refund_id: string;
+  booking_id: string;
+  reason: string;
+  amount_requested: number;
+  status: 'REQUESTED' | 'APPROVED' | 'PROCESSED' | 'REJECTED';
+  requested_at: string;
+  estimated_days: number;
 }
 
 // ── Mock Data ────────────────────────────────────────────────────────────────
@@ -571,6 +648,141 @@ export const experiencesService = {
     try {
       await fetch(`${API_BASE}/v1/experiences/bookings/${bookingId}/cancel`, { method: 'POST' });
     } catch {}
+  },
+
+  // ── P2 Methods ──────────────────────────────────────────────────────────────
+
+  async validateCoupon(code: string, experienceId: string, originalAmount: number): Promise<CouponResult> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/coupons/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, experience_id: experienceId, amount: originalAmount }),
+      });
+      if (r.ok) return r.json();
+    } catch {}
+    const MOCK_COUPONS: Record<string, { type: 'PERCENT' | 'FLAT'; value: number }> = {
+      'MANA10':   { type: 'PERCENT', value: 10 },
+      'FLAT200':  { type: 'FLAT',    value: 200 },
+      'SAVE50':   { type: 'PERCENT', value: 50 },
+      'WELCOME':  { type: 'FLAT',    value: 100 },
+    };
+    const coupon = MOCK_COUPONS[code.toUpperCase()];
+    if (!coupon) {
+      return { valid: false, code, discount_type: 'FLAT', discount_value: 0, discount_amount: 0, final_amount: originalAmount, message: 'Invalid coupon code' };
+    }
+    const discount = coupon.type === 'PERCENT'
+      ? Math.round((originalAmount * coupon.value) / 100)
+      : Math.min(coupon.value, originalAmount);
+    return {
+      valid: true,
+      code: code.toUpperCase(),
+      discount_type: coupon.type,
+      discount_value: coupon.value,
+      discount_amount: discount,
+      final_amount: originalAmount - discount,
+      message: coupon.type === 'PERCENT' ? `${coupon.value}% off applied!` : `₹${coupon.value} off applied!`,
+    };
+  },
+
+  async joinWaitlist(experienceId: string, name: string, phone: string): Promise<WaitlistEntry> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/${experienceId}/waitlist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone }),
+      });
+      if (r.ok) return r.json();
+    } catch {}
+    return {
+      waitlist_id: `WL-${Date.now()}`,
+      experience_id: experienceId,
+      position: Math.floor(Math.random() * 5) + 1,
+      name,
+      phone,
+      joined_at: new Date().toISOString(),
+    };
+  },
+
+  async requestRefund(bookingId: string, reason: string, amount: number): Promise<RefundRequest> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/bookings/${bookingId}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, amount }),
+      });
+      if (r.ok) return r.json();
+    } catch {}
+    return {
+      refund_id: `REF-${Date.now()}`,
+      booking_id: bookingId,
+      reason,
+      amount_requested: amount,
+      status: 'REQUESTED',
+      requested_at: new Date().toISOString(),
+      estimated_days: 5,
+    };
+  },
+
+  async getMyOrganizedExperiences(): Promise<Experience[]> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/my-organized`, {
+        headers: { 'Authorization': 'Bearer mock' },
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (Array.isArray(d)) return d;
+      }
+    } catch {}
+    return MOCK_EXPERIENCES.filter(e => e.organizer_verified).slice(0, 4);
+  },
+
+  async getOrganizerReport(experienceId: string): Promise<OrganizerReport> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/${experienceId}/organizer-report`, {
+        headers: { 'Authorization': 'Bearer mock' },
+      });
+      if (r.ok) return r.json();
+    } catch {}
+    const exp = MOCK_EXPERIENCES.find(e => e.id === experienceId)!;
+    const grossRevenue = exp.is_free ? 0 : (exp.price_individual ?? 0) * exp.registered_count;
+    const platformFee = Math.round(grossRevenue * 0.05);
+    const mockAttendees: OrganizerAttendee[] = Array.from({ length: Math.min(exp.registered_count, 8) }, (_, i) => ({
+      booking_id: `EXP-BK-${1000 + i}`,
+      name: ['Priya Reddy', 'Kiran Kumar', 'Ananya Singh', 'Rahul Verma', 'Sunita Patel', 'Arun Sharma', 'Deepa Nair', 'Vijay Iyer'][i],
+      phone: `98${String(40000000 + i * 1111111).slice(0, 8)}`,
+      ticket_type: ['GENERAL', 'FAMILY', 'GROUP', 'GENERAL', 'VIP', 'GENERAL', 'FAMILY', 'GENERAL'][i] as string,
+      attendee_count: [1, 3, 5, 2, 1, 1, 2, 1][i],
+      amount_paid: exp.is_free ? 0 : ([699, 0, 3495, 1398, 699, 699, 1398, 699][i] as number),
+      status: (['CONFIRMED', 'CONFIRMED', 'CONFIRMED', 'ATTENDED', 'CONFIRMED', 'ATTENDED', 'CANCELLED', 'CONFIRMED'][i]) as BookingStatus,
+      booked_at: new Date(Date.now() - (i + 1) * 86400000).toISOString(),
+      checked_in: [false, false, false, true, false, true, false, false][i],
+      checked_in_at: [undefined, undefined, undefined, new Date(Date.now() - 3600000).toISOString(), undefined, new Date(Date.now() - 3600000).toISOString(), undefined, undefined][i],
+      coupon_used: i === 1 ? 'MANA10' : undefined,
+      refund_status: i === 6 ? 'REQUESTED' : 'NONE',
+    }));
+    return {
+      experience_id: experienceId,
+      experience_title: exp.title,
+      emoji: exp.emoji,
+      backdrop_color: exp.backdrop_color,
+      start_date: exp.start_date,
+      venue: exp.venue,
+      capacity: exp.capacity,
+      registered_count: exp.registered_count,
+      checked_in_count: mockAttendees.filter(a => a.checked_in).length,
+      gross_revenue: grossRevenue,
+      platform_fee: platformFee,
+      net_settlement: grossRevenue - platformFee,
+      refunds_total: mockAttendees.filter(a => a.refund_status === 'REQUESTED' || a.refund_status === 'PROCESSED').reduce((s, a) => s + a.amount_paid, 0),
+      ticket_breakdown: [
+        { type: 'General', count: mockAttendees.filter(a => a.ticket_type === 'GENERAL').length, revenue: mockAttendees.filter(a => a.ticket_type === 'GENERAL').reduce((s, a) => s + a.amount_paid, 0) },
+        { type: 'Family', count: mockAttendees.filter(a => a.ticket_type === 'FAMILY').length, revenue: mockAttendees.filter(a => a.ticket_type === 'FAMILY').reduce((s, a) => s + a.amount_paid, 0) },
+        { type: 'Group', count: mockAttendees.filter(a => a.ticket_type === 'GROUP').length, revenue: mockAttendees.filter(a => a.ticket_type === 'GROUP').reduce((s, a) => s + a.amount_paid, 0) },
+      ].filter(t => t.count > 0),
+      coupon_usage_count: mockAttendees.filter(a => a.coupon_used).length,
+      attendees: mockAttendees,
+    };
   },
 };
 
