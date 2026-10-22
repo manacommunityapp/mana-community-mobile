@@ -7,6 +7,7 @@ export default function HealthGuardLayout() {
       <Stack.Screen name="sos" />
       <Stack.Screen name="contacts" />
       <Stack.Screen name="incidents" />
+      <Stack.Screen name="profile" />
     </Stack>
   );
 }
