@@ -127,6 +127,25 @@ export default function HealthGuardDashboard() {
         </TouchableOpacity>
       </View>
 
+      {/* Phase 2 — Community services */}
+      <Text style={styles.sectionTitle}>Community Services</Text>
+      <View style={styles.serviceRow}>
+        <TouchableOpacity style={[styles.serviceCard, { borderColor: "#3B82F630" }]} onPress={() => router.push("/healthguard/responder")}>
+          <View style={[styles.serviceIcon, { backgroundColor: "#EFF6FF" }]}>
+            <Ionicons name="shield-checkmark" size={22} color="#3B82F6" />
+          </View>
+          <Text style={styles.serviceName}>Responder Hub</Text>
+          <Text style={styles.serviceDesc}>Register as community responder</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.serviceCard, { borderColor: "#EF444430" }]} onPress={() => router.push("/healthguard/ambulance")}>
+          <View style={[styles.serviceIcon, { backgroundColor: "#FEF2F2" }]}>
+            <Ionicons name="car" size={22} color="#EF4444" />
+          </View>
+          <Text style={styles.serviceName}>Ambulance</Text>
+          <Text style={styles.serviceDesc}>Book emergency transport</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Blood group */}
       {profile?.bloodGroup && profile.bloodGroup !== "UNKNOWN" && (
         <View style={styles.profileCard}>
@@ -205,4 +224,12 @@ const styles = StyleSheet.create({
   contactPhone: { fontSize: 11, color: COLORS.TEXT_SECONDARY, marginTop: 1 },
   sosBadge: { backgroundColor: "#fef2f2", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: "#fca5a5" },
   sosBadgeText: { fontSize: 10, fontWeight: "700", color: "#dc2626" },
+  serviceRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
+  serviceCard: {
+    flex: 1, backgroundColor: "#fff", borderRadius: RADIUS.MD,
+    borderWidth: 1, padding: 12, alignItems: "center", gap: 6, ...SHADOWS.SM,
+  },
+  serviceIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  serviceName: { fontSize: 12, fontWeight: "700", color: COLORS.TEXT_PRIMARY, textAlign: "center" },
+  serviceDesc: { fontSize: 10, color: COLORS.TEXT_SECONDARY, textAlign: "center" },
 });
