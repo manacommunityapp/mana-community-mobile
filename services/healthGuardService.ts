@@ -4,6 +4,8 @@ import type {
   EmergencyContactDto,
   EmergencyIncidentDto,
   TriggerSosRequest,
+  WearableDeviceDto,
+  WearableHealthEventDto,
 } from '../types/healthguard';
 
 const BASE = '/api/healthguard';
@@ -225,6 +227,36 @@ export const healthGuardService = {
 
   async cancelAmbulanceBooking(id: number): Promise<any> {
     const res = await apiClient.put(`${BASE}/ambulance/${id}/cancel`, {});
+    return res.data;
+  },
+
+  // Phase 4 — Wearable Devices
+  async getWearableDevices(): Promise<WearableDeviceDto[]> {
+    try {
+      const res = await apiClient.get<WearableDeviceDto[]>(`${BASE}/wearables`);
+      return res.data ?? [];
+    } catch { return []; }
+  },
+
+  async registerWearableDevice(dto: WearableDeviceDto): Promise<WearableDeviceDto> {
+    const res = await apiClient.post<WearableDeviceDto>(`${BASE}/wearables`, dto);
+    return res.data;
+  },
+
+  async removeWearableDevice(id: number): Promise<void> {
+    await apiClient.delete(`${BASE}/wearables/${id}`);
+  },
+
+  // Phase 4 — Wearable Health Events
+  async getRecentWearableEvents(): Promise<WearableHealthEventDto[]> {
+    try {
+      const res = await apiClient.get<WearableHealthEventDto[]>(`${BASE}/wearables/events`);
+      return res.data ?? [];
+    } catch { return []; }
+  },
+
+  async submitWearableEvent(dto: WearableHealthEventDto): Promise<WearableHealthEventDto> {
+    const res = await apiClient.post<WearableHealthEventDto>(`${BASE}/wearables/events`, dto);
     return res.data;
   },
 };

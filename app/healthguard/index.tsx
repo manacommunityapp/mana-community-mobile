@@ -146,6 +146,19 @@ export default function HealthGuardDashboard() {
         </TouchableOpacity>
       </View>
 
+      {/* Phase 4 — Wearable */}
+      <Text style={styles.sectionTitle}>Wearable Monitor</Text>
+      <TouchableOpacity style={[styles.wearableBanner]} onPress={() => router.push("/healthguard/wearable")}>
+        <View style={styles.wearableBannerLeft}>
+          <Text style={styles.wearableBannerIcon}>⌚</Text>
+          <View>
+            <Text style={styles.wearableBannerTitle}>Connect Wearable</Text>
+            <Text style={styles.wearableBannerSub}>Fall detection · Heart rate alerts · SpO₂ monitoring</Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={COLORS.TEXT_SECONDARY} />
+      </TouchableOpacity>
+
       {/* Blood group */}
       {profile?.bloodGroup && profile.bloodGroup !== "UNKNOWN" && (
         <View style={styles.profileCard}>
@@ -224,6 +237,15 @@ const styles = StyleSheet.create({
   contactPhone: { fontSize: 11, color: COLORS.TEXT_SECONDARY, marginTop: 1 },
   sosBadge: { backgroundColor: "#fef2f2", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: "#fca5a5" },
   sosBadgeText: { fontSize: 10, fontWeight: "700", color: "#dc2626" },
+  wearableBanner: {
+    backgroundColor: "#eff6ff", borderRadius: RADIUS.MD, padding: SPACING.MD,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    borderWidth: 1, borderColor: "#bfdbfe", marginBottom: 14, ...SHADOWS.SM,
+  },
+  wearableBannerLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  wearableBannerIcon: { fontSize: 32 },
+  wearableBannerTitle: { fontSize: 15, fontWeight: "700", color: "#1e40af" },
+  wearableBannerSub: { fontSize: 12, color: "#3b82f6", marginTop: 2 },
   serviceRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
   serviceCard: {
     flex: 1, backgroundColor: "#fff", borderRadius: RADIUS.MD,

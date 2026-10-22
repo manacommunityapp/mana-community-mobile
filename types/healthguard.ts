@@ -81,3 +81,39 @@ export interface TriggerSosRequest {
   locationAddress?: string;
   severity?: IncidentSeverity;
 }
+
+export type WearableType =
+  | 'APPLE_WATCH' | 'FITBIT' | 'GARMIN' | 'SAMSUNG_GALAXY_WATCH'
+  | 'GENERIC_BLUETOOTH' | 'MANUAL';
+
+export type WearableEventType =
+  | 'FALL_DETECTED' | 'HIGH_HEART_RATE' | 'LOW_HEART_RATE' | 'IRREGULAR_HEART_RATE'
+  | 'LOW_SPO2' | 'INACTIVITY_ALERT' | 'LOW_BATTERY' | 'DEVICE_DISCONNECTED' | 'MANUAL_CHECK_IN';
+
+export interface WearableDeviceDto {
+  id?: number;
+  userId?: number;
+  deviceType?: WearableType;
+  deviceIdentifier: string;
+  deviceName?: string;
+  firmwareVersion?: string;
+  isActive?: boolean;
+  lastSyncAt?: string;
+  registeredAt?: string;
+}
+
+export interface WearableHealthEventDto {
+  id?: number;
+  userId?: number;
+  deviceId?: number;
+  eventType: WearableEventType;
+  heartRateBpm?: number;
+  spo2Percent?: number;
+  latitude?: number;
+  longitude?: number;
+  rawData?: string;
+  sosTriggered?: boolean;
+  linkedIncidentId?: number;
+  eventAt?: string;
+  createdAt?: string;
+}
