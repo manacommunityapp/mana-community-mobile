@@ -24,6 +24,9 @@ export const THEME = {
   indigoLight:  "#EEF2FF",
   amber:        "#FFB800",
   amberLight:   "#FFFBEB",
+  text:         "#0F172A",
+  muted:        "#64748B",
+  primary:      "#4F46E5",
 } as const;
 
 export default THEME;
