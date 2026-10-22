@@ -174,6 +174,59 @@ export const healthGuardService = {
       return incidentsState.find(i => i.id === id)!;
     }
   },
+
+  // Phase 2 — Community Responders
+  async getMyResponderProfile(): Promise<any> {
+    try {
+      const res = await apiClient.get(`${BASE}/responder/me`);
+      return res.status === 204 ? null : res.data;
+    } catch { return null; }
+  },
+
+  async registerAsResponder(dto: { skills: string; certifications: string; phoneNumber: string }): Promise<any> {
+    const res = await apiClient.post(`${BASE}/responder/register`, dto);
+    return res.data;
+  },
+
+  async updateResponderStatus(status: string): Promise<any> {
+    const res = await apiClient.put(`${BASE}/responder/status`, { status });
+    return res.data;
+  },
+
+  async getAvailableRespondersCount(): Promise<number> {
+    try {
+      const res = await apiClient.get<{ count: number }>(`${BASE}/responders/count`);
+      return res.data?.count ?? 0;
+    } catch { return 0; }
+  },
+
+  // Phase 2 — Ambulance Booking
+  async bookAmbulance(req: {
+    pickupAddress: string; destinationAddress: string;
+    patientName: string; patientPhone: string; emergencyDescription: string; incidentId?: number;
+  }): Promise<any> {
+    const res = await apiClient.post(`${BASE}/ambulance`, req);
+    return res.data;
+  },
+
+  async getActiveAmbulanceBooking(): Promise<any> {
+    try {
+      const res = await apiClient.get(`${BASE}/ambulance/active`);
+      return res.status === 204 ? null : res.data;
+    } catch { return null; }
+  },
+
+  async getAmbulanceHistory(): Promise<any[]> {
+    try {
+      const res = await apiClient.get(`${BASE}/ambulance`);
+      return res.data ?? [];
+    } catch { return []; }
+  },
+
+  async cancelAmbulanceBooking(id: number): Promise<any> {
+    const res = await apiClient.put(`${BASE}/ambulance/${id}/cancel`, {});
+    return res.data;
+  },
 };
 
 export default healthGuardService;

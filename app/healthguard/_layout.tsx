@@ -8,6 +8,7 @@ export default function HealthGuardLayout() {
       <Stack.Screen name="contacts" />
       <Stack.Screen name="incidents" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="ambulance" />
     </Stack>
   );
 }
