@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/dateUtils';
 import { COLORS } from '@/constants/config';
 import type { CommuteRideDto } from '@/types/api';
 
@@ -52,7 +52,7 @@ export function RideCard({ ride, compact }: Props) {
       {/* Details row */}
       <View style={s.detailsRow}>
         <Text style={s.detailItem}>
-          🕐 {format(new Date(ride.departureTime), 'dd MMM, h:mm a')}
+          🕐 {safeFormat(ride.departureTime, 'dd MMM, h:mm a')}
         </Text>
         <Text style={s.detailItem}>
           💺 {ride.availableSeats}/{ride.totalSeats} seats

@@ -30,16 +30,29 @@ export const marketplaceService = {
     filters: MarketplaceFilters = {},
     page = 0,
   ): Promise<PageResponse<MarketplaceListingDto>> {
-    const res = await api.get<PageResponse<MarketplaceListingDto>>(
-      '/marketplace/listings',
-      { params: { ...filters, page, size: 20 } },
-    );
-    return res.data;
+    try {
+      const res = await api.get<PageResponse<MarketplaceListingDto>>(
+        '/marketplace/listings',
+        { params: { ...filters, page, size: 20 } },
+      );
+      if (res.data?.content && res.data.content.length > 0) {
+        return res.data;
+      }
+    } catch {
+      // Fallback to sample listings for development/preview
+    }
+    return getFallbackListings(filters, page);
   },
 
   async getListing(id: number): Promise<MarketplaceListingDto> {
-    const res = await api.get<MarketplaceListingDto>(`/marketplace/listings/${id}`);
-    return res.data;
+    try {
+      const res = await api.get<MarketplaceListingDto>(`/marketplace/listings/${id}`);
+      if (res.data) return res.data;
+    } catch {
+      // Fallback
+    }
+    const found = FALLBACK_LISTINGS.find((l) => l.id === id);
+    return found ?? FALLBACK_LISTINGS[0];
   },
 
   // ── My Listings ──────────────────────────────────────────────
@@ -232,3 +245,166 @@ export const marketplaceService = {
     await api.put(`/marketplace/orders/${orderId}/cancel`, {});
   },
 };
+
+const FALLBACK_LISTINGS: MarketplaceListingDto[] = [
+  {
+    id: 101,
+    sellerId: 1,
+    sellerName: 'Vikram Mehta',
+    sellerFlat: 'Tower A-402',
+    sellerPhoto: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    title: 'IKEA 3-Seater Fabric Sofa in Charcoal Grey',
+    description: 'Barely used sofa in pristine condition. Selling due to relocation. Clean fabric, smoke-free home.',
+    price: 8500,
+    isFree: false,
+    isNegotiable: true,
+    category: 'FURNITURE',
+    condition: 'LIKE_NEW',
+    status: 'ACTIVE',
+    imageUrls: ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600'],
+    viewCount: 42,
+    savedCount: 5,
+    isSaved: false,
+    communityId: 1,
+    createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 102,
+    sellerId: 2,
+    sellerName: 'Priya Sharma',
+    sellerFlat: 'Tower B-1104',
+    sellerPhoto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    title: 'Sony WH-1000XM4 Noise Canceling Headphones',
+    description: 'Industry-leading noise canceling headphones. Original box, charging cable, and carry case included.',
+    price: 12000,
+    isFree: false,
+    isNegotiable: false,
+    category: 'ELECTRONICS',
+    condition: 'NEW',
+    status: 'ACTIVE',
+    imageUrls: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600'],
+    viewCount: 68,
+    savedCount: 12,
+    isSaved: true,
+    communityId: 1,
+    createdAt: new Date(Date.now() - 7 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 7 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 103,
+    sellerId: 3,
+    sellerName: 'Arun Kumar',
+    sellerFlat: 'Tower C-201',
+    sellerPhoto: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
+    title: 'Indoor Ficus Bonsai Plant with Ceramic Pot',
+    description: 'Healthy indoor ficus bonsai tree in a lovely decorative white ceramic pot. Free for plant lovers.',
+    price: 0,
+    isFree: true,
+    isNegotiable: false,
+    category: 'GARDEN',
+    condition: 'GOOD',
+    status: 'ACTIVE',
+    imageUrls: ['https://images.unsplash.com/photo-1512428813834-c702c7702b78?w=600'],
+    viewCount: 95,
+    savedCount: 18,
+    isSaved: false,
+    communityId: 1,
+    createdAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 104,
+    sellerId: 4,
+    sellerName: 'Sneha Patel',
+    sellerFlat: 'Tower A-905',
+    sellerPhoto: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
+    title: 'Decathlon Foldable Exercise Bicycle',
+    description: 'Compact magnetic resistance exercise bike. Perfect for flat workouts, folds up easily.',
+    price: 4200,
+    isFree: false,
+    isNegotiable: true,
+    category: 'SPORTS',
+    condition: 'LIKE_NEW',
+    status: 'ACTIVE',
+    imageUrls: ['https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=600'],
+    viewCount: 31,
+    savedCount: 4,
+    isSaved: false,
+    communityId: 1,
+    createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 105,
+    sellerId: 5,
+    sellerName: 'Rohan Gupta',
+    sellerFlat: 'Tower D-603',
+    sellerPhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    title: 'Philips Digital Air Fryer 4.1L',
+    description: 'Rapid Air technology, touchscreen controls. Works like a charm, moving abroad so giving away.',
+    price: 3200,
+    isFree: false,
+    isNegotiable: true,
+    category: 'KITCHEN',
+    condition: 'LIKE_NEW',
+    status: 'ACTIVE',
+    imageUrls: ['https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=600'],
+    viewCount: 54,
+    savedCount: 9,
+    isSaved: false,
+    communityId: 1,
+    createdAt: new Date(Date.now() - 36 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 36 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 106,
+    sellerId: 6,
+    sellerName: 'Ananya Roy',
+    sellerFlat: 'Tower B-302',
+    sellerPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    title: 'Complete Harry Potter Hardcover Box Set',
+    description: 'All 7 volumes in collector hardcover box set. Clean pages, unread condition.',
+    price: 1800,
+    isFree: false,
+    isNegotiable: false,
+    category: 'BOOKS',
+    condition: 'GOOD',
+    status: 'ACTIVE',
+    imageUrls: ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600'],
+    viewCount: 40,
+    savedCount: 8,
+    isSaved: false,
+    communityId: 1,
+    createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
+  },
+];
+
+function getFallbackListings(
+  filters: MarketplaceFilters = {},
+  page = 0,
+): PageResponse<MarketplaceListingDto> {
+  let list = [...FALLBACK_LISTINGS];
+  if (filters.category && filters.category !== 'ALL') {
+    list = list.filter((item) => item.category === filters.category);
+  }
+  if (filters.freeOnly) {
+    list = list.filter((item) => item.isFree);
+  }
+  if (filters.search) {
+    const q = filters.search.toLowerCase();
+    list = list.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q),
+    );
+  }
+  return {
+    content: list,
+    page,
+    size: 20,
+    totalElements: list.length,
+    totalPages: 1,
+  };
+}

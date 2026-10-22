@@ -284,7 +284,7 @@ export const foodService = {
 
   async getRestaurantMenu(restaurantId: string): Promise<MenuItemDto[]> {
     try {
-      const res = await api.get<MenuItemDto[]>(`/food/restaurants/${restaurantId}/menu`);
+      const res = await api.get<MenuItemDto[]>(`/food/home-chefs/${restaurantId}/menu`);
       if (res.data && res.data.length > 0) return res.data;
       const r = FALLBACK_RESTAURANTS.find((item) => item.id === restaurantId);
       return r?.menu || FALLBACK_RESTAURANTS[0].menu || [];
@@ -314,6 +314,7 @@ export const foodService = {
     items: Array<{ name: string; qty: number; price: number; isVeg?: boolean }>;
     totalAmount: number;
     deliveryAddress?: string;
+    deliveryInstructions?: string;
   }): Promise<FoodOrderDto> {
     try {
       const res = await api.post<FoodOrderDto>('/food/orders', payload);

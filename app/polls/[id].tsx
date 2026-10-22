@@ -11,7 +11,7 @@ import { feedService } from '@/services/feedService';
 import { PollCard } from '@/components/polls/PollCard';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, getInitials } from '@/constants/config';
-import { format, formatDistanceToNow, isPast } from 'date-fns';
+import { safeFormat, safeFormatDistanceToNow, safeIsPast } from '@/utils/dateUtils';
 
 export default function PollDetailScreen() {
   const { id }  = useLocalSearchParams<{ id: string }>();
@@ -71,7 +71,7 @@ export default function PollDetailScreen() {
 
   const poll      = post.poll;
   const isOwner   = post.authorId === user?.id;
-  const isExpired = poll.deadline ? isPast(new Date(poll.deadline)) : false;
+  const isExpired = poll.deadline ? safeIsPast(poll.deadline) : false;
   const isClosed  = !poll.isActive || isExpired;
   const maxVotes  = Math.max(...poll.options.map((o) => o.voteCount));
   const winner    = isClosed ? poll.options.find((o) => o.voteCount === maxVotes) : null;
@@ -103,7 +103,7 @@ export default function PollDetailScreen() {
             <View style={{ flex: 1 }}>
               <Text style={s.authorName}>{post.authorName}</Text>
               <Text style={s.authorMeta}>
-                {post.authorFlat} · {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                {post.authorFlat} · {safeFormatDistanceToNow(post.createdAt, { addSuffix: true })}
               </Text>
             </View>
           </View>
@@ -116,8 +116,8 @@ export default function PollDetailScreen() {
             {poll.deadline && (
               <Text style={s.meta}>
                 {isClosed
-                  ? `Ended ${format(new Date(poll.deadline), 'dd MMM, h:mm a')}`
-                  : `Closes ${formatDistanceToNow(new Date(poll.deadline), { addSuffix: true })}`
+                  ? `Ended ${safeFormat(poll.deadline, 'dd MMM, h:mm a')}`
+                  : `Closes ${safeFormatDistanceToNow(poll.deadline, { addSuffix: true })}`
                 }
               </Text>
             )}
@@ -181,7 +181,7 @@ export default function PollDetailScreen() {
                     <View style={s.commentHeader}>
                       <Text style={s.commentAuthor}>{c.authorName}</Text>
                       <Text style={s.commentTime}>
-                        {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
+                        {safeFormatDistanceToNow(c.createdAt, { addSuffix: true })}
                       </Text>
                     </View>
                     <Text style={s.commentText}>{c.content}</Text>

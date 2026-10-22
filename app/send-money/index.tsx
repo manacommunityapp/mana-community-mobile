@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert, Platform, StatusBar, FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as Contacts from 'expo-contacts';
+import * as Contacts from 'expo-contacts/legacy';
 import { THEME, FONTS, SHADOWS } from '@/constants/config';
 import { sendMoneyService, RecentContact, RECENT_CONTACTS, SendPayload } from '@/services/sendMoneyService';
 
@@ -203,7 +203,7 @@ export default function SendMoneyScreen() {
                     const color = sendMoneyService.avatarColor(name);
                     return (
                       <TouchableOpacity
-                        key={c.id || idx}
+                        key={(c as any).id || idx}
                         onPress={() => pickDevice(c)}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderBottomWidth: idx < filteredDevice.length - 1 ? 1 : 0, borderBottomColor: '#F0F0F5' }}
                       >

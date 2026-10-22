@@ -20,4 +20,10 @@ module.exports = {
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],
+  // Stub EXPO_PUBLIC_* env vars so babel-preset-expo's inline transform
+  // doesn't produce `undefined.EXPO_PUBLIC_*` in the test environment.
+  testEnvironmentOptions: {
+    env: { EXPO_PUBLIC_INSURANCE_ENABLED: 'false' },
+  },
 };
+

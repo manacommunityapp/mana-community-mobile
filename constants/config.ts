@@ -12,6 +12,14 @@ export const CONFIG = {
   WS_URL:       isDev ? `ws://3.109.145.130:8081/ws` : `wss://api.manacommunity.in/ws`,
   APP_NAME:     "Mana Community",
   VERSION:      "1.0.0",
+
+  // ── Flight affiliate IDs (replace with real IDs once registered) ──
+  // EaseMyTrip: register at b2b.easemytrip.com (affiliate division)
+  // MakeMyTrip: register at commission.makemytrip.com
+  FLIGHT_AFFILIATE: {
+    EMT_AFFILIATE_ID: "MANA_COMMUNITY",
+    MMT_CAMPAIGN_ID:  "affiliate_mana",
+  },
 } as const;
 
 // ── Theme Colors (matches web app Mana indigo palette) ────────
@@ -182,6 +190,10 @@ export const THEME = {
   surface:      "#FFFFFF",  // Main card surface
   surfaceSubtle:"#F9FAFC",  // Subtle secondary surface
   surfaceMuted: "#F1F4F7",  // Background chip
+  background:   "#F9FAFC",  // Light mode base background
+  backgroundAlt:"#F1F4F7",  // Secondary background
+  headerBg:     "#FFFFFF",  // Clean white header
+  headerBorder: "#EBEFF2",  // Hairline bottom header border
   border:       "#EBEFF2",  // 1px hairline border
   borderMedium: "#DFE4E8",
   textPrimary:  "#44475B",  // Soft Charcoal primary text
@@ -191,6 +203,9 @@ export const THEME = {
   indigoLight:  "#EEF2FF",
   amber:        "#FFB800",
   amberLight:   "#FFFBEB",
+  text:         "#0F172A",
+  muted:        "#64748B",
+  primary:      "#4F46E5",
 } as const;
 
 export const SHADOWS = {

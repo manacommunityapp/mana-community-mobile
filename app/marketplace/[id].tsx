@@ -13,7 +13,7 @@ import { marketplaceService } from '@/services/marketplaceService';
 import { chatService } from '@/services/chatService';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, getInitials } from '@/constants/config';
-import { formatDistanceToNow, format } from 'date-fns';
+import { safeFormat, safeFormatDistanceToNow } from '@/utils/dateUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -238,7 +238,7 @@ export default function ListingDetailScreen() {
           {/* Stats */}
           <Text style={scr.stats}>
             👁 {listing.viewCount} views · 🤍 {listing.savedCount} saves ·{' '}
-            {formatDistanceToNow(new Date(listing.createdAt), { addSuffix: true })}
+            {safeFormatDistanceToNow(listing.createdAt, { addSuffix: true })}
           </Text>
 
           {/* Description */}
@@ -279,7 +279,7 @@ export default function ListingDetailScreen() {
 
           {/* Listed date */}
           <Text style={scr.listedDate}>
-            Listed on {format(new Date(listing.createdAt), 'dd MMM yyyy')}
+            Listed on {safeFormat(listing.createdAt, 'dd MMM yyyy')}
           </Text>
 
           {/* Owner actions */}

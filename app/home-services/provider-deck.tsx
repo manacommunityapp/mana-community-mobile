@@ -95,6 +95,7 @@ export default function ProviderDeckScreen() {
       </LinearGradient>
 
       <FlatList
+        style={{ flex: 1 }}
         data={displayList}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}

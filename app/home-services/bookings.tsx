@@ -102,6 +102,7 @@ export default function BookingsScreen() {
       </LinearGradient>
 
       <FlatList
+        style={{ flex: 1 }}
         data={bookings}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}

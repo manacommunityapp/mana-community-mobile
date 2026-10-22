@@ -60,6 +60,7 @@ export default function PackagesScreen() {
       </LinearGradient>
 
       <FlatList
+        style={{ flex: 1 }}
         data={packages}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}

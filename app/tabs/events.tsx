@@ -43,6 +43,7 @@ const QUICK_ACTIONS = [
   { label: 'My Events',  emoji: '📋', bg: '#ECFDF5', color: '#059669', route: '/events/my-events' },
   { label: 'Calendar',   emoji: '🗓️', bg: '#FEF3C7', color: '#D97706', route: '/events/calendar' },
   { label: 'Passes',     emoji: '🎟️', bg: '#FCE7F3', color: '#DB2777', route: '/events/passes' },
+  { label: 'Desk',       emoji: '🛡️', bg: '#F1F5F9', color: '#0F172A', route: '/event-admin' },
 ];
 
 function EventCard({ event, onPress }: { event: EventDto; onPress: () => void }) {
@@ -111,7 +112,7 @@ function EventCard({ event, onPress }: { event: EventDto; onPress: () => void })
         <View style={styles.chipRow}>
           <View style={[styles.typeChip, { backgroundColor: theme.bg }]}>
             <Text style={styles.typeChipEmoji}>{theme.emoji}</Text>
-            <Text style={[styles.typeChipText, { color: theme.color }]}>{event.type}</Text>
+            <Text style={[styles.typeChipText, { color: theme.color }]} numberOfLines={1}>{event.type}</Text>
           </View>
           {dateIsToday && (
             <View style={styles.urgencyChipToday}>
@@ -125,22 +126,22 @@ function EventCard({ event, onPress }: { event: EventDto; onPress: () => void })
             </View>
           )}
           {!dateIsToday && !dateIsTomorrow && daysAway >= 0 && daysAway <= 7 && (
-            <Text style={styles.daysAway}>{weekday} · {daysAway}d</Text>
+            <Text style={styles.daysAway} numberOfLines={1}>{weekday} · {daysAway}d</Text>
           )}
         </View>
 
-        <Text style={styles.cardTitle} numberOfLines={2}>{event.title}</Text>
+        <Text style={styles.cardTitle} numberOfLines={1}>{event.title}</Text>
 
         {/* Meta */}
         <View style={styles.metaSection}>
-          <View style={styles.metaRow}>
+          <View style={styles.metaLocationRow}>
             <Text style={styles.metaEmoji}>📍</Text>
             <Text style={styles.cardMeta} numberOfLines={1}>
               {event.venue || event.location || 'TBD'}
             </Text>
           </View>
           <View style={styles.metaDivider} />
-          <View style={styles.metaRow}>
+          <View style={styles.metaTimeRow}>
             <Text style={styles.metaEmoji}>🕐</Text>
             <Text style={styles.cardMeta}>{formatTime(event.startTime)}</Text>
           </View>
@@ -259,8 +260,13 @@ export default function EventsScreen() {
         </View>
       </LinearGradient>
 
-      {/* Quick Actions */}
-      <View style={styles.quickRow}>
+      {/* Quick Action Navigation Bar */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.quickScrollWrap}
+        contentContainerStyle={styles.quickScroll}
+      >
         {QUICK_ACTIONS.map((a) => (
           <TouchableOpacity
             key={a.label}
@@ -271,10 +277,10 @@ export default function EventsScreen() {
             <View style={[styles.quickIcon, { backgroundColor: a.bg }]}>
               <Text style={styles.quickEmoji}>{a.emoji}</Text>
             </View>
-            <Text style={styles.quickLabel}>{a.label}</Text>
+            <Text style={styles.quickLabel} numberOfLines={1}>{a.label}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Category pills */}
       <ScrollView
@@ -308,6 +314,7 @@ export default function EventsScreen() {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={filtered}
           keyExtractor={(e) => String(e.id)}
           renderItem={({ item }) => (
@@ -455,69 +462,79 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
 
-  // ── Quick Actions ──
-  quickRow: {
-    flexDirection: 'row',
+  // ── 4-Column Navigation Row ──
+  // ── Quick Actions (Create, My Events, Calendar, Passes, Desk) ──
+  quickScrollWrap: {
+    flexGrow: 0,
+    height: 64,
+    marginVertical: 4,
+  },
+  quickScroll: {
     paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 6,
-    gap: 8,
+    alignItems: 'center',
+    gap: 7,
   },
   quickCard: {
-    flex: 1,
+    width: Math.max(64, Math.floor((SCREEN_W - 56) / 5)),
+    height: 56,
     backgroundColor: '#fff',
-    borderRadius: RADIUS.lg,
-    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+    paddingVertical: 5,
+    paddingHorizontal: 2,
     alignItems: 'center',
-    gap: 5,
+    justifyContent: 'center',
+    gap: 3,
     borderWidth: 1,
     borderColor: '#E8E8F0',
     ...SHADOWS.sm,
   },
   quickIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickEmoji: { fontSize: 16 },
+  quickEmoji: { fontSize: 13 },
   quickLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: COLORS.text,
     fontFamily: FONTS.medium,
+    textAlign: 'center',
   },
 
   // ── Filter Pills ──
   filterScroll: {
-    maxHeight: 50,
+    flexGrow: 0,
+    height: 36,
+    marginBottom: 4,
   },
   filterRow: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 7,
     alignItems: 'center',
+    gap: 6,
   },
   filterChip: {
+    height: 28,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     backgroundColor: '#fff',
     borderRadius: RADIUS.full,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
+    paddingHorizontal: 11,
     borderWidth: 1,
     borderColor: '#E8E8F0',
+    justifyContent: 'center',
   },
   filterChipActive: {
     backgroundColor: '#312E81',
     borderColor: '#312E81',
-    ...SHADOWS.sm,
   },
-  filterEmoji: { fontSize: 13 },
+  filterEmoji: { fontSize: 11 },
   filterText: {
-    fontSize: 12,
+    fontSize: 11,
+    lineHeight: 14,
     fontFamily: FONTS.semiBold,
     fontWeight: '600',
     color: COLORS.textMuted,
@@ -525,11 +542,12 @@ const styles = StyleSheet.create({
   filterTextActive: { color: '#fff' },
 
   // ── List ──
-  list: { padding: 14, gap: 12, paddingBottom: 20 },
+  list: { padding: 14, gap: 12, paddingBottom: 100 },
 
   // ── Event Card ──
   card: {
     flexDirection: 'row',
+    height: 112,
     backgroundColor: '#fff',
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
@@ -539,9 +557,10 @@ const styles = StyleSheet.create({
   },
   dateStrip: {
     width: 58,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     gap: 2,
   },
   dateStripEmoji: { fontSize: 16, marginBottom: 2 },
@@ -567,12 +586,17 @@ const styles = StyleSheet.create({
   },
 
   // ── Card Body ──
-  cardBody: { flex: 1, padding: 12, gap: 6 },
+  cardBody: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'space-between',
+  },
   chipRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
   },
   typeChip: {
     flexDirection: 'row',
@@ -643,10 +667,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  metaRow: {
+  metaLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
+    flex: 1,
+    flexShrink: 1,
+  },
+  metaTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    flexShrink: 0,
   },
   metaEmoji: { fontSize: 10 },
   metaDivider: {
@@ -659,6 +691,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textMuted,
     fontFamily: FONTS.medium,
+    flexShrink: 1,
   },
 
   // ── Card Footer ──

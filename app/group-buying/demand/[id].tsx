@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,45 +11,34 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { groupBuyingService } from '../../../services/groupBuyingService';
-import { DemandPool, VendorOffer } from '../../../types/groupBuying';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { groupBuyingService } from '@/services/groupBuyingService';
+import type { DemandPool, VendorOffer } from '@/types/groupBuying';
 
 export default function DemandDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [demand, setDemand] = useState<DemandPool | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadDemand();
-  }, [id]);
+  const { data: demand, isLoading: loading } = useQuery({
+    queryKey: ['demand-detail', id],
+    queryFn: () => groupBuyingService.getDemandById(id as string),
+    enabled: !!id,
+  });
 
-  const loadDemand = async () => {
-    if (!id) return;
-    try {
-      const data = await groupBuyingService.getDemandById(id);
-      setDemand(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const upvoteMutation = useMutation({
+    mutationFn: () => groupBuyingService.upvoteDemand(demand!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['demand-detail', id] });
+      queryClient.invalidateQueries({ queryKey: ['demand-board'] });
+    },
+    onError: () => Alert.alert('Error', 'Could not upvote demand'),
+  });
 
-  const handleUpvote = async () => {
+  const handleUpvote = () => {
     if (!demand) return;
-    try {
-      await groupBuyingService.upvoteDemand(demand.id);
-      setDemand(prev => prev ? {
-        ...prev,
-        upvotes: prev.hasUpvoted ? prev.upvotes - 1 : prev.upvotes + 1,
-        hasUpvoted: !prev.hasUpvoted,
-        interestedResidents: prev.hasUpvoted ? (prev.interestedResidents || 1) - 1 : (prev.interestedResidents || 0) + 1,
-      } : null);
-    } catch (e) {
-      Alert.alert('Error', 'Could not upvote demand');
-    }
+    upvoteMutation.mutate();
   };
 
   const handleAcceptOffer = async (offer: VendorOffer) => {

@@ -122,6 +122,7 @@ export default function InventoryScreen() {
     queryKey: ['inventory', 'items'],
     queryFn: () => inventoryService.getItems(),
     staleTime: 30_000,
+    retry: false,
   });
 
   const {
@@ -132,6 +133,7 @@ export default function InventoryScreen() {
     queryKey: ['inventory', 'procurement'],
     queryFn: () => inventoryService.getPurchaseRequests(),
     staleTime: 30_000,
+    retry: false,
   });
 
   const {
@@ -142,6 +144,7 @@ export default function InventoryScreen() {
     queryKey: ['inventory', 'audit'],
     queryFn: () => inventoryService.getAuditLogs(),
     staleTime: 30_000,
+    retry: false,
   });
 
   const createPRMutation = useMutation({

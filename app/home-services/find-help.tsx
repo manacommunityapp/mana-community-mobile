@@ -100,6 +100,7 @@ export default function FindHelpScreen() {
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
         data={CATEGORIES}
         keyExtractor={item => item.code}
         contentContainerStyle={styles.catList}
@@ -126,6 +127,7 @@ export default function FindHelpScreen() {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={filtered}
           keyExtractor={item => String(item.id)}
           contentContainerStyle={styles.listContent}
@@ -414,6 +416,7 @@ const styles = StyleSheet.create({
   },
   callBtn: {
     flex: 1,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ECFDF5',
@@ -423,8 +426,8 @@ const styles = StyleSheet.create({
     borderColor: '#A7F3D0',
   },
   callBtnText: { fontSize: 13, fontFamily: FONTS.bold, color: '#059669' },
-  bookBtn: { flex: 2, borderRadius: 12, overflow: 'hidden' },
-  bookGrad: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
+  bookBtn: { flex: 2, height: 42, borderRadius: 12, overflow: 'hidden' },
+  bookGrad: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
   bookBtnText: { color: '#FFFFFF', fontSize: 13, fontFamily: FONTS.bold },
 
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },

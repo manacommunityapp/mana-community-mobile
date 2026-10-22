@@ -8,16 +8,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS, SHADOWS, FONTS } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import { useQuery } from '@tanstack/react-query';
-import { budgetService } from '@/services/budgetService';
+import { societyFinanceService } from '@/services/societyFinanceService';
 
 export default function SocietyTreasuryDashboard() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'MONTH' | 'QUARTER' | 'YEAR'>('MONTH');
 
-  const { data: summary, refetch } = useQuery({
-    queryKey: ['society-budget-summary'],
-    queryFn: () => budgetService.getBudgetSummary(),
+  const { data: finSummary, refetch } = useQuery({
+    queryKey: ['society-finance-dashboard'],
+    queryFn: societyFinanceService.getDashboardSummary,
   });
 
   const onRefresh = async () => {
@@ -29,10 +29,10 @@ export default function SocietyTreasuryDashboard() {
     }
   };
 
-  const totalBudget = summary?.totalBudget || 4800000;
-  const totalExpenses = summary?.totalExpenses || 3950000;
-  const reserveFund = 12500000;
-  const totalCollections = 4250000;
+  const totalBudget = 4800000;
+  const totalExpenses = finSummary?.pendingPayables ?? 3950000;
+  const reserveFund = finSummary ? finSummary.sinkingFundBalance + finSummary.fixedDepositsBalance : 12500000;
+  const totalCollections = finSummary?.totalCollected ?? 4250000;
 
   return (
     <View style={s.container}>
@@ -90,13 +90,15 @@ export default function SocietyTreasuryDashboard() {
             <Text style={s.cardValue}>₹{(totalCollections).toLocaleString('en-IN')}</Text>
             <View style={s.gainPill}>
               <Ionicons name="trending-up" size={12} color={THEME.brandDark} />
-              <Text style={s.gainPillText}>+8.4% MoM</Text>
+              <Text style={s.gainPillText}>
+                {finSummary ? `${finSummary.collectionRate}% rate` : '+8.4% MoM'}
+              </Text>
             </View>
           </View>
 
           <View style={s.metricCard}>
             <Text style={s.cardLabel}>Reserve / Sinking Fund</Text>
-            <Text style={s.cardValue}>₹{(reserveFund).toLocaleString('en-IN')}</Text>
+            <Text style={s.cardValue}>₹{(reserveFund / 100000).toFixed(1)}L</Text>
             <View style={s.gainPill}>
               <Ionicons name="shield-checkmark" size={12} color={THEME.brandDark} />
               <Text style={s.gainPillText}>Liquid FD & Sweep</Text>
@@ -104,10 +106,21 @@ export default function SocietyTreasuryDashboard() {
           </View>
 
           <View style={s.metricCard}>
-            <Text style={s.cardLabel}>OpEx Incurred</Text>
-            <Text style={s.cardValue}>₹{(totalExpenses).toLocaleString('en-IN')}</Text>
+            <Text style={s.cardLabel}>Outstanding Dues</Text>
+            <Text style={s.cardValue}>₹{(finSummary?.outstandingReceivables ?? 137500).toLocaleString('en-IN')}</Text>
             <View style={[s.gainPill, { backgroundColor: THEME.amberLight }]}>
-              <Text style={[s.gainPillText, { color: '#B45309' }]}>82.3% of Allocation</Text>
+              <Text style={[s.gainPillText, { color: '#B45309' }]}>
+                {finSummary?.pendingApprovalsCount ?? 3} pending approvals
+              </Text>
+            </View>
+          </View>
+
+          <View style={s.metricCard}>
+            <Text style={s.cardLabel}>Vendor Payables</Text>
+            <Text style={s.cardValue}>₹{(finSummary?.pendingPayables ?? 245000).toLocaleString('en-IN')}</Text>
+            <View style={[s.gainPill, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="alert-circle-outline" size={12} color="#DC2626" />
+              <Text style={[s.gainPillText, { color: '#DC2626' }]}>Bills Due</Text>
             </View>
           </View>
         </ScrollView>
@@ -181,6 +194,17 @@ export default function SocietyTreasuryDashboard() {
                 <Ionicons name="people-outline" size={18} color="#7C3AED" />
               </View>
               <Text style={s.actionLabel}>Vendor TDS</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={s.actionBtn}
+              onPress={() => router.push('/finance/vendor-bills' as any)}
+              activeOpacity={0.75}
+            >
+              <View style={[s.actionIcon, { backgroundColor: '#EDE9FE' }]}>
+                <Ionicons name="document-attach-outline" size={18} color="#7C3AED" />
+              </View>
+              <Text style={s.actionLabel}>Vendor Bills</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

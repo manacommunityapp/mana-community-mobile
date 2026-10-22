@@ -79,6 +79,7 @@ export default function MyHelpScreen() {
       </LinearGradient>
 
       <FlatList
+        style={{ flex: 1 }}
         data={staffList}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
@@ -313,6 +314,7 @@ const styles = StyleSheet.create({
   },
   callBtn: {
     flex: 1,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ECFDF5',
@@ -324,6 +326,7 @@ const styles = StyleSheet.create({
   callBtnText: { fontSize: 12, fontFamily: FONTS.bold, color: '#059669' },
   gatePassBtn: {
     flex: 1,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
@@ -335,6 +338,7 @@ const styles = StyleSheet.create({
   gatePassBtnText: { fontSize: 12, fontFamily: FONTS.bold, color: '#334155' },
   salaryBtn: {
     flex: 1,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#EEF2FF',

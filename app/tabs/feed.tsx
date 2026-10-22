@@ -25,9 +25,12 @@ import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppBack } from '@/hooks/useAppBack';
 import { ProfileImageModal } from '@/components/common/ProfileImageModal';
+import { ResidentPassCard } from '@/components/common/ResidentPassCard';
+import { TodayAtAGlance, KpiChip } from '@/components/common/TodayAtAGlance';
+import { CommunityHighlightBanner } from '@/components/common/CommunityHighlightBanner';
 
 const SCREEN_W = Dimensions.get('window').width;
-const EVENT_CARD_W = SCREEN_W * 0.68;
+const EVENT_CARD_W = SCREEN_W * 0.62;
 
 type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
 
@@ -91,7 +94,7 @@ function UpcomingEventCard({ event, onPress }: { event: EventDto; onPress: () =>
         <View style={es.attendeeRow}>
           <View style={es.avatarStack}>
             {[0, 1, 2].map(i => (
-              <View key={i} style={[es.miniAvatar, { left: i * 16, backgroundColor: ['#4F46E5','#059669','#0891B2'][i] }]}>
+              <View key={i} style={[es.miniAvatar, { left: i * 13, backgroundColor: ['#4F46E5','#059669','#0891B2'][i] }]}>
                 <Text style={es.miniAvatarText}>{['A','B','C'][i]}</Text>
               </View>
             ))}
@@ -109,86 +112,89 @@ const es = StyleSheet.create({
   card: {
     width: EVENT_CARD_W,
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E8E8F0',
-    ...SHADOWS.md,
+    ...SHADOWS.sm,
   },
   imageArea: {
-    height: 110,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   eventIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eventEmoji: { fontSize: 24 },
+  eventEmoji: { fontSize: 16 },
   dateBadgeWrap: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(0,0,0,0.38)',
   },
   dateBadge: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
     color: '#fff',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
     fontFamily: FONTS.bold,
   },
   body: {
-    padding: 12,
-    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: COLORS.text,
     fontFamily: FONTS.displayBold,
     letterSpacing: -0.2,
+    lineHeight: 17,
   },
   attendeeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   avatarStack: {
     flexDirection: 'row',
-    width: 58,
-    height: 22,
+    width: 44,
+    height: 18,
     position: 'relative',
   },
   miniAvatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: COLORS.surface,
   },
   miniAvatarText: {
     color: '#fff',
-    fontSize: 8,
-    fontFamily: FONTS.bold, fontWeight: '800',
+    fontSize: 7.5,
+    fontFamily: FONTS.bold,
+    fontWeight: '800',
   },
   attendeeCount: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: COLORS.textMuted,
     fontFamily: FONTS.medium,
-    marginLeft: 6,
+    marginLeft: 4,
   },
 });
 
@@ -445,7 +451,77 @@ export default function FeedScreen() {
 
   const FinanceBanner = null;
 
-  // ── Quick Stats Row (dynamic) ───────────────────────────────────────
+  // ── KPI chips for the new "Today at a Glance" strip ────────────────
+  const kpiChips = useMemo<KpiChip[]>(() => [
+    {
+      id: 'events',
+      label: 'Events',
+      emoji: '🎉',
+      value: upcomingEvents.length,
+      icon: 'calendar-outline',
+      color: '#4F46E5',
+      bg: '#EEF2FF',
+      iconBg: '#C7D2FE',
+      route: '/tabs/events',
+    },
+    {
+      id: 'health_buddy',
+      label: 'Health Buddy',
+      emoji: '🥗',
+      value: 'Active',
+      icon: 'heart-outline',
+      color: '#059669',
+      bg: '#ECFDF5',
+      iconBg: '#A7F3D0',
+      route: '/wellness',
+    },
+    {
+      id: 'tickets',
+      label: 'Tickets',
+      emoji: '🎧',
+      value: openTickets.length,
+      icon: 'headset-outline',
+      color: '#0891B2',
+      bg: '#ECFEFF',
+      iconBg: '#A5F3FC',
+      route: '/helpdesk',
+    },
+    {
+      id: 'sports',
+      label: 'Live Sports',
+      emoji: '🏆',
+      value: 0,
+      icon: 'trophy-outline',
+      color: '#059669',
+      bg: '#ECFDF5',
+      iconBg: '#A7F3D0',
+      route: '/sports',
+    },
+    {
+      id: 'notifs',
+      label: 'Notifications',
+      emoji: '🔔',
+      value: unreadCount,
+      icon: 'notifications-outline',
+      color: '#2563EB',
+      bg: '#EFF6FF',
+      iconBg: '#BFDBFE',
+      route: '/notifications',
+    },
+    {
+      id: 'visitors',
+      label: 'Gate Log',
+      emoji: '🚪',
+      value: 0,
+      icon: 'shield-checkmark-outline',
+      color: '#0891B2',
+      bg: '#ECFEFF',
+      iconBg: '#A5F3FC',
+      route: '/visitors',
+    },
+  ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
+
+  // ── Quick Stats Row (legacy — kept for other parts if reused) ────────
   const statTiles = useMemo(() => [
     { id: 'events',  label: 'Events',  emoji: '📅', value: upcomingEvents.length,                color: '#4F46E5', labelColor: '#3730A3', bg: '#EEF2FF', route: '/tabs/events' },
     { id: 'polls',   label: 'Polls',   emoji: '📊', value: activePollsPage?.totalElements ?? 0,  color: '#7C3AED', labelColor: '#5B21B6', bg: '#EDE9FE', route: '/polls' },
@@ -454,57 +530,46 @@ export default function FeedScreen() {
     { id: 'notifs',  label: 'Notifs',  emoji: '🔔', value: unreadCount,                          color: '#2563EB', labelColor: '#1E40AF', bg: '#DBEAFE', route: '/notifications' },
   ], [upcomingEvents.length, activePollsPage?.totalElements, openTickets.length, unreadCount]);
 
-  const StatsRow = useMemo(() => (
-    <View style={styles.statsContainer}>
-      {statTiles.map(tile => (
-        <TouchableOpacity
-          key={tile.id}
-          style={[styles.statTile, { backgroundColor: tile.bg }]}
-          onPress={() => router.push(tile.route as any)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.statTileTop}>
-            <Text style={[styles.statNum, { color: tile.color }]}>{tile.value}</Text>
-            <Text style={styles.statEmoji}>{tile.emoji}</Text>
-          </View>
-          <Text style={[styles.statLabel, { color: tile.labelColor }]} numberOfLines={1}>
-            {tile.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  ), [statTiles, router]);
+  // Resident pass card data derived from the auth user
+  const flatNumber   = user?.flatNumber ?? user?.flatNo ?? undefined;
+  const tower        = user?.tower ?? user?.block ?? undefined;
+  const residentId   = user?.id ? `MNA-${String(user.id).padStart(4, '0')}` : 'MNA-0001';
+  const manaPoints   = (user as any)?.manaPoints ?? 0;
 
   const ListHeader = useMemo(() => (
     <View style={styles.headerStack}>
+
+      {/* ── 1. Resident Pass Hero Card (Hidden for now) ── */}
+      {/* <ResidentPassCard
+        residentName={userDisplayName}
+        flatNumber={flatNumber}
+        tower={tower}
+        communityName={communityName || undefined}
+        duesPaid
+        manaPoints={manaPoints}
+        residentId={residentId}
+      /> */}
+
+      {/* ── 2. Today at a Glance KPI Strip (NEW — Figma redesign) ── */}
+      <TodayAtAGlance chips={kpiChips} />
+
       <FlatGateActivityCard />
       {FinanceBanner}
-      {StatsRow}
       <QuickActions />
 
-      {/* Community Announcement Card */}
+      {/* ── 3. Community Highlight Banner (NEW — Figma redesign) ── */}
       {latestAnnouncement && (
-        <View style={styles.announcementCard}>
-          <LinearGradient
-            colors={['#EEF2FF', '#E0E7FF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.announcementGradient}
-          />
-          <View style={styles.announcementIconWrap}>
-            <Text style={styles.announcementEmoji}>📢</Text>
-          </View>
-          <View style={styles.announcementContent}>
-            <Text style={styles.announcementLabel}>COMMUNITY UPDATE</Text>
-            <Text style={styles.announcementTitle} numberOfLines={1}>
-              {latestAnnouncement.content.split('\n')[0]}
-            </Text>
-            <Text style={styles.announcementDesc} numberOfLines={2}>
-              {latestAnnouncement.content}
-            </Text>
-          </View>
-          <Text style={styles.announcementArrow}>{'>'}</Text>
-        </View>
+        <CommunityHighlightBanner
+          eyebrow="COMMUNITY UPDATE"
+          title={latestAnnouncement.content.split('\n')[0]}
+          description={
+            latestAnnouncement.content.includes('\n')
+              ? latestAnnouncement.content.split('\n').slice(1).join(' ').trim()
+              : undefined
+          }
+          decorEmoji="📢"
+          onPress={() => router.push('/tabs/feed')}
+        />
       )}
 
       {/* Upcoming Events */}
@@ -641,7 +706,7 @@ export default function FeedScreen() {
         </ScrollView>
       </View>
     </View>
-  ), [filter, filteredPosts.length, router, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, StatsRow, user?.profilePicUrl, user?.profilePhoto]);
+  ), [filter, filteredPosts.length, router, userDisplayName, flatNumber, tower, communityName, manaPoints, residentId, kpiChips, userInitial, avatarColor, latestAnnouncement, upcomingEvents, FinanceBanner, user?.profilePicUrl, user?.profilePhoto]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -1101,55 +1166,55 @@ const styles = StyleSheet.create({
 
   // ── Upcoming Events ────────────────────────────────────────────────
   eventsSection: {
-    marginTop: 18,
+    marginTop: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
-  sectionEmoji: { fontSize: 20 },
+  sectionEmoji: { fontSize: 17 },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
     color: COLORS.text,
     letterSpacing: -0.3,
     fontFamily: FONTS.displayBold,
   },
   sectionSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textMuted,
     fontFamily: FONTS.regular,
-    marginTop: 1,
+    marginTop: 0.5,
   },
   seeAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     backgroundColor: '#EEF2FF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E0E7FF',
   },
   seeAll: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: COLORS.primary,
     fontFamily: FONTS.bold,
   },
   eventsScroll: {
     paddingHorizontal: 16,
-    gap: 12,
-    paddingBottom: 4,
+    gap: 10,
+    paddingBottom: 2,
   },
 
   // ── Composer Card ──────────────────────────────────────────────────

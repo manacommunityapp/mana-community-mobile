@@ -34,17 +34,17 @@ export default function DealCard({ deal, onPress }: DealCardProps) {
         <View style={s.dealRightBadges}>
           {deal.isTrending && (
             <View style={s.trendBadge}>
-              <Text style={s.trendBadgeText}>?? Hot</Text>
+              <Text style={s.trendBadgeText}>🔥 Hot</Text>
             </View>
           )}
           {deal.isFestivalDeal && (
             <View style={s.festBadge}>
-              <Text style={s.festBadgeText}>?? Festival</Text>
+              <Text style={s.festBadgeText}>🎉 Festival</Text>
             </View>
           )}
           {(deal.isEndingSoon || deal.daysLeft <= 1) && (
             <View style={s.urgentBadge}>
-              <Text style={s.urgentBadgeText}>? Ends Soon</Text>
+              <Text style={s.urgentBadgeText}>⏰ Ends Soon</Text>
             </View>
           )}
         </View>
@@ -64,8 +64,8 @@ export default function DealCard({ deal, onPress }: DealCardProps) {
 
       <View style={s.dealPricingRow}>
         <View>
-          <Text style={s.dealMrp}>MRP ?{deal.mrp}</Text>
-          <Text style={s.dealCurrentPrice}>?{deal.currentTierPrice}</Text>
+          <Text style={s.dealMrp}>MRP ₹{deal.mrp}</Text>
+          <Text style={s.dealCurrentPrice}>₹{deal.currentTierPrice}</Text>
         </View>
         <View style={s.dealDiscBadge}>
           <Text style={s.dealDiscText}>{discPct}% OFF</Text>
@@ -77,7 +77,7 @@ export default function DealCard({ deal, onPress }: DealCardProps) {
         <View style={s.nextTierHint}>
           <Ionicons name="trending-down-outline" size={13} color="#059669" />
           <Text style={s.nextTierText}>
-            Next tier: ?{deal.nextTierPrice} ? {deal.nextTierUnitsNeeded} more needed
+            Next tier: ₹{deal.nextTierPrice} · {deal.nextTierUnitsNeeded} more needed
           </Text>
         </View>
       ) : null}
@@ -92,7 +92,7 @@ export default function DealCard({ deal, onPress }: DealCardProps) {
           />
         </View>
         <Text style={s.dealProgressText}>
-          {deal.committedQty}/{deal.targetQty} units ? {deal.daysLeft}d left
+          {deal.committedQty}/{deal.targetQty} units · {deal.daysLeft}d left
         </Text>
       </View>
 

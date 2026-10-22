@@ -702,6 +702,17 @@ export default function ProfileScreen() {
             onPress={() => router.push('/food')}
             iconColor="#E11D48"
             iconBg="#FFE4E6"
+          />
+          <MenuItem
+            icon="hardware-chip-outline"
+            label="Smart Home & IoT"
+            sublabel="Automations, scenes & smart device schedules"
+            onPress={() => router.push('/automation')}
+            iconColor="#7C3AED"
+            iconBg="#EDE9FE"
+            badge="IoT"
+            badgeBg="#EDE9FE"
+            badgeColor="#7C3AED"
             isLast
           />
         </View>
@@ -726,6 +737,28 @@ export default function ProfileScreen() {
               badgeColor={pendingDuesTotal > 0 ? '#DC2626' : '#059669'}
             />
           )}
+          <MenuItem
+            icon="flash-outline"
+            label="Mana Pay (BBPS Bills)"
+            sublabel="Electricity, water, gas & broadband payments"
+            onPress={() => router.push('/bbps')}
+            iconColor="#2563EB"
+            iconBg="#EFF6FF"
+            badge="BBPS"
+            badgeBg="#EDE9FE"
+            badgeColor="#4F46E5"
+          />
+          <MenuItem
+            icon="phone-portrait-outline"
+            label="Mobile Recharge"
+            sublabel="Jio, Airtel, Vi & BSNL instant plans"
+            onPress={() => router.push('/recharge')}
+            iconColor="#0284C7"
+            iconBg="#F0F9FF"
+            badge="NEW"
+            badgeBg="#DCFCE7"
+            badgeColor="#059669"
+          />
           <MenuItem
             icon="wallet-outline"
             label="My Finance (Personal)"
@@ -819,6 +852,14 @@ export default function ProfileScreen() {
             />
           )}
           <MenuItem
+            icon="navigate-circle-outline"
+            label="Mobility Hub"
+            sublabel="Carpool, group rides & on-demand"
+            onPress={() => router.push('/mobility' as any)}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
+          />
+          <MenuItem
             icon="car-sport-outline"
             label="Commute Carpool"
             sublabel="Rideshare with neighbors"
@@ -888,6 +929,17 @@ export default function ProfileScreen() {
             onPress={() => router.push('/cpn')}
             iconColor="#2563EB"
             iconBg="#EFF6FF"
+          />
+          <MenuItem
+            icon="megaphone-outline"
+            label="Community Job Board"
+            sublabel="Local society hiring, gigs & tutoring"
+            onPress={() => router.push('/jobs')}
+            iconColor="#7C3AED"
+            iconBg="#F3E8FF"
+            badge="NEW"
+            badgeBg="#F3E8FF"
+            badgeColor="#7C3AED"
             isLast
           />
         </View>

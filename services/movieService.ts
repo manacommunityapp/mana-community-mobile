@@ -1,7 +1,7 @@
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080/api';
 
 export type MovieLanguage = 'Hindi' | 'English' | 'Tamil' | 'Telugu' | 'Malayalam' | 'Kannada';
-export type MovieGenre = 'Action' | 'Drama' | 'Comedy' | 'Thriller' | 'Romance' | 'Sci-Fi' | 'Horror' | 'Family' | 'Animation';
+export type MovieGenre = 'Action' | 'Drama' | 'Comedy' | 'Thriller' | 'Romance' | 'Sci-Fi' | 'Horror' | 'Family' | 'Animation' | 'Fantasy';
 export type SeatType = 'CLASSIC' | 'PREMIUM' | 'RECLINER';
 export type SeatStatus = 'AVAILABLE' | 'OCCUPIED' | 'SELECTED' | 'BLOCKED';
 

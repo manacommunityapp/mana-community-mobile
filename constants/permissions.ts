@@ -60,6 +60,10 @@ export const VIEW_MAINTENANCE_DUES = "View Maintenance Dues";
 export const PAY_MAINTENANCE_DUES  = "Pay Maintenance Dues";
 export const MANAGE_BILLING        = "Manage Billing";
 
+// ──── INSURANCE ────
+export const VIEW_INSURANCE   = "View Insurance";
+export const MANAGE_INSURANCE = "Manage Insurance";
+
 // ──── ADMIN ────
 export const VIEW_ADMIN = "View Admin";
 export const VIEW_ADMIN_DASHBOARD  = "View Admin Dashboard";
@@ -245,11 +249,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     VIEW_GROUP_BUYING, JOIN_GROUP_DEAL, VIEW_TRIPS, BOOK_TRIP,
     VIEW_DISCOVER, VIEW_MAINTENANCE_DUES, PAY_MAINTENANCE_DUES,
     VIEW_JOBS, VIEW_HOME_SERVICE, REGISTER_EVENT, VIEW_EVENT_GALLERY,
-    VIEW_FOOD_MENU, MANAGE_PERSONAL_FINANCE,
+    VIEW_FOOD_MENU, MANAGE_PERSONAL_FINANCE, VIEW_INSURANCE,
   ],
   USER: [
     VIEW_FEED, VIEW_MARKETPLACE, VIEW_EVENTS,
     VIEW_NOTICES, VIEW_TICKETS, CREATE_TICKET,
-    VIEW_EMERGENCY, TRIGGER_SOS,
+    VIEW_EMERGENCY, TRIGGER_SOS, VIEW_INSURANCE,
   ],
 };

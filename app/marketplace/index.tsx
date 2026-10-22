@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
   TouchableOpacity, ScrollView, ActivityIndicator,
@@ -122,9 +122,14 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
   }
 
   const renderHeader = () => (
-    <View>
+    <View style={s.headerContainer}>
       {/* Quick Actions */}
-      <View style={s.quickRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.quickScroll}
+        style={s.quickScrollWrapper}
+      >
         {QUICK_ACTIONS.map((a) => (
           <TouchableOpacity
             key={a.label}
@@ -135,19 +140,21 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
             <View style={[s.quickIcon, { backgroundColor: a.bg }]}>
               <Text style={s.quickEmoji}>{a.emoji}</Text>
             </View>
-            <Text style={s.quickLabel}>{a.label}</Text>
+            <Text style={s.quickLabel} numberOfLines={2}>
+              {a.label}
+            </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
-      {/* Category Grid — fixed 2 rows of 5 */}
+      {/* Category Grid — fixed 2 rows of 4 (8 tiles total) */}
       <View style={s.catSection}>
         <View style={s.sectionHeader}>
           <View style={[s.sectionDot, { backgroundColor: '#6366F1' }]} />
           <Text style={s.sectionTitle}>Browse Categories</Text>
         </View>
         <View style={s.catGrid}>
-          {CATEGORIES.slice(0, CATEGORIES.length > 10 ? 9 : 10).map((c) => {
+          {CATEGORIES.slice(0, 7).map((c) => {
             const isActive = category === c.key;
             return (
               <TouchableOpacity
@@ -165,16 +172,16 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
               </TouchableOpacity>
             );
           })}
-          {CATEGORIES.length > 10 && (
+          {CATEGORIES.length > 7 && (
             <TouchableOpacity
               style={s.catItem}
               onPress={() => setShowAllCats(true)}
               activeOpacity={0.7}
             >
               <View style={[s.catIconBox, { backgroundColor: '#EEF2FF' }]}>
-                <Text style={s.catMoreCount}>+{CATEGORIES.length - 9}</Text>
+                <Text style={s.catMoreCount}>+{CATEGORIES.length - 7}</Text>
               </View>
-              <Text style={s.catLabel}>See all</Text>
+              <Text style={s.catLabel} numberOfLines={1}>See all</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -200,12 +207,17 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Gradient Header */}
-      <View style={s.cleanHeader}>
+      <LinearGradient
+        colors={['#064E3B', '#065F46', '#059669']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.cleanHeader}
+      >
         <View style={s.headerTop}>
           <View style={s.headerLeft}>
             {!isTab && (
               <TouchableOpacity onPress={goHome} style={s.backBtn} activeOpacity={0.7}>
-                <Ionicons name="arrow-back" size={20} color={THEME.textPrimary} />
+                <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }}>
@@ -287,7 +299,7 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
             )}
           </View>
         )}
-      </View>
+      </LinearGradient>
 
       {/* Listings grid */}
       {isLoading ? (
@@ -405,9 +417,6 @@ const s = StyleSheet.create({
   cleanHeader: {
     paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: THEME.border,
   },
   headerTop: {
     flexDirection: 'row',
@@ -533,21 +542,30 @@ const s = StyleSheet.create({
     fontFamily: FONTS.regular,
   },
 
+  headerContainer: {
+    marginHorizontal: -12,
+    marginBottom: 4,
+  },
+
   // ── Quick Actions ──
-  quickRow: {
-    flexDirection: 'row',
+  quickScrollWrapper: {
+    marginBottom: 6,
+  },
+  quickScroll: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 14,
+    paddingBottom: 6,
     gap: 10,
   },
   quickCard: {
-    flex: 1,
+    width: 82,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.lg,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     borderWidth: 1,
     borderColor: '#E8E8F0',
     ...SHADOWS.sm,
@@ -563,16 +581,19 @@ const s = StyleSheet.create({
     fontSize: 18,
   },
   quickLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
     color: COLORS.text,
     fontFamily: FONTS.medium,
+    textAlign: 'center',
+    lineHeight: 13,
+    height: 26,
   },
 
   // ── Category Section ──
   catSection: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 4,
   },
   sectionHeader: {
@@ -608,12 +629,11 @@ const s = StyleSheet.create({
   catGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 0,
   },
   catItem: {
-    width: (SCREEN_WIDTH - 56) / 5,
+    width: (SCREEN_WIDTH - 32) / 4,
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     paddingVertical: 8,
     borderRadius: RADIUS.md,
   },
@@ -621,17 +641,17 @@ const s = StyleSheet.create({
     backgroundColor: '#F0F0FF',
   },
   catIconBox: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   catEmoji: {
-    fontSize: 18,
+    fontSize: 19,
   },
   catLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: COLORS.textMuted,
     textAlign: 'center',
@@ -647,7 +667,8 @@ const s = StyleSheet.create({
   // ── Listings ──
   listingsHeader: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 6,
+    paddingBottom: 2,
   },
   grid: {
     paddingHorizontal: 12,

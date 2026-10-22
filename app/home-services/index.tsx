@@ -277,7 +277,7 @@ export default function HomeServicesHubScreen() {
             <Ionicons name="chevron-forward" size={14} color="#4F46E5" />
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.featuredRow}>
           {workers.slice(0, 5).map((w) => (
             <TouchableOpacity
               key={String(w.id)}
@@ -308,7 +308,7 @@ export default function HomeServicesHubScreen() {
         <View style={styles.catHeaderRow}>
           <Text style={styles.sectionHeader}>🔄 Doorstep Subscriptions</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.featuredRow}>
           <TouchableOpacity
             style={styles.subCard}
             onPress={() => {
@@ -580,14 +580,15 @@ const styles = StyleSheet.create({
   },
   moduleCard: {
     width: (SCREEN_W - 42) / 2,
+    height: 142,
     borderRadius: 18,
     marginBottom: 12,
     overflow: 'hidden',
     ...SHADOWS.sm,
   },
   moduleGradient: {
+    flex: 1,
     padding: 14,
-    minHeight: 120,
     justifyContent: 'space-between',
   },
   moduleIconBox: {
@@ -662,7 +663,9 @@ const styles = StyleSheet.create({
   },
   catBox: {
     width: (SCREEN_W - 56) / 4,
+    minHeight: 96,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingVertical: 14,
@@ -689,6 +692,7 @@ const styles = StyleSheet.create({
   featuredRow: { paddingBottom: 12 },
   featuredCard: {
     width: 148,
+    minHeight: 184,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
@@ -696,6 +700,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8E8F0',
     alignItems: 'center',
+    justifyContent: 'space-between',
     overflow: 'hidden',
     ...SHADOWS.sm,
   },
@@ -773,14 +778,16 @@ const styles = StyleSheet.create({
 
   subCard: {
     width: 160,
+    minHeight: 180,
     borderRadius: 18,
     marginRight: 10,
     overflow: 'hidden',
     ...SHADOWS.sm,
   },
   subCardGradient: {
+    flex: 1,
     padding: 14,
-    minHeight: 160,
+    minHeight: 180,
     justifyContent: 'space-between',
   },
   subCardEmoji: { fontSize: 28, marginBottom: 6 },
