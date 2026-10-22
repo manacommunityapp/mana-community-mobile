@@ -24,6 +24,8 @@ const FINANCE_HUBS = [
   { emoji: '⚡', label: 'Pay Bills',  color: '#D97706',            bg: '#FFFBEB',              route: '/bbps' },
   { emoji: '📱', label: 'Recharge',   color: '#0284C7',            bg: '#F0F9FF',              route: '/recharge' },
   { emoji: '📷', label: 'Scan & Pay', color: '#7C3AED',  bg: '#F5F3FF',  route: '/scan-and-pay' },
+  { emoji: '👥', label: 'Send Money', color: '#7C3AED',  bg: '#F5F3FF',  route: '/send-money' },
+  { emoji: '📋', label: 'UPI History',color: '#0F766E',  bg: '#F0FDFA',  route: '/upi-history' },
   { emoji: '🪙', label: 'Gold',       color: '#B45309',  bg: '#FFFBEB',  route: '/gold' },
   { emoji: '📈', label: 'Mutual Funds',color: '#1D4ED8', bg: '#EFF6FF',  route: '/mutual-funds' },
   { emoji: '🤝', label: 'Split Bill', color: '#16A34A',  bg: '#F0FDF4',  route: '/split-bill' },
