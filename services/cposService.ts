@@ -358,4 +358,23 @@ export const cposService = {
       return res.data;
     }
   },
+
+  async sendLeadSms(id: string, message: string): Promise<void> {
+    await api.post(`/v1/cpos/crm/leads/${id}/sms`, { message });
+  },
+
+  async requestLeadApproval(id: string, reason: string): Promise<CrmLead> {
+    const res = await api.post<CrmLead>(`/v1/cpos/crm/leads/${id}/request-approval`, { reason });
+    return res.data;
+  },
+
+  async getLeadsAwaitingApproval(): Promise<CrmLead[]> {
+    const res = await api.get<CrmLead[]>('/v1/cpos/crm/leads/pending-approval');
+    return res.data;
+  },
+
+  async approveOrRejectLead(id: string, approved: boolean, comment?: string): Promise<CrmLead> {
+    const res = await api.post<CrmLead>(`/v1/cpos/crm/leads/${id}/approve`, { approved, comment });
+    return res.data;
+  },
 };
