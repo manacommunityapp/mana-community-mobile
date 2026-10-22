@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isPast } from 'date-fns';
-import { experiencesService, ExperienceBooking, CATEGORY_META, RefundRequest } from '@/services/experiencesService';
+import { experiencesService, ExperienceBooking, CATEGORY_META, RefundRequest, ExperienceReview } from '@/services/experiencesService';
 import { THEME, FONTS, SHADOWS, COLORS } from '@/constants/config';
 
 // ── QR Pass Modal ─────────────────────────────────────────────────────────────
@@ -269,13 +269,160 @@ function RefundModal({
   );
 }
 
+// ── Review Modal ─────────────────────────────────────────────────────────────
+
+function ReviewModal({
+  booking,
+  onClose,
+}: {
+  booking: ExperienceBooking;
+  onClose: () => void;
+}) {
+  const [rating, setRating] = useState(0);
+  const [hovered, setHovered] = useState(0);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (rating === 0) { Alert.alert('Rating Required', 'Please select a star rating.'); return; }
+    if (!title.trim()) { Alert.alert('Title Required', 'Give your review a short title.'); return; }
+    if (!body.trim() || body.length < 20) { Alert.alert('Review Too Short', 'Please write at least 20 characters.'); return; }
+    setLoading(true);
+    try {
+      await experiencesService.submitReview({
+        experience_id: booking.experience_id,
+        booking_id: booking.booking_id,
+        rating,
+        title: title.trim(),
+        body: body.trim(),
+      });
+      setDone(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const STAR_LABELS = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
+
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        <LinearGradient
+          colors={[booking.backdrop_color, booking.backdrop_color + 'CC']}
+          style={{ paddingTop: Platform.OS === 'ios' ? 28 : 16, paddingBottom: 18, paddingHorizontal: 20 }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontFamily: FONTS.bold, fontSize: 17, color: '#fff' }}>
+              {done ? '✅ Review Submitted' : '⭐ Rate & Review'}
+            </Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color="rgba(255,255,255,0.8)" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+          {done ? (
+            <View style={{ alignItems: 'center', gap: 14, marginTop: 20 }}>
+              <Text style={{ fontSize: 52 }}>🎉</Text>
+              <Text style={{ fontFamily: FONTS.bold, fontSize: 18, color: THEME.text, textAlign: 'center' }}>
+                Thanks for the review!
+              </Text>
+              <Text style={{ fontFamily: FONTS.regular, fontSize: 13, color: THEME.muted, textAlign: 'center', lineHeight: 20 }}>
+                Your feedback helps others in the community discover great experiences.
+              </Text>
+              <TouchableOpacity
+                onPress={onClose}
+                style={{ backgroundColor: COLORS.primary, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14 }}
+              >
+                <Text style={{ fontFamily: FONTS.bold, fontSize: 15, color: '#fff' }}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {/* Event title */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 12 }}>
+                <Text style={{ fontSize: 26 }}>{booking.emoji}</Text>
+                <Text style={{ fontFamily: FONTS.semiBold, fontSize: 13, color: THEME.text, flex: 1 }} numberOfLines={2}>
+                  {booking.experience_title}
+                </Text>
+              </View>
+
+              {/* Star picker */}
+              <View style={{ alignItems: 'center', gap: 10 }}>
+                <Text style={{ fontFamily: FONTS.semiBold, fontSize: 13, color: THEME.muted }}>YOUR RATING</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => setRating(i)}
+                      style={{ padding: 4 }}
+                    >
+                      <Text style={{ fontSize: 38, color: i <= (hovered || rating) ? '#F59E0B' : '#E5E7EB' }}>★</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {(hovered || rating) > 0 && (
+                  <Text style={{ fontFamily: FONTS.semiBold, fontSize: 14, color: '#F59E0B' }}>
+                    {STAR_LABELS[hovered || rating]}
+                  </Text>
+                )}
+              </View>
+
+              <View>
+                <Text style={{ fontFamily: FONTS.semiBold, fontSize: 12, color: THEME.muted, marginBottom: 6 }}>REVIEW TITLE</Text>
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="Sum up your experience…"
+                  maxLength={80}
+                  style={{ borderWidth: 1.5, borderColor: '#E8E9F0', borderRadius: 12, padding: 12, fontFamily: FONTS.regular, fontSize: 14, color: THEME.text }}
+                />
+              </View>
+
+              <View>
+                <Text style={{ fontFamily: FONTS.semiBold, fontSize: 12, color: THEME.muted, marginBottom: 6 }}>YOUR REVIEW</Text>
+                <TextInput
+                  value={body}
+                  onChangeText={setBody}
+                  placeholder="What did you enjoy? What could be better? (min 20 chars)"
+                  multiline
+                  numberOfLines={5}
+                  style={{ borderWidth: 1.5, borderColor: '#E8E9F0', borderRadius: 12, padding: 12, fontFamily: FONTS.regular, fontSize: 14, color: THEME.text, minHeight: 110, textAlignVertical: 'top' }}
+                />
+                <Text style={{ fontFamily: FONTS.regular, fontSize: 11, color: THEME.muted, marginTop: 4, textAlign: 'right' }}>
+                  {body.length} chars
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleSubmit}
+                disabled={loading}
+                style={{ backgroundColor: COLORS.primary, borderRadius: 14, padding: 16, alignItems: 'center', opacity: loading ? 0.7 : 1 }}
+              >
+                {loading
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={{ fontFamily: FONTS.bold, fontSize: 15, color: '#fff' }}>⭐ Submit Review</Text>
+                }
+              </TouchableOpacity>
+            </>
+          )}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
 // ── Booking Card ──────────────────────────────────────────────────────────────
 
-function BookingCard({ booking, onViewPass, onCancel, onRefund }: {
+function BookingCard({ booking, onViewPass, onCancel, onRefund, onRate }: {
   booking: ExperienceBooking;
   onViewPass: () => void;
   onCancel: () => void;
   onRefund: () => void;
+  onRate: () => void;
 }) {
   const meta = CATEGORY_META[booking.category];
   const past = (() => { try { return isPast(parseISO(booking.start_date)); } catch { return false; } })();
@@ -370,9 +517,20 @@ function BookingCard({ booking, onViewPass, onCancel, onRefund }: {
             )}
           </View>
         )}
-        {past && !booking.refund_status && (
-          <View style={{ backgroundColor: '#F9FAFB', borderRadius: 10, padding: 10, alignItems: 'center' }}>
-            <Text style={{ fontFamily: FONTS.medium, fontSize: 12, color: THEME.muted }}>This event has ended ✓</Text>
+        {past && (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+              <Text style={{ fontFamily: FONTS.medium, fontSize: 12, color: THEME.muted }}>Event ended ✓</Text>
+            </View>
+            {booking.status !== 'CANCELLED' && (
+              <TouchableOpacity
+                onPress={onRate}
+                style={{ flex: 1, backgroundColor: '#FEF3C7', borderRadius: 10, padding: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
+              >
+                <Text style={{ fontSize: 14 }}>⭐</Text>
+                <Text style={{ fontFamily: FONTS.semiBold, fontSize: 12, color: '#92400E' }}>Rate</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -387,6 +545,7 @@ export default function MyBookingsScreen() {
   const qc = useQueryClient();
   const [selectedBooking, setSelectedBooking] = useState<ExperienceBooking | null>(null);
   const [refundBooking, setRefundBooking] = useState<ExperienceBooking | null>(null);
+  const [reviewBooking, setReviewBooking] = useState<ExperienceBooking | null>(null);
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ['my-bookings'],
@@ -475,6 +634,7 @@ export default function MyBookingsScreen() {
                   onViewPass={() => setSelectedBooking(b)}
                   onCancel={() => handleCancel(b)}
                   onRefund={() => setRefundBooking(b)}
+                  onRate={() => setReviewBooking(b)}
                 />
               ))}
             </View>
@@ -492,6 +652,7 @@ export default function MyBookingsScreen() {
                   onViewPass={() => setSelectedBooking(b)}
                   onCancel={() => handleCancel(b)}
                   onRefund={() => setRefundBooking(b)}
+                  onRate={() => setReviewBooking(b)}
                 />
               ))}
             </View>
@@ -504,6 +665,9 @@ export default function MyBookingsScreen() {
       )}
       {refundBooking && (
         <RefundModal booking={refundBooking} onClose={() => setRefundBooking(null)} />
+      )}
+      {reviewBooking && (
+        <ReviewModal booking={reviewBooking} onClose={() => setReviewBooking(null)} />
       )}
     </View>
   );

@@ -150,6 +150,77 @@ export interface RefundRequest {
   estimated_days: number;
 }
 
+// ── P3 Types ─────────────────────────────────────────────────────────────────
+
+export type PartnerCategory =
+  | 'RESTAURANT' | 'SPORTS_VENUE' | 'ACTIVITY_CENTER'
+  | 'COACHING' | 'ENTERTAINMENT' | 'WELLNESS' | 'RETAIL';
+
+export interface Partner {
+  id: string;
+  name: string;
+  category: PartnerCategory;
+  emoji: string;
+  backdrop_color: string;
+  tagline: string;
+  description: string;
+  address: string;
+  area: string;
+  rating: number;
+  review_count: number;
+  is_verified: boolean;
+  is_featured: boolean;
+  discount_for_members?: string;
+  contact_phone?: string;
+  website_url?: string;
+  booking_url?: string;
+  amenities: string[];
+  photos_count: number;
+  open_hours?: string;
+  price_range: '₹' | '₹₹' | '₹₹₹' | '₹₹₹₹';
+  experience_ids?: string[];
+}
+
+export interface ExperienceReview {
+  review_id: string;
+  experience_id: string;
+  reviewer_name: string;
+  reviewer_initials: string;
+  rating: number;
+  title: string;
+  body: string;
+  attended_date: string;
+  created_at: string;
+  helpful_count: number;
+  verified_attendee: boolean;
+  photos_count: number;
+}
+
+export interface ReviewRequest {
+  experience_id: string;
+  booking_id: string;
+  rating: number;
+  title: string;
+  body: string;
+}
+
+export interface CoachingSession {
+  session_id: string;
+  partner_id: string;
+  partner_name: string;
+  sport: string;
+  emoji: string;
+  coach_name: string;
+  coach_bio: string;
+  level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'ALL';
+  duration_mins: number;
+  price_per_session: number;
+  group_size_max: number;
+  available_slots: { date: string; time: string; spots_left: number }[];
+  venue: string;
+  area: string;
+}
+
 // ── Mock Data ────────────────────────────────────────────────────────────────
 
 function nextDate(daysFromNow: number): string {
@@ -544,6 +615,233 @@ const MOCK_BOOKINGS: ExperienceBooking[] = [
   },
 ];
 
+// ── P3 Mock Data ─────────────────────────────────────────────────────────────
+
+export const PARTNER_CATEGORY_META: Record<PartnerCategory, { label: string; emoji: string; color: string; bg: string }> = {
+  RESTAURANT:       { label: 'Restaurant',      emoji: '🍽️', color: '#B45309', bg: '#FEF3C7' },
+  SPORTS_VENUE:     { label: 'Sports Venue',    emoji: '🏟️', color: '#047857', bg: '#D1FAE5' },
+  ACTIVITY_CENTER:  { label: 'Activity Center', emoji: '🎯', color: '#7C3AED', bg: '#EDE9FE' },
+  COACHING:         { label: 'Coaching',        emoji: '🏅', color: '#0891B2', bg: '#ECFEFF' },
+  ENTERTAINMENT:    { label: 'Entertainment',   emoji: '🎪', color: '#DB2777', bg: '#FCE7F3' },
+  WELLNESS:         { label: 'Wellness',        emoji: '🧘', color: '#059669', bg: '#ECFDF5' },
+  RETAIL:           { label: 'Retail',          emoji: '🛍️', color: '#2563EB', bg: '#DBEAFE' },
+};
+
+const MOCK_PARTNERS: Partner[] = [
+  {
+    id: 'prt-001',
+    name: 'Chaitime Community Café',
+    category: 'RESTAURANT',
+    emoji: '☕',
+    backdrop_color: '#78350F',
+    tagline: 'Your neighbourhood third place',
+    description: 'A community café attached to Mana Township offering breakfast, chai, snacks, and work-from-café seating. Popular for resident meetups and small group events.',
+    address: 'Ground Floor, Tower A Community Block',
+    area: 'Kondapur',
+    rating: 4.6,
+    review_count: 142,
+    is_verified: true,
+    is_featured: true,
+    discount_for_members: '10% off for Mana residents',
+    contact_phone: '9876543210',
+    amenities: ['WiFi', 'Parking', 'Outdoor Seating', 'Private Event Space'],
+    photos_count: 18,
+    open_hours: '7 AM – 10 PM',
+    price_range: '₹₹',
+    experience_ids: ['exp-001'],
+  },
+  {
+    id: 'prt-002',
+    name: 'AquaArena Sports Complex',
+    category: 'SPORTS_VENUE',
+    emoji: '🏊',
+    backdrop_color: '#1E3A5F',
+    tagline: 'Olympic-standard facilities, community prices',
+    description: 'A multi-sport complex with 50m swimming pool, tennis courts, badminton hall, squash courts, and indoor cricket nets. Certified coaches for all sports.',
+    address: '23, Sports City Road',
+    area: 'Gachibowli',
+    rating: 4.8,
+    review_count: 286,
+    is_verified: true,
+    is_featured: true,
+    discount_for_members: '20% off membership for Mana residents',
+    contact_phone: '9123456789',
+    booking_url: 'https://aquaarena.example.com/book',
+    amenities: ['Pool', 'Tennis', 'Badminton', 'Squash', 'Cricket', 'Locker Rooms', 'Café'],
+    photos_count: 34,
+    open_hours: '5 AM – 11 PM',
+    price_range: '₹₹₹',
+    experience_ids: ['exp-003', 'exp-012'],
+  },
+  {
+    id: 'prt-003',
+    name: 'MindBody Wellness Studio',
+    category: 'WELLNESS',
+    emoji: '🧘',
+    backdrop_color: '#064E3B',
+    tagline: 'Yoga, meditation & holistic wellness',
+    description: 'A premium wellness studio offering yoga, pilates, meditation, and Ayurvedic therapies. Classes run morning and evening. Certified instructors with 10+ years experience.',
+    address: 'Level 2, Mana Wellness Wing',
+    area: 'Miyapur',
+    rating: 4.9,
+    review_count: 198,
+    is_verified: true,
+    is_featured: false,
+    discount_for_members: 'First class free for residents',
+    amenities: ['Yoga Studio', 'Meditation Room', 'Spa', 'Juice Bar', 'Changing Rooms'],
+    photos_count: 22,
+    open_hours: '5:30 AM – 9 PM',
+    price_range: '₹₹₹',
+  },
+  {
+    id: 'prt-004',
+    name: 'GameZone Entertainment Hub',
+    category: 'ENTERTAINMENT',
+    emoji: '🎮',
+    backdrop_color: '#4A044E',
+    tagline: 'Indoor gaming for all ages',
+    description: 'Bowling, laser tag, arcade games, VR experiences and a food court. Perfect for birthday parties, team outings and family fun. Hosts private events up to 200 pax.',
+    address: 'Inorbit Mall, Level 3',
+    area: 'Hitec City',
+    rating: 4.4,
+    review_count: 312,
+    is_verified: true,
+    is_featured: true,
+    discount_for_members: 'Flat ₹100 off on group bookings of 10+',
+    booking_url: 'https://gamezone.example.com',
+    amenities: ['Bowling', 'Laser Tag', 'VR', 'Arcade', 'Food Court', 'Party Hall'],
+    photos_count: 29,
+    open_hours: '10 AM – 11 PM',
+    price_range: '₹₹',
+  },
+  {
+    id: 'prt-005',
+    name: 'Elite Cricket Academy',
+    category: 'COACHING',
+    emoji: '🏏',
+    backdrop_color: '#14532D',
+    tagline: 'Former Ranji-level coaches · All age groups',
+    description: 'Professional cricket coaching for children (age 8+) and adults. Batting, bowling, and wicket-keeping specialisations. Residential camp option available in summer.',
+    address: 'Mana Sports Ground, Gate 3',
+    area: 'Manikonda',
+    rating: 4.7,
+    review_count: 94,
+    is_verified: true,
+    is_featured: false,
+    discount_for_members: '15% off annual membership',
+    contact_phone: '9988776655',
+    amenities: ['Turf Pitch', 'Nets', 'Video Analysis', 'Gym', 'Changing Rooms'],
+    photos_count: 16,
+    open_hours: '6 AM – 8 AM, 5 PM – 8 PM',
+    price_range: '₹₹',
+  },
+  {
+    id: 'prt-006',
+    name: 'Decathlon Kondapur',
+    category: 'RETAIL',
+    emoji: '🛒',
+    backdrop_color: '#1D4ED8',
+    tagline: 'Sports gear, rentals & try-before-you-buy',
+    description: 'Full-range Decathlon outlet with sports equipment rental for residents. Try-out zone for rackets and fitness equipment. Staff knowledgeable in all sports categories.',
+    address: 'Kondapur Main Road',
+    area: 'Kondapur',
+    rating: 4.5,
+    review_count: 521,
+    is_verified: true,
+    is_featured: false,
+    discount_for_members: '5% extra on already-discounted items',
+    website_url: 'https://decathlon.in',
+    amenities: ['Rental', 'Try-out Zone', 'Repair Service', 'Parking'],
+    photos_count: 12,
+    open_hours: '9 AM – 10 PM',
+    price_range: '₹₹',
+  },
+];
+
+const MOCK_REVIEWS: ExperienceReview[] = [
+  {
+    review_id: 'rev-001', experience_id: 'exp-001',
+    reviewer_name: 'Priya Reddy', reviewer_initials: 'PR', rating: 5,
+    title: 'Best community event this year!',
+    body: 'Amazing movie choice, projector quality was great and the community vibe was fantastic. Loved the free popcorn and the discussions afterwards. Definitely coming for the next one.',
+    attended_date: nextDate(-7), created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+    helpful_count: 14, verified_attendee: true, photos_count: 3,
+  },
+  {
+    review_id: 'rev-002', experience_id: 'exp-001',
+    reviewer_name: 'Kiran Kumar', reviewer_initials: 'KK', rating: 4,
+    title: 'Great atmosphere, minor sound issue early on',
+    body: 'Thoroughly enjoyed the event. The sound had a small glitch at the start but was sorted within 10 minutes. Organisation was smooth, seating was comfortable and the crowd was very friendly.',
+    attended_date: nextDate(-7), created_at: new Date(Date.now() - 6 * 86400000).toISOString(),
+    helpful_count: 8, verified_attendee: true, photos_count: 1,
+  },
+  {
+    review_id: 'rev-003', experience_id: 'exp-005',
+    reviewer_name: 'Ananya Singh', reviewer_initials: 'AS', rating: 5,
+    title: 'Incredible comedians, totally worth it',
+    body: 'All three comedians were hilarious. Rohan Joshi was the highlight. The venue at Humming Tree was perfect — intimate yet professional. Definitely booking the next one already.',
+    attended_date: nextDate(-14), created_at: new Date(Date.now() - 12 * 86400000).toISOString(),
+    helpful_count: 22, verified_attendee: true, photos_count: 5,
+  },
+  {
+    review_id: 'rev-004', experience_id: 'exp-003',
+    reviewer_name: 'Rahul Verma', reviewer_initials: 'RV', rating: 4,
+    title: 'Good workshop, great for beginners',
+    body: 'Coach Ravi was patient and explained everything clearly. Would have liked slightly longer batting practice time. Overall a solid 2-hour session and good value for money.',
+    attended_date: nextDate(-21), created_at: new Date(Date.now() - 18 * 86400000).toISOString(),
+    helpful_count: 6, verified_attendee: true, photos_count: 0,
+  },
+];
+
+const MOCK_COACHING: CoachingSession[] = [
+  {
+    session_id: 'cch-001', partner_id: 'prt-005', partner_name: 'Elite Cricket Academy',
+    sport: 'Cricket', emoji: '🏏', coach_name: 'Ravi Shankar', level: 'ALL',
+    coach_bio: 'Former Ranji Trophy player (Hyderabad). 12 years coaching experience. Specialises in batting and fielding drills.',
+    duration_mins: 90, price_per_session: 599, group_size_max: 12,
+    available_slots: [
+      { date: nextDate(1), time: '6:00 AM', spots_left: 4 },
+      { date: nextDate(2), time: '5:30 PM', spots_left: 7 },
+      { date: nextDate(4), time: '6:00 AM', spots_left: 10 },
+    ],
+    venue: 'Mana Sports Ground, Gate 3', area: 'Manikonda',
+  },
+  {
+    session_id: 'cch-002', partner_id: 'prt-002', partner_name: 'AquaArena Sports Complex',
+    sport: 'Swimming', emoji: '🏊', coach_name: 'Sunita Rao', level: 'BEGINNER',
+    coach_bio: 'National-level swimmer, RLSS certified coach. 8 years teaching all age groups from toddlers to adults.',
+    duration_mins: 60, price_per_session: 399, group_size_max: 8,
+    available_slots: [
+      { date: nextDate(1), time: '7:00 AM', spots_left: 3 },
+      { date: nextDate(3), time: '7:00 AM', spots_left: 6 },
+    ],
+    venue: 'AquaArena Sports Complex', area: 'Gachibowli',
+  },
+  {
+    session_id: 'cch-003', partner_id: 'prt-002', partner_name: 'AquaArena Sports Complex',
+    sport: 'Badminton', emoji: '🏸', coach_name: 'Deepak Naidu', level: 'INTERMEDIATE',
+    coach_bio: 'State-level shuttler. Coach for 6 years focusing on footwork, smash technique, and doubles strategy.',
+    duration_mins: 75, price_per_session: 499, group_size_max: 6,
+    available_slots: [
+      { date: nextDate(2), time: '6:30 PM', spots_left: 2 },
+      { date: nextDate(5), time: '7:00 AM', spots_left: 5 },
+    ],
+    venue: 'AquaArena Sports Complex', area: 'Gachibowli',
+  },
+  {
+    session_id: 'cch-004', partner_id: 'prt-003', partner_name: 'MindBody Wellness Studio',
+    sport: 'Yoga', emoji: '🧘', coach_name: 'Meera Iyer', level: 'ALL',
+    coach_bio: 'RYT-500 certified instructor. 10 years practice. Specialises in Hatha, Vinyasa and Pranayama.',
+    duration_mins: 60, price_per_session: 349, group_size_max: 15,
+    available_slots: [
+      { date: nextDate(1), time: '6:30 AM', spots_left: 8 },
+      { date: nextDate(1), time: '7:30 PM', spots_left: 11 },
+      { date: nextDate(3), time: '6:30 AM', spots_left: 10 },
+    ],
+    venue: 'MindBody Wellness Studio, Level 2', area: 'Miyapur',
+  },
+];
+
 // ── Service ──────────────────────────────────────────────────────────────────
 
 export const experiencesService = {
@@ -783,6 +1081,80 @@ export const experiencesService = {
       coupon_usage_count: mockAttendees.filter(a => a.coupon_used).length,
       attendees: mockAttendees,
     };
+  },
+
+  // ── P3 Methods ──────────────────────────────────────────────────────────────
+
+  async getPartners(category?: PartnerCategory): Promise<Partner[]> {
+    try {
+      const qs = category ? `?category=${category}` : '';
+      const r = await fetch(`${API_BASE}/v1/experiences/partners${qs}`);
+      if (r.ok) {
+        const d = await r.json();
+        if (Array.isArray(d) && d.length > 0) return d;
+      }
+    } catch {}
+    let result = [...MOCK_PARTNERS];
+    if (category) result = result.filter(p => p.category === category);
+    return result;
+  },
+
+  async getPartner(id: string): Promise<Partner | null> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/partners/${id}`);
+      if (r.ok) return r.json();
+    } catch {}
+    return MOCK_PARTNERS.find(p => p.id === id) ?? null;
+  },
+
+  async getExperienceReviews(experienceId: string): Promise<ExperienceReview[]> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/${experienceId}/reviews`);
+      if (r.ok) {
+        const d = await r.json();
+        if (Array.isArray(d)) return d;
+      }
+    } catch {}
+    return MOCK_REVIEWS.filter(rev => rev.experience_id === experienceId);
+  },
+
+  async submitReview(req: ReviewRequest): Promise<ExperienceReview> {
+    try {
+      const r = await fetch(`${API_BASE}/v1/experiences/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req),
+      });
+      if (r.ok) return r.json();
+    } catch {}
+    return {
+      review_id: `REV-${Date.now()}`,
+      experience_id: req.experience_id,
+      reviewer_name: 'You',
+      reviewer_initials: 'YO',
+      rating: req.rating,
+      title: req.title,
+      body: req.body,
+      attended_date: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString(),
+      helpful_count: 0,
+      verified_attendee: true,
+      photos_count: 0,
+    };
+  },
+
+  async getCoachingSessions(sport?: string): Promise<CoachingSession[]> {
+    try {
+      const qs = sport ? `?sport=${sport}` : '';
+      const r = await fetch(`${API_BASE}/v1/experiences/coaching${qs}`);
+      if (r.ok) {
+        const d = await r.json();
+        if (Array.isArray(d) && d.length > 0) return d;
+      }
+    } catch {}
+    let result = [...MOCK_COACHING];
+    if (sport) result = result.filter(s => s.sport.toLowerCase().includes(sport.toLowerCase()));
+    return result;
   },
 };
 

@@ -269,6 +269,9 @@ export default function ExperiencesScreen() {
             <TouchableOpacity onPress={() => router.push('/experiences/my-bookings')}>
               <Ionicons name="ticket-outline" size={22} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/experiences/partners')}>
+              <Ionicons name="storefront-outline" size={22} color="rgba(255,255,255,0.85)" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push('/experiences/organizer')}>
               <Ionicons name="bar-chart-outline" size={22} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>
@@ -439,10 +442,31 @@ export default function ExperiencesScreen() {
             );
           })()}
 
+          {/* Partners CTA */}
+          <TouchableOpacity
+            onPress={() => router.push('/experiences/partners')}
+            style={{ marginHorizontal: 16, marginTop: 20, borderRadius: 16, overflow: 'hidden' }}
+          >
+            <LinearGradient colors={['#1E3A5F', '#2D5986']} style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 24 }}>🤝</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: FONTS.bold, fontSize: 15, color: '#fff' }}>
+                  Local Partners & Coaching
+                </Text>
+                <Text style={{ fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
+                  Exclusive deals · Venues · Certified coaches
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.7)" />
+            </LinearGradient>
+          </TouchableOpacity>
+
           {/* Organizer CTA */}
           <TouchableOpacity
             onPress={() => router.push('/experiences/create')}
-            style={{ marginHorizontal: 16, marginTop: 24, borderRadius: 16, overflow: 'hidden' }}
+            style={{ marginHorizontal: 16, marginTop: 12, borderRadius: 16, overflow: 'hidden' }}
           >
             <LinearGradient colors={['#312E81', '#4F46E5']} style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>

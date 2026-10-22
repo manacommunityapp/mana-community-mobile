@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, differenceInDays, isToday, isTomorrow } from 'date-fns';
 import {
   experiencesService, Experience, BookingRequest, CATEGORY_META,
-  FamilyMember, CouponResult,
+  FamilyMember, CouponResult, ExperienceReview,
 } from '@/services/experiencesService';
 import { THEME, FONTS, SHADOWS, COLORS, RADIUS } from '@/constants/config';
 
@@ -672,6 +672,45 @@ function Row({ label, value, valueColor, valueBold }: { label: string; value: st
   );
 }
 
+// ── Review Card ──────────────────────────────────────────────────────────────
+
+function ReviewCard({ review }: { review: ExperienceReview }) {
+  return (
+    <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, ...SHADOWS.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary + '22', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontFamily: FONTS.bold, fontSize: 13, color: COLORS.primary }}>{review.reviewer_initials}</Text>
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={{ fontFamily: FONTS.semiBold, fontSize: 13, color: THEME.text }}>{review.reviewer_name}</Text>
+            {review.verified_attendee && (
+              <View style={{ backgroundColor: '#D1FAE5', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                <Text style={{ fontFamily: FONTS.semiBold, fontSize: 9, color: '#065F46' }}>✓ ATTENDED</Text>
+              </View>
+            )}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 2 }}>
+            {[1,2,3,4,5].map(i => (
+              <Text key={i} style={{ fontSize: 11, color: i <= review.rating ? '#F59E0B' : '#E5E7EB' }}>★</Text>
+            ))}
+          </View>
+        </View>
+        <Text style={{ fontFamily: FONTS.regular, fontSize: 11, color: THEME.muted }}>
+          {format(parseISO(review.created_at), 'd MMM')}
+        </Text>
+      </View>
+      <Text style={{ fontFamily: FONTS.semiBold, fontSize: 13, color: THEME.text, marginTop: 10 }}>{review.title}</Text>
+      <Text style={{ fontFamily: FONTS.regular, fontSize: 13, color: THEME.text, lineHeight: 20, marginTop: 4 }}>{review.body}</Text>
+      {review.helpful_count > 0 && (
+        <Text style={{ fontFamily: FONTS.regular, fontSize: 11, color: THEME.muted, marginTop: 8 }}>
+          👍 {review.helpful_count} found this helpful
+        </Text>
+      )}
+    </View>
+  );
+}
+
 // ── Detail Screen ─────────────────────────────────────────────────────────────
 
 export default function ExperienceDetailScreen() {
@@ -684,6 +723,13 @@ export default function ExperienceDetailScreen() {
     queryKey: ['experience', id],
     queryFn: () => experiencesService.getExperience(id!),
     enabled: !!id,
+  });
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['experience-reviews', id],
+    queryFn: () => experiencesService.getExperienceReviews(id!),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
   });
 
   if (isLoading || !exp) {
@@ -823,6 +869,29 @@ export default function ExperienceDetailScreen() {
               <Text style={{ fontFamily: FONTS.semiBold, fontSize: 12, color: '#166534' }}>Refund Policy</Text>
               <Text style={{ fontFamily: FONTS.regular, fontSize: 12, color: '#166534', marginTop: 2 }}>{exp.refund_policy}</Text>
             </View>
+          </View>
+        )}
+
+        {/* Reviews section */}
+        {reviews.length > 0 && (
+          <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={{ fontFamily: FONTS.bold, fontSize: 15, color: THEME.text }}>
+                ⭐ Reviews ({reviews.length})
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                {[1,2,3,4,5].map(i => {
+                  const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+                  return <Text key={i} style={{ fontSize: 13, color: i <= Math.round(avg) ? '#F59E0B' : '#E5E7EB' }}>★</Text>;
+                })}
+                <Text style={{ fontFamily: FONTS.bold, fontSize: 14, color: THEME.text, marginLeft: 4 }}>
+                  {(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)}
+                </Text>
+              </View>
+            </View>
+            {reviews.map(review => (
+              <ReviewCard key={review.review_id} review={review} />
+            ))}
           </View>
         )}
       </ScrollView>
