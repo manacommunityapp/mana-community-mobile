@@ -4,12 +4,18 @@ import {
   ActivityIndicator, Alert, Platform, StatusBar, FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as Contacts from 'expo-contacts/legacy';
+import * as Contacts from 'expo-contacts';
 import { THEME, FONTS, SHADOWS } from '@/constants/config';
 import { sendMoneyService, RecentContact, RECENT_CONTACTS, SendPayload } from '@/services/sendMoneyService';
 
 const QUICK_AMOUNTS = ['100', '200', '500', '1000', '2000', '5000'];
 const UPI_VPA_REGEX = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/;
+
+interface DeviceContact {
+  id?: string;
+  name?: string;
+  phoneNumbers?: Array<{ number?: string; digits?: string; label?: string }>;
+}
 
 interface PickedContact {
   name: string;
@@ -34,7 +40,7 @@ export default function SendMoneyScreen() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('PICK');
   const [search, setSearch] = useState('');
-  const [deviceContacts, setDeviceContacts] = useState<Contacts.Contact[]>([]);
+  const [deviceContacts, setDeviceContacts] = useState<DeviceContact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [contactsPermission, setContactsPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   const [picked, setPicked] = useState<PickedContact | null>(null);
@@ -53,7 +59,7 @@ export default function SendMoneyScreen() {
           fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
           sort: Contacts.SortTypes.FirstName,
         });
-        setDeviceContacts(data.filter(c => c.name && c.phoneNumbers?.length));
+        setDeviceContacts((data as any[]).filter(c => c.name && c.phoneNumbers?.length));
       } else {
         setContactsPermission('denied');
       }
@@ -83,7 +89,7 @@ export default function SendMoneyScreen() {
     setStep('PAY');
   }
 
-  function pickDevice(c: Contacts.Contact) {
+  function pickDevice(c: DeviceContact) {
     const name = c.name || 'Unknown';
     const phone = c.phoneNumbers?.[0]?.digits || c.phoneNumbers?.[0]?.number?.replace(/\D/g, '') || '';
     const initials = sendMoneyService.extractInitials(name);

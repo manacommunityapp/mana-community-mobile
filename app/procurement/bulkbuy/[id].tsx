@@ -109,6 +109,7 @@ export default function BulkBuyCampaignDetail() {
     : null;
 
   function handleCommit() {
+    if (!campaign) return;
     const qty = parseInt(commitQty, 10);
     if (!qty || qty < 1) {
       Alert.alert('Enter quantity', 'Please enter a valid quantity to commit.');
@@ -127,6 +128,7 @@ export default function BulkBuyCampaignDetail() {
   }
 
   function handleCancel() {
+    if (!campaign) return;
     Alert.alert(
       'Cancel Commitment',
       `Remove your commitment of ${campaign.myCommitmentQuantity} ${campaign.unit}?`,

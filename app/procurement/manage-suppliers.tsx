@@ -118,7 +118,7 @@ export default function ManageSuppliers() {
 
     createMut.mutate({
       businessName: form.businessName.trim(),
-      contactPerson: form.contactPerson.trim() || undefined,
+      contactPerson: form.contactPerson.trim() || form.businessName.trim(),
       mobile: form.mobile.trim(),
       email: form.email.trim() || undefined,
       gstNumber: form.gstNumber.trim() || undefined,
