@@ -31,6 +31,7 @@ export default function ProcurementLayout() {
       <Stack.Screen name="bulkbuy/[id]" options={{ title: 'Campaign Detail' }} />
       <Stack.Screen name="calendar/index" options={{ title: 'Purchase Calendar' }} />
       <Stack.Screen name="calendar/new" options={{ title: 'Schedule Item', presentation: 'modal' }} />
+      <Stack.Screen name="record-delivery" options={{ title: 'Record Delivery', presentation: 'modal' }} />
     </Stack>
   );
 }

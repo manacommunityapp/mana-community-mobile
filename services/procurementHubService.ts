@@ -261,6 +261,35 @@ export async function createRFQFromCalendar(id: number): Promise<import('../type
   return data;
 }
 
+// ── Phase 8: Supplier Reliability ────────────────────────────────────────────
+
+export async function getSupplierPerformance(
+  supplierId: number,
+): Promise<import('../types/procurement').SupplierPerformanceEvent[]> {
+  const { data } = await api.get(`${BASE}/suppliers/${supplierId}/performance`);
+  return data;
+}
+
+export async function recordPerformanceEvent(
+  supplierId: number,
+  payload: import('../types/procurement').RecordPerformancePayload,
+): Promise<import('../types/procurement').SupplierReliabilityScore> {
+  const { data } = await api.post(`${BASE}/suppliers/${supplierId}/performance`, payload);
+  return data;
+}
+
+export async function getSupplierReliability(
+  supplierId: number,
+): Promise<import('../types/procurement').SupplierReliabilityScore> {
+  const { data } = await api.get(`${BASE}/suppliers/${supplierId}/reliability`);
+  return data;
+}
+
+export async function getReliabilityLeaderboard(): Promise<import('../types/procurement').SupplierReliabilityScore[]> {
+  const { data } = await api.get(`${BASE}/suppliers/reliability-leaderboard`);
+  return data;
+}
+
 const procurementHubService = {
   getSuppliers, getSupplier, getSupplierProducts, getAllProducts,
   getRFQs, getRFQ, createRFQ, publishRFQ, cancelRFQ,
@@ -276,6 +305,7 @@ const procurementHubService = {
   placeAuctionBid, withdrawAuctionBid, awardAuctionBid,
   getCalendarEntries, getUpcomingCalendarItems,
   createCalendarEntry, updateCalendarEntry, deleteCalendarEntry, createRFQFromCalendar,
+  getSupplierPerformance, recordPerformanceEvent, getSupplierReliability, getReliabilityLeaderboard,
 };
 
 export default procurementHubService;

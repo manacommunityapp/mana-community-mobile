@@ -9,9 +9,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import procurementHubService from '@/services/procurementHubService';
-import type { SupplierProfile, SupplierProduct, ProcurementCategory } from '@/types/procurement';
+import type { SupplierProfile, SupplierProduct, ProcurementCategory, SupplierReliabilityScore, SupplierPerformanceEvent } from '@/types/procurement';
 
-type Tab = 'overview' | 'products';
+type Tab = 'overview' | 'products' | 'reliability';
 
 const CATEGORY_EMOJI: Record<string, string> = {
   CLEANING_SUPPLIES: '🧹', ELECTRICAL: '⚡', PLUMBING: '🔧',
@@ -38,6 +38,18 @@ export default function SupplierDetail() {
     queryKey: ['supplier-products', supplierId, catParam],
     queryFn: () => procurementHubService.getSupplierProducts(supplierId, catParam),
     enabled: !!supplierId && tab === 'products',
+  });
+
+  const { data: reliability } = useQuery({
+    queryKey: ['supplier-reliability', supplierId],
+    queryFn: () => procurementHubService.getSupplierReliability(supplierId),
+    enabled: !!supplierId,
+  });
+
+  const { data: perfEvents = [], isLoading: loadingPerf } = useQuery({
+    queryKey: ['supplier-performance', supplierId],
+    queryFn: () => procurementHubService.getSupplierPerformance(supplierId),
+    enabled: !!supplierId && tab === 'reliability',
   });
 
   if (isLoading || !supplier) {
@@ -95,10 +107,10 @@ export default function SupplierDetail() {
 
         {/* Tabs */}
         <View style={s.tabs}>
-          {(['overview', 'products'] as Tab[]).map(t => (
+          {(['overview', 'products', 'reliability'] as Tab[]).map(t => (
             <TouchableOpacity key={t} style={[s.tab, tab === t && s.tabActive]} onPress={() => setTab(t)}>
               <Text style={[s.tabText, tab === t && s.tabTextActive]}>
-                {t === 'overview' ? '📋 Overview' : '📦 Products'}
+                {t === 'overview' ? '📋 Overview' : t === 'products' ? '📦 Products' : '⭐ Reliability'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -114,6 +126,16 @@ export default function SupplierDetail() {
             onCatChange={setSelectedCat}
             categories={supplier.categories}
             onAddToRFQ={() => router.push('/procurement/rfq/new' as any)}
+          />
+        )}
+
+        {tab === 'reliability' && (
+          <ReliabilityTab
+            score={reliability ?? null}
+            events={perfEvents}
+            loading={loadingPerf}
+            supplierId={supplierId}
+            onRecord={() => router.push(`/procurement/record-delivery?supplierId=${supplierId}` as any)}
           />
         )}
 
@@ -437,4 +459,148 @@ const pt = StyleSheet.create({
     borderWidth: 1, borderColor: '#BFDBFE',
   },
   addBtnText: { fontSize: 12, fontWeight: '700', color: '#2563EB' },
+});
+
+// ── Reliability Tab ───────────────────────────────────────────────────────────
+
+const TIER_CONFIG = {
+  EXCELLENT: { color: '#059669', bg: '#ECFDF5', label: 'Excellent' },
+  GOOD:      { color: '#2563EB', bg: '#EFF6FF', label: 'Good' },
+  AVERAGE:   { color: '#D97706', bg: '#FFFBEB', label: 'Average' },
+  POOR:      { color: '#DC2626', bg: '#FEF2F2', label: 'Poor' },
+};
+
+const EVENT_CONFIG: Record<string, { emoji: string; label: string; color: string }> = {
+  DELIVERY_ON_TIME: { emoji: '✅', label: 'Delivered On Time',  color: '#059669' },
+  DELIVERY_LATE:    { emoji: '🕐', label: 'Delivered Late',     color: '#D97706' },
+  DELIVERY_PARTIAL: { emoji: '📦', label: 'Partial Delivery',   color: '#7C3AED' },
+  DELIVERY_FAILED:  { emoji: '❌', label: 'Delivery Failed',    color: '#DC2626' },
+  QUALITY_RATING:   { emoji: '⭐', label: 'Quality Rating',     color: '#F59E0B' },
+  QUOTE_RESPONSE:   { emoji: '📋', label: 'Quote Responded',    color: '#2563EB' },
+};
+
+function ReliabilityTab({ score, events, loading, supplierId, onRecord }: {
+  score: SupplierReliabilityScore | null;
+  events: SupplierPerformanceEvent[];
+  loading: boolean;
+  supplierId: number;
+  onRecord: () => void;
+}) {
+  const tier = (score?.tier ?? 'POOR') as keyof typeof TIER_CONFIG;
+  const cfg = TIER_CONFIG[tier];
+  const s = score?.reliabilityScore ?? 0;
+
+  return (
+    <View style={rt.root}>
+      {/* Score Gauge */}
+      {score && score.totalDeliveries > 0 ? (
+        <>
+          <View style={rt.scoreCard}>
+            <View style={[rt.scoreBadge, { backgroundColor: cfg.bg }]}>
+              <Text style={[rt.scoreNum, { color: cfg.color }]}>{s.toFixed(0)}</Text>
+              <Text style={[rt.scoreTier, { color: cfg.color }]}>{cfg.label}</Text>
+            </View>
+            <View style={rt.scoreMetrics}>
+              <ScoreMetric label="On-Time Rate"    val={`${score.onTimeRate}%`}    color="#059669" />
+              <ScoreMetric label="Fulfillment"     val={`${score.fulfillmentRate}%`} color="#2563EB" />
+              <ScoreMetric label="Quality Score"   val={score.avgQualityScore > 0 ? `${score.avgQualityScore}/5` : '—'} color="#F59E0B" />
+              <ScoreMetric label="Total Deliveries" val={String(score.totalDeliveries)} color="#64748B" />
+            </View>
+          </View>
+
+          {/* Score bar */}
+          <View style={rt.barWrap}>
+            <View style={[rt.barFill, { width: `${s}%`, backgroundColor: cfg.color }]} />
+          </View>
+
+          {/* Event timeline */}
+          {events.length > 0 && (
+            <View style={rt.section}>
+              <Text style={rt.sectionTitle}>Performance History</Text>
+              {events.slice(0, 10).map(ev => {
+                const ec = EVENT_CONFIG[ev.eventType] ?? { emoji: '📌', label: ev.eventType, color: '#64748B' };
+                return (
+                  <View key={ev.id} style={rt.eventRow}>
+                    <Text style={rt.eventEmoji}>{ec.emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[rt.eventLabel, { color: ec.color }]}>{ec.label}</Text>
+                      {ev.eventType === 'QUALITY_RATING' && ev.numericValue && (
+                        <Text style={rt.eventSub}>Rated {ev.numericValue}/5</Text>
+                      )}
+                      {ev.notes && <Text style={rt.eventSub} numberOfLines={1}>{ev.notes}</Text>}
+                    </View>
+                    <Text style={rt.eventDate}>
+                      {new Date(ev.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </>
+      ) : (
+        <View style={rt.empty}>
+          <Text style={rt.emptyIcon}>📊</Text>
+          <Text style={rt.emptyTitle}>No performance data yet</Text>
+          <Text style={rt.emptySub}>Record a delivery outcome after receiving goods from this supplier</Text>
+        </View>
+      )}
+
+      <TouchableOpacity style={rt.recordBtn} onPress={onRecord}>
+        <Ionicons name="add-circle-outline" size={18} color="#fff" />
+        <Text style={rt.recordBtnText}>Record Delivery Outcome</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function ScoreMetric({ label, val, color }: { label: string; val: string; color: string }) {
+  return (
+    <View style={rt.metric}>
+      <Text style={[rt.metricVal, { color }]}>{val}</Text>
+      <Text style={rt.metricLabel}>{label}</Text>
+    </View>
+  );
+}
+
+const rt = StyleSheet.create({
+  root: { padding: 12, gap: 12 },
+  scoreCard: {
+    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderWidth: 1, borderColor: '#E2E8F0', ...SHADOWS.sm,
+  },
+  scoreBadge: {
+    width: 80, height: 80, borderRadius: 40,
+    alignItems: 'center', justifyContent: 'center', gap: 2,
+  },
+  scoreNum: { fontSize: 26, fontWeight: '900' },
+  scoreTier: { fontSize: 10, fontWeight: '800' },
+  scoreMetrics: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  metric: { width: '45%' },
+  metricVal: { fontSize: 16, fontWeight: '900' },
+  metricLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600', marginTop: 1 },
+  barWrap: {
+    height: 8, backgroundColor: '#E2E8F0', borderRadius: 4, overflow: 'hidden',
+  },
+  barFill: { height: '100%', borderRadius: 4 },
+  section: {
+    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 14, gap: 10,
+    borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#1E293B' },
+  eventRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  eventEmoji: { fontSize: 16, width: 24 },
+  eventLabel: { fontSize: 13, fontWeight: '700' },
+  eventSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  eventDate: { fontSize: 11, color: COLORS.textMuted },
+  empty: { alignItems: 'center', paddingTop: 40, gap: 8 },
+  emptyIcon: { fontSize: 36 },
+  emptyTitle: { fontSize: 15, fontWeight: '800', color: '#1E293B' },
+  emptySub: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center', paddingHorizontal: 24 },
+  recordBtn: {
+    backgroundColor: '#2563EB', borderRadius: RADIUS.md, height: 46,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  recordBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 });

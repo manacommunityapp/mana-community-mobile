@@ -162,8 +162,17 @@ export default function SupplierMarketplace() {
   );
 }
 
+function reliabilityBadge(onTimeRate: number, fulfillmentRate: number): { label: string; color: string; bg: string } {
+  const score = onTimeRate * 0.6 + fulfillmentRate * 0.4;
+  if (score >= 85) return { label: '⭐ Excellent', color: '#059669', bg: '#ECFDF5' };
+  if (score >= 70) return { label: '✅ Good',      color: '#2563EB', bg: '#EFF6FF' };
+  if (score >= 50) return { label: '⚠️ Average',   color: '#D97706', bg: '#FFFBEB' };
+  return             { label: '🔴 Poor',           color: '#DC2626', bg: '#FEF2F2' };
+}
+
 function SupplierCard({ supplier: s, onPress }: { supplier: SupplierProfile; onPress: () => void }) {
   const verified = s.verificationStatus === 'VERIFIED';
+  const rel = s.totalOrders > 0 ? reliabilityBadge(s.onTimeRate, s.fulfillmentRate) : null;
   return (
     <TouchableOpacity style={sc.card} onPress={onPress} activeOpacity={0.85}>
       <View style={sc.top}>
@@ -177,9 +186,16 @@ function SupplierCard({ supplier: s, onPress }: { supplier: SupplierProfile; onP
           </View>
           <Text style={sc.city}>{s.city} · {s.serviceArea.slice(0, 2).join(', ')}</Text>
         </View>
-        <View style={sc.ratingBadge}>
-          <Ionicons name="star" size={11} color="#F59E0B" />
-          <Text style={sc.rating}>{s.rating.toFixed(1)}</Text>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          <View style={sc.ratingBadge}>
+            <Ionicons name="star" size={11} color="#F59E0B" />
+            <Text style={sc.rating}>{s.rating.toFixed(1)}</Text>
+          </View>
+          {rel && (
+            <View style={[sc.relBadge, { backgroundColor: rel.bg }]}>
+              <Text style={[sc.relText, { color: rel.color }]}>{rel.label}</Text>
+            </View>
+          )}
         </View>
       </View>
       <View style={sc.cats}>
@@ -297,6 +313,8 @@ const sc = StyleSheet.create({
     backgroundColor: '#FFFBEB', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3,
   },
   rating: { fontSize: 12, fontWeight: '800', color: '#D97706' },
+  relBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  relText: { fontSize: 10, fontWeight: '800' },
   cats: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   catPill: { backgroundColor: '#EFF6FF', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   catPillText: { fontSize: 10, fontWeight: '600', color: '#2563EB' },

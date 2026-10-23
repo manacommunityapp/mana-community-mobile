@@ -399,3 +399,45 @@ export interface CreateCalendarEntryPayload {
   nextDueDate: string;
   notes?: string;
 }
+
+// Phase 8: Supplier Reliability ──────────────────────────────────────────────
+
+export type PerformanceEventType =
+  | 'DELIVERY_ON_TIME' | 'DELIVERY_LATE' | 'DELIVERY_PARTIAL'
+  | 'DELIVERY_FAILED' | 'QUALITY_RATING' | 'QUOTE_RESPONSE';
+
+export type ReliabilityTier = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR';
+
+export interface SupplierPerformanceEvent {
+  id: number;
+  supplierId: number;
+  poId?: number;
+  rfqId?: number;
+  communityId: number;
+  eventType: PerformanceEventType;
+  numericValue?: number;
+  onTimeFlag?: boolean;
+  notes?: string;
+  recordedBy?: string;
+  createdAt: string;
+}
+
+export interface SupplierReliabilityScore {
+  supplierId: number;
+  supplierName: string;
+  totalDeliveries: number;
+  onTimeDeliveries: number;
+  onTimeRate: number;
+  fulfillmentRate: number;
+  avgQualityScore: number;
+  reliabilityScore: number;
+  tier: ReliabilityTier;
+}
+
+export interface RecordPerformancePayload {
+  poId?: number;
+  rfqId?: number;
+  eventType: PerformanceEventType;
+  numericValue?: number;
+  notes?: string;
+}
