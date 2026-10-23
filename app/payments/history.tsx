@@ -71,11 +71,16 @@ export default function PaymentHistoryScreen() {
 }
 
 function PaymentCard({ order }: { order: CashfreeOrderResponse }) {
+  const router = useRouter();
   const statusCfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.PENDING;
   const date = order.paidAt ?? order.createdAt;
 
   return (
-    <View style={s.card}>
+    <TouchableOpacity
+      style={s.card}
+      activeOpacity={0.75}
+      onPress={() => router.push({ pathname: '/payments/receipt', params: { orderId: order.manaOrderId } })}
+    >
       <View style={s.cardRow}>
         <View style={s.cardLeft}>
           <Text style={s.refType} numberOfLines={1}>
@@ -96,12 +101,13 @@ function PaymentCard({ order }: { order: CashfreeOrderResponse }) {
           <View style={[s.badge, { backgroundColor: statusCfg.bg }]}>
             <Text style={[s.badgeText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
           </View>
+          <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
         </View>
       </View>
       {order.paymentMethod ? (
         <Text style={s.method}>via {order.paymentMethod}</Text>
       ) : null}
-    </View>
+    </TouchableOpacity>
   );
 }
 

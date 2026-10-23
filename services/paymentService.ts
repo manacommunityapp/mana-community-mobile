@@ -72,4 +72,17 @@ export const paymentService = {
     });
     return res.data;
   },
+
+  /** Initiate a refund for a PAID order. */
+  async initiateRefund(
+    manaOrderId: string,
+    amount?: number,
+    reason?: string,
+  ): Promise<CashfreeOrderResponse> {
+    const res = await api.post<CashfreeOrderResponse>(
+      `/payments/cashfree/orders/${manaOrderId}/refund`,
+      { amount, reason },
+    );
+    return res.data;
+  },
 };
