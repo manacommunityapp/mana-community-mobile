@@ -161,8 +161,9 @@ export function resolveRoute(data: Record<string, unknown>): string | null {
 
     // Safety & Emergency
     case 'SOS_ALERT':
-    case 'EMERGENCY':
     case 'INCIDENT_REPORT':
+      return '/healthguard';
+    case 'EMERGENCY':
     case 'FIRE_ALERT':
       return '/safety';
 
