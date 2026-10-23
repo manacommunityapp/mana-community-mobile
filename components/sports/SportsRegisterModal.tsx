@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
   TextInput, ScrollView, ActivityIndicator, Alert,
@@ -11,6 +11,8 @@ import { sportsService } from '@/services/sportsService';
 import api from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { usePayment } from '@/hooks/usePayment';
+import { PaymentModal } from '@/components/payment/PaymentModal';
 import {
   checkCategoryEligibility,
   calculateAge,
@@ -105,6 +107,10 @@ export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRe
   const [plan, setPlan] = useState(PLANS[0]);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<RegistrationRecord | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingRecord, setPendingRecord] = useState<RegistrationRecord | null>(null);
+
+  const payment = usePayment();
 
   // Fetch real tournaments and categories
   const { data: openTournaments = [], isLoading: loadingTournaments } = useQuery({
@@ -264,7 +270,44 @@ export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRe
     onClose();
   };
 
-  // Submit Registration to real backend
+  // Builds the registration record and submits to the backend (after payment if required).
+  const submitRegistration = useCallback(async (record: RegistrationRecord) => {
+    if (!currentEvent) return;
+    try {
+      if (currentEvent.format === 'TEAM') {
+        const memberIds = selectedRoster.map((m) => m.id);
+        if (user?.id && !memberIds.includes(user.id)) memberIds.unshift(user.id);
+        await sportsService.registerTeam({
+          teamName: teamName.trim(),
+          tournamentId: currentEvent.tournamentId,
+          memberUserIds: memberIds,
+          logoEmoji,
+        }).catch(() => null);
+      } else {
+        await sportsService.registerForEvent(currentEvent.event.id, {
+          eventId: currentEvent.event.id,
+          playerName: participantName.trim(),
+          flatNumber: participantFlat.trim(),
+          age: Number(participantAge) || undefined,
+          gender: participantGender,
+          partnerUserId: selectedPartner?.id,
+        }).catch(() => null);
+      }
+      queryClient.invalidateQueries({ queryKey: ['tournaments-open-dash'] });
+      queryClient.invalidateQueries({ queryKey: ['tournaments-hub'] });
+      queryClient.invalidateQueries({ queryKey: ['sports-my-registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+    } catch {
+      // Continue to confirmation view for graceful UI feedback
+    } finally {
+      setLoading(false);
+      setDone(record);
+      onRegistered?.(record);
+    }
+  }, [currentEvent, selectedRoster, user, teamName, logoEmoji, participantName,
+      participantFlat, participantAge, participantGender, selectedPartner,
+      queryClient, onRegistered]);
+
   const confirmRegistration = async () => {
     if (!currentEvent) return;
     setLoading(true);
@@ -290,45 +333,44 @@ export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRe
       venueName: currentEvent.event.venueName || 'Society Arena',
     };
 
-    try {
-      if (currentEvent.format === 'TEAM') {
-        // Dispatch real team registration
-        const memberIds = selectedRoster.map((m) => m.id);
-        if (user?.id && !memberIds.includes(user.id)) memberIds.unshift(user.id);
-
-        await sportsService.registerTeam({
-          teamName: teamName.trim(),
-          tournamentId: currentEvent.tournamentId,
-          memberUserIds: memberIds,
-          logoEmoji,
-        }).catch(() => null);
-      } else {
-        // Dispatch real individual/doubles event registration
-        await sportsService.registerForEvent(currentEvent.event.id, {
-          eventId: currentEvent.event.id,
-          playerName: participantName.trim(),
-          flatNumber: participantFlat.trim(),
-          age: Number(participantAge) || undefined,
-          gender: participantGender,
-          partnerUserId: selectedPartner?.id,
-        }).catch(() => null);
-      }
-
-      // Invalidate relevant query caches for immediate refresh
-      queryClient.invalidateQueries({ queryKey: ['tournaments-open-dash'] });
-      queryClient.invalidateQueries({ queryKey: ['tournaments-hub'] });
-      queryClient.invalidateQueries({ queryKey: ['sports-my-registrations'] });
-      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
-    } catch {
-      // Continue to confirmation view for graceful UI feedback
-    } finally {
+    // If there is a non-zero fee, gate on Cashfree payment first.
+    if (fee > 0) {
+      setPendingRecord(record);
+      const order = await payment.startPayment({
+        amount: fee,
+        referenceType: 'SPORTS_REGISTRATION',
+        referenceId: currentEvent.event.id,
+        description: `${currentEvent.tournamentName} — ${currentEvent.event.categoryName || currentEvent.event.name}`,
+      });
       setLoading(false);
-      setDone(record);
-      onRegistered?.(record);
+      if (order) {
+        setShowPaymentModal(true);
+      }
+      return;
     }
+
+    // Free event — submit registration directly.
+    await submitRegistration(record);
   };
 
+  // Called by PaymentModal after the SDK's onVerify fires.
+  const handlePaymentVerify = useCallback(async (manaOrderId: string) => {
+    await (payment.startPayment as any)._handleVerify?.(manaOrderId);
+  }, [payment]);
+
+  // After payment resolves (success or fail), proceed or show error.
+  useEffect(() => {
+    if (payment.status === 'success' && pendingRecord) {
+      setShowPaymentModal(false);
+      pendingRecord.status = 'Confirmed';
+      submitRegistration(pendingRecord).then(() => setPendingRecord(null));
+    } else if (payment.status === 'failed' && pendingRecord) {
+      // Keep modal open to show failure screen; user dismisses via PaymentModal.
+    }
+  }, [payment.status]);  // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
+    <>
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={handleClose}>
       <SafeAreaView style={s.container} edges={['top', 'bottom']}>
         {done ? (
@@ -896,6 +938,21 @@ export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRe
         )}
       </SafeAreaView>
     </Modal>
+
+    {/* Cashfree payment sheet — rendered outside the registration modal */}
+    <PaymentModal
+      visible={showPaymentModal}
+      order={payment.order}
+      status={payment.status}
+      error={payment.error}
+      onVerify={handlePaymentVerify}
+      onDismiss={() => {
+        setShowPaymentModal(false);
+        payment.reset();
+        setPendingRecord(null);
+      }}
+    />
+    </>
   );
 }
 
