@@ -362,3 +362,40 @@ export interface EnableAuctionPayload {
   auctionDeadline: string;
   reservePrice?: number;
 }
+
+// Phase 7: Purchase Calendar ─────────────────────────────────────────────────
+
+export type CalendarFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'BIANNUAL' | 'ANNUAL';
+
+export interface PurchaseCalendarEntry {
+  id: number;
+  title: string;
+  description?: string;
+  category: ProcurementCategory;
+  frequency: CalendarFrequency;
+  unit: string;
+  quantity: number;
+  estimatedBudget?: number;
+  deliveryLocation?: string;
+  nextDueDate: string;
+  lastRfqDate?: string;
+  lastRfqId?: number;
+  isActive: boolean;
+  communityId: number;
+  notes?: string;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface CreateCalendarEntryPayload {
+  title: string;
+  description?: string;
+  category: ProcurementCategory;
+  frequency: CalendarFrequency;
+  unit: string;
+  quantity: number;
+  estimatedBudget?: number;
+  deliveryLocation?: string;
+  nextDueDate: string;
+  notes?: string;
+}

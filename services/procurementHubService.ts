@@ -225,6 +225,42 @@ export async function awardAuctionBid(rfqId: number, bidId: number): Promise<imp
   return data;
 }
 
+// ── Phase 7: Purchase Calendar ────────────────────────────────────────────
+
+export async function getCalendarEntries(): Promise<import('../types/procurement').PurchaseCalendarEntry[]> {
+  const { data } = await api.get(`${BASE}/calendar`);
+  return data;
+}
+
+export async function getUpcomingCalendarItems(): Promise<import('../types/procurement').PurchaseCalendarEntry[]> {
+  const { data } = await api.get(`${BASE}/calendar/upcoming`);
+  return data;
+}
+
+export async function createCalendarEntry(
+  payload: import('../types/procurement').CreateCalendarEntryPayload,
+): Promise<import('../types/procurement').PurchaseCalendarEntry> {
+  const { data } = await api.post(`${BASE}/calendar`, payload);
+  return data;
+}
+
+export async function updateCalendarEntry(
+  id: number,
+  payload: Partial<import('../types/procurement').CreateCalendarEntryPayload>,
+): Promise<import('../types/procurement').PurchaseCalendarEntry> {
+  const { data } = await api.put(`${BASE}/calendar/${id}`, payload);
+  return data;
+}
+
+export async function deleteCalendarEntry(id: number): Promise<void> {
+  await api.delete(`${BASE}/calendar/${id}`);
+}
+
+export async function createRFQFromCalendar(id: number): Promise<import('../types/procurement').ProcurementRFQ> {
+  const { data } = await api.post(`${BASE}/calendar/${id}/create-rfq`);
+  return data;
+}
+
 const procurementHubService = {
   getSuppliers, getSupplier, getSupplierProducts, getAllProducts,
   getRFQs, getRFQ, createRFQ, publishRFQ, cancelRFQ,
@@ -238,6 +274,8 @@ const procurementHubService = {
   getCampaignCommitments,
   getOpenAuctions, enableAuctionMode, getAuctionBids,
   placeAuctionBid, withdrawAuctionBid, awardAuctionBid,
+  getCalendarEntries, getUpcomingCalendarItems,
+  createCalendarEntry, updateCalendarEntry, deleteCalendarEntry, createRFQFromCalendar,
 };
 
 export default procurementHubService;
