@@ -15,6 +15,7 @@ const PROCUREMENT_CATEGORIES = [
     emoji: '🏢',
     color: '#2563EB',
     bg: '#EFF6FF',
+    category: 'CLEANING_SUPPLIES',
     items: ['Floor cleaning liquid', 'Toilet fresheners', 'Garbage bags', 'Mops & brooms', 'Phenyl'],
   },
   {
@@ -22,6 +23,7 @@ const PROCUREMENT_CATEGORIES = [
     emoji: '⚡',
     color: '#D97706',
     bg: '#FFFBEB',
+    category: 'ELECTRICAL',
     items: ['LED bulbs', 'MCB switches', 'PVC pipes', 'Water pump parts', 'Cable wires'],
   },
   {
@@ -29,6 +31,7 @@ const PROCUREMENT_CATEGORIES = [
     emoji: '🌿',
     color: '#059669',
     bg: '#ECFDF5',
+    category: 'GARDENING',
     items: ['Fertilizers', 'Plant pots', 'Garden soil', 'Seeds & plants', 'Garden tools'],
   },
   {
@@ -36,6 +39,7 @@ const PROCUREMENT_CATEGORIES = [
     emoji: '🔒',
     color: '#DC2626',
     bg: '#FEF2F2',
+    category: 'SECURITY_EQUIPMENT',
     items: ['CCTV cameras', 'Access cards', 'Visitor management', 'Barriers', 'Intercom parts'],
   },
   {
@@ -43,6 +47,7 @@ const PROCUREMENT_CATEGORIES = [
     emoji: '📎',
     color: '#6366F1',
     bg: '#EEF2FF',
+    category: 'OFFICE_SUPPLIES',
     items: ['Printer paper', 'Ink cartridges', 'Stationery', 'Files & folders', 'Stamps'],
   },
   {
@@ -50,15 +55,16 @@ const PROCUREMENT_CATEGORIES = [
     emoji: '🔨',
     color: '#374151',
     bg: '#F3F4F6',
+    category: 'MAINTENANCE',
     items: ['Painting services', 'Plumber visits', 'Electrician AMC', 'Lift maintenance', 'Pest control'],
   },
 ];
 
 const QUICK_TEMPLATES = [
-  { label: 'Monthly Cleaning', emoji: '🧹', description: 'Floor cleaner, phenyl, toilet fresheners, garbage bags' },
-  { label: 'Quarterly Electrical', emoji: '⚡', description: 'LED replacements, switches, cable wire, MCBs' },
-  { label: 'Annual Maintenance', emoji: '🏢', description: 'Painting, plumbing, lift servicing, pest control' },
-  { label: 'Festival Setup', emoji: '🎉', description: 'Decorations, lighting, sound equipment, banners' },
+  { label: 'Monthly Cleaning',     emoji: '🧹', description: 'Floor cleaner, phenyl, toilet fresheners, garbage bags', id: 'monthly-cleaning' },
+  { label: 'Quarterly Electrical', emoji: '⚡', description: 'LED replacements, switches, cable wire, MCBs', id: 'quarterly-electrical' },
+  { label: 'Annual Maintenance',   emoji: '🏢', description: 'Painting, plumbing, lift servicing, pest control', id: 'annual-maintenance' },
+  { label: 'Festival Setup',       emoji: '🎉', description: 'Decorations, lighting, sound equipment, banners', id: 'festival-setup' },
 ];
 
 function fmt(n: number) {
@@ -137,9 +143,14 @@ export default function AssociationProcurement() {
             onPress={() => router.push('/procurement/supplier-marketplace' as any)}
           />
           <ActionCard
-            emoji="💰" title="Savings Report" subtitle="View cost analysis"
+            emoji="📊" title="Savings Report" subtitle="Spend analytics & savings"
             color="#D97706" bg="#FFFBEB"
-            onPress={() => router.push('/procurement' as any)}
+            onPress={() => router.push('/procurement/analytics' as any)}
+          />
+          <ActionCard
+            emoji="🏦" title="Finance" subtitle="Working capital loans"
+            color="#0284C7" bg="#E0F2FE"
+            onPress={() => router.push('/procurement/finance' as any)}
           />
         </View>
       </View>
@@ -153,7 +164,7 @@ export default function AssociationProcurement() {
             <TouchableOpacity
               key={t.label}
               style={s.templateCard}
-              onPress={() => router.push('/procurement/rfq/new' as any)}
+              onPress={() => router.push(`/procurement/rfq/new?template=${t.id}` as any)}
               activeOpacity={0.85}
             >
               <Text style={s.templateEmoji}>{t.emoji}</Text>
@@ -174,7 +185,7 @@ export default function AssociationProcurement() {
           <TouchableOpacity
             key={cat.title}
             style={s.catCard}
-            onPress={() => router.push('/procurement/rfq/new' as any)}
+            onPress={() => router.push(`/procurement/rfq/new?category=${(cat as any).category ?? 'OTHER'}` as any)}
             activeOpacity={0.85}
           >
             <View style={[s.catIcon, { backgroundColor: cat.bg }]}>

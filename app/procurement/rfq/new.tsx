@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import procurementHubService from '@/services/procurementHubService';
 import type { RFQItem, ProcurementCategory, CreateRFQPayload } from '@/types/procurement';
@@ -27,6 +27,46 @@ const emptyItem = (): Omit<RFQItem, 'id'> => ({
   productName: '', description: '', category: 'OTHER', unit: 'units', quantity: 1,
 });
 
+const TEMPLATES: Record<string, { title: string; items: Omit<RFQItem, 'id'>[] }> = {
+  'monthly-cleaning': {
+    title: 'Monthly Cleaning Supplies',
+    items: [
+      { productName: 'Floor Cleaning Liquid', description: '', category: 'CLEANING_SUPPLIES', unit: 'litres', quantity: 20 },
+      { productName: 'Phenyl Concentrate', description: '', category: 'CLEANING_SUPPLIES', unit: 'litres', quantity: 10 },
+      { productName: 'Toilet Freshener', description: '', category: 'CLEANING_SUPPLIES', unit: 'pieces', quantity: 15 },
+      { productName: 'Heavy Duty Garbage Bags', description: '', category: 'CLEANING_SUPPLIES', unit: 'packets', quantity: 10 },
+      { productName: 'Mops & Brooms Set', description: '', category: 'CLEANING_SUPPLIES', unit: 'sets', quantity: 3 },
+    ],
+  },
+  'quarterly-electrical': {
+    title: 'Quarterly Electrical Maintenance',
+    items: [
+      { productName: 'LED Bulbs 9W', description: '', category: 'ELECTRICAL', unit: 'pieces', quantity: 50 },
+      { productName: 'MCB Switches 16A', description: '', category: 'ELECTRICAL', unit: 'pieces', quantity: 10 },
+      { productName: 'PVC Cable Wire 2.5mm', description: '', category: 'ELECTRICAL', unit: 'metres', quantity: 100 },
+      { productName: 'Extension Boards 4-port', description: '', category: 'ELECTRICAL', unit: 'pieces', quantity: 5 },
+    ],
+  },
+  'annual-maintenance': {
+    title: 'Annual Maintenance Items',
+    items: [
+      { productName: 'Exterior Weatherproof Paint', description: '', category: 'MAINTENANCE', unit: 'litres', quantity: 100 },
+      { productName: 'Plumbing Repair Kit', description: '', category: 'PLUMBING', unit: 'sets', quantity: 3 },
+      { productName: 'Pest Control Service (Quarterly)', description: '', category: 'MAINTENANCE', unit: 'visits', quantity: 4 },
+      { productName: 'Lift Annual Maintenance Contract', description: '', category: 'MAINTENANCE', unit: 'contract', quantity: 1 },
+    ],
+  },
+  'festival-setup': {
+    title: 'Festival & Event Setup',
+    items: [
+      { productName: 'Decorative LED String Lights', description: '', category: 'ELECTRICAL', unit: 'metres', quantity: 200 },
+      { productName: 'Printed Banners & Standees', description: '', category: 'OTHER', unit: 'pieces', quantity: 10 },
+      { productName: 'Sound System Rental', description: '', category: 'OTHER', unit: 'days', quantity: 2 },
+      { productName: 'Folding Chairs', description: '', category: 'FURNITURE', unit: 'pieces', quantity: 100 },
+    ],
+  },
+};
+
 function addDays(d: number): string {
   const dt = new Date();
   dt.setDate(dt.getDate() + d);
@@ -36,8 +76,14 @@ function addDays(d: number): string {
 export default function NewRFQ() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { template, category } = useLocalSearchParams<{ template?: string; category?: string }>();
 
-  const [title, setTitle] = useState('');
+  const templateData = template ? TEMPLATES[template] : undefined;
+  const categoryItem: Omit<RFQItem, 'id'> | null = category
+    ? { productName: '', description: '', category: category as ProcurementCategory, unit: 'units', quantity: 1 }
+    : null;
+
+  const [title, setTitle] = useState(templateData?.title ?? '');
   const [description, setDescription] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [quotationDeadline, setQuotationDeadline] = useState(addDays(7));
@@ -45,7 +91,9 @@ export default function NewRFQ() {
   const [estimatedValue, setEstimatedValue] = useState('');
   const [approvedBudget, setApprovedBudget] = useState('');
   const [notes, setNotes] = useState('');
-  const [items, setItems] = useState<Omit<RFQItem, 'id'>[]>([emptyItem()]);
+  const [items, setItems] = useState<Omit<RFQItem, 'id'>[]>(
+    templateData?.items ?? (categoryItem ? [categoryItem] : [emptyItem()])
+  );
   const [showCatPicker, setShowCatPicker] = useState<number | null>(null);
 
   const createMut = useMutation({

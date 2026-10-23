@@ -20,6 +20,8 @@ export default function ProcurementLayout() {
       <Stack.Screen name="manage-suppliers" options={{ title: 'Manage Suppliers' }} />
       <Stack.Screen name="submit-quote" options={{ title: 'Record Supplier Quote', presentation: 'modal' }} />
       <Stack.Screen name="analytics" options={{ title: 'Procurement Analytics' }} />
+      <Stack.Screen name="add-product" options={{ title: 'Add Product', presentation: 'modal' }} />
+      <Stack.Screen name="finance" options={{ title: 'MSME Finance Connect' }} />
     </Stack>
   );
 }
