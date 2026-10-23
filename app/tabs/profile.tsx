@@ -830,6 +830,14 @@ export default function ProfileScreen() {
               iconBg="#ECFDF5"
             />
           )}
+          <MenuItem
+            icon="business-outline"
+            label="Procurement Hub"
+            sublabel="RFQs, supplier quotes & purchase orders"
+            onPress={() => router.push('/procurement' as any)}
+            iconColor="#2563EB"
+            iconBg="#EFF6FF"
+          />
           {showTrips && (
             <MenuItem
               icon="compass-outline"
