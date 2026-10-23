@@ -133,7 +133,7 @@ export default function SupplierMarketplace() {
         {isLoading && <ActivityIndicator color="#2563EB" style={{ marginTop: 32 }} />}
 
         {!isLoading && tab === 'SUPPLIERS' && filteredSuppliers.map(sup => (
-          <SupplierCard key={sup.id} supplier={sup} onPress={() => router.push((`/procurement/supplier-marketplace`) as any)} />
+          <SupplierCard key={sup.id} supplier={sup} onPress={() => router.push(`/procurement/supplier/${sup.id}` as any)} />
         ))}
 
         {!isLoading && tab === 'PRODUCTS' && filteredProducts.map(p => (
