@@ -290,6 +290,23 @@ export async function getReliabilityLeaderboard(): Promise<import('../types/proc
   return data;
 }
 
+// ── Phase 9: Mana Buddy AI + Reorder + Savings ────────────────────────────────
+
+export async function parseBuddyRFQ(text: string): Promise<import('../types/procurement').BuddyRFQDraft> {
+  const { data } = await api.post(`${BASE}/mana-buddy/parse-rfq`, { text });
+  return data;
+}
+
+export async function getReorderSuggestions(): Promise<import('../types/procurement').ReorderSuggestion[]> {
+  const { data } = await api.get(`${BASE}/reorder-suggestions`);
+  return data;
+}
+
+export async function getSavingsDashboard(): Promise<import('../types/procurement').SavingsDashboard> {
+  const { data } = await api.get(`${BASE}/savings-dashboard`);
+  return data;
+}
+
 const procurementHubService = {
   getSuppliers, getSupplier, getSupplierProducts, getAllProducts,
   getRFQs, getRFQ, createRFQ, publishRFQ, cancelRFQ,
@@ -306,6 +323,7 @@ const procurementHubService = {
   getCalendarEntries, getUpcomingCalendarItems,
   createCalendarEntry, updateCalendarEntry, deleteCalendarEntry, createRFQFromCalendar,
   getSupplierPerformance, recordPerformanceEvent, getSupplierReliability, getReliabilityLeaderboard,
+  parseBuddyRFQ, getReorderSuggestions, getSavingsDashboard,
 };
 
 export default procurementHubService;

@@ -28,6 +28,9 @@ const QUICK_ACTIONS = [
   { emoji: '🛒', label: 'BulkBuy',          color: '#7C3AED', bg: '#F5F3FF', route: '/procurement/bulkbuy/index' },
   { emoji: '🔨', label: 'Auctions',         color: '#4C1D95', bg: '#EDE9FE', route: '/procurement/auction/index' },
   { emoji: '📅', label: 'Calendar',         color: '#065F46', bg: '#ECFDF5', route: '/procurement/calendar/index' },
+  { emoji: '🤖', label: 'Mana Buddy',       color: '#4F46E5', bg: '#EEF2FF', route: '/procurement/mana-buddy' },
+  { emoji: '🔄', label: 'Smart Reorder',    color: '#C2410C', bg: '#FFF7ED', route: '/procurement/reorder-suggestions' },
+  { emoji: '💰', label: 'Savings',          color: '#16A34A', bg: '#DCFCE7', route: '/procurement/savings-dashboard' },
 ] as const;
 
 const CATEGORY_ICONS: Record<string, { icon: string; color: string; bg: string }> = {

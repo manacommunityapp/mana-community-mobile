@@ -441,3 +441,65 @@ export interface RecordPerformancePayload {
   numericValue?: number;
   notes?: string;
 }
+
+// Phase 9: Mana Buddy AI + Reorder + Savings ─────────────────────────────────
+
+export type ReorderUrgency = 'OVERDUE' | 'URGENT' | 'DUE_SOON' | 'UPCOMING';
+
+export interface ReorderSuggestion {
+  calendarEntryId: number;
+  title: string;
+  category: ProcurementCategory;
+  unit: string;
+  quantity: number;
+  estimatedBudget?: number;
+  nextDueDate: string;
+  lastRfqDate?: string;
+  daysSinceLastOrder: number;
+  frequency: string;
+  urgency: ReorderUrgency;
+}
+
+export interface SavingsEvent {
+  rfqId: number;
+  rfqNumber: string;
+  title: string;
+  quoteCount: number;
+  awardedAmount: number;
+  estimatedValue?: number;
+  savings: number;
+  winningSupplier: string;
+  createdAt: string;
+}
+
+export interface CategorySavings {
+  category: string;
+  savings: number;
+}
+
+export interface SavingsDashboard {
+  totalSavings: number;
+  totalSpend: number;
+  savingsRate: number;
+  awardedRFQs: number;
+  competitiveBids: number;
+  categorySavings: CategorySavings[];
+  topSavingsEvents: SavingsEvent[];
+}
+
+export interface BuddyRFQDraft {
+  title: string;
+  items: Array<{
+    productName: string;
+    category: ProcurementCategory;
+    unit: string;
+    quantity: number;
+    targetPricePerUnit?: number;
+    specifications?: string;
+  }>;
+  deliveryLocation: string;
+  deliveryDeadline: string;
+  quotationDeadline: string;
+  estimatedValue?: number;
+  notes?: string;
+}

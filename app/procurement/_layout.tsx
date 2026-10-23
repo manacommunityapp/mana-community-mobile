@@ -32,6 +32,9 @@ export default function ProcurementLayout() {
       <Stack.Screen name="calendar/index" options={{ title: 'Purchase Calendar' }} />
       <Stack.Screen name="calendar/new" options={{ title: 'Schedule Item', presentation: 'modal' }} />
       <Stack.Screen name="record-delivery" options={{ title: 'Record Delivery', presentation: 'modal' }} />
+      <Stack.Screen name="mana-buddy" options={{ title: '🤖 Mana Buddy' }} />
+      <Stack.Screen name="reorder-suggestions" options={{ title: 'Smart Reorder' }} />
+      <Stack.Screen name="savings-dashboard" options={{ title: 'Savings Dashboard' }} />
     </Stack>
   );
 }
