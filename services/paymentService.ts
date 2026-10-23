@@ -27,6 +27,15 @@ export interface CashfreeOrderResponse {
   appId?: string;
 }
 
+export interface AdminSummaryResponse {
+  totalCollected: number;
+  totalRefunded: number;
+  countByStatus: Record<string, number>;
+  amountByStatus: Record<string, number>;
+  countByReferenceType: Record<string, number>;
+  revenueByReferenceType: Record<string, number>;
+}
+
 export const paymentService = {
   /**
    * Step 1 — Create a Cashfree order on the Mana backend.
@@ -81,6 +90,46 @@ export const paymentService = {
   ): Promise<CashfreeOrderResponse> {
     const res = await api.post<CashfreeOrderResponse>(
       `/payments/cashfree/orders/${manaOrderId}/refund`,
+      { amount, reason },
+    );
+    return res.data;
+  },
+
+  // ── Admin ──────────────────────────────────────────────────────────────────
+
+  async getAdminReport(params: {
+    status?: string;
+    refType?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    size?: number;
+  }): Promise<{ content: CashfreeOrderResponse[]; totalElements: number; totalPages: number }> {
+    const res = await api.get('/payments/cashfree/admin/report', { params: {
+      ...(params.status  ? { status:  params.status  } : {}),
+      ...(params.refType ? { refType: params.refType } : {}),
+      ...(params.from    ? { from:    params.from    } : {}),
+      ...(params.to      ? { to:      params.to      } : {}),
+      page: params.page ?? 0,
+      size: params.size ?? 20,
+    }});
+    return res.data;
+  },
+
+  async getAdminSummary(from?: string, to?: string): Promise<AdminSummaryResponse> {
+    const res = await api.get('/payments/cashfree/admin/summary', {
+      params: { ...(from ? { from } : {}), ...(to ? { to } : {}) },
+    });
+    return res.data;
+  },
+
+  async adminInitiateRefund(
+    manaOrderId: string,
+    amount?: number,
+    reason?: string,
+  ): Promise<CashfreeOrderResponse> {
+    const res = await api.post<CashfreeOrderResponse>(
+      `/payments/cashfree/admin/refund/${manaOrderId}`,
       { amount, reason },
     );
     return res.data;
