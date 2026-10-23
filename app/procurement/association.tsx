@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import procurementHubService from '@/services/procurementHubService';
+import type { BulkBuyCampaign } from '@/types/procurement';
 
 const PROCUREMENT_CATEGORIES = [
   {
@@ -92,11 +93,16 @@ export default function AssociationProcurement() {
     queryFn: () => procurementHubService.getPurchaseOrders(),
   });
 
+  const { data: activeCampaigns = [], refetch: refetchCampaigns } = useQuery({
+    queryKey: ['bulkbuy-campaigns', 'ACTIVE'],
+    queryFn: () => procurementHubService.getBulkBuyCampaigns('ACTIVE'),
+  });
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchStats(), refetchRFQs(), refetchPOs()]);
+    await Promise.all([refetchStats(), refetchRFQs(), refetchPOs(), refetchCampaigns()]);
     setRefreshing(false);
-  }, [refetchStats, refetchRFQs, refetchPOs]);
+  }, [refetchStats, refetchRFQs, refetchPOs, refetchCampaigns]);
 
   const totalSpend = pos
     .filter(p => p.status === 'FULFILLED')
@@ -152,8 +158,34 @@ export default function AssociationProcurement() {
             color="#0284C7" bg="#E0F2FE"
             onPress={() => router.push('/procurement/finance' as any)}
           />
+          <ActionCard
+            emoji="🛒" title="BulkBuy" subtitle="Pool demand for savings"
+            color="#7C3AED" bg="#F5F3FF"
+            onPress={() => router.push('/procurement/bulkbuy/index' as any)}
+          />
         </View>
       </View>
+
+      {/* Active BulkBuy Campaigns */}
+      {activeCampaigns.length > 0 && (
+        <View style={s.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={s.sectionTitle}>🛒 Active BulkBuy Campaigns</Text>
+            <TouchableOpacity onPress={() => router.push('/procurement/bulkbuy/index' as any)}>
+              <Text style={{ fontSize: 12, color: '#2563EB', fontWeight: '700' }}>View All →</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ gap: 6 }}>
+            {activeCampaigns.slice(0, 3).map(c => (
+              <BulkBuyTeaser
+                key={c.id}
+                campaign={c}
+                onPress={() => router.push(`/procurement/bulkbuy/${c.id}` as any)}
+              />
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Quick templates */}
       <View style={s.section}>
@@ -270,6 +302,35 @@ function ActionCard({ emoji, title, subtitle, color, bg, onPress }: {
   );
 }
 
+function BulkBuyTeaser({ campaign: c, onPress }: { campaign: BulkBuyCampaign; onPress: () => void }) {
+  const progress = c.minOrderQuantity > 0
+    ? Math.min(1, c.currentQuantity / c.minOrderQuantity)
+    : 0;
+  const pct = Math.round(progress * 100);
+  const days = Math.max(0, Math.ceil((new Date(c.deadlineDate).getTime() - Date.now()) / 86400000));
+  const isJoined = c.myCommitmentQuantity != null && c.myCommitmentQuantity > 0;
+
+  return (
+    <TouchableOpacity style={s.teaserCard} onPress={onPress} activeOpacity={0.85}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <Text style={{ fontSize: 20 }}>🛒</Text>
+        <Text style={s.teaserTitle} numberOfLines={1}>{c.title}</Text>
+        <Text style={[s.teaserDays, days <= 2 && { color: '#DC2626' }]}>{days}d left</Text>
+      </View>
+      <View style={s.teaserBar}>
+        <View style={[s.teaserFill, { width: `${pct}%` as any }]} />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3 }}>
+        <Text style={s.teaserSub}>{c.currentQuantity}/{c.minOrderQuantity} {c.unit}</Text>
+        {isJoined
+          ? <Text style={s.teaserJoined}>✓ Joined</Text>
+          : <Text style={s.teaserJoin}>Join →</Text>
+        }
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F1F5F9' },
   content: { padding: 12, gap: 12 },
@@ -341,4 +402,16 @@ const s = StyleSheet.create({
   tipItem: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   tipDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#2563EB', marginTop: 5 },
   tipText: { flex: 1, fontSize: 12, color: '#374151', lineHeight: 17 },
+
+  teaserCard: {
+    backgroundColor: '#fff', borderRadius: RADIUS.md, padding: 10,
+    borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  teaserTitle: { flex: 1, fontSize: 12, fontWeight: '700', color: '#1E293B' },
+  teaserDays: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
+  teaserBar: { height: 5, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' },
+  teaserFill: { height: '100%', backgroundColor: '#2563EB', borderRadius: 3 },
+  teaserSub: { fontSize: 10, color: COLORS.textMuted },
+  teaserJoined: { fontSize: 10, color: '#059669', fontWeight: '700' },
+  teaserJoin: { fontSize: 10, color: '#2563EB', fontWeight: '700' },
 });

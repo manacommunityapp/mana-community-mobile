@@ -245,3 +245,69 @@ export interface ProcurementAnalytics {
   avgQuotesPerRFQ: number;
   pendingPOValue: number;
 }
+
+// Phase 4: BulkBuy Campaigns ──────────────────────────────────────────────
+
+export type BulkBuyCampaignStatus = 'DRAFT' | 'ACTIVE' | 'COMMITTED' | 'AWARDED' | 'CLOSED' | 'CANCELLED';
+export type CommitmentStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+
+export interface BulkBuyPriceTier {
+  minQuantity: number;
+  pricePerUnit: number;
+}
+
+export interface BulkBuyCampaign {
+  id: number;
+  title: string;
+  description?: string;
+  productName: string;
+  category: ProcurementCategory;
+  unit: string;
+  minOrderQuantity: number;
+  targetQuantity?: number;
+  currentQuantity: number;
+  priceTiers: BulkBuyPriceTier[];
+  currentEffectivePrice?: number;
+  retailPrice?: number;
+  supplierId?: number;
+  supplierName?: string;
+  deadlineDate: string;
+  deliveryDate?: string;
+  status: BulkBuyCampaignStatus;
+  commitmentCount: number;
+  communityId: number;
+  createdBy?: string;
+  myCommitmentQuantity?: number;
+  myCommitmentId?: number;
+  createdAt: string;
+}
+
+export interface BulkBuyCommitment {
+  id: number;
+  campaignId: number;
+  userId: number;
+  userName: string;
+  quantity: number;
+  pricePerUnit: number;
+  totalAmount: number;
+  status: CommitmentStatus;
+  createdAt: string;
+}
+
+export interface CreateBulkBuyCampaignPayload {
+  title: string;
+  description?: string;
+  productName: string;
+  category: ProcurementCategory;
+  unit: string;
+  minOrderQuantity: number;
+  targetQuantity?: number;
+  priceTiers: BulkBuyPriceTier[];
+  retailPrice?: number;
+  deadlineDate: string;
+  deliveryDate?: string;
+}
+
+export interface CommitToCampaignPayload {
+  quantity: number;
+}

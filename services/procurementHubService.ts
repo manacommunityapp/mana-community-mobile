@@ -137,6 +137,55 @@ export async function getProcurementAnalytics(): Promise<import('../types/procur
   return data;
 }
 
+// ── Phase 4: BulkBuy Campaigns ────────────────────────────────────────────
+
+export async function getBulkBuyCampaigns(
+  status?: string,
+): Promise<import('../types/procurement').BulkBuyCampaign[]> {
+  const { data } = await api.get(`${BASE}/bulk-buy/campaigns`, { params: { status } });
+  return data;
+}
+
+export async function getBulkBuyCampaign(
+  id: number,
+): Promise<import('../types/procurement').BulkBuyCampaign> {
+  const { data } = await api.get(`${BASE}/bulk-buy/campaigns/${id}`);
+  return data;
+}
+
+export async function createBulkBuyCampaign(
+  payload: import('../types/procurement').CreateBulkBuyCampaignPayload,
+): Promise<import('../types/procurement').BulkBuyCampaign> {
+  const { data } = await api.post(`${BASE}/bulk-buy/campaigns`, payload);
+  return data;
+}
+
+export async function activateBulkBuyCampaign(
+  id: number,
+): Promise<import('../types/procurement').BulkBuyCampaign> {
+  const { data } = await api.post(`${BASE}/bulk-buy/campaigns/${id}/activate`);
+  return data;
+}
+
+export async function commitToCampaign(
+  campaignId: number,
+  payload: import('../types/procurement').CommitToCampaignPayload,
+): Promise<import('../types/procurement').BulkBuyCommitment> {
+  const { data } = await api.post(`${BASE}/bulk-buy/campaigns/${campaignId}/commit`, payload);
+  return data;
+}
+
+export async function cancelCampaignCommitment(campaignId: number): Promise<void> {
+  await api.delete(`${BASE}/bulk-buy/campaigns/${campaignId}/commit`);
+}
+
+export async function getCampaignCommitments(
+  campaignId: number,
+): Promise<import('../types/procurement').BulkBuyCommitment[]> {
+  const { data } = await api.get(`${BASE}/bulk-buy/campaigns/${campaignId}/commitments`);
+  return data;
+}
+
 const procurementHubService = {
   getSuppliers, getSupplier, getSupplierProducts, getAllProducts,
   getRFQs, getRFQ, createRFQ, publishRFQ, cancelRFQ,
@@ -145,6 +194,9 @@ const procurementHubService = {
   getProcurementStats,
   createSupplier, verifySupplier, addSupplierProduct,
   submitQuote, getProcurementAnalytics,
+  getBulkBuyCampaigns, getBulkBuyCampaign, createBulkBuyCampaign,
+  activateBulkBuyCampaign, commitToCampaign, cancelCampaignCommitment,
+  getCampaignCommitments,
 };
 
 export default procurementHubService;
