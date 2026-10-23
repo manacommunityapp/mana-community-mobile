@@ -26,6 +26,7 @@ const QUICK_ACTIONS = [
   { emoji: '👥', label: 'Manage Suppliers',color: '#374151', bg: '#F3F4F6', route: '/procurement/manage-suppliers' },
   { emoji: '🏦', label: 'Finance',          color: '#0F766E', bg: '#F0FDFA', route: '/procurement/finance' },
   { emoji: '🛒', label: 'BulkBuy',          color: '#7C3AED', bg: '#F5F3FF', route: '/procurement/bulkbuy/index' },
+  { emoji: '🔨', label: 'Auctions',         color: '#4C1D95', bg: '#EDE9FE', route: '/procurement/auction/index' },
 ] as const;
 
 const CATEGORY_ICONS: Record<string, { icon: string; color: string; bg: string }> = {

@@ -186,6 +186,45 @@ export async function getCampaignCommitments(
   return data;
 }
 
+// ── Phase 5: Reverse Auctions ─────────────────────────────────────────────
+
+export async function getOpenAuctions(): Promise<import('../types/procurement').AuctionRFQ[]> {
+  const { data } = await api.get(`${BASE}/auctions`);
+  return data;
+}
+
+export async function enableAuctionMode(
+  rfqId: number,
+  payload: import('../types/procurement').EnableAuctionPayload,
+): Promise<import('../types/procurement').AuctionRFQ> {
+  const { data } = await api.post(`${BASE}/rfqs/${rfqId}/enable-auction`, payload);
+  return data;
+}
+
+export async function getAuctionBids(
+  rfqId: number,
+): Promise<import('../types/procurement').AuctionBid[]> {
+  const { data } = await api.get(`${BASE}/auctions/${rfqId}/bids`);
+  return data;
+}
+
+export async function placeAuctionBid(
+  rfqId: number,
+  payload: import('../types/procurement').PlaceAuctionBidPayload,
+): Promise<import('../types/procurement').AuctionBid> {
+  const { data } = await api.post(`${BASE}/auctions/${rfqId}/bids`, payload);
+  return data;
+}
+
+export async function withdrawAuctionBid(rfqId: number): Promise<void> {
+  await api.delete(`${BASE}/auctions/${rfqId}/bids`);
+}
+
+export async function awardAuctionBid(rfqId: number, bidId: number): Promise<import('../types/procurement').AuctionBid> {
+  const { data } = await api.post(`${BASE}/auctions/${rfqId}/bids/${bidId}/award`);
+  return data;
+}
+
 const procurementHubService = {
   getSuppliers, getSupplier, getSupplierProducts, getAllProducts,
   getRFQs, getRFQ, createRFQ, publishRFQ, cancelRFQ,
@@ -197,6 +236,8 @@ const procurementHubService = {
   getBulkBuyCampaigns, getBulkBuyCampaign, createBulkBuyCampaign,
   activateBulkBuyCampaign, commitToCampaign, cancelCampaignCommitment,
   getCampaignCommitments,
+  getOpenAuctions, enableAuctionMode, getAuctionBids,
+  placeAuctionBid, withdrawAuctionBid, awardAuctionBid,
 };
 
 export default procurementHubService;

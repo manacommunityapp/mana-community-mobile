@@ -23,6 +23,9 @@ export default function ProcurementLayout() {
       <Stack.Screen name="add-product" options={{ title: 'Add Product', presentation: 'modal' }} />
       <Stack.Screen name="finance" options={{ title: 'MSME Finance Connect' }} />
       <Stack.Screen name="supplier/[id]" options={{ title: 'Supplier Profile' }} />
+      <Stack.Screen name="auction/index" options={{ title: 'Reverse Auctions' }} />
+      <Stack.Screen name="auction/new" options={{ title: 'New Auction', presentation: 'modal' }} />
+      <Stack.Screen name="auction/[id]" options={{ title: 'Auction Detail' }} />
       <Stack.Screen name="bulkbuy/index" options={{ title: 'BulkBuy Campaigns' }} />
       <Stack.Screen name="bulkbuy/new" options={{ title: 'New Campaign', presentation: 'modal' }} />
       <Stack.Screen name="bulkbuy/[id]" options={{ title: 'Campaign Detail' }} />

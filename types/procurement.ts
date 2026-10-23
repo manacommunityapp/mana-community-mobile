@@ -311,3 +311,54 @@ export interface CreateBulkBuyCampaignPayload {
 export interface CommitToCampaignPayload {
   quantity: number;
 }
+
+// Phase 5: Reverse Auction ───────────────────────────────────────────────────
+
+export type AuctionBidStatus = 'ACTIVE' | 'WITHDRAWN' | 'AWARDED';
+
+export interface AuctionBid {
+  id: number;
+  rfqId: number;
+  supplierId?: number;
+  supplierName: string;
+  bidAmount: number;
+  deliveryDays?: number;
+  notes?: string;
+  status: AuctionBidStatus;
+  rank: number;
+  isMyBid: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuctionRFQ {
+  id: number;
+  rfqNumber: string;
+  title: string;
+  description?: string;
+  status: RFQStatus;
+  communityId: number;
+  requestedBy: string;
+  primaryItem: string;
+  deliveryLocation: string;
+  deliveryDeadline: string;
+  quotationDeadline: string;
+  auctionDeadline?: string;
+  reservePrice?: number;
+  estimatedValue?: number;
+  bidCount: number;
+  lowestBid?: number;
+  myBid?: AuctionBid;
+  createdAt: string;
+}
+
+export interface PlaceAuctionBidPayload {
+  bidAmount: number;
+  deliveryDays?: number;
+  notes?: string;
+}
+
+export interface EnableAuctionPayload {
+  auctionDeadline: string;
+  reservePrice?: number;
+}
