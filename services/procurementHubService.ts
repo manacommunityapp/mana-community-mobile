@@ -100,12 +100,51 @@ export async function getProcurementStats(): Promise<ProcurementStats> {
   return data;
 }
 
+// ── Phase 2: Supplier Management ──────────────────────────────────────────
+
+export async function createSupplier(payload: import('../types/procurement').CreateSupplierPayload): Promise<SupplierProfile> {
+  const { data } = await api.post(`${BASE}/suppliers`, payload);
+  return data;
+}
+
+export async function verifySupplier(id: number): Promise<SupplierProfile> {
+  const { data } = await api.put(`${BASE}/suppliers/${id}/verify`);
+  return data;
+}
+
+export async function addSupplierProduct(
+  supplierId: number,
+  payload: import('../types/procurement').CreateProductPayload,
+): Promise<SupplierProduct> {
+  const { data } = await api.post(`${BASE}/suppliers/${supplierId}/products`, payload);
+  return data;
+}
+
+// ── Phase 2: Quote Submission ─────────────────────────────────────────────
+
+export async function submitQuote(
+  rfqId: number,
+  payload: import('../types/procurement').SubmitQuotePayload,
+): Promise<SupplierQuote> {
+  const { data } = await api.post(`${BASE}/rfqs/${rfqId}/quotes`, payload);
+  return data;
+}
+
+// ── Phase 2: Analytics ────────────────────────────────────────────────────
+
+export async function getProcurementAnalytics(): Promise<import('../types/procurement').ProcurementAnalytics> {
+  const { data } = await api.get(`${BASE}/analytics`);
+  return data;
+}
+
 const procurementHubService = {
   getSuppliers, getSupplier, getSupplierProducts, getAllProducts,
   getRFQs, getRFQ, createRFQ, publishRFQ, cancelRFQ,
   getRFQQuotes, awardQuote,
   getPurchaseOrders, getPurchaseOrder, updatePOStatus,
   getProcurementStats,
+  createSupplier, verifySupplier, addSupplierProduct,
+  submitQuote, getProcurementAnalytics,
 };
 
 export default procurementHubService;

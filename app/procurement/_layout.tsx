@@ -17,6 +17,9 @@ export default function ProcurementLayout() {
       <Stack.Screen name="rfq/[id]" options={{ title: 'RFQ Detail' }} />
       <Stack.Screen name="purchase-orders" options={{ title: 'Purchase Orders' }} />
       <Stack.Screen name="association" options={{ title: 'Association Procurement' }} />
+      <Stack.Screen name="manage-suppliers" options={{ title: 'Manage Suppliers' }} />
+      <Stack.Screen name="submit-quote" options={{ title: 'Record Supplier Quote', presentation: 'modal' }} />
+      <Stack.Screen name="analytics" options={{ title: 'Procurement Analytics' }} />
     </Stack>
   );
 }

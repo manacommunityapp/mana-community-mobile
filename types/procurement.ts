@@ -171,3 +171,77 @@ export interface QuoteComparisonRow {
     leadDays: number;
   }>;
 }
+
+// Phase 2 ──────────────────────────────────────────────────────────────────
+
+export interface CreateSupplierPayload {
+  businessName: string;
+  contactPerson: string;
+  mobile: string;
+  email?: string;
+  gstNumber?: string;
+  address: string;
+  city: string;
+  pincode: string;
+  categories: string;
+  serviceArea?: string;
+  description?: string;
+}
+
+export interface CreateProductPayload {
+  name: string;
+  description?: string;
+  category: ProcurementCategory;
+  unit: string;
+  wholesalePrice: number;
+  retailPrice?: number;
+  moq: number;
+  gstPercent: number;
+  leadTimeDays: number;
+}
+
+export interface QuoteItemSubmit {
+  rfqItemId?: number;
+  productName: string;
+  unit: string;
+  quantity: number;
+  pricePerUnit: number;
+  gstPercent: number;
+  leadTimeDays: number;
+  notes?: string;
+}
+
+export interface SubmitQuotePayload {
+  supplierId: number;
+  items: QuoteItemSubmit[];
+  deliveryCharge?: number;
+  validUntil: string;
+  deliveryDate: string;
+  paymentTerms?: string;
+  notes?: string;
+}
+
+export interface CategorySpend {
+  category: string;
+  spend: number;
+  poCount: number;
+}
+
+export interface SupplierSpend {
+  supplierId: number;
+  supplierName: string;
+  spend: number;
+  poCount: number;
+}
+
+export interface ProcurementAnalytics {
+  totalSpend: number;
+  totalSavings: number;
+  savingsRate: number;
+  categorySpend: CategorySpend[];
+  topSuppliers: SupplierSpend[];
+  totalRFQs: number;
+  awardedRFQs: number;
+  avgQuotesPerRFQ: number;
+  pendingPOValue: number;
+}

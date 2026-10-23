@@ -193,6 +193,16 @@ export default function RFQDetail() {
       {/* QUOTES tab */}
       {activeTab === 'QUOTES' && (
         <View style={s.section}>
+          {['OPEN', 'QUOTES_RECEIVED', 'COMPARING'].includes(rfq.status) && (
+            <TouchableOpacity
+              style={s.recordQuoteBtn}
+              onPress={() => router.push(`/procurement/submit-quote?rfqId=${rfqId}&rfqTitle=${encodeURIComponent(rfq.title)}` as any)}
+            >
+              <Ionicons name="add-circle-outline" size={18} color="#fff" />
+              <Text style={s.recordQuoteBtnText}>Record Supplier Quote</Text>
+            </TouchableOpacity>
+          )}
+
           {loadingQuotes && <ActivityIndicator color="#2563EB" style={{ marginTop: 16 }} />}
 
           {!loadingQuotes && quotes.length === 0 && (
@@ -201,7 +211,7 @@ export default function RFQDetail() {
               <Text style={s.emptyTitle}>No quotes yet</Text>
               <Text style={s.emptySub}>
                 {rfq.status === 'OPEN'
-                  ? 'Quotes will appear here when suppliers respond.'
+                  ? 'Tap "Record Supplier Quote" above to enter a quote you received.'
                   : 'This RFQ has not received any quotes.'}
               </Text>
             </View>
@@ -398,6 +408,11 @@ const s = StyleSheet.create({
   timelinePending: { backgroundColor: '#E2E8F0', borderWidth: 2, borderColor: '#93C5FD' },
   timelineLabel: { fontSize: 10, fontWeight: '700', color: '#374151', textAlign: 'center' },
   timelineDate: { fontSize: 9, color: COLORS.textMuted, textAlign: 'center' },
+  recordQuoteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#2563EB', borderRadius: 12, padding: 12, marginBottom: 4,
+  },
+  recordQuoteBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   emptyQuotes: { alignItems: 'center', paddingVertical: 40, gap: 8 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
   emptySub: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center' },
