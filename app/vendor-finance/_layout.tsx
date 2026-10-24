@@ -1,0 +1,12 @@
+import { Stack } from 'expo-router';
+
+export default function VendorFinanceLayout() {
+  return (
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="khata" />
+      <Stack.Screen name="add-party" />
+      <Stack.Screen name="reports" />
+    </Stack>
+  );
+}
