@@ -31,6 +31,8 @@ const FINANCE_HUBS = [
   { emoji: '✅', label: 'Approvals',  color: '#DC2626',            bg: '#FEF2F2',              route: '/finance/expenses' },
   { emoji: '🧾', label: 'Vendor Bills', color: '#7C3AED',          bg: '#F5F3FF',              route: '/finance/vendor-bills' },
   { emoji: '💰', label: 'My Money',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/personal-finance' },
+  { emoji: '📒', label: 'My Khata',   color: '#7C3AED',            bg: '#F5F3FF',              route: '/vendor-finance' },
+  { emoji: '🤝', label: 'Udhaar',     color: '#0284C7',            bg: '#E0F2FE',              route: '/personal-finance/khata' },
 ] as const;
 
 export default function MaintenanceDuesScreen() {
