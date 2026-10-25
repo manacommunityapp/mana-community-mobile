@@ -37,62 +37,70 @@ export interface AdminSummaryResponse {
 }
 
 export const paymentService = {
-  /**
-   * Step 1 — Create a Cashfree order on the Mana backend.
-   * Returns paymentSessionId and appId needed to launch the SDK checkout.
-   */
   async createOrder(req: CashfreeCreateOrderRequest): Promise<CashfreeOrderResponse> {
-    const res = await api.post<CashfreeOrderResponse>('/payments/cashfree/orders', req);
-    return res.data;
+    try {
+      const res = await api.post<CashfreeOrderResponse>('/payments/cashfree/orders', req);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to create payment order. Please try again.');
+    }
   },
 
-  /**
-   * Step 2 — Verify payment after SDK checkout completes.
-   * The backend re-queries Cashfree to confirm authoritative status.
-   */
   async verifyPayment(orderId: string): Promise<CashfreeOrderResponse> {
-    const res = await api.post<CashfreeOrderResponse>(
-      `/payments/cashfree/orders/${orderId}/verify`,
-      {},
-    );
-    return res.data;
+    try {
+      const res = await api.post<CashfreeOrderResponse>(
+        `/payments/cashfree/orders/${orderId}/verify`,
+        {},
+      );
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to verify payment. Please contact support if amount was deducted.');
+    }
   },
 
-  /** Current user's payment history (paginated). */
   async getMyOrders(page = 0, size = 20): Promise<{ content: CashfreeOrderResponse[]; totalElements: number }> {
-    const res = await api.get('/payments/cashfree/orders', { params: { page, size } });
-    return res.data;
+    try {
+      const res = await api.get('/payments/cashfree/orders', { params: { page, size } });
+      return res.data ?? { content: [], totalElements: 0 };
+    } catch {
+      return { content: [], totalElements: 0 };
+    }
   },
 
-  /** Single order by local DB ID. */
   async getOrderById(id: number): Promise<CashfreeOrderResponse> {
     const res = await api.get<CashfreeOrderResponse>(`/payments/cashfree/orders/${id}`);
     return res.data;
   },
 
-  /** Orders linked to a specific business entity. */
   async getOrdersByReference(
     referenceType: string,
     referenceId: number,
     page = 0,
   ): Promise<{ content: CashfreeOrderResponse[] }> {
-    const res = await api.get('/payments/cashfree/orders/by-reference', {
-      params: { referenceType, referenceId, page },
-    });
-    return res.data;
+    try {
+      const res = await api.get('/payments/cashfree/orders/by-reference', {
+        params: { referenceType, referenceId, page },
+      });
+      return res.data ?? { content: [] };
+    } catch {
+      return { content: [] };
+    }
   },
 
-  /** Initiate a refund for a PAID order. */
   async initiateRefund(
     manaOrderId: string,
     amount?: number,
     reason?: string,
   ): Promise<CashfreeOrderResponse> {
-    const res = await api.post<CashfreeOrderResponse>(
-      `/payments/cashfree/orders/${manaOrderId}/refund`,
-      { amount, reason },
-    );
-    return res.data;
+    try {
+      const res = await api.post<CashfreeOrderResponse>(
+        `/payments/cashfree/orders/${manaOrderId}/refund`,
+        { amount, reason },
+      );
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to initiate refund. Please try again.');
+    }
   },
 
   // ── Admin ──────────────────────────────────────────────────────────────────
@@ -105,22 +113,30 @@ export const paymentService = {
     page?: number;
     size?: number;
   }): Promise<{ content: CashfreeOrderResponse[]; totalElements: number; totalPages: number }> {
-    const res = await api.get('/payments/cashfree/admin/report', { params: {
-      ...(params.status  ? { status:  params.status  } : {}),
-      ...(params.refType ? { refType: params.refType } : {}),
-      ...(params.from    ? { from:    params.from    } : {}),
-      ...(params.to      ? { to:      params.to      } : {}),
-      page: params.page ?? 0,
-      size: params.size ?? 20,
-    }});
-    return res.data;
+    try {
+      const res = await api.get('/payments/cashfree/admin/report', { params: {
+        ...(params.status  ? { status:  params.status  } : {}),
+        ...(params.refType ? { refType: params.refType } : {}),
+        ...(params.from    ? { from:    params.from    } : {}),
+        ...(params.to      ? { to:      params.to      } : {}),
+        page: params.page ?? 0,
+        size: params.size ?? 20,
+      }});
+      return res.data ?? { content: [], totalElements: 0, totalPages: 0 };
+    } catch {
+      return { content: [], totalElements: 0, totalPages: 0 };
+    }
   },
 
   async getAdminSummary(from?: string, to?: string): Promise<AdminSummaryResponse> {
-    const res = await api.get('/payments/cashfree/admin/summary', {
-      params: { ...(from ? { from } : {}), ...(to ? { to } : {}) },
-    });
-    return res.data;
+    try {
+      const res = await api.get('/payments/cashfree/admin/summary', {
+        params: { ...(from ? { from } : {}), ...(to ? { to } : {}) },
+      });
+      return res.data;
+    } catch {
+      return {} as AdminSummaryResponse;
+    }
   },
 
   async adminInitiateRefund(
@@ -128,10 +144,14 @@ export const paymentService = {
     amount?: number,
     reason?: string,
   ): Promise<CashfreeOrderResponse> {
-    const res = await api.post<CashfreeOrderResponse>(
-      `/payments/cashfree/admin/refund/${manaOrderId}`,
-      { amount, reason },
-    );
-    return res.data;
+    try {
+      const res = await api.post<CashfreeOrderResponse>(
+        `/payments/cashfree/admin/refund/${manaOrderId}`,
+        { amount, reason },
+      );
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to process refund. Please try again.');
+    }
   },
 };
