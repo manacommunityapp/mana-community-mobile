@@ -8,6 +8,7 @@ const PROD_API_URL = "https://api.manacommunity.in";
 const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
 
 export const CONFIG = {
+  N8N_AI_WEBHOOK_URL: process.env.EXPO_PUBLIC_N8N_AI_WEBHOOK_URL || "",
   API_BASE_URL: isDev ? DEV_API_URL : PROD_API_URL,
   WS_URL:       isDev ? `ws://3.109.145.130:8081/ws` : `wss://api.manacommunity.in/ws`,
   APP_NAME:     "Mana Community",

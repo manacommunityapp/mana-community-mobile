@@ -704,6 +704,48 @@ let doctorsState: DoctorDto[] = [
     ],
     reviews: []
   },
+  {
+    id: "physio-3",
+    name: "Dr. Ananya Sen (ProMove Rehab)",
+    specialty: "Orthopedic & Post-Operative Rehabilitation",
+    category: "PHYSIOTHERAPIST",
+    qualifications: ["BPT", "MPT (Orthopedics & Joint Mobilization)", "Dry Needling Certified"],
+    experienceYears: 10,
+    rating: 4.92,
+    reviewCount: 39,
+    consultationFee: 650,
+    consultationModes: ["IN_PERSON", "VIDEO"],
+    nextAvailableSlot: "Today, 5:30 PM",
+    verifiedBadge: true,
+    registrationNumber: "MIAP-34190",
+    medicalCouncil: "Indian Association of Physiotherapists (IAP)",
+    languages: ["English", "Hindi", "Bengali", "Kannada"],
+    clinicName: "ProMove Ortho & Spine Care",
+    clinicAddress: "Mana Wellness Hub & Doorstep Home Visits",
+    distanceKm: 0.3,
+    phone: "+91-98860-44552",
+    hospitalAffiliations: ["Manipal Hospital Rehab Panel", "Apollo Spectra"],
+    verifiedCommunityConsultations: 28,
+    openNow: true,
+    emergencyServicesAvailable: false,
+    homeVisitAvailable: true,
+    communityOffer: {
+      title: "15% Off 5-Session Rehab Package",
+      badge: "Mana Special",
+      discountPercent: 15,
+      description: "Post-surgery joint mobilization and dry needling therapy with free ergonomic home assessment.",
+      validUntil: "2026-12-15"
+    },
+    clinicHours: [
+      { day: "Mon - Sat", morning: "08:30 AM - 01:00 PM", evening: "04:00 PM - 08:00 PM" },
+      { day: "Sunday", morning: "10:00 AM - 01:00 PM" }
+    ],
+    appointmentSlots: [
+      { id: "s-37", time: "09:30 AM", period: "MORNING", available: true, mode: "IN_PERSON" },
+      { id: "s-38", time: "05:30 PM", period: "EVENING", available: true, mode: "IN_PERSON" }
+    ],
+    reviews: []
+  },
 
   // ── HOME-CARE PROVIDERS ──
   {
@@ -790,6 +832,139 @@ let doctorsState: DoctorDto[] = [
     appointmentSlots: [
       { id: "s-40", time: "10:00 AM", period: "MORNING", available: true, mode: "IN_PERSON" },
       { id: "s-41", time: "03:30 PM", period: "AFTERNOON", available: true, mode: "IN_PERSON" }
+    ],
+    reviews: []
+  },
+
+  // ── GYM TRAINERS & FITNESS COACHES ──
+  {
+    id: "trainer-1",
+    name: "Coach Rajesh Sharma",
+    specialty: "Strength & Hypertrophy Coach",
+    category: "FITNESS_TRAINER",
+    qualifications: ["ACE Certified Personal Trainer", "CSCS (Strength & Conditioning)", "CPR/AED Certified"],
+    experienceYears: 10,
+    rating: 4.95,
+    reviewCount: 52,
+    consultationFee: 500,
+    consultationModes: ["IN_PERSON"],
+    nextAvailableSlot: "Today, 6:30 AM",
+    verifiedBadge: true,
+    registrationNumber: "ACE-CPT-894102",
+    medicalCouncil: "American Council on Exercise (ACE)",
+    languages: ["English", "Hindi", "Kannada"],
+    clinicName: "Mana Clubhouse Gymnasium",
+    clinicAddress: "Clubhouse Level 1 (Tower A Ground Floor)",
+    distanceKm: 0.1,
+    phone: "+91-98801-77231",
+    email: "rajesh.fit@managym.in",
+    hospitalAffiliations: ["Mana Sports & Fitness Committee"],
+    verifiedCommunityConsultations: 48,
+    openNow: true,
+    emergencyServicesAvailable: false,
+    homeVisitAvailable: true,
+    communityOffer: {
+      title: "Free InBody Assessment & 1st PT Trial",
+      badge: "Mana Fitness Partner",
+      discountPercent: 20,
+      promoCode: "MANAFIT20",
+      description: "Complimentary body composition analysis and 1-on-1 form assessment for all Mana residents.",
+      validUntil: "2026-12-31"
+    },
+    clinicHours: [
+      { day: "Mon - Sat", morning: "06:00 AM - 11:30 AM", evening: "05:00 PM - 09:30 PM" },
+      { day: "Sunday", morning: "07:00 AM - 12:00 PM" }
+    ],
+    appointmentSlots: [
+      { id: "s-tr1", time: "06:30 AM", period: "MORNING", available: true, mode: "IN_PERSON" },
+      { id: "s-tr2", time: "08:00 AM", period: "MORNING", available: true, mode: "IN_PERSON" },
+      { id: "s-tr3", time: "06:00 PM", period: "EVENING", available: true, mode: "IN_PERSON" }
+    ],
+    reviews: []
+  },
+  {
+    id: "trainer-2",
+    name: "Coach Sneha Kapoor",
+    specialty: "Functional HIIT & Postural Specialist",
+    category: "FITNESS_TRAINER",
+    qualifications: ["ACSM Certified Personal Trainer", "Pre & Post-Natal Fitness Certified", "TRX Master Instructor"],
+    experienceYears: 7,
+    rating: 4.91,
+    reviewCount: 38,
+    consultationFee: 450,
+    consultationModes: ["IN_PERSON"],
+    nextAvailableSlot: "Tomorrow, 7:00 AM",
+    verifiedBadge: true,
+    registrationNumber: "ACSM-CPT-44120",
+    medicalCouncil: "American College of Sports Medicine (ACSM)",
+    languages: ["English", "Hindi"],
+    clinicName: "Mana Clubhouse Gym & Doorstep Training",
+    clinicAddress: "Clubhouse Gymnasium & Apartment Home Training",
+    distanceKm: 0.1,
+    phone: "+91-99450-88321",
+    email: "sneha.coach@managym.in",
+    hospitalAffiliations: ["Mana Women Wellness Circle"],
+    verifiedCommunityConsultations: 35,
+    openNow: true,
+    emergencyServicesAvailable: false,
+    homeVisitAvailable: true,
+    communityOffer: {
+      title: "15% Off 10-Session Women's Core Pass",
+      badge: "Resident Exclusive",
+      discountPercent: 15,
+      description: "Customized pelvic floor and core strengthening program for postpartum and desk-workers.",
+      validUntil: "2026-12-31"
+    },
+    clinicHours: [
+      { day: "Mon - Sat", morning: "07:00 AM - 11:00 AM", evening: "04:30 PM - 08:30 PM" },
+      { day: "Sunday", morning: "08:00 AM - 11:30 AM" }
+    ],
+    appointmentSlots: [
+      { id: "s-tr5", time: "07:00 AM", period: "MORNING", available: true, mode: "IN_PERSON" },
+      { id: "s-tr6", time: "09:30 AM", period: "MORNING", available: true, mode: "IN_PERSON" }
+    ],
+    reviews: []
+  },
+  {
+    id: "trainer-3",
+    name: "Coach Marcus D'Souza",
+    specialty: "Athletic Conditioning & Senior Mobility",
+    category: "FITNESS_TRAINER",
+    qualifications: ["K11 Master Trainer Diploma", "Calisthenics Level 2", "Functional Aging Specialist"],
+    experienceYears: 12,
+    rating: 4.88,
+    reviewCount: 44,
+    consultationFee: 550,
+    consultationModes: ["IN_PERSON"],
+    nextAvailableSlot: "Today, 5:00 PM",
+    verifiedBadge: true,
+    registrationNumber: "K11-MT-10928",
+    medicalCouncil: "K11 School of Fitness Sciences",
+    languages: ["English", "Hindi", "Konkani", "Kannada"],
+    clinicName: "Mana Clubhouse Gym & Sports Turf",
+    clinicAddress: "Clubhouse Gymnasium & Outdoor Turf",
+    distanceKm: 0.1,
+    phone: "+91-97411-33290",
+    email: "marcus.pt@managym.in",
+    hospitalAffiliations: ["Mana Sports Association"],
+    verifiedCommunityConsultations: 41,
+    openNow: true,
+    emergencyServicesAvailable: false,
+    homeVisitAvailable: true,
+    communityOffer: {
+      title: "Complimentary Senior Mobility Screening",
+      badge: "Mana Elders Fit",
+      discountPercent: 10,
+      description: "Balance, gait, and joint agility screening for residents aged 55+.",
+      validUntil: "2026-12-15"
+    },
+    clinicHours: [
+      { day: "Mon - Sat", morning: "06:30 AM - 12:00 PM", evening: "04:00 PM - 09:00 PM" },
+      { day: "Sunday", morning: "07:30 AM - 12:30 PM" }
+    ],
+    appointmentSlots: [
+      { id: "s-tr8", time: "06:30 AM", period: "MORNING", available: true, mode: "IN_PERSON" },
+      { id: "s-tr9", time: "11:00 AM", period: "MORNING", available: true, mode: "IN_PERSON" }
     ],
     reviews: []
   }

@@ -138,7 +138,11 @@ export default function AiChatScreen() {
     setIsThinking(true);
 
     try {
-      const response = await aiChatService.sendMessage(query, conversationId);
+      const history = messages
+        .filter((item) => item.id !== 'welcome' && (item.sender === 'user' || item.sender === 'assistant'))
+        .slice(-12)
+        .map((item) => ({ role: item.sender, content: item.text }));
+      const response = await aiChatService.sendMessage(query, conversationId, undefined, history);
       if (response.conversationId) {
         setConversationId(response.conversationId);
       }
