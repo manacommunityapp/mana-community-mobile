@@ -1304,13 +1304,27 @@ export const healthService = {
     return [...medicalRecordsState];
   },
 
-  async auditAccessRecord(recordId: string, action: string): Promise<HealthAuditEntry> {
+  async auditAccessRecord(recordId: string, action: string, accessorName?: string, accessorRole?: string): Promise<HealthAuditEntry> {
+    // Resolve caller identity from the auth store when not explicitly provided.
+    let resolvedName = accessorName;
+    let resolvedRole = accessorRole ?? 'RESIDENT';
+    if (!resolvedName) {
+      try {
+        const { useAuth } = await import('@/hooks/useAuth');
+        const authState = useAuth.getState();
+        const u = authState.user;
+        resolvedName = u ? (u.name || u.fullName || u.email || 'Unknown User') : 'Unknown User';
+        resolvedRole = authState.roles[0] ?? 'RESIDENT';
+      } catch {
+        resolvedName = 'Unknown User';
+      }
+    }
     const rec = medicalRecordsState.find(r => r.id === recordId);
     const entry: HealthAuditEntry = {
       id: "aud-" + Date.now(),
       timestamp: new Date().toISOString(),
-      accessorName: "Sandeep Roy (Resident Owner)",
-      accessorRole: "RESIDENT",
+      accessorName: resolvedName,
+      accessorRole: resolvedRole,
       action,
       recordTitle: rec ? rec.title : "Medical Document"
     };
