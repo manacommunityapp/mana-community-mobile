@@ -76,6 +76,15 @@ const MODULES: QuickModule[] = [
     gradient: ['#0F172A', '#334155'],
     badge: '🔒 Staff',
   },
+  {
+    id: 'vehicle-care',
+    title: 'Vehicle Care',
+    subtitle: 'Car & Bike Wash • Washcaro',
+    route: '/vehicle-care',
+    emoji: '🚗',
+    gradient: ['#0284C7', '#0EA5E9'],
+    badge: '✨ New',
+  },
 ];
 
 const CATEGORIES = [
