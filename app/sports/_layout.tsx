@@ -15,6 +15,8 @@ export default function SportsLayout() {
       <Stack.Screen name="player" />
       <Stack.Screen name="photos" />
       <Stack.Screen name="rate" />
+      <Stack.Screen name="trainers" />
+      <Stack.Screen name="trainer" />
     </Stack>
   );
 }
