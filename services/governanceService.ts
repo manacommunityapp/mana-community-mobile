@@ -703,16 +703,7 @@ export const governanceService = {
       });
       return res.data;
     } catch {
-      if (search && search.trim()) {
-        const q = search.toLowerCase();
-        return MOCK_RESOLUTIONS.filter(
-          (r) =>
-            r.title.toLowerCase().includes(q) ||
-            r.resolutionNumber.toLowerCase().includes(q) ||
-            r.category.toLowerCase().includes(q)
-        );
-      }
-      return MOCK_RESOLUTIONS;
+      return [];
     }
   },
 
@@ -723,15 +714,7 @@ export const governanceService = {
       });
       return res.data;
     } catch {
-      let list = MOCK_VAULT_DOCS;
-      if (category && category !== 'ALL') {
-        list = list.filter((d) => d.category === category);
-      }
-      if (search && search.trim()) {
-        const q = search.toLowerCase();
-        list = list.filter((d) => d.title.toLowerCase().includes(q) || d.category.toLowerCase().includes(q));
-      }
-      return list;
+      return [];
     }
   },
 };
