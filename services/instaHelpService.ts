@@ -58,32 +58,56 @@ export function toApiDuration(uiValue: string): InstaHelpDuration {
 
 export const instaHelpService = {
   async createBooking(request: InstaHelpRequest): Promise<InstaHelpResponse> {
-    const res = await api.post('/api/v1/insta-help/bookings', request);
-    return res.data;
+    try {
+      const res = await api.post('/api/v1/insta-help/bookings', request);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to create booking. Please try again.');
+    }
   },
 
   async getMyBookings(): Promise<InstaHelpResponse[]> {
-    const res = await api.get('/api/v1/insta-help/bookings/my');
-    return res.data ?? [];
+    try {
+      const res = await api.get('/api/v1/insta-help/bookings/my');
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 
   async startSession(bookingRef: string): Promise<InstaHelpResponse> {
-    const res = await api.put(`/api/v1/insta-help/bookings/${bookingRef}/start`);
-    return res.data;
+    try {
+      const res = await api.put(`/api/v1/insta-help/bookings/${bookingRef}/start`);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to start session.');
+    }
   },
 
   async completeSession(bookingRef: string): Promise<InstaHelpResponse> {
-    const res = await api.put(`/api/v1/insta-help/bookings/${bookingRef}/complete`);
-    return res.data;
+    try {
+      const res = await api.put(`/api/v1/insta-help/bookings/${bookingRef}/complete`);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to complete session.');
+    }
   },
 
   async cancelBooking(bookingRef: string): Promise<InstaHelpResponse> {
-    const res = await api.put(`/api/v1/insta-help/bookings/${bookingRef}/cancel`);
-    return res.data;
+    try {
+      const res = await api.put(`/api/v1/insta-help/bookings/${bookingRef}/cancel`);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to cancel booking.');
+    }
   },
 
   async rateBooking(bookingRef: string, req: RateRequest): Promise<InstaHelpResponse> {
-    const res = await api.put(`/api/v1/insta-help/bookings/${bookingRef}/rate`, req);
-    return res.data;
+    try {
+      const res = await api.put(`/api/v1/insta-help/bookings/${bookingRef}/rate`, req);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to submit rating. Please try again.');
+    }
   },
 };

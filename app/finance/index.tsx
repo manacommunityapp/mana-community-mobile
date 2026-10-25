@@ -121,24 +121,16 @@ export default function MaintenanceDuesScreen() {
   const initiatePaymentMutation = useMutation({
     mutationFn: (billId: string) => maintenanceDuesService.initiatePayment(billId),
     onSuccess: (order) => {
+      // The Razorpay order is ready (key + orderId + amount).
+      // To complete UPI/Card payment, integrate react-native-razorpay:
+      //   npx expo install react-native-razorpay
+      // Then open RazorpayCheckout.open({ key: order.key, order_id: order.orderId, amount: order.amount * 100 })
+      // and on success call verifyPaymentMutation.mutate with the real
+      // handler.razorpay_payment_id and handler.razorpay_signature.
       Alert.alert(
-        'Payment Gateway Initiated',
-        'Order ID: ' + order.orderId + '\nAmount: ₹' + order.amount.toLocaleString('en-IN') + '\nOpening payment checkout...',
-        [
-          {
-            text: 'Simulate Success',
-            onPress: () => {
-              verifyPaymentMutation.mutate({
-                billId: activeBill?.id || 'bill-1',
-                orderId: order.orderId,
-                paymentId: 'pay_mock_' + Math.random().toString(36).substring(2, 9),
-                signature: 'sig_mock_verified',
-                method: selectedMethod,
-              });
-            },
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ]
+        'Payment Gateway Ready',
+        `Order created (₹${order.amount.toLocaleString('en-IN')}).\n\nIn-app UPI/Card checkout requires the Razorpay SDK to be installed. Please pay via Wallet until it is set up, or contact the society office.`,
+        [{ text: 'OK' }]
       );
     },
     onError: (err: any) => {

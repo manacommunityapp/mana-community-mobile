@@ -27,9 +27,9 @@ export interface TrainerSlotDto {
   trainerId: number;
   trainerName: string;
   sport: string;
-  slotDate: string;       // ISO date "2026-11-01"
-  startTime: string;      // "07:00:00"
-  endTime: string;        // "08:00:00"
+  slotDate: string;
+  startTime: string;
+  endTime: string;
   durationMinutes: number;
   slotType: 'INDIVIDUAL' | 'GROUP';
   maxCapacity: number;
@@ -79,38 +79,62 @@ export interface BookSlotRequest {
 export const sportsTrainerService = {
 
   async listApproved(communityId: number): Promise<SportsTrainerDto[]> {
-    const res = await api.get<SportsTrainerDto[]>('/sports/trainers', {
-      params: { communityId },
-    });
-    return res.data;
+    try {
+      const res = await api.get<SportsTrainerDto[]>('/sports/trainers', {
+        params: { communityId },
+      });
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 
   async applyAsTrainer(communityId: number, data: ApplyAsTrainerRequest): Promise<SportsTrainerDto> {
-    const res = await api.post<SportsTrainerDto>('/sports/trainers/apply', data, {
-      params: { communityId },
-    });
-    return res.data;
+    try {
+      const res = await api.post<SportsTrainerDto>('/sports/trainers/apply', data, {
+        params: { communityId },
+      });
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to submit trainer application. Please try again.');
+    }
   },
 
   async getSlots(trainerId: number): Promise<TrainerSlotDto[]> {
-    const res = await api.get<TrainerSlotDto[]>(`/sports/trainers/${trainerId}/slots`);
-    return res.data;
+    try {
+      const res = await api.get<TrainerSlotDto[]>(`/sports/trainers/${trainerId}/slots`);
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 
   async bookSlot(slotId: number, data: BookSlotRequest): Promise<TrainerSlotBookingDto> {
-    const res = await api.post<TrainerSlotBookingDto>(`/sports/trainer-slots/${slotId}/book`, data);
-    return res.data;
+    try {
+      const res = await api.post<TrainerSlotBookingDto>(`/sports/trainer-slots/${slotId}/book`, data);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to book slot. Please try again.');
+    }
   },
 
   async cancelBooking(bookingId: number): Promise<TrainerSlotBookingDto> {
-    const res = await api.post<TrainerSlotBookingDto>(`/sports/trainer-bookings/${bookingId}/cancel`);
-    return res.data;
+    try {
+      const res = await api.post<TrainerSlotBookingDto>(`/sports/trainer-bookings/${bookingId}/cancel`);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to cancel booking.');
+    }
   },
 
   async myBookings(communityId: number): Promise<TrainerSlotBookingDto[]> {
-    const res = await api.get<TrainerSlotBookingDto[]>('/sports/trainer-bookings/my', {
-      params: { communityId },
-    });
-    return res.data;
+    try {
+      const res = await api.get<TrainerSlotBookingDto[]>('/sports/trainer-bookings/my', {
+        params: { communityId },
+      });
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 };

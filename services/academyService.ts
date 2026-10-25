@@ -639,45 +639,8 @@ export const academyService = {
     try {
       const res = await api.post<AcademyProgram>('/academy/teaching/workshops', req);
       return res.data;
-    } catch {
-      const newProg: AcademyProgram = {
-        id: `prog-${Date.now()}`,
-        instructorId: 'inst-1',
-        instructorName: 'Arjun Mehta',
-        instructorTower: 'Tower B',
-        instructorFlat: '804',
-        instructorRating: 4.9,
-        categoryName: req.categoryCode,
-        categoryCode: req.categoryCode,
-        title: req.title,
-        summary: req.summary,
-        description: req.description,
-        learningType: req.learningType,
-        level: req.level,
-        mode: req.mode,
-        location: req.location || 'Clubhouse',
-        onlineMeetingUrl: req.onlineMeetingUrl,
-        startDate: req.startDate,
-        startTime: req.startTime,
-        durationMinutes: req.durationMinutes,
-        totalSessions: req.totalSessions,
-        pricingType: req.pricingType,
-        price: req.price,
-        totalSeats: req.totalSeats,
-        enrolledCount: 0,
-        userEnrolled: false,
-        status: 'PENDING_APPROVAL',
-        certificateProvided: true,
-        syllabus: req.syllabus?.map((s, idx) => ({
-          sessionNumber: idx + 1,
-          title: s.title,
-          description: s.description,
-          durationMinutes: req.durationMinutes,
-        })),
-      };
-
-      memoryPrograms = [newProg, ...memoryPrograms];
-      return newProg;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to host workshop. Please try again.');
     }
   },
 
