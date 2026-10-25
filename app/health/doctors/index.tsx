@@ -13,6 +13,7 @@ const CATEGORY_TABS: { id: ProviderCategory | "ALL"; label: string; icon: string
   { id: "DIAGNOSTIC_CENTER", label: "Labs", icon: "flask-outline" },
   { id: "PHARMACY", label: "Pharmacy", icon: "bandage-outline" },
   { id: "PHYSIOTHERAPIST", label: "Physio", icon: "fitness-outline" },
+  { id: "FITNESS_TRAINER", label: "Gym Trainers", icon: "barbell-outline" },
   { id: "HOME_CARE", label: "Home Care", icon: "home-outline" }
 ];
 
@@ -39,9 +40,9 @@ const FEE_OPTIONS = [
 
 export default function HealthcareDirectoryScreen() {
   const router = useRouter();
-  const { specialty } = useLocalSearchParams<{ specialty?: string }>();
+  const { specialty, category } = useLocalSearchParams<{ specialty?: string; category?: ProviderCategory | "ALL" }>();
   const [providers, setProviders] = useState<DoctorDto[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<ProviderCategory | "ALL">("ALL");
+  const [selectedCategory, setSelectedCategory] = useState<ProviderCategory | "ALL">(category ?? "ALL");
   const [searchQuery, setSearchQuery] = useState(specialty ?? "");
   const [selectedDistance, setSelectedDistance] = useState<number>(999);
   const [selectedFeeIndex, setSelectedFeeIndex] = useState<number>(0);
@@ -49,6 +50,12 @@ export default function HealthcareDirectoryScreen() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [selectedDept, setSelectedDept] = useState("All Depts");
+
+  useEffect(() => {
+    if (category) {
+      setSelectedCategory(category);
+    }
+  }, [category]);
 
   useEffect(() => {
     healthService.getDoctors().then(setProviders);

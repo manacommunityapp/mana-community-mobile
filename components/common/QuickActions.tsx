@@ -49,7 +49,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: "amc_maintenance",  emoji: "⚙️", icon: "construct-outline",        label: "AMCs & Assets", route: "/inventory/maintenance",    bg: "#F0FDF4", color: "#16A34A", category: "Facilities",      badge: "AMC" },
   { id: "automation",       emoji: "🤖", icon: "hardware-chip-outline",     label: "Smart Home",    route: "/automation",               bg: "#EDE9FE", color: "#7C3AED", category: "Facilities",      badge: "IoT" },
   { id: "submeters",        emoji: "⚡", icon: "speedometer-outline",       label: "Sub-Meters",    route: "/iot/meters",               bg: "#ECFDF5", color: "#059669", category: "Facilities" },
-  { id: "facilities",       emoji: "🏋️", icon: "fitness-outline",          label: "Amenities",     route: "/facilities",               bg: "#CCFBF1", color: "#0D9488", category: "Facilities" },
+  { id: "facilities",       emoji: "🏋️", icon: "fitness-outline",          label: "Amenities & Bookings", route: "/facilities",        bg: "#CCFBF1", color: "#0D9488", category: "Facilities" },
 
   // Social & Sports
   { id: "sports",           emoji: "🏆", icon: "trophy-outline",            label: "Sports",        route: "/sports",                   bg: "#DCFCE7", color: "#059669", category: "Social & Sports" },
@@ -67,7 +67,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
 
   // Commerce & Food
   { id: "market",           emoji: "🏪", icon: "storefront-outline",       label: "Marketplace",   route: "/tabs/marketplace",         bg: "#D1FAE5", color: "#059669", category: "Commerce & Food" },
-  { id: "offers",           emoji: "🛍️", icon: "pricetag-outline",          label: "Offers",        route: "/offers",                   bg: "#FEF3C7", color: "#D97706", category: "Commerce & Food", badge: "NEW" },
+  { id: "offers",           emoji: "🛍️", icon: "pricetag-outline",          label: "Deals & Offers", route: "/offers",                   bg: "#FEF3C7", color: "#D97706", category: "Commerce & Food", badge: "NEW" },
   { id: "group_buying",     emoji: "👜", icon: "bag-handle-outline",         label: "Group Buy",     route: "/group-buying",             bg: "#ECFDF5", color: "#059669", category: "Commerce & Food" },
   { id: "lost_found",       emoji: "🔍", icon: "search-outline",           label: "Lost & Found",  route: "/marketplace/lost-found",   bg: "#FEF2F2", color: "#DC2626", category: "Commerce & Food" },
   { id: "donations",        emoji: "🎁", icon: "gift-outline",             label: "Give Away",     route: "/marketplace/donations",    bg: "#FDF2F8", color: "#DB2777", category: "Commerce & Food" },
