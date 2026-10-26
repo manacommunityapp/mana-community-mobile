@@ -5,7 +5,8 @@ import {
   Image, ScrollView, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { COLORS } from '@/constants/config';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { PickedFile } from '@/services/chatService';
 
 interface ChatInputProps {
@@ -17,7 +18,7 @@ interface ChatInputProps {
 }
 
 const MAX_ATTACHMENTS = 5;
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export function ChatInput({ onSend, onSendAttachments, onTyping, isSending = false, disabled = false }: ChatInputProps) {
   const [text, setText]           = useState('');
@@ -110,40 +111,40 @@ export function ChatInput({ onSend, onSendAttachments, onTyping, isSending = fal
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.previewStrip}
-          contentContainerStyle={styles.previewContent}
+          style={st.previewStrip}
+          contentContainerStyle={st.previewContent}
         >
           {pickedFiles.map((file, i) => (
-            <View key={file.uri} style={styles.previewItem}>
+            <View key={file.uri} style={st.previewItem}>
               {file.type.startsWith('image/') ? (
-                <Image source={{ uri: file.uri }} style={styles.previewImage} />
+                <Image source={{ uri: file.uri }} style={st.previewImage} />
               ) : (
-                <View style={styles.previewFile}>
-                  <Text style={styles.previewFileIcon}>📄</Text>
+                <View style={st.previewFile}>
+                  <Text style={st.previewFileIcon}>📄</Text>
                 </View>
               )}
-              <TouchableOpacity style={styles.previewRemove} onPress={() => removeFile(i)}>
-                <Text style={styles.previewRemoveText}>✕</Text>
+              <TouchableOpacity style={st.previewRemove} onPress={() => removeFile(i)}>
+                <Text style={st.previewRemoveText}>✕</Text>
               </TouchableOpacity>
             </View>
           ))}
         </ScrollView>
       )}
 
-      <View style={styles.container}>
+      <View style={st.container}>
         {/* Attachment button */}
-        <TouchableOpacity style={styles.iconBtn} onPress={pickImages} disabled={disabled || isSending}>
-          <Text style={[styles.iconText, pickedFiles.length > 0 && styles.iconActive]}>📎</Text>
+        <TouchableOpacity style={st.iconBtn} onPress={pickImages} disabled={disabled || isSending}>
+          <Text style={st.iconEmoji}>📎</Text>
           {pickedFiles.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{pickedFiles.length}</Text>
+            <View style={st.attachBadge}>
+              <Text style={st.attachBadgeText}>{pickedFiles.length}</Text>
             </View>
           )}
         </TouchableOpacity>
 
         {/* Text input */}
         <TextInput
-          style={[styles.input, { height: Math.max(44, Math.min(inputHeight, 120)) }]}
+          style={[st.input, { height: Math.max(44, Math.min(inputHeight, 120)) }]}
           value={text}
           onChangeText={handleChangeText}
           placeholder="Type a message…"
@@ -155,40 +156,131 @@ export function ChatInput({ onSend, onSendAttachments, onTyping, isSending = fal
           blurOnSubmit={false}
         />
 
-        {/* Send / loading */}
+        {/* Send button */}
         <TouchableOpacity
-          style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+          style={st.sendBtnWrap}
           onPress={handleSend}
           disabled={!canSend}
           activeOpacity={0.8}
         >
-          {isSending
-            ? <ActivityIndicator color="#fff" size="small" />
-            : <Text style={styles.sendIcon}>➤</Text>
-          }
+          <LinearGradient
+            colors={canSend ? ['#312E81', '#4F46E5'] : ['#E8E8F0', '#E8E8F0']}
+            style={st.sendBtn}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            {isSending ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={[st.sendIcon, !canSend && st.sendIconDisabled]}>➤</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container:       { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 10, paddingVertical: 8, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border, gap: 8 },
-  iconBtn:         { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  iconText:        { fontSize: 20 },
-  iconActive:      { opacity: 1 },
-  badge:           { position: 'absolute', top: -2, right: -2, backgroundColor: COLORS.primary, borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  badgeText:       { color: '#fff', fontSize: 10, fontFamily: 'DMSans-Bold', fontWeight: '700' },
-  input:           { flex: 1, backgroundColor: '#F3F4F6', borderRadius: 22, paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 11 : 8, paddingBottom: Platform.OS === 'ios' ? 11 : 8, fontSize: 15, color: COLORS.text, maxHeight: 120 },
-  sendBtn:         { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  sendBtnDisabled: { backgroundColor: COLORS.border },
-  sendIcon:        { color: '#fff', fontSize: 16, marginLeft: 2 },
-  previewStrip:    { backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border, maxHeight: 88 },
-  previewContent:  { paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
-  previewItem:     { width: 68, height: 68, borderRadius: 10, overflow: 'hidden', backgroundColor: '#F3F4F6' },
-  previewImage:    { width: 68, height: 68, borderRadius: 10 },
-  previewFile:     { width: 68, height: 68, alignItems: 'center', justifyContent: 'center' },
+const st = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#E8E8F0',
+    gap: 8,
+  },
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 3,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+    position: 'relative',
+  },
+  iconEmoji: { fontSize: 18 },
+  attachBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#4F46E5',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  attachBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: FONTS.bold,
+    fontWeight: '700',
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#F1F5F9',
+    borderRadius: RADIUS.xl,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 11 : 8,
+    paddingBottom: Platform.OS === 'ios' ? 11 : 8,
+    fontSize: 15,
+    color: COLORS.text,
+    maxHeight: 120,
+    fontFamily: FONTS.regular,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+  },
+  sendBtnWrap: { borderRadius: 20, overflow: 'hidden', marginBottom: 2 },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendIcon: { color: '#fff', fontSize: 16, marginLeft: 2 },
+  sendIconDisabled: { color: COLORS.textMuted },
+  previewStrip: {
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#E8E8F0',
+    maxHeight: 88,
+  },
+  previewContent: { paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
+  previewItem: {
+    width: 68,
+    height: 68,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+  },
+  previewImage: { width: 68, height: 68, borderRadius: RADIUS.md },
+  previewFile: {
+    width: 68,
+    height: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   previewFileIcon: { fontSize: 28 },
-  previewRemove:   { position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+  previewRemove: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   previewRemoveText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });

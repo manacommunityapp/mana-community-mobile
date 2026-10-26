@@ -56,7 +56,7 @@ export const emergencySosService = {
 
   async acknowledgeSos(incidentId: number, acknowledgedBy = 'Security Guard'): Promise<Partial<SosIncidentDto>> {
     try {
-      const res = await api.post<SosIncidentDto>(`/api/v1/emergency/sos/${incidentId}/acknowledge`, { acknowledgedBy });
+      const res = await api.post<SosIncidentDto>(`/v1/emergency/sos/${incidentId}/acknowledge`, { acknowledgedBy });
       return res.data;
     } catch {
       return { id: incidentId, status: 'RESPONDED' };
@@ -65,7 +65,7 @@ export const emergencySosService = {
 
   async setResponderEta(incidentId: number, etaMinutes: number): Promise<Partial<SosIncidentDto>> {
     try {
-      const res = await api.post<SosIncidentDto>(`/api/v1/emergency/sos/${incidentId}/eta`, { etaMinutes });
+      const res = await api.post<SosIncidentDto>(`/v1/emergency/sos/${incidentId}/eta`, { etaMinutes });
       return res.data;
     } catch {
       return {
@@ -80,7 +80,7 @@ export const emergencySosService = {
 
   async markOnScene(incidentId: number): Promise<Partial<SosIncidentDto>> {
     try {
-      const res = await api.post<SosIncidentDto>(`/api/v1/emergency/sos/${incidentId}/on-scene`);
+      const res = await api.post<SosIncidentDto>(`/v1/emergency/sos/${incidentId}/on-scene`);
       return res.data;
     } catch {
       return { id: incidentId, status: 'ON_SCENE', onSceneAt: new Date().toISOString() };
@@ -89,7 +89,7 @@ export const emergencySosService = {
 
   async escalateSos(incidentId: number, targetLevel: string, reason: string): Promise<Partial<SosIncidentDto>> {
     try {
-      const res = await api.post<SosIncidentDto>(`/api/v1/emergency/sos/${incidentId}/escalate`, { targetLevel, reason });
+      const res = await api.post<SosIncidentDto>(`/v1/emergency/sos/${incidentId}/escalate`, { targetLevel, reason });
       return res.data;
     } catch {
       return { id: incidentId, status: 'ESCALATED', escalationLevel: targetLevel, slaBreached: true };
@@ -98,7 +98,7 @@ export const emergencySosService = {
 
   async resolveSos(incidentId: number, resolutionNotes: string): Promise<{ success: boolean }> {
     try {
-      const res = await api.post(`/api/v1/emergency/sos/${incidentId}/resolve`, { resolutionNotes });
+      const res = await api.post(`/v1/emergency/sos/${incidentId}/resolve`, { resolutionNotes });
       return res.data;
     } catch {
       return { success: true };

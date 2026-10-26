@@ -15,6 +15,8 @@ interface HeaderProps {
   leftIcon?: keyof typeof Ionicons.glyphMap;
   onLeftPress?: () => void;
   branded?: boolean;
+  showBack?: boolean;
+  onBack?: () => void;
 }
 
 export function Header({
@@ -24,13 +26,18 @@ export function Header({
   leftIcon,
   onLeftPress,
   branded = false,
+  showBack = false,
+  onBack,
 }: HeaderProps) {
+  const effectiveLeftIcon = leftIcon || (showBack ? 'arrow-back' : undefined);
+  const effectiveLeftPress = onLeftPress || onBack;
+
   return (
     <View style={styles.header}>
       <View style={styles.left}>
-        {leftIcon && onLeftPress && (
-          <TouchableOpacity onPress={onLeftPress} hitSlop={8} style={styles.leftBtn}>
-            <Ionicons name={leftIcon} size={22} color={COLORS.text} />
+        {effectiveLeftIcon && effectiveLeftPress && (
+          <TouchableOpacity onPress={effectiveLeftPress} hitSlop={8} style={styles.leftBtn}>
+            <Ionicons name={effectiveLeftIcon} size={22} color={COLORS.text} />
           </TouchableOpacity>
         )}
         <View style={styles.titleBlock}>

@@ -7,6 +7,10 @@ export default function MarketplaceLayout() {
       <Stack.Screen name="[id]"  options={{ presentation: 'card' }} />
       <Stack.Screen name="create" options={{ presentation: 'modal' }} />
       <Stack.Screen name="my-listings" />
+      <Stack.Screen name="wishlist" />
+      <Stack.Screen name="orders" />
+      <Stack.Screen name="donations" />
+      <Stack.Screen name="lost-found" />
     </Stack>
   );
 }

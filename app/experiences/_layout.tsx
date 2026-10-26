@@ -1,0 +1,15 @@
+import { Stack } from 'expo-router';
+
+export default function ExperiencesLayout() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="[id]" />
+      <Stack.Screen name="my-bookings" />
+      <Stack.Screen name="create" />
+      <Stack.Screen name="organizer" />
+      <Stack.Screen name="partners" />
+      <Stack.Screen name="buddy" />
+    </Stack>
+  );
+}

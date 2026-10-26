@@ -14,7 +14,10 @@ import { chatService } from '@/services/chatService';
 import { MessageBubble } from '@/components/common/MessageBubble';
 import { ChatInput } from '@/components/common/ChatInput';
 import { TypingIndicator } from '@/components/common/TypingIndicator';
-import { COLORS, getInitials } from '@/constants/config';
+import {
+  COLORS, SHADOWS, RADIUS, SPACING, FONTS,
+  getInitials, getAvatarColor,
+} from '@/constants/config';
 
 // ── Connection status badge ────────────────────────────────────
 function StatusDot({ connected }: { connected: boolean }) {
@@ -50,15 +53,17 @@ function ChatHeader({
   onToggleSearch, isSearching, searchQuery, onSearchChange,
   matchCount, currentMatch, onNextMatch, onPrevMatch, onCloseSearch,
 }: HeaderProps) {
+  const avatarColor = getAvatarColor(name);
+
   if (isSearching) {
     return (
       <View style={hdr.searchContainer}>
-        <TouchableOpacity onPress={onCloseSearch} style={hdr.iconBtn} hitSlop={8}>
-          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+        <TouchableOpacity onPress={onCloseSearch} style={hdr.navBtn} hitSlop={8}>
+          <Ionicons name="arrow-back" size={18} color={COLORS.text} />
         </TouchableOpacity>
 
         <View style={hdr.searchInputWrap}>
-          <Ionicons name="search" size={16} color={COLORS.textMuted} />
+          <Text style={hdr.searchEmoji}>🔍</Text>
           <TextInput
             style={hdr.searchInput}
             placeholder="Search in chat..."
@@ -85,7 +90,7 @@ function ChatHeader({
               style={[hdr.arrowBtn, matchCount === 0 && hdr.btnDisabled]}
               hitSlop={6}
             >
-              <Ionicons name="chevron-up" size={18} color={matchCount === 0 ? COLORS.textMuted : COLORS.text} />
+              <Ionicons name="chevron-up" size={16} color={matchCount === 0 ? COLORS.textMuted : COLORS.text} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onNextMatch}
@@ -93,7 +98,7 @@ function ChatHeader({
               style={[hdr.arrowBtn, matchCount === 0 && hdr.btnDisabled]}
               hitSlop={6}
             >
-              <Ionicons name="chevron-down" size={18} color={matchCount === 0 ? COLORS.textMuted : COLORS.text} />
+              <Ionicons name="chevron-down" size={16} color={matchCount === 0 ? COLORS.textMuted : COLORS.text} />
             </TouchableOpacity>
           </View>
         )}
@@ -103,12 +108,12 @@ function ChatHeader({
 
   return (
     <View style={hdr.container}>
-      <TouchableOpacity onPress={onBack} style={hdr.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Text style={hdr.backText}>‹</Text>
+      <TouchableOpacity onPress={onBack} style={hdr.navBtn} hitSlop={8}>
+        <Ionicons name="arrow-back" size={18} color={COLORS.text} />
       </TouchableOpacity>
 
-      <View style={hdr.avatar}>
-        <Text style={hdr.avatarText}>{getInitials(name)}</Text>
+      <View style={[hdr.avatar, { backgroundColor: avatarColor.bg }]}>
+        <Text style={[hdr.avatarText, { color: avatarColor.text }]}>{getInitials(name)}</Text>
       </View>
 
       <View style={hdr.info}>
@@ -119,32 +124,122 @@ function ChatHeader({
         </View>
       </View>
 
-      <TouchableOpacity onPress={onToggleSearch} style={hdr.searchToggleBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Ionicons name="search-outline" size={22} color={COLORS.text} />
+      <TouchableOpacity
+        onPress={onToggleSearch}
+        style={hdr.actionBtn}
+        hitSlop={8}
+      >
+        <Text style={hdr.actionEmoji}>🔍</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const hdr = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
-  backBtn:   { padding: 4 },
-  backText:  { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  avatar:    { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  avatarText:{ color: '#fff', fontFamily: 'DMSans-Bold', fontWeight: '700', fontSize: 16 },
-  info:      { flex: 1, gap: 2 },
-  name:      { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8F0',
+    gap: 10,
+  },
+  navBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontFamily: FONTS.bold,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  info: { flex: 1, gap: 2 },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    fontFamily: FONTS.displayBold,
+    letterSpacing: -0.2,
+  },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  subtitle:  { fontSize: 12, color: COLORS.textMuted },
-  searchToggleBtn: { padding: 6, borderRadius: 20 },
-  // ── Search Mode Header
-  searchContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 8 },
-  iconBtn: { padding: 4 },
-  searchInputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceAlt, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, gap: 6 },
-  searchInput: { flex: 1, fontSize: 14, color: COLORS.text, paddingVertical: 0 },
-  searchNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  matchCounter: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, marginRight: 2 },
-  arrowBtn: { padding: 4, borderRadius: 12 },
+  subtitle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+  },
+  actionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+  },
+  actionEmoji: { fontSize: 16 },
+  // ── Search Mode
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8F0',
+    gap: 8,
+  },
+  searchInputWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#E8E8F0',
+  },
+  searchEmoji: { fontSize: 13 },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    paddingVertical: 0,
+    fontFamily: FONTS.regular,
+  },
+  searchNav: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  matchCounter: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    marginRight: 2,
+    fontFamily: FONTS.bold,
+  },
+  arrowBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+  },
   btnDisabled: { opacity: 0.35 },
 });
 
@@ -156,7 +251,6 @@ export default function ChatWindowScreen() {
   const { user } = useAuth();
   const listRef = useRef<FlatList<LocalMessage>>(null);
 
-  // Search state
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
@@ -167,7 +261,6 @@ export default function ChatWindowScreen() {
     loadMore, publishTyping, connected,
   } = useChatWindow(conversationId, user?.id ?? 0);
 
-  // Load conversation metadata for header
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
     queryFn: chatService.getConversations,
@@ -185,7 +278,6 @@ export default function ChatWindowScreen() {
     ? (isOtherOnline ? 'Online' : 'Active')
     : 'Connecting…';
 
-  // Compute matching messages
   const matchIndices = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.trim().toLowerCase();
@@ -198,7 +290,6 @@ export default function ChatWindowScreen() {
     return indices;
   }, [messages, searchQuery]);
 
-  // Reset or adjust current match index when matches change
   useEffect(() => {
     if (matchIndices.length > 0) {
       setCurrentMatchIndex(0);
@@ -238,7 +329,6 @@ export default function ChatWindowScreen() {
     setCurrentMatchIndex(0);
   };
 
-  // Scroll to bottom when new messages arrive (only if not searching)
   useEffect(() => {
     if (!isSearching && messages.length > 0) {
       setTimeout(() => {
@@ -247,18 +337,14 @@ export default function ChatWindowScreen() {
     }
   }, [messages.length, isSearching]);
 
-  // ── Render each message ────────────────────────────────────────
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<LocalMessage>) => {
       const isMine     = item.senderId === user?.id;
       const prevMsg    = index > 0 ? messages[index - 1] : undefined;
       const nextMsg    = messages[index + 1];
-
-      // Show avatar only for first message in a consecutive received group
       const showAvatar = !isMine && (
         !nextMsg || nextMsg.senderId !== item.senderId || nextMsg.senderId === user?.id
       );
-
       const isCurrentMatch = isSearching && matchIndices.length > 0 && matchIndices[currentMatchIndex] === index;
 
       return (
@@ -275,7 +361,6 @@ export default function ChatWindowScreen() {
     [messages, user?.id, isSearching, searchQuery, matchIndices, currentMatchIndex],
   );
 
-  // ── Load more on scroll to top ─────────────────────────────────
   const handleScroll = useCallback(
     ({ nativeEvent }: any) => {
       if (nativeEvent.contentOffset.y < 60 && hasMore && !isLoadingMore) {
@@ -285,7 +370,6 @@ export default function ChatWindowScreen() {
     [hasMore, isLoadingMore, loadMore],
   );
 
-  // ── Empty / loading state ──────────────────────────────────────
   if (isLoading) {
     return (
       <SafeAreaView style={scr.container} edges={['top']}>
@@ -304,7 +388,9 @@ export default function ChatWindowScreen() {
           onPrevMatch={() => {}}
           onCloseSearch={() => {}}
         />
-        <ActivityIndicator style={{ flex: 1 }} color={COLORS.primary} size="large" />
+        <View style={scr.loadingWrap}>
+          <ActivityIndicator color={COLORS.primary} size="large" />
+        </View>
       </SafeAreaView>
     );
   }
@@ -332,7 +418,6 @@ export default function ChatWindowScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        {/* Load more indicator */}
         {isLoadingMore && (
           <ActivityIndicator
             style={{ paddingVertical: 8 }}
@@ -341,7 +426,6 @@ export default function ChatWindowScreen() {
           />
         )}
 
-        {/* Messages list */}
         <FlatList
           ref={listRef}
           data={messages}
@@ -352,24 +436,23 @@ export default function ChatWindowScreen() {
           scrollEventThrottle={200}
           showsVerticalScrollIndicator={false}
           onScrollToIndexFailed={(info) => {
-            // Wait and retry in case layout is measuring
             setTimeout(() => {
               listRef.current?.scrollToIndex({ index: info.index, animated: true });
             }, 100);
           }}
           ListEmptyComponent={
             <View style={scr.empty}>
-              <Text style={scr.emptyEmoji}>💬</Text>
-              <Text style={scr.emptyText}>No messages yet.</Text>
-              <Text style={scr.emptyHint}>Say hello!</Text>
+              <View style={scr.emptyCircle}>
+                <Text style={scr.emptyEmoji}>💬</Text>
+              </View>
+              <Text style={scr.emptyTitle}>No messages yet</Text>
+              <Text style={scr.emptyHint}>Say hello! 👋</Text>
             </View>
           }
         />
 
-        {/* Typing indicator */}
         <TypingIndicator names={typingNames} />
 
-        {/* Input bar */}
         <ChatInput
           onSend={sendMessage}
           onSendAttachments={sendWithAttachments}
@@ -383,11 +466,36 @@ export default function ChatWindowScreen() {
 }
 
 const scr = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: '#F0F2F5' },
-  flex:        { flex: 1 },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  flex: { flex: 1 },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listContent: { paddingVertical: 12, paddingBottom: 4 },
-  empty:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, gap: 6 },
-  emptyEmoji:  { fontSize: 48 },
-  emptyText:   { fontSize: 17, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
-  emptyHint:   { fontSize: 14, color: COLORS.textMuted },
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 100,
+    gap: 8,
+  },
+  emptyCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  emptyEmoji: { fontSize: 30 },
+  emptyTitle: {
+    fontSize: 17,
+    fontFamily: FONTS.displayBold,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  emptyHint: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+  },
 });

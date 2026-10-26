@@ -14,7 +14,7 @@ import {
   type AdminDashboardStats,
   type AdminApproval,
   type SecurityAlert,
-} from '@/services/adminRoleService';
+} from '@/services/adminService';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 

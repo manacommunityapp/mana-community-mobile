@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { ADMIN_COLORS } from '@/constants/adminTheme';
-import { adminRoleService, type AdminApproval, type ApprovalType, type ApprovalStatus } from '@/services/adminRoleService';
+import { adminRoleService, type AdminApproval, type ApprovalType, type ApprovalStatus } from '@/services/adminService';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 type FilterKey = 'pending' | 'approved' | 'rejected';

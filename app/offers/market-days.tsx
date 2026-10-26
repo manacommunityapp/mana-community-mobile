@@ -1,713 +1,238 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-  Modal,
-  TextInput,
-} from 'react-native';
+import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
-import { offersService } from '@/services/offersService';
-import type { FarmersMarketDay, MarketVendor } from '@/types/offers';
+import { useRouter } from 'expo-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { COLORS } from '@/constants/config';
+import { PaymentModal } from '@/components/payment/PaymentModal';
+import { marketBazaarService } from '@/services/marketBazaarService';
+import { paymentService, type CashfreeOrderResponse } from '@/services/paymentService';
+import type { MarketApplicationDto, MarketEventDto, MarketStallDto } from '@/types/marketBazaar';
 
-export default function MarketDaysScreen() {
-  const qc = useQueryClient();
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [selectedVendorModal, setSelectedVendorModal] = useState<MarketVendor | null>(null);
-  const [showStallBookingModal, setShowStallBookingModal] = useState(false);
+type PaymentStatus = 'idle' | 'checkout' | 'verifying' | 'success' | 'failed';
+const colors: Record<string, string> = { SUBMITTED: '#2563EB', UNDER_REVIEW: '#7C3AED', APPROVED: '#059669', PAYMENT_PENDING: '#D97706', CONFIRMED: '#059669', REJECTED: '#DC2626', CANCELLED: '#64748B', EXPIRED: '#64748B', REFUND_PENDING: '#D97706', REFUNDED: '#64748B' };
+const errorText = (error: unknown) => error instanceof Error ? error.message : 'Please try again.';
 
-  // Stall booking form
-  const [vendorName, setVendorName] = useState('');
-  const [vendorPhone, setVendorPhone] = useState('');
-  const [vendorCategory, setVendorCategory] = useState('ORGANIC_VEGGIES');
-  const [vendorProducts, setVendorProducts] = useState('');
-
-  const { data: marketDays = [], isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['farmersMarketDays'],
-    queryFn: offersService.getMarketDays,
-  });
-
-  const rsvpMutation = useMutation({
-    mutationFn: (marketId: string) => offersService.rsvpMarketDay(marketId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['farmersMarketDays'] });
-    },
-  });
-
-  const stallMutation = useMutation({
-    mutationFn: (data: { marketId: string; vendorName: string; category: string; phone: string; products: string }) =>
-      offersService.bookVendorStall(data),
-    onSuccess: () => {
-      setShowStallBookingModal(false);
-      setVendorName('');
-      setVendorPhone('');
-      setVendorProducts('');
-      Alert.alert('Application Submitted!', 'Society Estate & Welfare team will review your stall application within 24 hours.');
-    },
-  });
-
-  const primaryMarket = marketDays[0];
-
-  const filteredVendors = (primaryMarket?.vendors || []).filter((v) => {
-    if (selectedCategory === 'ALL') return true;
-    return v.category === selectedCategory;
-  });
-
-  const categoryOptions = [
-    { label: 'All Stalls', value: 'ALL', icon: 'apps-outline' },
-    { label: '🥬 Farm Fresh', value: 'ORGANIC_VEGGIES', icon: 'leaf-outline' },
-    { label: '🥖 Artisan Bakery', value: 'BAKERY', icon: 'cafe-outline' },
-    { label: '🥛 Native Dairy & Honey', value: 'FARM_DAIRY', icon: 'water-outline' },
-    { label: '🌱 Balcony Nursery', value: 'PLANTS_NURSERY', icon: 'flower-outline' },
-    { label: '🌰 Gourmet Dryfruits', value: 'SPECIALTY_FOOD', icon: 'nutrition-outline' },
-  ];
-
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
-      >
-        {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.primary} size="large" />
-        ) : (
-          <>
-            {/* ── Active / Upcoming Market Hero ───────────────────────── */}
-            {primaryMarket && (
-              <View style={styles.heroCard}>
-                <View style={styles.heroBadgeRow}>
-                  <View style={styles.statusPill}>
-                    <View style={styles.pulseDot} />
-                    <Text style={styles.statusPillText}>
-                      {primaryMarket.status === 'LIVE_NOW' ? '🔴 LIVE NOW' : '🗓️ THIS WEEKEND'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.rsvpBtn, primaryMarket.userRsvp && styles.rsvpBtnActive]}
-                    onPress={() => rsvpMutation.mutate(primaryMarket.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons
-                      name={primaryMarket.userRsvp ? 'checkmark-circle' : 'calendar-outline'}
-                      size={14}
-                      color={primaryMarket.userRsvp ? '#065F46' : '#FFFFFF'}
-                    />
-                    <Text style={[styles.rsvpBtnText, primaryMarket.userRsvp && styles.rsvpBtnTextActive]}>
-                      {primaryMarket.userRsvp ? 'RSVP Confirmed' : 'I will attend'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.heroTitle}>{primaryMarket.title}</Text>
-                <Text style={styles.heroTheme}>{primaryMarket.theme}</Text>
-
-                <View style={styles.metaRow}>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="time-outline" size={14} color="#A7F3D0" />
-                    <Text style={styles.metaText}>{primaryMarket.time}</Text>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="location-outline" size={14} color="#A7F3D0" />
-                    <Text style={styles.metaText}>{primaryMarket.location}</Text>
-                  </View>
-                </View>
-
-                {/* Society Highlights */}
-                <View style={styles.highlightBox}>
-                  <Text style={styles.highlightHead}>Society Exclusive Features</Text>
-                  {primaryMarket.highlights.map((h, i) => (
-                    <Text key={i} style={styles.highlightItem}>
-                      • {h}
-                    </Text>
-                  ))}
-                </View>
-
-                {/* RSVP Counter & CTA */}
-                <View style={styles.heroFooter}>
-                  <View style={styles.attendeePills}>
-                    <Ionicons name="people" size={15} color="#FDE68A" />
-                    <Text style={styles.attendeeText}>{primaryMarket.rsvpCount} Neighbors Attending</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.bookStallMiniBtn}
-                    onPress={() => setShowStallBookingModal(true)}
-                  >
-                    <Ionicons name="storefront-outline" size={13} color="#D1FAE5" />
-                    <Text style={styles.bookStallMiniText}>Put Up a Stall</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* ── Category Filter Pills ───────────────────────────────── */}
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>Confirmed Farmers & Vendor Stalls</Text>
-                <Text style={styles.sectionSub}>Pre-order directly or pick up fresh at the clubhouse lawn</Text>
-              </View>
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScroll}>
-              {categoryOptions.map((opt) => {
-                const isSel = selectedCategory === opt.value;
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.catPill, isSel && styles.catPillSelected]}
-                    onPress={() => setSelectedCategory(opt.value)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={opt.icon as any}
-                      size={13}
-                      color={isSel ? '#FFFFFF' : COLORS.textSecondary}
-                    />
-                    <Text style={[styles.catPillText, isSel && styles.catPillTextSelected]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            {/* ── Vendor Stalls List ──────────────────────────────────── */}
-            <View style={styles.vendorList}>
-              {filteredVendors.map((vendor) => (
-                <View key={vendor.id} style={styles.vendorCard}>
-                  <View style={styles.vendorHeader}>
-                    <View style={styles.stallPill}>
-                      <Text style={styles.stallPillText}>{vendor.stallNumber}</Text>
-                    </View>
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={12} color="#D97706" />
-                      <Text style={styles.ratingText}>{vendor.rating}</Text>
-                      <Text style={styles.reviewCountText}>({vendor.reviewCount})</Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.vendorName}>{vendor.name}</Text>
-                  <Text style={styles.vendorTagline}>🌱 {vendor.tagline}</Text>
-                  <Text style={styles.vendorDesc}>{vendor.description}</Text>
-
-                  {/* Popular Items Chips */}
-                  <View style={styles.itemChipsRow}>
-                    {vendor.popularItems.map((item, idx) => (
-                      <View key={idx} style={styles.itemChip}>
-                        <Text style={styles.itemChipText}>{item}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Special Society Perk */}
-                  {vendor.specialSocietyDiscount && (
-                    <View style={styles.perkBox}>
-                      <Ionicons name="gift-outline" size={14} color="#059669" />
-                      <Text style={styles.perkText}>{vendor.specialSocietyDiscount}</Text>
-                    </View>
-                  )}
-
-                  {/* Action Buttons */}
-                  <View style={styles.vendorActionRow}>
-                    <TouchableOpacity
-                      style={styles.detailsBtn}
-                      onPress={() => setSelectedVendorModal(vendor)}
-                    >
-                      <Ionicons name="information-circle-outline" size={15} color={COLORS.primary} />
-                      <Text style={styles.detailsBtnText}>Stall Details</Text>
-                    </TouchableOpacity>
-
-                    {vendor.preOrderAvailable ? (
-                      <TouchableOpacity
-                        style={styles.preOrderBtn}
-                        onPress={() =>
-                          Alert.alert(
-                            'Pre-Order with ' + vendor.name,
-                            `Direct WhatsApp pre-orders open until Friday 9 PM.\n\nContact Vendor: ${vendor.contactNumber || 'Available at Gate'}`
-                          )
-                        }
-                      >
-                        <Ionicons name="bag-check-outline" size={15} color="#FFFFFF" />
-                        <Text style={styles.preOrderBtnText}>Pre-Order Slot</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.counterOnlyPill}>
-                        <Text style={styles.counterOnlyText}>Walk-in Counter Only</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            {/* ── Upcoming Future Market Schedule ──────────────────────── */}
-            {marketDays.length > 1 && (
-              <View style={styles.futureScheduleBox}>
-                <Text style={styles.futureScheduleTitle}>Future Market Days Calendar</Text>
-                {marketDays.slice(1).map((m) => (
-                  <View key={m.id} style={styles.futureRow}>
-                    <View style={styles.futureDateBox}>
-                      <Ionicons name="calendar" size={16} color={COLORS.primary} />
-                      <Text style={styles.futureDateText}>{m.date}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.futureTitle}>{m.title}</Text>
-                      <Text style={styles.futureTime}>⏰ {m.time} · {m.location}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </>
-        )}
-      </ScrollView>
-
-      {/* ── Vendor Detail Modal ────────────────────────────────────────── */}
-      <Modal visible={!!selectedVendorModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>{selectedVendorModal?.name}</Text>
-                <Text style={styles.modalSub}>{selectedVendorModal?.stallNumber} · {selectedVendorModal?.ownerName}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setSelectedVendorModal(null)}>
-                <Ionicons name="close" size={24} color={COLORS.text} />
-              </TouchableOpacity>
-            </View>
-
-            {selectedVendorModal && (
-              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
-                <Text style={styles.modalDesc}>{selectedVendorModal.description}</Text>
-
-                <Text style={styles.modalSectionHead}>Specialties & Key Products</Text>
-                <View style={styles.modalItemsList}>
-                  {selectedVendorModal.popularItems.map((item, idx) => (
-                    <View key={idx} style={styles.modalItemRow}>
-                      <Ionicons name="checkmark-circle" size={16} color="#059669" />
-                      <Text style={styles.modalItemText}>{item}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {selectedVendorModal.specialSocietyDiscount && (
-                  <View style={styles.modalDiscountBox}>
-                    <Ionicons name="sparkles" size={16} color="#D97706" />
-                    <Text style={styles.modalDiscountText}>
-                      {selectedVendorModal.specialSocietyDiscount}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.contactMerchantBox}>
-                  <Text style={styles.contactMerchantLabel}>Direct Contact</Text>
-                  <Text style={styles.contactMerchantVal}>
-                    📞 {selectedVendorModal.contactNumber || 'Society Estate Desk'}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.closeBtn}
-                  onPress={() => setSelectedVendorModal(null)}
-                >
-                  <Text style={styles.closeBtnText}>Done</Text>
-                </TouchableOpacity>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── Stall Booking / Vendor Application Modal ──────────────────── */}
-      <Modal visible={showStallBookingModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Book a Market Stall</Text>
-                <Text style={styles.modalSub}>For resident entrepreneurs & verified organic growers</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowStallBookingModal(false)}>
-                <Ionicons name="close" size={24} color={COLORS.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 440 }}>
-              <Text style={styles.inputLabel}>Farm / Brand / Stall Name *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g. Grandma's Pickles & Bakes"
-                placeholderTextColor={COLORS.textMuted}
-                value={vendorName}
-                onChangeText={setVendorName}
-              />
-
-              <Text style={styles.inputLabel}>Contact Phone Number *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="+91 98765 43210"
-                placeholderTextColor={COLORS.textMuted}
-                keyboardType="phone-pad"
-                value={vendorPhone}
-                onChangeText={setVendorPhone}
-              />
-
-              <Text style={styles.inputLabel}>Category</Text>
-              <View style={styles.formCategoryRow}>
-                {[
-                  { label: '🥬 Farm Produce', val: 'ORGANIC_VEGGIES' },
-                  { label: '🥖 Bakery', val: 'BAKERY' },
-                  { label: '🥛 Dairy/Honey', val: 'FARM_DAIRY' },
-                  { label: '🌱 Plants', val: 'PLANTS_NURSERY' },
-                  { label: '🎨 Crafts', val: 'HANDMADE_CRAFTS' },
-                ].map((c) => (
-                  <TouchableOpacity
-                    key={c.val}
-                    style={[styles.formCatPill, vendorCategory === c.val && styles.formCatPillActive]}
-                    onPress={() => setVendorCategory(c.val)}
-                  >
-                    <Text
-                      style={[styles.formCatText, vendorCategory === c.val && styles.formCatTextActive]}
-                    >
-                      {c.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Products Offered & FSSAI / Organic Certifications</Text>
-              <TextInput
-                style={[styles.textInput, { height: 75, textAlignVertical: 'top' }]}
-                placeholder="List main items you wish to sell, apartment/farm details..."
-                placeholderTextColor={COLORS.textMuted}
-                multiline
-                value={vendorProducts}
-                onChangeText={setVendorProducts}
-              />
-
-              <TouchableOpacity
-                style={styles.submitStallBtn}
-                onPress={() => {
-                  if (!vendorName.trim() || !vendorPhone.trim()) {
-                    Alert.alert('Required Fields', 'Please enter your stall name and contact number.');
-                    return;
-                  }
-                  stallMutation.mutate({
-                    marketId: primaryMarket?.id || 'market-1',
-                    vendorName,
-                    category: vendorCategory,
-                    phone: vendorPhone,
-                    products: vendorProducts,
-                  });
-                }}
-              >
-                <Text style={styles.submitStallBtnText}>Submit Stall Application</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    </View>
-  );
+function dateText(value: string) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { padding: SPACING.md, paddingBottom: 40 },
+export default function MarketDaysScreen() {
+  const router = useRouter();
+  const qc = useQueryClient();
+  const [tab, setTab] = useState<'discover' | 'applications'>('discover');
+  const [query, setQuery] = useState('');
+  const [city, setCity] = useState('');
+  const [eventCategory, setEventCategory] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState<MarketEventDto | null>(null);
+  const [selectedStall, setSelectedStall] = useState<MarketStallDto | null>(null);
+  const [showApplication, setShowApplication] = useState(false);
+  const [vendorName, setVendorName] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [category, setCategory] = useState('');
+  const [products, setProducts] = useState('');
+  const [compliance, setCompliance] = useState('');
+  const [paymentOrder, setPaymentOrder] = useState<CashfreeOrderResponse | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  // ── Hero ──────────────────────────────────────────────────────────
-  heroCard: {
-    backgroundColor: '#064E3B',
-    padding: 16,
-    borderRadius: RADIUS.xl,
-    marginBottom: SPACING.lg,
-    ...SHADOWS.md,
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: RADIUS.full,
-  },
-  pulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#34D399',
-  },
-  statusPillText: { fontSize: 11, fontWeight: '900', color: '#D1FAE5', letterSpacing: 0.5 },
-  rsvpBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#059669',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
-  },
-  rsvpBtnActive: {
-    backgroundColor: '#D1FAE5',
-  },
-  rsvpBtnText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
-  rsvpBtnTextActive: { color: '#065F46' },
-  heroTitle: { fontSize: 19, fontWeight: '900', color: '#FFFFFF', marginBottom: 4 },
-  heroTheme: { fontSize: 13, color: '#A7F3D0', lineHeight: 18, marginBottom: 12 },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    marginBottom: 12,
-  },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaText: { fontSize: 12, color: '#D1FAE5', fontWeight: '600' },
-  highlightBox: {
-    backgroundColor: 'rgba(0,0,0,0.22)',
-    padding: 12,
-    borderRadius: RADIUS.md,
-    marginBottom: 12,
-  },
-  highlightHead: { fontSize: 11, fontWeight: '800', color: '#FDE68A', marginBottom: 4, textTransform: 'uppercase' },
-  highlightItem: { fontSize: 11, color: '#E6FFFA', lineHeight: 17 },
-  heroFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
-    paddingTop: 10,
-  },
-  attendeePills: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  attendeeText: { fontSize: 12, fontWeight: '800', color: '#FDE68A' },
-  bookStallMiniBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  bookStallMiniText: { fontSize: 12, fontWeight: '700', color: '#D1FAE5', textDecorationLine: 'underline' },
+  const events = useQuery({
+    queryKey: ['marketBazaarEvents', query, city, eventCategory],
+    queryFn: () => marketBazaarService.getEvents({ query: query.trim() || undefined, city: city.trim() || undefined, category: eventCategory || undefined, page: 0, size: 30 }),
+  });
+  const stalls = useQuery({
+    queryKey: ['marketBazaarStalls', selectedEvent?.id],
+    queryFn: () => marketBazaarService.getStalls(selectedEvent!.id),
+    enabled: !!selectedEvent,
+  });
+  const applications = useQuery({
+    queryKey: ['myMarketApplications'],
+    queryFn: marketBazaarService.getMyApplications,
+    enabled: tab === 'applications',
+  });
+  const apply = useMutation({
+    mutationFn: () => {
+      if (!selectedEvent || !selectedStall) throw new Error('Select an available stall first.');
+      return marketBazaarService.applyForStall(selectedEvent.id, {
+        stallId: selectedStall.id, vendorName: vendorName.trim(), businessName: businessName.trim(),
+        category: category.trim(), phone: phone.trim(), products: products.trim(),
+        complianceDocuments: compliance.trim() ? [compliance.trim()] : [],
+      });
+    },
+    onSuccess: (result) => {
+      setShowApplication(false);
+      setSelectedStall(null);
+      setVendorName(''); setBusinessName(''); setPhone(''); setCategory(''); setProducts(''); setCompliance('');
+      qc.invalidateQueries({ queryKey: ['myMarketApplications'] });
+      qc.invalidateQueries({ queryKey: ['marketBazaarStalls'] });
+      Alert.alert('Application received', 'Application ' + result.id + ' is ' + result.status.replaceAll('_', ' ').toLowerCase() + '.');
+    },
+    onError: (error) => Alert.alert('Application not submitted', errorText(error)),
+  });
+  const checkout = useMutation({
+    mutationFn: (application: MarketApplicationDto) => marketBazaarService.checkoutBooking(application.bookingId ?? application.id),
+    onSuccess: (order) => { setPaymentOrder(order); setPaymentError(null); setPaymentStatus('checkout'); },
+    onError: (error) => Alert.alert('Checkout unavailable', errorText(error)),
+  });
 
-  // ── Sections & Filters ────────────────────────────────────────────
-  sectionHeader: { marginBottom: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '900', color: COLORS.text },
-  sectionSub: { fontSize: 12, color: COLORS.textMuted },
-  catScroll: { flexDirection: 'row', gap: 6, paddingBottom: 14 },
-  catPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  catPillSelected: {
-    backgroundColor: '#065F46',
-    borderColor: '#065F46',
-  },
-  catPillText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
-  catPillTextSelected: { color: '#FFFFFF' },
+  const visibleEvents = (events.data ?? []).filter((event) => {
+    const text = (event.title + ' ' + (event.description ?? '') + ' ' + (event.venue ?? '') + ' ' + (event.city ?? '')).toLowerCase();
+    return (!query.trim() || text.includes(query.trim().toLowerCase())) && (!city.trim() || (event.city ?? '').toLowerCase().includes(city.trim().toLowerCase())) && (!eventCategory || (event.category ?? '').toLowerCase() === eventCategory.toLowerCase());
+  });
 
-  // ── Vendor Cards ──────────────────────────────────────────────────
-  vendorList: { gap: SPACING.md },
-  vendorCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.sm,
-  },
-  vendorHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  stallPill: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
-  },
-  stallPillText: { fontSize: 10, fontWeight: '900', color: COLORS.primary },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
-  },
-  ratingText: { fontSize: 11, fontWeight: '800', color: '#B45309' },
-  reviewCountText: { fontSize: 10, color: COLORS.textMuted },
-  vendorName: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 2 },
-  vendorTagline: { fontSize: 12, fontWeight: '700', color: '#059669', marginBottom: 6 },
-  vendorDesc: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 17, marginBottom: 10 },
-  itemChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-  itemChip: {
-    backgroundColor: COLORS.surfaceAlt,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.sm,
-  },
-  itemChipText: { fontSize: 11, color: COLORS.text, fontWeight: '600' },
-  perkBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#ECFDF5',
-    padding: 8,
-    borderRadius: RADIUS.md,
-    marginBottom: 12,
-  },
-  perkText: { fontSize: 11, fontWeight: '700', color: '#065F46', flex: 1 },
-  vendorActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 10,
-  },
-  detailsBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  detailsBtnText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  preOrderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#059669',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: RADIUS.md,
-  },
-  preOrderBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  counterOnlyPill: {
-    backgroundColor: COLORS.surfaceAlt,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: RADIUS.sm,
-  },
-  counterOnlyText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
+  const submitApplication = () => {
+    if (!vendorName.trim() || !businessName.trim() || !phone.trim() || !category.trim() || !products.trim()) {
+      Alert.alert('Complete the form', 'Enter your contact details, business, category, and products.');
+      return;
+    }
+    if (!/^[+0-9() -]{8,20}$/.test(phone.trim())) {
+      Alert.alert('Check phone number', 'Enter a valid phone number.');
+      return;
+    }
+    apply.mutate();
+  };
 
-  // ── Future Schedule ───────────────────────────────────────────────
-  futureScheduleBox: {
-    marginTop: SPACING.xl,
-    backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  futureScheduleTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text, marginBottom: 12 },
-  futureRow: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 10 },
-  futureDateBox: {
-    backgroundColor: COLORS.primaryLight,
-    padding: 8,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    minWidth: 90,
-  },
-  futureDateText: { fontSize: 10, fontWeight: '800', color: COLORS.primary, marginTop: 2, textAlign: 'center' },
-  futureTitle: { fontSize: 13, fontWeight: '800', color: COLORS.text },
-  futureTime: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  const verifyPayment = async (orderId: string) => {
+    setPaymentStatus('verifying');
+    try {
+      const verified = await paymentService.verifyPayment(orderId);
+      if (verified.status === 'PAID') {
+        setPaymentOrder(verified); setPaymentStatus('success');
+        await qc.invalidateQueries({ queryKey: ['myMarketApplications'] });
+        await qc.invalidateQueries({ queryKey: ['marketBazaarStalls'] });
+      } else {
+        setPaymentError(verified.failureReason ?? 'Payment is not confirmed yet. Refresh your applications before retrying.');
+        setPaymentStatus('failed');
+      }
+    } catch (error) {
+      setPaymentError(errorText(error)); setPaymentStatus('failed');
+    }
+  };
+  const dismissPayment = () => {
+    const paid = paymentStatus === 'success';
+    setPaymentStatus('idle'); setPaymentOrder(null); setPaymentError(null);
+    if (paid) setTab('applications');
+  };
 
-  // ── Modals ────────────────────────────────────────────────────────
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: RADIUS.xxl,
-    borderTopRightRadius: RADIUS.xxl,
-    padding: 20,
-    maxHeight: '85%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-  modalTitle: { fontSize: 18, fontWeight: '900', color: COLORS.text },
-  modalSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  modalDesc: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19, marginBottom: 14 },
-  modalSectionHead: { fontSize: 13, fontWeight: '800', color: COLORS.text, marginBottom: 8 },
-  modalItemsList: { gap: 6, marginBottom: 14 },
-  modalItemRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  modalItemText: { fontSize: 12, color: COLORS.text },
-  modalDiscountBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FEF3C7',
-    padding: 10,
-    borderRadius: RADIUS.md,
-    marginBottom: 14,
-  },
-  modalDiscountText: { fontSize: 12, fontWeight: '800', color: '#92400E', flex: 1 },
-  contactMerchantBox: {
-    backgroundColor: COLORS.surfaceAlt,
-    padding: 10,
-    borderRadius: RADIUS.md,
-    marginBottom: 16,
-  },
-  contactMerchantLabel: { fontSize: 10, fontWeight: '800', color: COLORS.textMuted },
-  contactMerchantVal: { fontSize: 13, fontWeight: '800', color: COLORS.text, marginTop: 2 },
-  closeBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-  },
-  closeBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  return <View style={s.root}>
+    <View style={s.tabs}>
+      <TouchableOpacity onPress={() => setTab('discover')} style={[s.tab, tab === 'discover' && s.tabOn]}><Text style={[s.tabText, tab === 'discover' && s.tabTextOn]}>Discover</Text></TouchableOpacity>
+      <TouchableOpacity onPress={() => setTab('applications')} style={[s.tab, tab === 'applications' && s.tabOn]}><Text style={[s.tabText, tab === 'applications' && s.tabTextOn]}>My applications</Text></TouchableOpacity>
+    </View>
+    {tab === 'discover' ? <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={events.isRefetching} onRefresh={() => events.refetch()} />}>
+      <Text style={s.eyebrow}>MANA COMMUNITY BAZAAR</Text>
+      <Text style={s.heading}>Markets around your community</Text>
+      <Text style={s.sub}>Discover local events, browse current stall inventory, and apply to exhibit.</Text>
+      <TouchableOpacity style={s.organizerLink} onPress={() => router.push('/offers/organizer' as any)}><Ionicons name="settings-outline" size={15} color="#047857" /><Text style={s.organizerLinkText}>Organizer tools</Text></TouchableOpacity>
+      <TextInput value={query} onChangeText={setQuery} placeholder="Search markets, venues, or communities" placeholderTextColor="#94A3B8" style={s.input} />
+      <TextInput value={city} onChangeText={setCity} placeholder="Filter by city" placeholderTextColor="#94A3B8" style={s.input} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.categories}>
+        {['All categories', 'Food', 'Produce', 'Artisan', 'Clothing', 'Services'].map((item) => {
+          const value = item === 'All categories' ? '' : item;
+          const active = eventCategory === value;
+          return <TouchableOpacity key={item} onPress={() => setEventCategory(value)} style={[s.categoryChip, active && s.categoryChipActive]}><Text style={[s.categoryText, active && s.categoryTextActive]}>{item}</Text></TouchableOpacity>;
+        })}
+      </ScrollView>
+      {events.isLoading ? <ActivityIndicator style={s.spinner} color={COLORS.primary} /> : null}
+      {events.isError ? <View style={s.notice}><Text style={s.noticeText}>Markets are unavailable. No sample inventory is being displayed.</Text><TouchableOpacity onPress={() => events.refetch()}><Text style={s.link}>Retry</Text></TouchableOpacity></View> : null}
+      {!events.isLoading && !events.isError && visibleEvents.length === 0 ? <View style={s.empty}><Ionicons name="storefront-outline" size={34} color="#94A3B8" /><Text style={s.emptyTitle}>No published markets</Text><Text style={s.sub}>Try another search or check back later.</Text></View> : null}
+      {visibleEvents.map((event) => {
+        const open = selectedEvent?.id === event.id;
+        return <View key={String(event.id)} style={s.card}>
+          <TouchableOpacity style={s.eventHead} onPress={() => setSelectedEvent(open ? null : event)}>
+            <View style={s.icon}><Ionicons name="storefront" size={22} color="#047857" /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.cardTitle}>{event.title}</Text>
+              <Text style={s.meta}>{dateText(event.startsAt)}</Text>
+              <Text style={s.meta}>{[event.venue, event.city, event.communityName].filter(Boolean).join(' · ') || 'Location to be announced'}</Text>
+            </View>
+            <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={19} color="#64748B" />
+          </TouchableOpacity>
+          {!!event.description && <Text style={s.description}>{event.description}</Text>}
+          <View style={s.row}><Text style={s.pill}>{event.status.replaceAll('_', ' ')}</Text><Text style={s.meta}>{event.availableStallCount ?? '—'} available stalls</Text><Text style={s.meta}>{event.vendorCount ?? 0} vendors</Text></View>
+          {open ? <View style={s.inventory}>
+            <Text style={s.section}>Stall packages</Text>
+            {stalls.isLoading ? <ActivityIndicator color={COLORS.primary} /> : null}
+            {stalls.isError ? <View style={s.notice}><Text style={s.noticeText}>Inventory could not be loaded.</Text><TouchableOpacity onPress={() => stalls.refetch()}><Text style={s.link}>Retry</Text></TouchableOpacity></View> : null}
+            {!stalls.isLoading && !stalls.isError && !(stalls.data ?? []).length ? <Text style={s.meta}>No stalls have been published for this market.</Text> : null}
+            {(stalls.data ?? []).map((stall) => {
+              const available = stall.status === 'AVAILABLE' && event.status === 'PUBLISHED';
+              return <View key={String(stall.id)} style={s.stall}>
+                <View style={s.rowBetween}><View style={{ flex: 1 }}><Text style={s.stallTitle}>{stall.packageName} · {stall.stallNumber}</Text><Text style={s.meta}>{[stall.zone, stall.size].filter(Boolean).join(' · ')}</Text></View><Text style={s.price}>{stall.currency && stall.currency !== 'INR' ? stall.currency + ' ' : '₹'}{stall.price.toLocaleString('en-IN')}</Text></View>
+                {!!stall.description && <Text style={s.meta}>{stall.description}</Text>}
+                {!!stall.facilities?.length && <Text style={s.meta}>Includes {stall.facilities.join(' · ')}</Text>}
+                <View style={s.rowBetween}><Text style={[s.stallStatus, !available && { color: '#64748B' }]}>{stall.status.replaceAll('_', ' ')}</Text><TouchableOpacity disabled={!available} onPress={() => { setSelectedStall(stall); setSelectedEvent(event); setShowApplication(true); }} style={[s.button, !available && s.disabled]}><Text style={s.buttonText}>Apply for stall</Text></TouchableOpacity></View>
+              </View>;
+            })}
+          </View> : null}
+        </View>;
+      })}
+    </ScrollView> : <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={applications.isRefetching} onRefresh={() => applications.refetch()} />}>
+      <Text style={s.heading}>My stall applications</Text><Text style={s.sub}>Approval and payment are separate steps. A stall is confirmed only after payment verification.</Text>
+      {applications.isLoading ? <ActivityIndicator style={s.spinner} color={COLORS.primary} /> : null}
+      {applications.isError ? <View style={s.notice}><Text style={s.noticeText}>Applications could not be loaded.</Text><TouchableOpacity onPress={() => applications.refetch()}><Text style={s.link}>Retry</Text></TouchableOpacity></View> : null}
+      {!applications.isLoading && !applications.isError && !(applications.data ?? []).length ? <View style={s.empty}><Ionicons name="clipboard-outline" size={34} color="#94A3B8" /><Text style={s.emptyTitle}>No applications yet</Text><Text style={s.sub}>Apply for an available stall to track it here.</Text></View> : null}
+      {(applications.data ?? []).map((app) => <View key={String(app.id)} style={s.card}>
+        <View style={s.rowBetween}><View style={{ flex: 1 }}><Text style={s.cardTitle}>{app.businessName || app.vendorName}</Text><Text style={s.meta}>{app.eventTitle || 'Community market'}{app.stallNumber ? ' · ' + app.stallNumber : ''}</Text></View><Text style={{ color: colors[app.status] ?? '#64748B', fontWeight: '900', fontSize: 11 }}>{app.status.replaceAll('_', ' ')}</Text></View>
+        {!!app.rejectionReason && <Text style={s.errorText}>{app.rejectionReason}</Text>}
+        {app.status === 'PAYMENT_PENDING' ? <View style={s.rowBetween}><Text style={s.price}>{app.amountDue == null ? 'Payment required' : 'Due ₹' + app.amountDue.toLocaleString('en-IN')}</Text><TouchableOpacity disabled={checkout.isPending} onPress={() => checkout.mutate(app)} style={s.button}>{checkout.isPending ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Pay and confirm</Text>}</TouchableOpacity></View> : null}
+      </View>)}
+    </ScrollView>}
 
-  // ── Form Styles ───────────────────────────────────────────────────
-  inputLabel: { fontSize: 12, fontWeight: '800', color: COLORS.text, marginTop: 10, marginBottom: 4 },
-  textInput: {
-    backgroundColor: COLORS.surfaceAlt,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: COLORS.text,
-  },
-  formCategoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 4 },
-  formCatPill: {
-    backgroundColor: COLORS.surfaceAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  formCatPillActive: { backgroundColor: '#059669', borderColor: '#059669' },
-  formCatText: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary },
-  formCatTextActive: { color: '#FFFFFF' },
-  submitStallBtn: {
-    backgroundColor: '#059669',
-    paddingVertical: 12,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 20,
-  },
-  submitStallBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+    <Modal visible={showApplication} animationType="slide" transparent onRequestClose={() => setShowApplication(false)}>
+      <View style={s.backdrop}><View style={s.modal}>
+        <View style={s.rowBetween}><View style={{ flex: 1 }}><Text style={s.modalTitle}>Apply for {selectedStall?.stallNumber}</Text><Text style={s.meta}>{selectedEvent?.title} · {selectedStall?.packageName}</Text></View><TouchableOpacity onPress={() => setShowApplication(false)}><Ionicons name="close" size={24} color="#334155" /></TouchableOpacity></View>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <Label title="Contact name" value={vendorName} set={setVendorName} placeholder="Your name" />
+          <Label title="Business name" value={businessName} set={setBusinessName} placeholder="Trading or registered name" />
+          <Label title="Phone" value={phone} set={setPhone} placeholder="+91 98765 43210" />
+          <Label title="Category" value={category} set={setCategory} placeholder="Food, crafts, clothing…" />
+          <Label title="Products or services" value={products} set={setProducts} placeholder="Describe what you plan to sell" multiline />
+          <Label title="Compliance document reference (optional)" value={compliance} set={setCompliance} placeholder="FSSAI / GST / other reference" />
+          <Text style={s.disclaimer}>The organizer reviews this application. Approval does not confirm a booking; payment is a separate step.</Text>
+          <TouchableOpacity disabled={apply.isPending} onPress={submitApplication} style={s.button}>{apply.isPending ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Submit application</Text>}</TouchableOpacity>
+        </ScrollView>
+      </View></View>
+    </Modal>
+    <PaymentModal visible={paymentStatus !== 'idle'} order={paymentOrder} status={paymentStatus} error={paymentError} onVerify={verifyPayment} onDismiss={dismissPayment} />
+  </View>;
+}
+
+function Label({ title, value, set, placeholder, multiline }: { title: string; value: string; set: (v: string) => void; placeholder: string; multiline?: boolean }) {
+  return <View style={s.field}><Text style={s.label}>{title}</Text><TextInput value={value} onChangeText={set} placeholder={placeholder} placeholderTextColor="#94A3B8" multiline={multiline} style={[s.input, multiline && { minHeight: 76, textAlignVertical: 'top', paddingTop: 10 }]} /></View>;
+}
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#F8FAFC' }, body: { padding: 16, paddingBottom: 36 },
+  tabs: { flexDirection: 'row', margin: 14, marginBottom: 0, padding: 4, borderRadius: 13, backgroundColor: '#E2E8F0' },
+  tab: { flex: 1, padding: 11, borderRadius: 10, alignItems: 'center' }, tabOn: { backgroundColor: '#047857' },
+  tabText: { color: '#475569', fontWeight: '800', fontSize: 13 }, tabTextOn: { color: '#fff' },
+  eyebrow: { color: '#047857', fontWeight: '900', letterSpacing: 1.2, fontSize: 11, marginTop: 8 },
+  heading: { color: '#0F172A', fontSize: 23, fontWeight: '900', marginTop: 8, marginBottom: 6 },
+  sub: { color: '#64748B', fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  input: { minHeight: 44, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, paddingHorizontal: 12, color: '#0F172A', backgroundColor: '#fff', marginBottom: 10 },
+  spinner: { margin: 28 }, notice: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A', borderWidth: 1, borderRadius: 12, padding: 13, marginVertical: 8, gap: 6 },
+  noticeText: { color: '#92400E', fontSize: 13, lineHeight: 19 }, link: { color: '#047857', fontWeight: '900', paddingVertical: 4 },
+  empty: { alignItems: 'center', padding: 24, borderRadius: 14, backgroundColor: '#fff', gap: 8, marginVertical: 10 },
+  emptyTitle: { color: '#0F172A', fontSize: 16, fontWeight: '800' },
+  card: { backgroundColor: '#fff', padding: 14, borderRadius: 15, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12, gap: 10 },
+  eventHead: { flexDirection: 'row', alignItems: 'center', gap: 10 }, icon: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { color: '#0F172A', fontWeight: '800', fontSize: 15 }, meta: { color: '#64748B', fontSize: 11, lineHeight: 16 },
+  description: { color: '#475569', fontSize: 13, lineHeight: 19 }, row: { flexDirection: 'row', alignItems: 'center', gap: 9, flexWrap: 'wrap' },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  pill: { color: '#047857', backgroundColor: '#ECFDF5', overflow: 'hidden', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontWeight: '900' },
+  inventory: { borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 12, gap: 10 }, section: { color: '#0F172A', fontWeight: '900', fontSize: 15 },
+  stall: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 11, gap: 8 },
+  stallTitle: { color: '#0F172A', fontWeight: '800', fontSize: 13 }, price: { color: '#047857', fontWeight: '900', fontSize: 14 }, stallStatus: { color: '#047857', fontSize: 10, fontWeight: '900' },
+  button: { backgroundColor: '#047857', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
+  organizerLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginBottom: 10, paddingVertical: 6 },
+  organizerLinkText: { color: '#047857', fontWeight: '800', fontSize: 12 },
+  categories: { gap: 7, paddingBottom: 12 }, categoryChip: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: '#fff' }, categoryChipActive: { borderColor: '#047857', backgroundColor: '#ECFDF5' }, categoryText: { color: '#475569', fontSize: 11, fontWeight: '700' }, categoryTextActive: { color: '#047857' },
+  disabled: { backgroundColor: '#94A3B8' }, buttonText: { color: '#fff', fontWeight: '900', fontSize: 12 },
+  errorText: { color: '#B91C1C', fontSize: 12 }, backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,.55)', justifyContent: 'flex-end' },
+  modal: { maxHeight: '92%', backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18 },
+  modalTitle: { color: '#0F172A', fontWeight: '900', fontSize: 18 }, field: { marginTop: 10 }, label: { color: '#334155', fontWeight: '800', fontSize: 12, marginBottom: 5 },
+  disclaimer: { color: '#64748B', fontSize: 11, lineHeight: 16, marginVertical: 10 },
 });

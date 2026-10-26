@@ -8,7 +8,7 @@ export default function AccessLayout() {
         contentStyle: { backgroundColor: '#F8FAFC' },
       }}
     >
-      <Stack.Screen name="turnstiles" options={{ title: 'Pedestrian Turnstiles' }} />
+      <Stack.Screen name="turnstiles" options={{ title: 'Smart Gates' }} />
     </Stack>
   );
 }

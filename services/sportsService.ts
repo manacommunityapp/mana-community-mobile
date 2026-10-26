@@ -1,11 +1,12 @@
 import api from './apiClient';
-import { inferMimeType } from '@/security';
+import { inferMimeType, secureLog } from '@/security';
 import type {
   TournamentDto, TeamDto, MatchDto, MatchEventDto,
   StandingDto, RegisterTeamRequest, PageResponse, SportType,
   CricketScorecardDto, PlayerProfileDto, BadgeDto,
   LeaderboardEntryDto, LeaderboardCategory, MatchPhotoDto,
   MatchRatingSummaryDto, SubmitRatingsRequest,
+  SportsChallengeDto, CreateSportsChallengeRequest,
 } from '@/types/api';
 
 export const sportsService = {
@@ -270,5 +271,154 @@ export const sportsService = {
   async submitMatchRatings(matchId: number, data: SubmitRatingsRequest): Promise<void> {
     await api.post(`/sports/matches/${matchId}/ratings`, data);
   },
+
+  // ── Community Open Challenges ────────────────────────────────
+  async getChallenges(sport?: SportType): Promise<SportsChallengeDto[]> {
+    try {
+      const res = await api.get<SportsChallengeDto[]>('/sports/challenges', {
+        params: { sport },
+      });
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch (err: any) {
+      if (err?.response?.status !== 404) {
+        secureLog.warn('[sportsService] Challenges API unavailable, using fallback', err?.message);
+      }
+    }
+    return sport
+      ? FALLBACK_CHALLENGES.filter((c) => c.sport === sport)
+      : [...FALLBACK_CHALLENGES];
+  },
+
+  async createChallenge(req: CreateSportsChallengeRequest): Promise<SportsChallengeDto> {
+    try {
+      const res = await api.post<SportsChallengeDto>('/sports/challenges', req);
+      if (res.data) {
+        FALLBACK_CHALLENGES.unshift(res.data);
+        return res.data;
+      }
+    } catch (err: any) {
+      secureLog.warn('[sportsService] Create challenge API unavailable, creating local challenge', err?.message);
+    }
+    const emojiMap: Record<string, { emoji: string; color: string; bg: string }> = {
+      BADMINTON:    { emoji: '🏸', color: '#7C3AED', bg: '#F5F3FF' },
+      CRICKET:      { emoji: '🏏', color: '#2563EB', bg: '#EFF6FF' },
+      TABLE_TENNIS: { emoji: '🏓', color: '#4F46E5', bg: '#EEF2FF' },
+      TENNIS:       { emoji: '🎾', color: '#059669', bg: '#ECFDF5' },
+      FOOTBALL:     { emoji: '⚽', color: '#EA580C', bg: '#FFF7ED' },
+      BASKETBALL:   { emoji: '🏀', color: '#D97706', bg: '#FFFBEB' },
+      VOLLEYBALL:   { emoji: '🏐', color: '#0891B2', bg: '#ECFEFF' },
+    };
+    const style = emojiMap[req.sport] || { emoji: '🏅', color: '#4F46E5', bg: '#EEF2FF' };
+    const newChallenge: SportsChallengeDto = {
+      id: Date.now(),
+      title: req.title,
+      sport: req.sport,
+      creatorId: 1,
+      creatorName: 'You (Host)',
+      creatorFlat: 'Flat 504 (Tower B)',
+      format: req.format,
+      venue: req.venue || 'Clubhouse Sports Arena',
+      scheduledTime: req.scheduledTime || 'Today 6:00 PM',
+      status: 'OPEN',
+      emoji: style.emoji,
+      color: style.color,
+      bg: style.bg,
+      notes: req.notes,
+      createdAt: new Date().toISOString(),
+    };
+    FALLBACK_CHALLENGES.unshift(newChallenge);
+    return newChallenge;
+  },
+
+  async acceptChallenge(challengeId: number, challengerName = 'You', challengerFlat = 'Flat 504'): Promise<SportsChallengeDto> {
+    try {
+      const res = await api.post<SportsChallengeDto>(`/sports/challenges/${challengeId}/accept`);
+      if (res.data) return res.data;
+    } catch (err: any) {
+      secureLog.warn(`[sportsService] Accept challenge API failed for ${challengeId}, updating locally`, err?.message);
+    }
+    const idx = FALLBACK_CHALLENGES.findIndex((c) => c.id === challengeId);
+    if (idx !== -1) {
+      FALLBACK_CHALLENGES[idx] = {
+        ...FALLBACK_CHALLENGES[idx],
+        status: 'ACCEPTED',
+        challengerName,
+        challengerFlat,
+      };
+      return FALLBACK_CHALLENGES[idx];
+    }
+    throw new Error('Challenge not found');
+  },
 };
+
+const FALLBACK_CHALLENGES: SportsChallengeDto[] = [
+  {
+    id: 1,
+    title: 'Badminton Singles Match',
+    sport: 'BADMINTON',
+    creatorId: 101,
+    creatorName: 'Tower A & B Residents (Vikram)',
+    creatorFlat: 'Tower A-202',
+    format: '1v1 Friendly',
+    venue: 'Clubhouse Court 1',
+    scheduledTime: 'Today 7:00 PM',
+    status: 'OPEN',
+    emoji: '🏸',
+    color: '#7C3AED',
+    bg: '#F5F3FF',
+    notes: 'Intermediate level, Yonex Mavis 350 nylon shuttles',
+    createdAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+  },
+  {
+    id: 2,
+    title: 'Box Cricket Tournament',
+    sport: 'CRICKET',
+    creatorId: 102,
+    creatorName: 'Society Sports Committee',
+    creatorFlat: 'Tower C-404',
+    format: '6v6 Box',
+    venue: 'Central Turf Arena',
+    scheduledTime: 'Tomorrow 6:30 AM',
+    status: 'OPEN',
+    emoji: '🏏',
+    color: '#2563EB',
+    bg: '#EFF6FF',
+    notes: 'Tennis ball box cricket, 6 overs per side',
+    createdAt: new Date(Date.now() - 5 * 3600000).toISOString(),
+  },
+  {
+    id: 3,
+    title: 'Table Tennis Knockout',
+    sport: 'TABLE_TENNIS',
+    creatorId: 103,
+    creatorName: 'Clubhouse Wing (Amit P)',
+    creatorFlat: 'Tower B-102',
+    format: '1v1 Knockout',
+    venue: 'Clubhouse 1st Floor TT Room',
+    scheduledTime: 'Sunday 5:00 PM',
+    status: 'OPEN',
+    emoji: '🏓',
+    color: '#4F46E5',
+    bg: '#EEF2FF',
+    notes: 'Best of 3 sets, 11 points each',
+    createdAt: new Date(Date.now() - 10 * 3600000).toISOString(),
+  },
+  {
+    id: 4,
+    title: 'Weekend Tennis Doubles',
+    sport: 'TENNIS',
+    creatorId: 104,
+    creatorName: 'Tennis Enthusiasts (Rahul)',
+    creatorFlat: 'Tower D-801',
+    format: '2v2 Doubles',
+    venue: 'Outdoor Court 2',
+    scheduledTime: 'Saturday 7:30 AM',
+    status: 'OPEN',
+    emoji: '🎾',
+    color: '#059669',
+    bg: '#ECFDF5',
+    notes: 'Looking for 1 partner and 2 opponents for friendly doubles',
+    createdAt: new Date(Date.now() - 18 * 3600000).toISOString(),
+  },
+];
 

@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRoleSwitcher } from '@/hooks/useRoleSwitcher';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getInitials } from '@/constants/config';
+import { THEME } from '@/constants/theme';
 import { profileService } from '@/services/profileService';
 import { eventService } from '@/services/eventService';
 import { marketplaceService } from '@/services/marketplaceService';
@@ -21,6 +22,7 @@ import { sportsService } from '@/services/sportsService';
 import { maintenanceDuesService } from '@/services/maintenanceDuesService';
 import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { notificationService } from '@/services/notificationService';
+import { ProfileImageModal } from '@/components/common/ProfileImageModal';
 import {
   VIEW_EMERGENCY,
   VIEW_GROUP_BUYING,
@@ -132,6 +134,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [passModalVisible, setPassModalVisible] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // ── Database Queries ──────────────────────────────────────────────
   // 1. Fresh Profile from /api/users/me
@@ -276,6 +279,7 @@ export default function ProfileScreen() {
     !profilePhoto.includes('null') &&
     !profilePhoto.includes('undefined') &&
     (profilePhoto.startsWith('http') ||
+      profilePhoto.startsWith('/') ||
       profilePhoto.startsWith('file://') ||
       profilePhoto.startsWith('data:'));
 
@@ -354,7 +358,11 @@ export default function ProfileScreen() {
 
             {/* Profile Avatar & Quick Badges */}
             <View style={styles.heroHeaderRow}>
-              <View style={styles.avatarContainer}>
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                activeOpacity={0.85}
+                onPress={() => setShowPhotoModal(true)}
+              >
                 {hasPhoto ? (
                   <Image
                     source={{ uri: profilePhoto }}
@@ -374,7 +382,7 @@ export default function ProfileScreen() {
 
                 {/* Online verification dot */}
                 <View style={styles.avatarOnlineDot} />
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.heroInfoWrap}>
                 <View style={styles.verifiedRow}>
@@ -632,6 +640,14 @@ export default function ProfileScreen() {
             iconBg="#CFFAFE"
           />
           <MenuItem
+            icon="people-circle-outline"
+            label="Resident Directory"
+            sublabel="Browse flat-wise residents in your society"
+            onPress={() => router.push('/community/directory')}
+            iconColor="#6366F1"
+            iconBg="#EEF2FF"
+          />
+          <MenuItem
             icon="fitness-outline"
             label="Facility Bookings"
             sublabel="Clubhouse, tennis, gym & pool slots"
@@ -646,9 +662,17 @@ export default function ProfileScreen() {
             onPress={() => router.push('/health')}
             iconColor="#0D9488"
             iconBg="#CCFBF1"
+          />
+          <MenuItem
+            icon="nutrition-outline"
+            label="Health Buddy"
+            sublabel="AI nutrition, meal tracking & wellness challenges"
+            onPress={() => router.push('/wellness')}
+            iconColor="#10B981"
+            iconBg="#D1FAE5"
             badge="NEW"
-            badgeBg="#CCFBF1"
-            badgeColor="#0F766E"
+            badgeBg="#D1FAE5"
+            badgeColor="#059669"
           />
           <MenuItem
             icon="construct-outline"
@@ -686,6 +710,17 @@ export default function ProfileScreen() {
             onPress={() => router.push('/food')}
             iconColor="#E11D48"
             iconBg="#FFE4E6"
+          />
+          <MenuItem
+            icon="hardware-chip-outline"
+            label="Smart Home & IoT"
+            sublabel="Automations, scenes & smart device schedules"
+            onPress={() => router.push('/automation')}
+            iconColor="#7C3AED"
+            iconBg="#EDE9FE"
+            badge="IoT"
+            badgeBg="#EDE9FE"
+            badgeColor="#7C3AED"
             isLast
           />
         </View>
@@ -710,6 +745,28 @@ export default function ProfileScreen() {
               badgeColor={pendingDuesTotal > 0 ? '#DC2626' : '#059669'}
             />
           )}
+          <MenuItem
+            icon="flash-outline"
+            label="Mana Pay (BBPS Bills)"
+            sublabel="Electricity, water, gas & broadband payments"
+            onPress={() => router.push('/bbps')}
+            iconColor="#2563EB"
+            iconBg="#EFF6FF"
+            badge="BBPS"
+            badgeBg="#EDE9FE"
+            badgeColor="#4F46E5"
+          />
+          <MenuItem
+            icon="phone-portrait-outline"
+            label="Mobile Recharge"
+            sublabel="Jio, Airtel, Vi & BSNL instant plans"
+            onPress={() => router.push('/recharge')}
+            iconColor="#0284C7"
+            iconBg="#F0F9FF"
+            badge="NEW"
+            badgeBg="#DCFCE7"
+            badgeColor="#059669"
+          />
           <MenuItem
             icon="wallet-outline"
             label="My Finance (Personal)"
@@ -781,6 +838,14 @@ export default function ProfileScreen() {
               iconBg="#ECFDF5"
             />
           )}
+          <MenuItem
+            icon="business-outline"
+            label="Procurement Hub"
+            sublabel="RFQs, supplier quotes & purchase orders"
+            onPress={() => router.push('/procurement' as any)}
+            iconColor="#2563EB"
+            iconBg="#EFF6FF"
+          />
           {showTrips && (
             <MenuItem
               icon="compass-outline"
@@ -802,6 +867,14 @@ export default function ProfileScreen() {
               badge={totalTeamsCount > 0 ? `${totalTeamsCount} Teams` : undefined}
             />
           )}
+          <MenuItem
+            icon="navigate-circle-outline"
+            label="Mobility Hub"
+            sublabel="Carpool, group rides & on-demand"
+            onPress={() => router.push('/mobility' as any)}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
+          />
           <MenuItem
             icon="car-sport-outline"
             label="Commute Carpool"
@@ -852,6 +925,19 @@ export default function ProfileScreen() {
             iconColor="#059669"
             iconBg="#DCFCE7"
           />
+          {showDiscover && (
+            <MenuItem
+              icon="sparkles-outline"
+              label="Community Discover"
+              sublabel="Neighbor talent, sports buddies, and skills"
+              onPress={() => router.push('/discover' as any)}
+              iconColor="#7C3AED"
+              iconBg="#EDE9FE"
+              badge="AI MATCH"
+              badgeBg="#EDE9FE"
+              badgeColor="#7C3AED"
+            />
+          )}
           <MenuItem
             icon="briefcase-outline"
             label="Pro Network (CPN)"
@@ -859,6 +945,17 @@ export default function ProfileScreen() {
             onPress={() => router.push('/cpn')}
             iconColor="#2563EB"
             iconBg="#EFF6FF"
+          />
+          <MenuItem
+            icon="megaphone-outline"
+            label="Community Job Board"
+            sublabel="Local society hiring, gigs & tutoring"
+            onPress={() => router.push('/jobs')}
+            iconColor="#7C3AED"
+            iconBg="#F3E8FF"
+            badge="NEW"
+            badgeBg="#F3E8FF"
+            badgeColor="#7C3AED"
             isLast
           />
         </View>
@@ -904,12 +1001,44 @@ export default function ProfileScreen() {
             badge={unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined}
           />
           <MenuItem
+            icon="people-outline"
+            label="Family Members"
+            sublabel="Register family so security knows who can enter"
+            onPress={() => router.push('/profile/family')}
+            iconColor="#7C3AED"
+            iconBg="#F5F3FF"
+          />
+          <MenuItem
+            icon="car-outline"
+            label="My Vehicles"
+            sublabel="Register vehicles for ANPR auto gate entry"
+            onPress={() => router.push('/profile/vehicles')}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
+          />
+          <MenuItem
+            icon="finger-print-outline"
+            label="KYC Verification"
+            sublabel="Submit Aadhaar / PAN for identity verification"
+            onPress={() => router.push('/profile/kyc')}
+            iconColor="#059669"
+            iconBg="#D1FAE5"
+          />
+          <MenuItem
             icon="shield-checkmark-outline"
             label="Privacy & GDPR Settings"
             sublabel="Directory visibility, data export & erasure"
             onPress={() => router.push('/settings/privacy')}
             iconColor="#059669"
             iconBg="#D1FAE5"
+          />
+          <MenuItem
+            icon="finger-print-outline"
+            label="App Lock & Biometrics"
+            sublabel="Fingerprint, Face ID, PIN & pattern protection"
+            onPress={() => router.push('/settings/security' as any)}
+            iconColor="#4F46E5"
+            iconBg="#EEF2FF"
           />
           <MenuItem
             icon="lock-closed-outline"
@@ -1075,6 +1204,15 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Enlarged Profile Photo Modal */}
+      <ProfileImageModal
+        visible={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        imageUrl={hasPhoto ? profilePhoto : null}
+        name={displayName}
+        subtitle={[tower, flatNumber].filter(Boolean).join(' • ') || communityName}
+      />
     </SafeAreaView>
   );
 }
@@ -1082,7 +1220,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: THEME.background,
   },
   loadingContainer: {
     flex: 1,
@@ -1103,7 +1241,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: THEME.border,
   },
   topBarLeft: {
     flex: 1,
@@ -1112,12 +1250,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: FONTS.displayBold,
     fontWeight: '800',
-    color: '#111827',
+    color: THEME.textPrimary,
     letterSpacing: -0.3,
   },
   topBarSubtitle: {
     fontSize: 11,
-    color: '#6B7280',
+    color: THEME.textSecondary,
     marginTop: 1,
   },
   topBarActions: {

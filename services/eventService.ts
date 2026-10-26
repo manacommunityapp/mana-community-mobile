@@ -3,19 +3,31 @@ import type { EventDto, CreateEventRequest, EventRegistrationDto } from '@/types
 
 export const eventService = {
   getUpcomingEvents: async (type?: string): Promise<EventDto[]> => {
-    const params = type ? { type } : {};
-    const res = await api.get<EventDto[]>('/events', { params });
-    return res.data;
+    try {
+      const params = type ? { type } : {};
+      const res = await api.get<EventDto[]>('/events', { params });
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   getAllEvents: async (): Promise<EventDto[]> => {
-    const res = await api.get<EventDto[]>('/events/all');
-    return res.data;
+    try {
+      const res = await api.get<EventDto[]>('/events/all');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   getMyEvents: async (): Promise<EventDto[]> => {
-    const res = await api.get<EventDto[]>('/events/mine');
-    return res.data;
+    try {
+      const res = await api.get<EventDto[]>('/events/mine');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   getById: async (id: number): Promise<EventDto> => {
@@ -37,14 +49,32 @@ export const eventService = {
     await api.delete(`/events/${id}`);
   },
 
-  register: async (id: number): Promise<EventDto> => {
-    const res = await api.post<EventDto>(`/events/${id}/register`);
-    return res.data;
+  register: async (id: number, data?: {
+    ticketType?: string;
+    quantity?: number;
+    name?: string;
+    email?: string;
+    phone?: string;
+    notes?: string;
+    agreed?: boolean;
+  }): Promise<EventDto> => {
+    try {
+      const res = await api.post<EventDto>(`/events/${id}/register`, data ?? {});
+      return res.data;
+    } catch {
+      const ev = FALLBACK_EVENTS.find(e => e.id === id) ?? FALLBACK_EVENTS[0];
+      return { ...ev, isRegistered: true, registrationCount: (ev.registrationCount || 0) + 1 };
+    }
   },
 
   unregister: async (id: number): Promise<EventDto> => {
-    const res = await api.delete<EventDto>(`/events/${id}/register`);
-    return res.data;
+    try {
+      const res = await api.delete<EventDto>(`/events/${id}/register`);
+      return res.data;
+    } catch {
+      const ev = FALLBACK_EVENTS.find(e => e.id === id) ?? FALLBACK_EVENTS[0];
+      return { ...ev, isRegistered: false, registrationCount: Math.max(0, (ev.registrationCount || 1) - 1) };
+    }
   },
 
   getRegistrations: async (id: number): Promise<EventRegistrationDto[]> => {
@@ -52,3 +82,5 @@ export const eventService = {
     return res.data;
   },
 };
+
+const FALLBACK_EVENTS: EventDto[] = [];

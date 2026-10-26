@@ -119,7 +119,7 @@ export const biometricAccessService = {
 
   async triggerManualRelay(turnstileId: number, durationSec: number = 3): Promise<{ success: boolean; message: string }> {
     try {
-      const res = await api.post(`/api/v1/access/turnstiles/${turnstileId}/relay-unlock`, { durationSeconds: durationSec });
+      const res = await api.post(`/v1/access/turnstiles/${turnstileId}/relay-unlock`, { durationSeconds: durationSec });
       return res.data;
     } catch {
       return { success: true, message: `Turnstile #${turnstileId} relay pulsed for ${durationSec}s` };

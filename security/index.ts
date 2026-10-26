@@ -12,4 +12,3 @@ export {
 } from './fileValidation';
 export { getSafeErrorMessage, showSafeError, logSecurityEvent } from './errorHandler';
 export { secureLog } from './secureLogger';
-export { useAdminGuard } from './useAdminGuard';

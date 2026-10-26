@@ -88,11 +88,11 @@ export default function EventGatePassScreen() {
                 </View>
                 <View style={s.infoCell}>
                   <Text style={s.infoLabel}>VENUE</Text>
-                  <Text style={s.infoVal}>{event.venue || event.location || 'Main Club'}</Text>
+                  <Text style={s.infoVal} numberOfLines={2}>{event.venue || event.location || 'Main Club'}</Text>
                 </View>
                 <View style={s.infoCell}>
                   <Text style={s.infoLabel}>ATTENDEE</Text>
-                  <Text style={s.infoVal}>{user?.fullName || user?.name || 'Resident'}</Text>
+                  <Text style={s.infoVal} numberOfLines={2}>{user?.fullName || user?.name || 'Resident'}</Text>
                 </View>
               </View>
 
@@ -149,7 +149,7 @@ const s = StyleSheet.create({
   notchRight: { width: 14, height: 24, borderTopLeftRadius: 12, borderBottomLeftRadius: 12, backgroundColor: COLORS.background },
   ticketBody: { padding: 20 },
   infoGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },
-  infoCell: { width: '50%' },
+  infoCell: { width: '50%', paddingRight: 10 },
   infoLabel: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 0.5 },
   infoVal: { fontSize: 13, fontWeight: '700', color: COLORS.text, marginTop: 2 },
   passBox: {

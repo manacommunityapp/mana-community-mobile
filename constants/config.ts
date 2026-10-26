@@ -1,14 +1,26 @@
+export * from './theme';
 // ── API Configuration ──────────────────────────────────────────
 // Switch between dev (local Spring Boot) and prod (Lightsail) easily.
 
 const DEV_API_URL  = "http://3.109.145.130:8081";   // dev Lightsail (PostgreSQL-backed)
 const PROD_API_URL = "https://api.manacommunity.in";
 
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
+
 export const CONFIG = {
-  API_BASE_URL: __DEV__ ? DEV_API_URL : PROD_API_URL,
-  WS_URL:       __DEV__ ? `ws://3.109.145.130:8081/ws` : `wss://api.manacommunity.in/ws`,
+  N8N_AI_WEBHOOK_URL: process.env.EXPO_PUBLIC_N8N_AI_WEBHOOK_URL || "",
+  API_BASE_URL: isDev ? DEV_API_URL : PROD_API_URL,
+  WS_URL:       isDev ? `ws://3.109.145.130:8081/ws` : `wss://api.manacommunity.in/ws`,
   APP_NAME:     "Mana Community",
   VERSION:      "1.0.0",
+
+  // ── Flight affiliate IDs (replace with real IDs once registered) ──
+  // EaseMyTrip: register at b2b.easemytrip.com (affiliate division)
+  // MakeMyTrip: register at commission.makemytrip.com
+  FLIGHT_AFFILIATE: {
+    EMT_AFFILIATE_ID: "MANA_COMMUNITY",
+    MMT_CAMPAIGN_ID:  "affiliate_mana",
+  },
 } as const;
 
 // ── Theme Colors (matches web app Mana indigo palette) ────────
@@ -21,14 +33,14 @@ export const COLORS = {
   accent:       "#4F46E5",  // primary indigo
   accentDark:   "#3730A3",  // indigo-800
   accentLight:  "#EEF2FF",  // indigo-50
-  background:   "#F8FAFC",  // modern slate-50 base
-  backgroundAlt:"#F1F5F9",  // slate-100
+  background:   "#F9FAFC",  // light mode base background
+  backgroundAlt:"#F1F4F7",  // secondary background
   surface:      "#FFFFFF",  // white card
   surfaceAlt:   "#F8FAFC",  // soft slate surface
   surfaceCard:  "#FFFFFF",  // card surface
   border:       "rgba(99, 102, 241, 0.14)",  // refined border
   borderLight:  "rgba(99, 102, 241, 0.08)",  // subtle border
-  borderSlate:  "#E2E8F0",  // slate-200 border
+  borderSlate:  "#EBEFF2",  // hairline border
   text:         "#0F172A",  // slate-900 (ultra-crisp)
   textSecondary:"#475569",  // slate-600
   textMuted:    "#64748B",  // slate-500
@@ -81,6 +93,24 @@ export const THEMES = {
     amber: "#D97706",
     amberGradient: ["#D97706", "#F59E0B"] as const,
     accentLight: "#FEF3C7",
+  },
+  wellness: {
+    primary: "#10B981",
+    primaryDark: "#059669",
+    gradient: ["#059669", "#10B981", "#34D399"] as const,
+    bg: "#ECFDF5",
+    bgSubtle: "#F0FDF4",
+    card: "#FFFFFF",
+    accentLight: "#D1FAE5",
+    accentBorder: "#A7F3D0",
+    orange: "#F97316",
+    orangeLight: "#FFF7ED",
+    blue: "#3B82F6",
+    blueLight: "#EFF6FF",
+    purple: "#8B5CF6",
+    purpleLight: "#F5F3FF",
+    rose: "#F43F5E",
+    roseLight: "#FFF1F2",
   },
 } as const;
 
@@ -148,6 +178,37 @@ export const RADIUS = {
 } as const;
 
 // ── Shadows (Multi-Layer Ambient & Directional Depth) ──────────
+// ── Mana Community Design System ────────────────────────
+export const THEME = {
+  brand:        "#00D09C",  // Emerald Primary
+  brandDark:    "#008767",  // Deeper emerald for text
+  brandLight:   "#E6FAF5",  // 10% alpha emerald tint
+  brandBorder:  "#A7F3D0",  // Emerald border
+  loss:         "#EB5B5B",  // Coral Red
+  lossDark:     "#DC2626",
+  lossLight:    "#FEEFEF",  // 10% alpha red tint
+  lossBorder:   "#FECACA",
+  surface:      "#FFFFFF",  // Main card surface
+  surfaceSubtle:"#F9FAFC",  // Subtle secondary surface
+  surfaceMuted: "#F1F4F7",  // Background chip
+  background:   "#F9FAFC",  // Light mode base background
+  backgroundAlt:"#F1F4F7",  // Secondary background
+  headerBg:     "#FFFFFF",  // Clean white header
+  headerBorder: "#EBEFF2",  // Hairline bottom header border
+  border:       "#EBEFF2",  // 1px hairline border
+  borderMedium: "#DFE4E8",
+  textPrimary:  "#44475B",  // Soft Charcoal primary text
+  textSecondary:"#7C7E8C",  // Secondary text
+  textMuted:    "#9CA3AF",
+  indigo:       "#5367FF",  // Electric accent
+  indigoLight:  "#EEF2FF",
+  amber:        "#FFB800",
+  amberLight:   "#FFFBEB",
+  text:         "#0F172A",
+  muted:        "#64748B",
+  primary:      "#4F46E5",
+} as const;
+
 export const SHADOWS = {
   sm: {
     shadowColor: "#0F172A",

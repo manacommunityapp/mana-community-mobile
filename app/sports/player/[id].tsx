@@ -10,7 +10,7 @@ import { sportsService } from '@/services/sportsService';
 import { BadgeCard, BadgeRow } from '@/components/sports/BadgeCard';
 import { COLORS, getInitials } from '@/constants/config';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/dateUtils';
 import type { SportStatDto } from '@/types/api';
 
 const RARITY_ORDER = { legendary: 0, epic: 1, rare: 2, common: 3 };
@@ -209,7 +209,7 @@ export default function PlayerProfileScreen() {
               >
                 <Text style={s.matchSport}>{SPORT_EMOJI[m.sport]}</Text>
                 <Text style={s.matchResult} numberOfLines={1}>{m.result}</Text>
-                <Text style={s.matchDate}>{format(new Date(m.date), 'dd MMM')}</Text>
+                <Text style={s.matchDate}>{safeFormat(m.date, 'dd MMM')}</Text>
               </TouchableOpacity>
             ))}
           </View>

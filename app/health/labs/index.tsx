@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { healthService } from "@/services/healthService";
 import { LabPackageDto } from "@/types/health";
 
 export default function LabsScreen() {
+  const router = useRouter();
   const [packages, setPackages] = useState<LabPackageDto[]>([]);
 
   useEffect(() => {
@@ -12,11 +14,16 @@ export default function LabsScreen() {
   }, []);
 
   const handleBook = (pkg: LabPackageDto) => {
-    Alert.alert(
-      "Book Sample Collection",
-      `Book ${pkg.name} for ₹${pkg.price}? A phlebotomist will arrive tomorrow between 7:00 AM - 9:00 AM.`,
-      [{ text: "Cancel", style: "cancel" }, { text: "Confirm Booking", onPress: () => Alert.alert("Success", "Phlebotomist booked for doorstep sample collection.") }]
-    );
+    router.push({
+      pathname: "/health/labs/book",
+      params: {
+        pkgId: pkg.id,
+        pkgName: pkg.name,
+        pkgPrice: String(pkg.price),
+        turnaround: String(pkg.reportTurnaroundHours),
+        fastingRequired: String(pkg.fastingRequired),
+      }
+    } as any);
   };
 
   return (

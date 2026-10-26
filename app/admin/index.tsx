@@ -9,7 +9,7 @@ import { adminService } from '@/services/adminService';
 import { StatCard } from '@/components/admin/StatCard';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS } from '@/constants/config';
-import { useAdminGuard } from '@/security';
+import { useAdminGuard } from '@/security/useAdminGuard';
 
 interface QuickAction {
   emoji:  string;
@@ -53,6 +53,10 @@ export default function AdminDashboard() {
     {
       emoji: '📢', label: 'Announcements', sub: 'Broadcast to all',
       route: '/admin/announcements',       color: COLORS.warning,
+    },
+    {
+      emoji: '🚨', label: 'Emergency Broadcast', sub: 'Push alert to all flats',
+      route: '/admin/broadcast',           color: '#DC2626',
     },
     {
       emoji: '⚙️', label: 'Community',     sub: 'Settings & invite',

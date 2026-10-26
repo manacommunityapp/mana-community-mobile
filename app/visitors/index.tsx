@@ -9,6 +9,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
+import { THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 
@@ -435,6 +436,49 @@ export default function VisitorsScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ── Quick Links: Approvals / Whitelist / Watchlist ── */}
+      <View style={s.quickLinksRow}>
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/pending-approvals')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="notifications-outline" size={16} color="#D97706" />
+          <Text style={[s.quickLinkText, { color: '#D97706' }]}>Approvals</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/whitelist')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
+          <Text style={s.quickLinkText}>Whitelist</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/watchlist')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="warning-outline" size={16} color="#DC2626" />
+          <Text style={[s.quickLinkText, { color: '#DC2626' }]}>Watchlist</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/group-invite')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="people-outline" size={16} color="#7C3AED" />
+          <Text style={[s.quickLinkText, { color: '#7C3AED' }]}>Group Invite</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+      </View>
+
       {/* ── Tabs (Active / History) ── */}
       <View style={s.tabBar}>
         <TouchableOpacity
@@ -665,7 +709,7 @@ export default function VisitorsScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: THEME.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -721,6 +765,33 @@ const s = StyleSheet.create({
   statVal: { fontSize: 16, fontWeight: '900', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   statLabel: { fontSize: 10, color: COLORS.textMuted, marginTop: 1, fontFamily: 'DMSans-Regular' },
 
+  quickLinksRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(99, 102, 241, 0.08)',
+  },
+  quickLinkBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+  },
+  quickLinkText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+    fontFamily: 'Outfit-Bold',
+  },
+  quickLinkDivider: {
+    width: 1,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    marginVertical: 8,
+  },
+
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.md,
@@ -752,8 +823,8 @@ const s = StyleSheet.create({
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center' },
   typeIconBox: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  visitorName: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
-  visitorPurpose: { fontSize: 12, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
+  visitorName: { fontSize: 16, fontWeight: '800', color: THEME.textPrimary, fontFamily: 'Outfit-Bold', letterSpacing: -0.2 },
+  visitorPurpose: { fontSize: 12, color: THEME.textSecondary, marginTop: 2, fontFamily: 'DMSans-Regular' },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 10, fontWeight: '800', fontFamily: 'Outfit-Bold' },
 

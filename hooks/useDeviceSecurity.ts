@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
-import * as Device from 'expo-device';
+import { deviceSecurity } from '@/security/deviceSecurity';
 import { secureLog } from '@/security';
 
 export function useDeviceSecurity() {
   useEffect(() => {
-    if (__DEV__) return;
-    if (!Device.isDevice) {
-      secureLog.security('EMULATOR_DETECTED_IN_PRODUCTION');
-    }
+    deviceSecurity.inspectDevice().then((status) => {
+      if (status.securityViolations.length > 0) {
+        secureLog.security('DEVICE_SECURITY_WARNING', {
+          violations: status.securityViolations,
+          isRooted: status.isRootedOrJailbroken,
+        });
+      }
+    }).catch(() => {});
   }, []);
 }

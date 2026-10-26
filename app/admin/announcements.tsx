@@ -9,8 +9,8 @@ import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
 import { COLORS } from '@/constants/config';
-import { useAdminGuard } from '@/security';
-import { format } from 'date-fns';
+import { useAdminGuard } from '@/security/useAdminGuard';
+import { safeFormat } from '@/utils/dateUtils';
 import type { AnnouncementDto } from '@/types/api';
 
 // ── Create announcement modal ──────────────────────────────────
@@ -180,7 +180,7 @@ function AnnouncementCard({
         {item.priority === 'URGENT' && (
           <View style={ac.urgentBadge}><Text style={ac.urgentText}>URGENT</Text></View>
         )}
-        <Text style={ac.date}>{format(new Date(item.createdAt), 'dd MMM · h:mm a')}</Text>
+        <Text style={ac.date}>{safeFormat(item.createdAt, 'dd MMM · h:mm a')}</Text>
       </View>
       <Text style={ac.title}>{item.title}</Text>
       <Text style={ac.content} numberOfLines={3}>{item.content}</Text>

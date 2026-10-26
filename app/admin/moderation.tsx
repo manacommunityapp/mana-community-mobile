@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
 import { COLORS } from '@/constants/config';
-import { useAdminGuard } from '@/security';
+import { useAdminGuard } from '@/security/useAdminGuard';
 import { formatDistanceToNow } from 'date-fns';
 import type { ReportDto } from '@/types/api';
 

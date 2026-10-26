@@ -27,6 +27,8 @@ import { initSentry, setUser, clearUser } from '@/utils/sentry';
 import { offlineSyncService } from '@/services/offlineSyncService';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { getPortalForRole } from '@/hooks/useRoleSwitcher';
+import { useAppBiometrics } from '@/hooks/useAppBiometrics';
+import { BiometricLockModal } from '@/components/security/BiometricLockModal';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
@@ -93,13 +95,20 @@ function AuthGuard() {
     }
   }, [isAuthenticated, isLoading, isPending, segments]);
 
-  return null;
+  const { isLocked, unlock } = useAppBiometrics();
+
+  return (
+    <BiometricLockModal
+      visible={isAuthenticated && !isPending && isLocked}
+      onUnlock={unlock}
+    />
+  );
 }
 
 function RootLayout() {
   useEffect(() => {
-    ScreenCapture.preventScreenCaptureAsync();
-    return () => { ScreenCapture.allowScreenCaptureAsync(); };
+    ScreenCapture.preventScreenCaptureAsync().catch(() => {});
+    return () => { ScreenCapture.allowScreenCaptureAsync().catch(() => {}); };
   }, []);
 
   const [fontsLoaded] = Font.useFonts({
@@ -166,6 +175,25 @@ function RootLayout() {
             <Stack.Screen name="admin-role" />
             <Stack.Screen name="sports-admin" />
             <Stack.Screen name="event-admin" />
+            <Stack.Screen name="wellness" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="health" />
+            <Stack.Screen name="home-services" />
+            <Stack.Screen name="automation" />
+            <Stack.Screen name="access" />
+            <Stack.Screen name="community" />
+            <Stack.Screen name="activity" />
+            <Stack.Screen name="bbps" />
+            <Stack.Screen name="recharge" />
+            <Stack.Screen name="insurance" />
+            <Stack.Screen name="ai-chat" />
+            <Stack.Screen name="commerce" />
+            <Stack.Screen name="intelligence" />
+            <Stack.Screen name="iot" />
+            <Stack.Screen name="personal-finance" />
+            <Stack.Screen name="projects" />
+            <Stack.Screen name="mobility" />
+            <Stack.Screen name="experiences" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
@@ -173,4 +201,5 @@ function RootLayout() {
   );
 }
 
-export default Sentry.wrap(RootLayout);
+// Only wrap with Sentry in production when Sentry.init has run
+export default !__DEV__ ? Sentry.wrap(RootLayout) : RootLayout;

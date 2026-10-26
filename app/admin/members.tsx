@@ -9,8 +9,8 @@ import { useRouter } from 'expo-router';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services/adminService';
 import { COLORS, getInitials } from '@/constants/config';
-import { useAdminGuard } from '@/security';
-import { format } from 'date-fns';
+import { useAdminGuard } from '@/security/useAdminGuard';
+import { safeFormat } from '@/utils/dateUtils';
 import type { AdminMemberDto } from '@/types/api';
 
 type Tab = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
@@ -54,10 +54,10 @@ function MemberCard({
           </View>
           <Text style={mc.date}>
             {tab === 'PENDING'
-              ? `Requested ${format(new Date(member.joinedAt), 'dd MMM yyyy')}`
+              ? `Requested ${safeFormat(member.joinedAt, 'dd MMM yyyy')}`
               : tab === 'SUSPENDED'
               ? `Suspended member`
-              : `Joined ${format(new Date(member.joinedAt), 'dd MMM yyyy')}`
+              : `Joined ${safeFormat(member.joinedAt, 'dd MMM yyyy')}`
             }
           </Text>
         </View>

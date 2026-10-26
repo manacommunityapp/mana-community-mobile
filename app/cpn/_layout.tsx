@@ -11,6 +11,7 @@ export default function CPNLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: '💼 Professional Network (CPN)' }} />
+      <Stack.Screen name="profile" options={{ title: '👤 Professional Profile' }} />
     </Stack>
   );
 }

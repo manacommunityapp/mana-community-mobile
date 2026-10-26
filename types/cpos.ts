@@ -105,6 +105,14 @@ export type CrmLeadStage = 'INQUIRY' | 'SITE_VISIT' | 'NEGOTIATION' | 'AGREEMENT
 export type CrmLeadSource = 'REFERRAL' | 'PORTAL' | 'WALK_IN' | 'BROKER' | 'SOCIAL_MEDIA';
 export type CrmDealType = 'SALE' | 'RENTAL';
 
+export interface CrmLeadTag {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export type CrmApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+
 export interface CrmLead {
   id: string;
   name: string;
@@ -122,6 +130,10 @@ export interface CrmLead {
   createdAt: string;
   updatedAt: string;
   assignedTo?: string;
+  tags?: CrmLeadTag[];
+  approvalStatus?: CrmApprovalStatus;
+  approvalReason?: string;
+  approvalComment?: string;
 }
 
 export interface CrmPipelineSummary {

@@ -172,6 +172,26 @@ export default function GuardDashboard() {
           />
         </View>
 
+        {/* Quick action row: Shift Handover + CCTV */}
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+          <TouchableOpacity
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#1E293B', borderRadius: 12, padding: 12 }}
+            onPress={() => router.push('/guard/handover')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="swap-horizontal-outline" size={18} color="#94A3B8" />
+            <Text style={{ color: '#E2E8F0', fontSize: 13, fontFamily: 'Outfit-Bold', fontWeight: '700' }}>Shift Handover</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#1E293B', borderRadius: 12, padding: 12 }}
+            onPress={() => router.push('/guard/cctv')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="videocam-outline" size={18} color="#94A3B8" />
+            <Text style={{ color: '#E2E8F0', fontSize: 13, fontFamily: 'Outfit-Bold', fontWeight: '700' }}>CCTV Monitor</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* SOS Alert Button */}
         <TouchableOpacity
           style={s.sosBtn}

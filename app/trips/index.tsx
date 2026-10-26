@@ -1,15 +1,64 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, ActivityIndicator, Alert, TextInput, RefreshControl,
+  Modal, ActivityIndicator, Alert, TextInput, RefreshControl, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { COLORS, SPACING, RADIUS, SHADOWS, GRADIENTS } from '@/constants/config';
+import { COLORS, SPACING, RADIUS, SHADOWS, GRADIENTS, CONFIG } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { tripsService, TripDto, TripBookingDto } from '@/services/tripsService';
+
+const FLIGHT_TRANSPORTS = ['FLIGHT', 'GROUP_FLIGHT'] as const;
+
+function isFlightTrip(trip: TripDto): boolean {
+  return FLIGHT_TRANSPORTS.includes(trip.transport as any);
+}
+
+function transportIconName(transport: string): 'airplane' | 'bus-outline' | 'car-outline' {
+  if (transport === 'FLIGHT' || transport === 'GROUP_FLIGHT') return 'airplane';
+  if (/suv|innova|traveller|car/i.test(transport)) return 'car-outline';
+  return 'bus-outline';
+}
+
+function openFlightSearch(trip: TripDto, router: ReturnType<typeof useRouter>): void {
+  const dateStr = trip.departureDate.slice(0, 10);
+  const [yyyy, mm, dd] = dateStr.split('-');
+  const origin = trip.flightOriginIATA || 'BLR';
+  const dest = trip.flightDestIATA || 'DEL';
+
+  Alert.alert(
+    'Find Flights ✈',
+    `${origin} → ${dest}  ·  ${dd}/${mm}/${yyyy}\n\nChoose your preferred platform:`,
+    [
+      {
+        text: '🔍 Search via App',
+        onPress: () =>
+          router.push({
+            pathname: '/trips/flights',
+            params: { origin, destination: dest, date: dateStr },
+          }),
+      },
+      {
+        text: 'EaseMyTrip',
+        onPress: () =>
+          Linking.openURL(
+            `https://www.easemytrip.com/flights.html?org=${origin}&dest=${dest}&dept=${dd}/${mm}/${yyyy}&adt=1&affiliate_id=${CONFIG.FLIGHT_AFFILIATE.EMT_AFFILIATE_ID}`,
+          ).catch(() => Alert.alert('Error', 'Unable to open EaseMyTrip. Please try again.')),
+      },
+      {
+        text: 'MakeMyTrip',
+        onPress: () =>
+          Linking.openURL(
+            `https://www.makemytrip.com/flight/search?itinerary=${origin}-${dest}-${dateStr.replace(/-/g, '')}&tripType=O&paxType=A-1_C-0_I-0&cmp=${CONFIG.FLIGHT_AFFILIATE.MMT_CAMPAIGN_ID}`,
+          ).catch(() => Alert.alert('Error', 'Unable to open MakeMyTrip. Please try again.')),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ],
+  );
+}
 
 export default function TripsScreen() {
   const router = useRouter();
@@ -128,6 +177,15 @@ export default function TripsScreen() {
           <Text style={styles.heroSubtitle}>
             Resident-curated weekend treks, spiritual yatras, and family getaways with doorstep society bus pickup.
           </Text>
+          <TouchableOpacity
+            style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginTop: 4 }}
+            onPress={() => router.push('/trips/create')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add-circle" size={16} color={COLORS.primary} />
+            <Text style={{ color: COLORS.primary, fontWeight: '800', fontSize: 13 }}>Host a Trip</Text>
+          </TouchableOpacity>
+
           <View style={styles.heroStatsRow}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatValue}>{trips.length}</Text>
@@ -281,9 +339,21 @@ export default function TripsScreen() {
                     <View style={styles.catPill}>
                       <Text style={styles.catPillText}>{trip.category.toUpperCase()}</Text>
                     </View>
-                    <View style={styles.transportPill}>
-                      <Ionicons name="bus-outline" size={13} color={COLORS.primary} />
-                      <Text style={styles.transportPillText}>{trip.transport}</Text>
+                    <View style={[
+                      styles.transportPill,
+                      isFlightTrip(trip) && { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' },
+                    ]}>
+                      <Ionicons
+                        name={transportIconName(trip.transport)}
+                        size={13}
+                        color={isFlightTrip(trip) ? '#0284C7' : COLORS.primary}
+                      />
+                      <Text style={[
+                        styles.transportPillText,
+                        isFlightTrip(trip) && { color: '#0284C7', fontWeight: '700' },
+                      ]}>
+                        {trip.transport === 'GROUP_FLIGHT' ? 'Group Flight' : trip.transport === 'FLIGHT' ? 'Air Travel' : trip.transport}
+                      </Text>
                     </View>
                   </View>
 
@@ -340,14 +410,38 @@ export default function TripsScreen() {
                     </View>
                   </View>
 
+                  {/* Group PNR banner — only for GROUP_FLIGHT */}
+                  {trip.transport === 'GROUP_FLIGHT' && trip.groupPnr && (
+                    <View style={styles.groupPnrBanner}>
+                      <Ionicons name="shield-checkmark" size={13} color="#0284C7" />
+                      <Text style={styles.groupPnrText}>
+                        Group PNR: {trip.groupPnr}  ·  Flight fare locked @ ₹{(trip.farePerPerson ?? 0).toLocaleString()}/seat
+                      </Text>
+                    </View>
+                  )}
+
                   {/* Card Footer */}
                   <View style={styles.cardFooter}>
                     <View>
-                      <Text style={styles.priceMeta}>FARE PER SEAT</Text>
+                      <Text style={styles.priceMeta}>
+                        {trip.transport === 'FLIGHT' ? 'POOL COST (EXCL. FLIGHT)' : 'FARE PER SEAT'}
+                      </Text>
                       <Text style={styles.priceNum}>₹{trip.pricePerPerson.toLocaleString()}</Text>
                     </View>
 
                     <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={[styles.splitIconBtn, { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }]}
+                        onPress={() => router.push({
+                          pathname: '/trips/roster',
+                          params: { tripId: trip.id, tripTitle: trip.title },
+                        })}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="list-outline" size={14} color={COLORS.primary} />
+                        <Text style={[styles.splitIconBtnText, { color: COLORS.primary }]}>Roster</Text>
+                      </TouchableOpacity>
+
                       <TouchableOpacity
                         style={styles.splitIconBtn}
                         onPress={() => router.push({
@@ -360,17 +454,38 @@ export default function TripsScreen() {
                         <Text style={styles.splitIconBtnText}>Split</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={styles.bookNowBtn}
-                        onPress={() => {
-                          setSelectedTrip(trip);
-                          setPassengers(1);
-                        }}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.bookNowText}>Book Seats</Text>
-                        <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
-                      </TouchableOpacity>
+                      {trip.transport === 'FLIGHT' ? (
+                        /* Individual-flight trip: open OTA search, join community pool separately */
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          <TouchableOpacity
+                            style={styles.findFlightsBtn}
+                            onPress={() => openFlightSearch(trip, router)}
+                            activeOpacity={0.85}
+                          >
+                            <Ionicons name="airplane" size={14} color="#FFFFFF" />
+                            <Text style={styles.findFlightsBtnText}>Find Flights</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.joinTripBtn}
+                            onPress={() => { setSelectedTrip(trip); setPassengers(1); }}
+                            activeOpacity={0.85}
+                          >
+                            <Text style={styles.joinTripBtnText}>I'm Joining</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        /* Bus / GROUP_FLIGHT: standard seat reservation */
+                        <TouchableOpacity
+                          style={styles.bookNowBtn}
+                          onPress={() => { setSelectedTrip(trip); setPassengers(1); }}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={styles.bookNowText}>
+                            {trip.transport === 'GROUP_FLIGHT' ? 'Book Seat' : 'Book Seats'}
+                          </Text>
+                          <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -1350,5 +1465,51 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#059669',
+  },
+  groupPnrBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#E0F2FE',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  groupPnrText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0369A1',
+    flex: 1,
+  },
+  findFlightsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: RADIUS.md,
+    gap: 5,
+  },
+  findFlightsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  joinTripBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+  },
+  joinTripBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
 });

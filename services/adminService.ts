@@ -468,3 +468,18 @@ export const adminService = {
   },
 };
 
+export {
+  adminRoleService,
+  type ApprovalType,
+  type ApprovalStatus,
+  type SecurityAlertLevel,
+  type GovernanceItemType,
+  type GovernanceStatus,
+  type AdminApproval,
+  type FinanceEntry,
+  type SecurityAlert,
+  type GovernanceItem,
+  type AdminDashboardStats,
+  type AnalyticsData,
+} from './adminRoleService';
+

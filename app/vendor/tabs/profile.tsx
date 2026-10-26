@@ -121,10 +121,11 @@ export default function VendorProfileScreen() {
         {/* Business */}
         <Text style={s.sectionHeader}>Business</Text>
         <View style={s.menuSection}>
-          <MenuItem icon="calendar-outline" label="My Availability" onPress={() => {}} iconColor={VENDOR_COLORS.accent} iconBg={VENDOR_COLORS.accentLight} />
-          <MenuItem icon="pricetags-outline" label="Service Rates" onPress={() => {}} iconColor="#7C3AED" iconBg="#EDE9FE" />
-          <MenuItem icon="document-text-outline" label="Invoice History" onPress={() => {}} iconColor="#2563EB" iconBg="#DBEAFE" />
-          <MenuItem icon="stats-chart-outline" label="Earnings Report" onPress={() => {}} iconColor="#059669" iconBg="#D1FAE5" />
+          <MenuItem icon="calendar-outline" label="My Availability" onPress={() => router.push('/vendor/availability')} iconColor={VENDOR_COLORS.accent} iconBg={VENDOR_COLORS.accentLight} />
+          <MenuItem icon="shield-checkmark-outline" label="KYC & Documents" onPress={() => router.push('/vendor/documents')} iconColor="#059669" iconBg="#DCFCE7" />
+          <MenuItem icon="pricetags-outline" label="Service Rates" onPress={() => router.push('/vendor/products')} iconColor="#7C3AED" iconBg="#EDE9FE" />
+          <MenuItem icon="document-text-outline" label="Settlements & Invoices" onPress={() => router.push('/vendor/settlements')} iconColor="#2563EB" iconBg="#DBEAFE" />
+          <MenuItem icon="stats-chart-outline" label="Analytics & Performance" onPress={() => router.push('/vendor/analytics')} iconColor="#D97706" iconBg="#FEF3C7" />
         </View>
 
         {/* Account */}

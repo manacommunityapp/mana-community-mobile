@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/dateUtils';
 import type { MatchDto } from '@/types/api';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,7 +59,7 @@ function SportScore({ match }: { match: MatchDto }) {
   }
 
   if (match.status === 'SCHEDULED') {
-    return <Text style={ss.time}>{format(new Date(match.scheduledAt), 'h:mm a')}</Text>;
+    return <Text style={ss.time}>{safeFormat(match.scheduledAt, 'h:mm a')}</Text>;
   }
 
   return (

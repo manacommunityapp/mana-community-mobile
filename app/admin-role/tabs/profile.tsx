@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS, getAvatarColor, getInitials } from '@/constants/config';
 import { ADMIN_COLORS } from '@/constants/adminTheme';
 import { useAuth } from '@/hooks/useAuth';
-import { adminRoleService, type AnalyticsData } from '@/services/adminRoleService';
+import { adminRoleService, type AnalyticsData } from '@/services/adminService';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 

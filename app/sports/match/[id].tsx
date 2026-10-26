@@ -10,6 +10,8 @@ import { useLiveScore } from '@/hooks/useLiveScore';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { format, formatDistanceToNow } from 'date-fns';
+import { safeFormat } from '@/utils/dateUtils';
+import { shareMatch } from '@/utils/sportsShare';
 import { LiveScoringModal } from '@/components/sports/LiveScoringModal';
 import type { MatchDto, MatchEventDto } from '@/types/api';
 
@@ -143,7 +145,7 @@ function EventRow({ ev }: { ev: MatchEventDto }) {
         {ev.playerName && <Text style={er.player}>{ev.playerName}</Text>}
       </View>
       <Text style={er.time}>
-        {ev.minute != null ? `${ev.minute}'` : ev.over ?? format(new Date(ev.timestamp), 'h:mm a')}
+        {ev.minute != null ? `${ev.minute}'` : ev.over ?? (ev.timestamp ? safeFormat(ev.timestamp, 'h:mm a') : '')}
       </Text>
     </View>
   );
@@ -209,14 +211,24 @@ export default function LiveMatchScreen() {
           <Text style={scr.sport}>{SPORT_EMOJI[match.sport]} {match.tournamentName}</Text>
           {match.round && <Text style={scr.round}>{match.round}</Text>}
         </View>
-        {isLive && (
-          <View style={scr.liveBadge}>
-            <View style={scr.liveDot} />
-            <Text style={scr.liveText}>LIVE</Text>
-            {!connected && <Text style={scr.reconnect}> ·Reconnecting</Text>}
-          </View>
-        )}
-        {isDone && <Text style={scr.doneBadge}>FT</Text>}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {isLive && (
+            <View style={scr.liveBadge}>
+              <View style={scr.liveDot} />
+              <Text style={scr.liveText}>LIVE</Text>
+              {!connected && <Text style={scr.reconnect}> ·Reconnecting</Text>}
+            </View>
+          )}
+          {isDone && <Text style={scr.doneBadge}>FT</Text>}
+          <TouchableOpacity
+            onPress={() => shareMatch(match)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={scr.topShareBtn}
+            accessibilityLabel="Share match summary"
+          >
+            <Ionicons name="share-social-outline" size={17} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[1]}>
@@ -231,12 +243,17 @@ export default function LiveMatchScreen() {
           )}
           {match.status === 'SCHEDULED' && (
             <Text style={scr.scheduledTime}>
-              {format(new Date(match.scheduledAt), 'EEE, dd MMM · h:mm a')}
+              {safeFormat(match.scheduledAt, 'EEE, dd MMM · h:mm a', 'Scheduled')}
             </Text>
           )}
-          {match.venue && (
-            <Text style={scr.venue}>📍 {match.venue}</Text>
-          )}
+          {(() => {
+            const venueStr = typeof match.venue === 'object' && match.venue !== null
+              ? [(match.venue as any).name, (match.venue as any).area, (match.venue as any).city].filter(Boolean).join(', ') || (match.venue as any).address || ''
+              : typeof match.venue === 'string' ? match.venue : '';
+            return venueStr ? (
+              <Text style={scr.venue}>📍 {venueStr}</Text>
+            ) : null;
+          })()}
 
           <Animated.View style={[scr.scoreboard, { opacity: flashAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.4] }) }]}>
             <Scoreboard match={match} />
@@ -314,6 +331,12 @@ export default function LiveMatchScreen() {
               <Text style={scr.actionBtnText}>⭐ Rate Players</Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            style={scr.actionBtn}
+            onPress={() => shareMatch(match)}
+          >
+            <Text style={scr.actionBtnText}>📤 Share Match</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Scheduled info */}
@@ -322,7 +345,7 @@ export default function LiveMatchScreen() {
             <Text style={scr.scheduledEmoji}>⏰</Text>
             <Text style={scr.scheduledTitle}>Match not started yet</Text>
             <Text style={scr.scheduledSub}>
-              Scheduled for {format(new Date(match.scheduledAt), 'EEEE, dd MMMM · h:mm a')}
+              Scheduled for {safeFormat(match.scheduledAt, 'EEEE, dd MMMM · h:mm a', 'upcoming date')}
             </Text>
           </View>
         )}
@@ -350,6 +373,7 @@ const scr = StyleSheet.create({
   topMid:         { flex: 1, gap: 1 },
   sport:          { fontSize: 13, fontFamily: 'DMSans-SemiBold', fontWeight: '600', color: COLORS.text },
   round:          { fontSize: 11, color: COLORS.textMuted },
+  topShareBtn:    { padding: 6, borderRadius: 8, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   liveBadge:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   liveDot:        { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.error },
   liveText:       { fontSize: 11, fontWeight: '800', color: COLORS.error },

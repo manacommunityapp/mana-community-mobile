@@ -12,18 +12,21 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { cpnService } from '@/services/cpnService';
 import type {
   ProfessionalProfileDto,
+  CPNPostDto,
   JobPostingDto,
   MentorshipSessionDto,
   AICareerFeedbackDto,
 } from '@/types/cpn';
 
-type TabType = 'DIRECTORY' | 'JOBS' | 'MENTORSHIP' | 'AI_COACH';
+type TabType = 'DIRECTORY' | 'JOBS' | 'MENTORSHIP' | 'AI_COACH' | 'FEED';
 
 export default function CPNScreen() {
+  const router = useRouter();
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('DIRECTORY');
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,6 +35,11 @@ export default function CPNScreen() {
   const { data: directory = [], isLoading: dirLoading, refetch: refetchDir, isRefetching } = useQuery({
     queryKey: ['cpnDirectory'],
     queryFn: () => cpnService.getDirectory(),
+  });
+
+  const { data: feedPosts = [], isLoading: feedLoading, refetch: refetchFeed } = useQuery({
+    queryKey: ['cpnFeed'],
+    queryFn: cpnService.getFeed,
   });
 
   const { data: jobs = [], isLoading: jobsLoading, refetch: refetchJobs } = useQuery({
@@ -49,10 +57,11 @@ export default function CPNScreen() {
     queryFn: cpnService.getAICareerCoach,
   });
 
-  const isLoading = dirLoading || jobsLoading || mentorsLoading || aiLoading;
+  const isLoading = dirLoading || feedLoading || jobsLoading || mentorsLoading || aiLoading;
 
   const onRefresh = () => {
     refetchDir();
+    refetchFeed();
     refetchJobs();
     refetchMentors();
     refetchAI();
@@ -76,6 +85,13 @@ export default function CPNScreen() {
     },
   });
 
+  const likeMutation = useMutation({
+    mutationFn: (postId: string) => cpnService.toggleLikePost(postId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cpnFeed'] });
+    },
+  });
+
   const filteredDirectory = directory.filter((p) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -84,6 +100,17 @@ export default function CPNScreen() {
       p.headline.toLowerCase().includes(q) ||
       p.company.toLowerCase().includes(q) ||
       p.skills.some((s) => s.toLowerCase().includes(q))
+    );
+  });
+
+  const filteredFeed = feedPosts.filter((post) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      post.authorName.toLowerCase().includes(q) ||
+      post.authorHeadline.toLowerCase().includes(q) ||
+      post.content.toLowerCase().includes(q) ||
+      post.hashtags.some((h) => h.toLowerCase().includes(q))
     );
   });
 
@@ -101,7 +128,14 @@ export default function CPNScreen() {
               <Ionicons name="sparkles" size={12} color="#FDE68A" />
               <Text style={styles.heroPillText}>Mana Professional Network</Text>
             </View>
-            <Text style={styles.heroSubText}>Verified Talent & Careers</Text>
+            <TouchableOpacity
+              style={styles.myProfileBtn}
+              onPress={() => router.push('/cpn/profile')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="person-circle-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.myProfileBtnText}>My Profile</Text>
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.heroTitle}>Hyperlocal Career Growth & Mentorship</Text>
@@ -146,8 +180,9 @@ export default function CPNScreen() {
         {/* ── Navigation Tab Bar ──────────────────────────────────────── */}
         <View style={styles.tabBar}>
           {[
+            { key: 'FEED', label: 'Feed', icon: 'newspaper-outline' },
             { key: 'DIRECTORY', label: 'Directory', icon: 'people-outline' },
-            { key: 'JOBS', label: 'Jobs & Referrals', icon: 'briefcase-outline' },
+            { key: 'JOBS', label: 'Jobs', icon: 'briefcase-outline' },
             { key: 'MENTORSHIP', label: 'Mentorship', icon: 'school-outline' },
             { key: 'AI_COACH', label: 'AI Coach', icon: 'sparkles-outline' },
           ].map((t) => {
@@ -159,7 +194,7 @@ export default function CPNScreen() {
                 onPress={() => setActiveTab(t.key as TabType)}
                 activeOpacity={0.8}
               >
-                <Ionicons name={t.icon as any} size={15} color={isActive ? COLORS.primary : COLORS.textMuted} />
+                <Ionicons name={t.icon as any} size={14} color={isActive ? COLORS.primary : COLORS.textMuted} />
                 <Text style={[styles.tabBtnText, isActive && styles.tabBtnTextActive]}>{t.label}</Text>
               </TouchableOpacity>
             );
@@ -170,10 +205,126 @@ export default function CPNScreen() {
           <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.primary} size="large" />
         ) : (
           <>
+            {/* ── TAB 0: FEED ─────────────────────────────────────────── */}
+            {activeTab === 'FEED' && (
+              <View style={styles.tabContent}>
+                {filteredFeed.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="newspaper-outline" size={44} color="#94A3B8" />
+                    <Text style={styles.emptyTitle}>No Posts Yet</Text>
+                    <Text style={styles.emptySub}>Be the first to share career updates or project insights with your community.</Text>
+                  </View>
+                ) : (
+                  filteredFeed.map((post) => (
+                  <View key={post.id} style={styles.feedCard}>
+                    <View style={styles.feedHeaderRow}>
+                      <View style={styles.feedAvatar}>
+                        <Text style={styles.feedAvatarText}>
+                          {post.authorName
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.feedAuthorRow}>
+                          <Text style={styles.feedAuthorName}>{post.authorName}</Text>
+                          <View
+                            style={[
+                              styles.postTypeBadge,
+                              post.type === 'ACHIEVEMENT' && styles.achievementBadge,
+                              post.type === 'HIRING' && styles.hiringPostBadge,
+                              post.type === 'ARTICLE' && styles.articleBadge,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.postTypeText,
+                                post.type === 'ACHIEVEMENT' && styles.achievementBadgeText,
+                                post.type === 'HIRING' && styles.hiringBadgePostText,
+                                post.type === 'ARTICLE' && styles.articleBadgeText,
+                              ]}
+                            >
+                              {post.type}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.feedAuthorHeadline}>{post.authorHeadline}</Text>
+                        <Text style={styles.feedMeta}>
+                          📍 {post.authorTower} - {post.authorFlat} · 🕒 {post.timeAgo}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.feedContentText}>{post.content}</Text>
+
+                    {/* Hashtags */}
+                    {post.hashtags && post.hashtags.length > 0 && (
+                      <View style={styles.hashtagsRow}>
+                        {post.hashtags.map((h, idx) => (
+                          <View key={idx} style={styles.hashtagChip}>
+                            <Text style={styles.hashtagText}>#{h}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Feed Action Bar */}
+                    <View style={styles.feedActionBar}>
+                      <TouchableOpacity
+                        style={styles.feedActionBtn}
+                        onPress={() => likeMutation.mutate(post.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={post.hasUserLiked ? 'heart' : 'heart-outline'}
+                          size={18}
+                          color={post.hasUserLiked ? '#EF4444' : COLORS.textMuted}
+                        />
+                        <Text
+                          style={[
+                            styles.feedActionLabel,
+                            post.hasUserLiked && { color: '#EF4444', fontWeight: '800' },
+                          ]}
+                        >
+                          {post.reactionsCount} Likes
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.feedActionBtn}
+                        onPress={() => Alert.alert('Comments', `Community discussion thread for ${post.authorName}'s post.`)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="chatbubble-outline" size={17} color={COLORS.textMuted} />
+                        <Text style={styles.feedActionLabel}>{post.commentsCount} Comments</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.feedActionBtn}
+                        onPress={() => Alert.alert('Share', 'Post link copied to resident clipboard.')}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="share-social-outline" size={17} color={COLORS.textMuted} />
+                        <Text style={styles.feedActionLabel}>Share</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )))}
+              </View>
+            )}
+
             {/* ── TAB 1: DIRECTORY ────────────────────────────────────── */}
             {activeTab === 'DIRECTORY' && (
               <View style={styles.tabContent}>
-                {filteredDirectory.map((p) => (
+                {filteredDirectory.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="people-outline" size={44} color="#94A3B8" />
+                    <Text style={styles.emptyTitle}>No Members Found</Text>
+                    <Text style={styles.emptySub}>No professional profiles matched your search or filters.</Text>
+                  </View>
+                ) : (
+                  filteredDirectory.map((p) => (
                   <View key={p.id} style={styles.profileCard}>
                     <View style={styles.profileTopRow}>
                       <View style={styles.profileAvatar}>
@@ -225,7 +376,7 @@ export default function CPNScreen() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                ))}
+                )))}
               </View>
             )}
 
@@ -237,7 +388,14 @@ export default function CPNScreen() {
                   <Text style={styles.sectionSub}>Get directly referred by flat owners at top tech & finance firms</Text>
                 </View>
 
-                {jobs.map((job) => (
+                {jobs.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="briefcase-outline" size={44} color="#94A3B8" />
+                    <Text style={styles.emptyTitle}>No Job Openings</Text>
+                    <Text style={styles.emptySub}>No active referral postings right now. Check back soon!</Text>
+                  </View>
+                ) : (
+                  jobs.map((job) => (
                   <View key={job.id} style={styles.jobCard}>
                     <View style={styles.jobHeader}>
                       <View style={{ flex: 1 }}>
@@ -280,7 +438,7 @@ export default function CPNScreen() {
                       <Text style={styles.applyReferralBtnText}>Request Neighbor Referral</Text>
                     </TouchableOpacity>
                   </View>
-                ))}
+                )))}
               </View>
             )}
 
@@ -292,7 +450,14 @@ export default function CPNScreen() {
                   <Text style={styles.sectionSub}>Book 30-min coffee chats or mock interviews with neighborhood leaders</Text>
                 </View>
 
-                {mentors.map((m) => (
+                {mentors.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="school-outline" size={44} color="#94A3B8" />
+                    <Text style={styles.emptyTitle}>No Mentors Available</Text>
+                    <Text style={styles.emptySub}>No resident mentors are currently accepting bookings.</Text>
+                  </View>
+                ) : (
+                  mentors.map((m) => (
                   <View key={m.id} style={styles.mentorCard}>
                     <View style={styles.mentorHeader}>
                       <View style={{ flex: 1 }}>
@@ -329,7 +494,7 @@ export default function CPNScreen() {
                       ))}
                     </View>
                   </View>
-                ))}
+                )))}
               </View>
             )}
 
@@ -416,6 +581,21 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
   },
   heroPillText: { fontSize: 10, fontFamily: 'DMSans-Bold', fontWeight: '800', color: '#FDE68A' },
+  myProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  myProfileBtnText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
   heroSubText: { fontSize: 11, color: '#C7D2FE' },
   heroTitle: { fontSize: 17, fontWeight: '900', color: '#fff', marginBottom: 12 },
   heroMetricsGrid: {
@@ -635,4 +815,154 @@ const styles = StyleSheet.create({
   improveText: { fontSize: 12, color: COLORS.textSecondary, flex: 1, lineHeight: 16 },
   suggestedMentorItem: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   suggestedMentorText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+
+  // ── Feed Post Card ─────────────────────────────────────────────────
+  feedCard: {
+    backgroundColor: COLORS.surface,
+    padding: 16,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  feedHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  feedAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.full,
+    backgroundColor: '#EDE9FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedAvatarText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: '800',
+    color: '#6D28D9',
+  },
+  feedAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  feedAuthorName: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  postTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  postTypeText: {
+    fontSize: 9,
+    fontFamily: 'DMSans-Bold',
+    fontWeight: '800',
+    color: COLORS.textSecondary,
+  },
+  achievementBadge: {
+    backgroundColor: '#FEF3C7',
+  },
+  achievementBadgeText: {
+    color: '#B45309',
+  },
+  hiringPostBadge: {
+    backgroundColor: '#ECFDF5',
+  },
+  hiringBadgePostText: {
+    color: '#065F46',
+  },
+  articleBadge: {
+    backgroundColor: '#EEF2FF',
+  },
+  articleBadgeText: {
+    color: '#4338CA',
+  },
+  feedAuthorHeadline: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  feedMeta: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  feedContentText: {
+    fontSize: 13,
+    color: COLORS.text,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  hashtagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  hashtagChip: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+  },
+  hashtagText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  feedActionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: 10,
+  },
+  feedActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  feedActionLabel: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontFamily: 'DMSans-Medium',
+    fontWeight: '700',
+  },
+  emptyCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+    fontFamily: 'Outfit-Bold',
+    marginTop: 4,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    fontFamily: 'DMSans-Regular',
+    lineHeight: 18,
+  },
 });

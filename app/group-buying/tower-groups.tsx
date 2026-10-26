@@ -70,11 +70,11 @@ export default function TowerGroupsScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={s.groupName}>{grp.name}</Text>
-                    <Text style={s.towerText}>{grp.tower} ? {grp.block}</Text>
+                    <Text style={s.towerText}>{grp.tower} · {grp.block}</Text>
                   </View>
                   {grp.isMember && (
                     <View style={s.memberPill}>
-                      <Text style={s.memberText}>Joined ?</Text>
+                      <Text style={s.memberText}>Joined ✓</Text>
                     </View>
                   )}
                 </View>
@@ -89,7 +89,7 @@ export default function TowerGroupsScreen() {
                   </View>
                   <View style={s.statDivider} />
                   <View style={s.statItem}>
-                    <Text style={s.statNum}>?{((grp.totalSaved ?? grp.totalSavings ?? 0) / 1000).toFixed(1)}k</Text>
+                    <Text style={s.statNum}>₹{((grp.totalSaved ?? grp.totalSavings ?? 0) / 1000).toFixed(1)}k</Text>
                     <Text style={s.statLabel}>Total Saved</Text>
                   </View>
                   <View style={s.statDivider} />

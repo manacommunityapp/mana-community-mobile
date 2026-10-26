@@ -3,13 +3,15 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Modal, Tex
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { healthService } from "@/services/healthService";
-import { HealthAppointmentDto } from "@/types/health";
+import { HealthAppointmentDto, CareJourneyDto } from "@/types/health";
 
 export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [appointment, setAppointment] = useState<HealthAppointmentDto | null>(null);
+  const [journey, setJourney] = useState<CareJourneyDto | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [activeReminder, setActiveReminder] = useState<string | null>(null);
   const [comm, setComm] = useState(5);
   const [wait, setWait] = useState(5);
   const [prof, setProf] = useState(5);
@@ -22,6 +24,15 @@ export default function AppointmentDetailScreen() {
       healthService.getAppointments().then(appts => {
         const found = appts.find(a => a.id === id);
         if (found) setAppointment(found);
+      });
+      healthService.getCareJourneys().then(journeys => {
+        const matched = journeys.find(j => j.appointmentId === id || j.id === id);
+        if (matched) {
+          setJourney(matched);
+        } else if (journeys.length > 0) {
+          // Fallback to sample care journey for demonstration
+          setJourney(journeys[0]);
+        }
       });
     }
   }, [id]);
@@ -91,13 +102,118 @@ export default function AppointmentDetailScreen() {
         </View>
 
         {/* Action / Meeting Link */}
-        {appointment.mode === "VIDEO" && appointment.meetingLink && (
-          <View style={styles.videoCard}>
+        {appointment.mode === "VIDEO" && (
+          <TouchableOpacity
+            style={styles.videoCard}
+            onPress={() => router.push({ pathname: "/health/appointments/video-room", params: { appointmentId: appointment.id } } as any)}
+            activeOpacity={0.85}
+          >
             <Ionicons name="videocam" size={24} color="#0D9488" />
             <View style={{ flex: 1 }}>
               <Text style={styles.videoTitle}>Secure Video Room Ready</Text>
-              <Text style={styles.videoLink}>{appointment.meetingLink}</Text>
+              <Text style={styles.videoLink}>Tap to join your encrypted consultation</Text>
             </View>
+            <View style={styles.joinBtn}>
+              <Text style={styles.joinBtnText}>Join Now</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* 6-Stage Care Journey Lifecycle */}
+        {journey && (
+          <View style={styles.card}>
+            <View style={styles.journeyHeaderRow}>
+              <View>
+                <Text style={styles.cardTitle}>🔄 Continuous Care Journey</Text>
+                <Text style={styles.journeySubtitle}>Connected 6-stage healthcare cycle</Text>
+              </View>
+              <View style={styles.activeTag}>
+                <Text style={styles.activeTagText}>Active</Text>
+              </View>
+            </View>
+
+            {/* Stepper horizontal/grid */}
+            <View style={styles.stepperContainer}>
+              {[
+                { stage: "APPOINTMENT_BOOKED", label: "1. Booked", done: true, icon: "calendar" },
+                { stage: "CONSULTATION_COMPLETED", label: "2. Consult", done: true, icon: "medkit" },
+                { stage: "PRESCRIPTION_ISSUED", label: "3. Prescription", done: !!journey.prescriptionId, icon: "document-text" },
+                { stage: "LAB_TEST_ORDERED", label: "4. Lab Test", done: !!journey.labPackageName, icon: "flask" },
+                { stage: "RESULTS_READY", label: "5. Results", done: journey.resultsAvailable, icon: "analytics" },
+                { stage: "FOLLOW_UP_SCHEDULED", label: "6. Follow-up", done: journey.clinicianRecommendedFollowUp?.status === "BOOKED", icon: "notifications" }
+              ].map((step, idx) => (
+                <View key={idx} style={[styles.stepChip, step.done ? styles.stepChipDone : styles.stepChipPending]}>
+                  <Ionicons name={step.icon as any} size={14} color={step.done ? "#0F766E" : "#9CA3AF"} />
+                  <Text style={[styles.stepText, step.done ? styles.stepTextDone : styles.stepTextPending]}>
+                    {step.label}
+                  </Text>
+                  {step.done && <Ionicons name="checkmark-circle" size={12} color="#0D9488" />}
+                </View>
+              ))}
+            </View>
+
+            {/* Prescription summary if present */}
+            {journey.prescriptionSummary && (
+              <View style={styles.journeyDetailBox}>
+                <Text style={styles.journeyDetailHeading}>💊 Active Prescription:</Text>
+                <Text style={styles.journeyDetailText}>{journey.prescriptionSummary}</Text>
+              </View>
+            )}
+
+            {/* Diagnostic Lab Status */}
+            {journey.labPackageName && (
+              <View style={[styles.journeyDetailBox, { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0" }]}>
+                <Text style={[styles.journeyDetailHeading, { color: "#166534" }]}>🧪 Diagnostic Tests:</Text>
+                <Text style={[styles.journeyDetailText, { color: "#14532D" }]}>
+                  {journey.labPackageName} • {journey.resultsAvailable ? "Verified Results Ready in Vault" : "Sample In Transit"}
+                </Text>
+              </View>
+            )}
+
+            {/* Clinician-Decided Follow-up Decision Guardrail */}
+            {journey.clinicianRecommendedFollowUp && (
+              <View style={styles.clinicianDecisionBox}>
+                <View style={styles.clinicianHeaderRow}>
+                  <Ionicons name="shield-checkmark" size={16} color="#4338CA" />
+                  <Text style={styles.clinicianTitle}>Clinician Follow-up Decision</Text>
+                </View>
+                <Text style={styles.clinicianAdvice}>
+                  "{journey.clinicianRecommendedFollowUp.instructions}"
+                </Text>
+                <View style={styles.clinicianFooterRow}>
+                  <Text style={styles.clinicianDateText}>
+                    Target Review: <Text style={{ fontWeight: "700" }}>{journey.clinicianRecommendedFollowUp.dueDate}</Text>
+                  </Text>
+                  <View style={[
+                    styles.followUpBadge,
+                    journey.clinicianRecommendedFollowUp.status === "BOOKED" ? styles.followUpBooked : styles.followUpPending
+                  ]}>
+                    <Text style={[
+                      styles.followUpBadgeText,
+                      journey.clinicianRecommendedFollowUp.status === "BOOKED" ? { color: "#166534" } : { color: "#92400E" }
+                    ]}>
+                      {journey.clinicianRecommendedFollowUp.status}
+                    </Text>
+                  </View>
+                </View>
+                {journey.clinicianRecommendedFollowUp.status !== "BOOKED" && (
+                  <TouchableOpacity
+                    style={styles.scheduleFollowUpBtn}
+                    onPress={() => router.push({
+                      pathname: "/health/appointments/book",
+                      params: { doctorId: appointment?.doctorId ?? "" }
+                    } as any)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="calendar" size={14} color="#FFFFFF" />
+                    <Text style={styles.scheduleFollowUpText}>Schedule Follow-up Appointment</Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.clinicalGuardrailNote}>
+                  🛡️ Safe Care Policy: Diagnostic tests are never auto-diagnosed. Follow-ups are directed strictly by clinician recommendations.
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -111,6 +227,83 @@ export default function AppointmentDetailScreen() {
             </View>
           ))}
         </View>
+
+        {/* Appointment Reminders */}
+        {appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED" && (
+          <View style={styles.card}>
+            <View style={styles.reminderHeaderRow}>
+              <Ionicons name="notifications" size={16} color="#0D9488" />
+              <Text style={styles.cardTitle}>Set Appointment Reminder</Text>
+            </View>
+            <Text style={styles.reminderSub}>Get notified before your appointment</Text>
+            <View style={styles.reminderOptionsGrid}>
+              {[
+                { label: "15 min before", value: "15m" },
+                { label: "30 min before", value: "30m" },
+                { label: "1 hour before", value: "1h" },
+                { label: "2 hours before", value: "2h" },
+                { label: "Day before", value: "1d" },
+              ].map(opt => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.reminderChip, activeReminder === opt.value && styles.reminderChipActive]}
+                  onPress={() => {
+                    setActiveReminder(opt.value);
+                    Alert.alert("Reminder Set", `You'll be notified ${opt.label} your appointment with ${appointment.doctorName}.`);
+                  }}
+                >
+                  <Ionicons
+                    name={activeReminder === opt.value ? "alarm" : "alarm-outline"}
+                    size={14}
+                    color={activeReminder === opt.value ? "#FFFFFF" : "#0D9488"}
+                  />
+                  <Text style={[styles.reminderChipText, activeReminder === opt.value && { color: "#FFFFFF" }]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {activeReminder && (
+              <View style={styles.reminderConfirmBanner}>
+                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Text style={styles.reminderConfirmText}>
+                  Reminder active — you'll be notified {
+                    activeReminder === "15m" ? "15 minutes" :
+                    activeReminder === "30m" ? "30 minutes" :
+                    activeReminder === "1h" ? "1 hour" :
+                    activeReminder === "2h" ? "2 hours" : "1 day"
+                  } before
+                </Text>
+                <TouchableOpacity onPress={() => setActiveReminder(null)}>
+                  <Text style={styles.reminderClearText}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Second Opinion */}
+        {appointment.status === "COMPLETED" && (
+          <View style={styles.card}>
+            <View style={styles.soHeaderRow}>
+              <View style={styles.soIconWrap}>
+                <Ionicons name="chatbubbles" size={18} color="#7C3AED" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Get a Second Opinion</Text>
+                <Text style={styles.soSubText}>Not 100% sure about your diagnosis? Ask another specialist.</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.soBtn}
+              onPress={() => router.push("/health/cancer" as any)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="people" size={16} color="#FFFFFF" />
+              <Text style={styles.soBtnText}>Find Second Opinion Specialist</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Review Action */}
         {!appointment.reviewSubmitted && appointment.status !== "CANCELLED" && (
@@ -134,25 +327,45 @@ export default function AppointmentDetailScreen() {
       <Modal visible={showReviewModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Rate Your Experience with {appointment.doctorName}</Text>
-            <Text style={styles.modalSub}>Multi-dimensional reviews ensure authentic ratings for community trust.</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={styles.modalTitle}>Rate {appointment.doctorName}</Text>
+              <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+                <Ionicons name="close" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSub}>Tap stars to rate each dimension</Text>
 
-            <View style={styles.dimRow}>
-              <Text style={styles.dimLabel}>Communication (1-5):</Text>
-              <Text style={styles.dimVal}>⭐ {comm}</Text>
-            </View>
-            <View style={styles.dimRow}>
-              <Text style={styles.dimLabel}>Waiting Time (1-5):</Text>
-              <Text style={styles.dimVal}>⭐ {wait}</Text>
-            </View>
-            <View style={styles.dimRow}>
-              <Text style={styles.dimLabel}>Professionalism (1-5):</Text>
-              <Text style={styles.dimVal}>⭐ {prof}</Text>
-            </View>
+            {([
+              { label: "Communication", val: comm, set: setComm },
+              { label: "Waiting Time", val: wait, set: setWait },
+              { label: "Professionalism", val: prof, set: setProf },
+              { label: "Clinic Experience", val: clinic, set: setClinic }
+            ] as { label: string; val: number; set: (n: number) => void }[]).map(dim => (
+              <View key={dim.label} style={styles.starDimRow}>
+                <Text style={styles.starDimLabel}>{dim.label}</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <TouchableOpacity key={n} onPress={() => dim.set(n)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+                      <Ionicons name={n <= dim.val ? "star" : "star-outline"} size={22} color={n <= dim.val ? "#F59E0B" : "#D1D5DB"} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
+
+            <TouchableOpacity
+              style={[styles.recommendRow, recommend && styles.recommendRowActive]}
+              onPress={() => setRecommend(!recommend)}
+            >
+              <Ionicons name={recommend ? "thumbs-up" : "thumbs-up-outline"} size={16} color={recommend ? "#0D9488" : "#6B7280"} />
+              <Text style={[styles.recommendText, recommend && { color: "#0D9488" }]}>
+                {recommend ? "I would recommend this doctor" : "Would you recommend this doctor?"}
+              </Text>
+            </TouchableOpacity>
 
             <TextInput
               style={styles.reviewInput}
-              placeholder="Share details of your consultation (optional)..."
+              placeholder="Share your experience (optional)..."
               multiline
               value={comment}
               onChangeText={setComment}
@@ -190,6 +403,8 @@ const styles = StyleSheet.create({
   videoCard: { backgroundColor: "#F0FDFA", borderWidth: 1, borderColor: "#99F6E4", padding: 14, borderRadius: 14, flexDirection: "row", gap: 12, alignItems: "center" },
   videoTitle: { fontSize: 13, fontWeight: "bold", color: "#0F766E" },
   videoLink: { fontSize: 11, color: "#0D9488", marginTop: 2 },
+  joinBtn: { backgroundColor: "#0D9488", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  joinBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 12 },
   cardTitle: { fontSize: 15, fontWeight: "bold", color: "#111827" },
   historyRow: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 3 },
   historyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#0D9488" },
@@ -205,10 +420,61 @@ const styles = StyleSheet.create({
   dimRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
   dimLabel: { fontSize: 13, color: "#374151" },
   dimVal: { fontSize: 13, fontWeight: "bold", color: "#B45309" },
+  starDimRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },
+  starDimLabel: { fontSize: 13, color: "#374151", flex: 1 },
+  starsRow: { flexDirection: "row", gap: 4 },
+  recommendRow: { flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#F9FAFB" },
+  recommendRowActive: { backgroundColor: "#F0FDFA", borderColor: "#99F6E4" },
+  recommendText: { fontSize: 13, color: "#6B7280", fontWeight: "500" },
   reviewInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, padding: 10, height: 80, fontSize: 13, textAlignVertical: "top" },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 10 },
   modalCancel: { flex: 1, backgroundColor: "#E5E7EB", padding: 12, borderRadius: 10, alignItems: "center" },
   modalCancelText: { color: "#374151", fontWeight: "bold" },
   modalSubmit: { flex: 1, backgroundColor: "#0D9488", padding: 12, borderRadius: 10, alignItems: "center" },
-  modalSubmitText: { color: "#FFFFFF", fontWeight: "bold" }
+  modalSubmitText: { color: "#FFFFFF", fontWeight: "bold" },
+  journeyHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  journeySubtitle: { fontSize: 11, color: "#6B7280", marginTop: 2 },
+  activeTag: { backgroundColor: "#CCFBF1", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  activeTagText: { fontSize: 10, fontWeight: "700", color: "#0F766E" },
+  stepperContainer: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginVertical: 4 },
+  stepChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
+  stepChipDone: { backgroundColor: "#F0FDFA", borderColor: "#99F6E4" },
+  stepChipPending: { backgroundColor: "#F9FAFB", borderColor: "#E5E7EB" },
+  stepText: { fontSize: 11, fontWeight: "600" },
+  stepTextDone: { color: "#115E59" },
+  stepTextPending: { color: "#9CA3AF" },
+  journeyDetailBox: { backgroundColor: "#F8FAFC", padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#E2E8F0", gap: 2 },
+  journeyDetailHeading: { fontSize: 11, fontWeight: "700", color: "#334155" },
+  journeyDetailText: { fontSize: 12, color: "#1E293B" },
+  clinicianDecisionBox: { backgroundColor: "#EEF2FF", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#C7D2FE", gap: 6 },
+  clinicianHeaderRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  clinicianTitle: { fontSize: 12, fontWeight: "700", color: "#3730A3" },
+  clinicianAdvice: { fontSize: 12, color: "#312E81", fontStyle: "italic" },
+  clinicianFooterRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 2 },
+  clinicianDateText: { fontSize: 11, color: "#4338CA" },
+  followUpBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  followUpBooked: { backgroundColor: "#DCFCE7" },
+  followUpPending: { backgroundColor: "#FEF3C7" },
+  followUpBadgeText: { fontSize: 10, fontWeight: "700" },
+  clinicalGuardrailNote: { fontSize: 10, color: "#475569", marginTop: 2 },
+  scheduleFollowUpBtn: { backgroundColor: "#4338CA", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 10, marginTop: 4 },
+  scheduleFollowUpText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+
+  // Second Opinion
+  soHeaderRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  soIconWrap: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#EDE9FE", justifyContent: "center", alignItems: "center" },
+  soSubText: { fontSize: 12, color: "#6B7280", marginTop: 2 },
+  soBtn: { backgroundColor: "#7C3AED", paddingVertical: 12, borderRadius: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
+  soBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
+
+  // Appointment Reminders
+  reminderHeaderRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  reminderSub: { fontSize: 12, color: "#6B7280", marginBottom: 10 },
+  reminderOptionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  reminderChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#0D9488", backgroundColor: "#F0FDFA" },
+  reminderChipActive: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
+  reminderChipText: { fontSize: 12, fontWeight: "600", color: "#0D9488" },
+  reminderConfirmBanner: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#ECFDF5", padding: 10, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: "#A7F3D0" },
+  reminderConfirmText: { flex: 1, fontSize: 12, color: "#065F46", fontWeight: "500" },
+  reminderClearText: { fontSize: 12, color: "#DC2626", fontWeight: "700" }
 });

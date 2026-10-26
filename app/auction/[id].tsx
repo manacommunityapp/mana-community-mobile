@@ -13,7 +13,7 @@ import { CountdownTimer } from '@/components/auction/CountdownTimer';
 import { BidFeed } from '@/components/auction/BidFeed';
 import { BidButton } from '@/components/auction/BidButton';
 import { COLORS } from '@/constants/config';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/dateUtils';
 
 const { width: W } = Dimensions.get('window');
 
@@ -299,11 +299,11 @@ export default function AuctionRoomScreen() {
             </View>
             <View style={scr.detailRow}>
               <Text style={scr.detailLabel}>Start Time</Text>
-              <Text style={scr.detailValue}>{format(new Date(auction.startTime), 'dd MMM, h:mm a')}</Text>
+              <Text style={scr.detailValue}>{safeFormat(auction.startTime, 'dd MMM, h:mm a')}</Text>
             </View>
             <View style={scr.detailRow}>
               <Text style={scr.detailLabel}>End Time</Text>
-              <Text style={scr.detailValue}>{format(new Date(auction.endTime), 'dd MMM, h:mm a')}</Text>
+              <Text style={scr.detailValue}>{safeFormat(auction.endTime, 'dd MMM, h:mm a')}</Text>
             </View>
             <View style={scr.detailRow}>
               <Text style={scr.detailLabel}>Min. Next Bid</Text>

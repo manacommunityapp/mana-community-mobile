@@ -74,16 +74,48 @@ export default function HealthHubScreen() {
           <Ionicons name="chevron-forward" size={18} color="#0D9488" />
         </TouchableOpacity>
 
+        {/* Health Buddy Banner */}
+        <TouchableOpacity
+          style={styles.aiBanner}
+          onPress={() => router.push("/wellness")}
+          activeOpacity={0.85}
+        >
+          <View style={[styles.aiIconWrap, { backgroundColor: "#D1FAE5" }]}>
+            <Ionicons name="nutrition" size={24} color="#10B981" />
+          </View>
+          <View style={styles.aiTextWrap}>
+            <Text style={[styles.aiTitle, { color: "#059669" }]}>Health Buddy</Text>
+            <Text style={[styles.aiDesc, { color: "#065F46" }]}>AI meal tracking, nutrition goals & community wellness challenges.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#10B981" />
+        </TouchableOpacity>
+
         {/* Quick Hub Grid */}
         <Text style={styles.sectionTitle}>Healthcare Services</Text>
         <View style={styles.grid}>
           {[
+            { title: "Care Journey", desc: "Track Full Journey", icon: "git-merge", route: "/health/care-journey", color: "#4F46E5", bg: "#EEF2FF" },
             { title: "Find Doctors", desc: "Specialists & Clinic", icon: "medkit", route: "/health/doctors", color: "#0D9488", bg: "#CCFBF1" },
+            { title: "Clubhouse Camps", desc: "Screening Drives", icon: "fitness", route: "/health/camps", color: "#059669", bg: "#D1FAE5" },
             { title: "Family Health", desc: "Manage Dependents", icon: "people", route: "/health/family", color: "#6366F1", bg: "#EEF2FF" },
-            { title: "Health Vault", desc: "Prescriptions & Reports", icon: "shield-checkmark", route: "/health/records", color: "#059669", bg: "#DCFCE7" },
+            { title: "Health Wallet", desc: "Allowance & Claims", icon: "card", route: "/health/benefits", color: "#2563EB", bg: "#DBEAFE" },
+            { title: "Provider Ops", desc: "Doctor / Clinic Desk", icon: "business", route: "/health/provider", color: "#4F46E5", bg: "#EEF2FF" },
+            { title: "Health Vault", desc: "Prescriptions & Reports", icon: "shield-checkmark", route: "/health/records", color: "#0D9488", bg: "#DCFCE7" },
             { title: "Lab Packages", desc: "Home Collection", icon: "flask", route: "/health/labs", color: "#D97706", bg: "#FEF3C7" },
             { title: "Home Care", desc: "Nurses & Physio", icon: "home", route: "/health/homecare", color: "#DB2777", bg: "#FCE7F3" },
-            { title: "Emergency", desc: "Ambulance & 24x7", icon: "warning", route: "/health/emergency", color: "#DC2626", bg: "#FEE2E2" },
+            { title: "Pharmacy", desc: "Medicine Delivery", icon: "medkit", route: "/health/pharmacy", color: "#7C3AED", bg: "#EDE9FE" },
+            { title: "Emergency SOS", desc: "Ambulance & 24x7", icon: "warning", route: "/health/emergency", color: "#DC2626", bg: "#FEE2E2" },
+          { title: "Ambulance", desc: "Basic / ALS / ICU", icon: "car", route: "/health/ambulance", color: "#DC2626", bg: "#FEE2E2" },
+          { title: "IPD Admission", desc: "Hospital Stay Booking", icon: "bed", route: "/health/ipd", color: "#7C3AED", bg: "#EDE9FE" },
+          { title: "Surgery Care", desc: "Cost Est · Care Buddy", icon: "cut", route: "/health/surgery", color: "#DC2626", bg: "#FEE2E2" },
+          { title: "Dental Care", desc: "Dentist · Packages", icon: "sad", route: "/health/dental", color: "#2563EB", bg: "#DBEAFE" },
+          { title: "Physiotherapy", desc: "Rehab · Sports · Home", icon: "fitness", route: "/health/doctors?category=PHYSIOTHERAPIST", color: "#0D9488", bg: "#CCFBF1" },
+          { title: "Gym Trainers", desc: "Clubhouse Gym · PT", icon: "barbell", route: "/health/doctors?category=FITNESS_TRAINER", color: "#D97706", bg: "#FEF3C7" },
+          { title: "ABHA Health ID", desc: "National Digital ID", icon: "card", route: "/health/abha", color: "#059669", bg: "#D1FAE5" },
+          { title: "Cancer Care", desc: "Oncology · 2nd Opinion", icon: "ribbon", route: "/health/cancer", color: "#7C3AED", bg: "#EDE9FE" },
+          { title: "Mental Health", desc: "Therapy · Psychiatry", icon: "heart", route: "/health/mental-health", color: "#7C3AED", bg: "#EDE9FE" },
+          { title: "Hospitals", desc: "Cashless · Network Finder", icon: "business", route: "/health/hospitals", color: "#0D9488", bg: "#CCFBF1" },
+          { title: "Mana Gold", desc: "Premium Membership", icon: "star", route: "/health/gold", color: "#B45309", bg: "#FEF3C7" },
           ].map((item, idx) => (
             <TouchableOpacity
               key={idx}

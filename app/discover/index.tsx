@@ -10,6 +10,8 @@ import { COLORS, SPACING, RADIUS, SHADOWS, GRADIENTS, getAvatarColor, getInitial
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
 import { communityGraphService, GraphNodeDto } from '@/services/communityGraphService';
+import { manaIntelligenceService } from '@/services/manaIntelligenceService';
+import { CommunityProfile, ProfileVisibility } from '@/types/manaIntelligence';
 
 interface Recommendation {
   id: string;
@@ -118,41 +120,78 @@ export default function DiscoverScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
+  // Active Main Tab: matches Web parity (for-you, directory, privacy)
+  const [activeTab, setActiveTab] = useState<'FOR_YOU' | 'DIRECTORY' | 'PRIVACY'>('FOR_YOU');
+
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('ALL');
+  const [selectedTower, setSelectedTower] = useState('ALL');
+  const [selectedSkill, setSelectedSkill] = useState('');
   const [connectedIds, setConnectedIds] = useState<string[]>([]);
-  const [chatModalTarget, setChatModalTarget] = useState<Recommendation | null>(null);
+  const [chatModalTarget, setChatModalTarget] = useState<any | null>(null);
   const [introMessage, setIntroMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  // Privacy Matrix state
+  const [privacySettings, setPrivacySettings] = useState({
+    skills: 'PUBLIC',
+    profession: 'PUBLIC',
+    sports: 'PUBLIC',
+    interests: 'NEIGHBORS',
+    flatNumber: 'NEIGHBORS',
+  });
+  const [privacySaved, setPrivacySaved] = useState(false);
 
   // ── 1. Fetch Live Discover Graph Recommendations ───────────────────────────
   const {
     data: graphFeed,
-    isLoading,
-    refetch,
+    isLoading: isFeedLoading,
+    refetch: refetchFeed,
   } = useQuery({
     queryKey: ['community-graph', 'discover'],
     queryFn: () => communityGraphService.getDiscoverFeed(),
     staleTime: 30_000,
   });
 
+  // ── 2. Fetch Directory Profiles (Zero-leakage API) ──────────────────────────
+  const {
+    data: directoryProfiles = [],
+    isLoading: isProfilesLoading,
+    refetch: refetchProfiles,
+  } = useQuery({
+    queryKey: ['discover-profiles', search, selectedTower, selectedSkill],
+    queryFn: () => manaIntelligenceService.searchDiscoverProfiles(
+      search || undefined,
+      selectedTower === 'ALL' ? undefined : selectedTower,
+      selectedSkill || undefined
+    ),
+    staleTime: 30_000,
+  });
+
+  // ── 3. Fetch Top Skills Cloud ──────────────────────────────────────────────
+  const { data: topSkills = [] } = useQuery({
+    queryKey: ['discover-top-skills'],
+    queryFn: () => communityGraphService.getTopSkills(),
+    staleTime: 60_000,
+  });
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetchFeed(), refetchProfiles()]);
     } finally {
       setRefreshing(false);
     }
-  }, [refetch]);
+  }, [refetchFeed, refetchProfiles]);
 
-  // ── 2. Connect Mutation ───────────────────────────────────────────────────
+  // ── 4. Connect Mutation ───────────────────────────────────────────────────
   const connectMutation = useMutation({
     mutationFn: ({ targetUserId, message }: { targetUserId: string; message?: string }) =>
       communityGraphService.connectWithNeighbor(targetUserId, message),
     onSuccess: (_, { targetUserId }) => {
       queryClient.invalidateQueries({ queryKey: ['community-graph'] });
       setConnectedIds((prev) => [...prev, targetUserId]);
-      const targetName = chatModalTarget?.name || 'Neighbor';
+      const targetName = chatModalTarget?.name || chatModalTarget?.fullName || 'Neighbor';
       setChatModalTarget(null);
       Alert.alert(
         '🤝 Connection Request Sent',
@@ -161,6 +200,22 @@ export default function DiscoverScreen() {
     },
     onError: (err: any) => {
       Alert.alert('Connection Failed', err?.message || 'Unable to send connection request. Please try again.');
+    },
+  });
+
+  // ── 5. Privacy Visibility Mutation ────────────────────────────────────────
+  const updateVisMutation = useMutation({
+    mutationFn: (vis: ProfileVisibility) =>
+      manaIntelligenceService.updateVisibility({
+        visibility: vis,
+        shareProfession: true,
+        shareSkills: true,
+        shareInterests: true,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['discover-profiles'] });
+      setPrivacySaved(true);
+      setTimeout(() => setPrivacySaved(false), 2500);
     },
   });
 
@@ -211,14 +266,18 @@ export default function DiscoverScreen() {
     return matchesFilter && matchesSearch;
   });
 
-  const handleOpenConnect = (item: Recommendation) => {
-    setChatModalTarget(item);
-    setIntroMessage(`Hi ${item.name.split(' ')[0]}, I saw your profile on Mana Discover and would love to connect!`);
+  const towers = ['ALL', 'Tower A', 'Tower B', 'Tower C', 'Tower D'];
+
+  const handleOpenConnect = (target: any) => {
+    setChatModalTarget(target);
+    const targetName = target.name || target.fullName || 'Neighbor';
+    setIntroMessage(`Hi ${targetName.split(' ')[0]}, I saw your profile on Mana Discover and would love to connect!`);
   };
 
   const handleSendIntro = () => {
     if (!chatModalTarget) return;
-    connectMutation.mutate({ targetUserId: chatModalTarget.id, message: introMessage.trim() });
+    const targetId = chatModalTarget.id || chatModalTarget.userId;
+    connectMutation.mutate({ targetUserId: String(targetId), message: introMessage.trim() });
   };
 
   return (
@@ -242,6 +301,51 @@ export default function DiscoverScreen() {
         </View>
       </View>
 
+      {/* ── 3-Tab Segment Selector (Matches Web Parity) ── */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'FOR_YOU' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('FOR_YOU')}
+        >
+          <Ionicons
+            name="sparkles"
+            size={14}
+            color={activeTab === 'FOR_YOU' ? '#7C3AED' : COLORS.textMuted}
+          />
+          <Text style={[styles.tabBtnText, activeTab === 'FOR_YOU' && styles.tabBtnTextActive]}>
+            For You ({filteredItems.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'DIRECTORY' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('DIRECTORY')}
+        >
+          <Ionicons
+            name="people"
+            size={14}
+            color={activeTab === 'DIRECTORY' ? '#2563EB' : COLORS.textMuted}
+          />
+          <Text style={[styles.tabBtnText, activeTab === 'DIRECTORY' && styles.tabBtnTextActive]}>
+            Directory
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'PRIVACY' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('PRIVACY')}
+        >
+          <Ionicons
+            name="shield-checkmark"
+            size={14}
+            color={activeTab === 'PRIVACY' ? '#059669' : COLORS.textMuted}
+          />
+          <Text style={[styles.tabBtnText, activeTab === 'PRIVACY' && styles.tabBtnTextActive]}>
+            Privacy
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -254,123 +358,351 @@ export default function DiscoverScreen() {
           />
         }
       >
-        {/* ── Hero Banner ── */}
-        <LinearGradient colors={GRADIENTS.hero} style={styles.heroBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <View style={styles.heroBadge}>
-            <Ionicons name="sparkles" size={14} color="#FFFFFF" />
-            <Text style={styles.heroBadgeText}>Neighbourhood Graph AI</Text>
-          </View>
-          <Text style={styles.heroTitle}>Discover Your Community Talent</Text>
-          <Text style={styles.heroSub}>
-            Connect with verified doctors, badminton partners, home chefs, and career mentors living right next door.
-          </Text>
-        </LinearGradient>
+        {/* ── TAB 1: FOR YOU (Affinity Feed) ── */}
+        {activeTab === 'FOR_YOU' && (
+          <>
+            {/* Hero Banner */}
+            <LinearGradient colors={GRADIENTS.hero} style={styles.heroBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <View style={styles.heroBadge}>
+                <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+                <Text style={styles.heroBadgeText}>Neighbourhood Graph AI</Text>
+              </View>
+              <Text style={styles.heroTitle}>Discover Your Community Talent</Text>
+              <Text style={styles.heroSub}>
+                Connect with verified doctors, badminton partners, home chefs, and career mentors living right next door.
+              </Text>
+            </LinearGradient>
 
-        {/* ── Filter Chips ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipScrollContent}>
-          {filters.map((f) => {
-            const isActive = selectedFilter === f.key;
-            return (
-              <TouchableOpacity
-                key={f.key}
-                style={[styles.chip, isActive && styles.chipActive]}
-                onPress={() => setSelectedFilter(f.key)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+            {/* Filter Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipScrollContent}>
+              {filters.map((f) => {
+                const isActive = selectedFilter === f.key;
+                return (
+                  <TouchableOpacity
+                    key={f.key}
+                    style={[styles.chip, isActive && styles.chipActive]}
+                    onPress={() => setSelectedFilter(f.key)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
-        {/* ── Section Title ── */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>High Affinity Community Matches</Text>
-          <Text style={styles.sectionSub}>
-            {isLoading ? 'Finding matches...' : `${filteredItems.length} recommendations`}
-          </Text>
-        </View>
+            {/* Section Title */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>High Affinity Community Matches</Text>
+              <Text style={styles.sectionSub}>
+                {isFeedLoading ? 'Finding matches...' : `${filteredItems.length} recommendations`}
+              </Text>
+            </View>
 
-        {/* Loading Spinner */}
-        {isLoading && (
-          <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            {/* Loading Spinner */}
+            {isFeedLoading && (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              </View>
+            )}
+
+            {/* Discover Cards */}
+            <View style={{ gap: SPACING.md }}>
+              {filteredItems.map((item) => {
+                const isConnected = connectedIds.includes(item.id);
+                const initials = getInitials(item.name);
+
+                return (
+                  <View key={item.id} style={styles.card}>
+                    <View style={styles.cardTop}>
+                      <View style={[styles.avatar, { backgroundColor: item.avatarColor }]}>
+                        <Text style={styles.avatarText}>{initials}</Text>
+                      </View>
+
+                      <View style={styles.cardInfo}>
+                        <View style={styles.nameRow}>
+                          <Text style={styles.nameText}>{item.name}</Text>
+                          {item.isVerified && (
+                            <View style={styles.verifiedTag}>
+                              <Ionicons name="shield-checkmark" size={12} color="#059669" />
+                              <Text style={styles.verifiedText}>Resident</Text>
+                            </View>
+                          )}
+                        </View>
+
+                        <Text style={styles.professionText}>{item.profession}</Text>
+                        <Text style={styles.unitText}>🏠 {item.tower}, Flat {item.flat}</Text>
+                      </View>
+
+                      <View style={styles.matchBadge}>
+                        <Text style={styles.matchScore}>{item.matchScore}%</Text>
+                        <Text style={styles.matchLabel}>AFFINITY</Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.descriptionText}>{item.description}</Text>
+
+                    <View style={styles.tagRow}>
+                      {item.tags.map((tag, idx) => (
+                        <View key={idx} style={styles.tag}>
+                          <Text style={styles.tagText}>#{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={styles.availRow}>
+                      <Ionicons name="time-outline" size={13} color={COLORS.textMuted} />
+                      <Text style={styles.availText}>Active: {item.availability}</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.connectBtn, isConnected && styles.connectedBtn]}
+                      onPress={() => handleOpenConnect(item)}
+                      disabled={isConnected}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons
+                        name={isConnected ? 'checkmark-circle' : 'chatbubbles-outline'}
+                        size={16}
+                        color={isConnected ? '#059669' : '#FFFFFF'}
+                      />
+                      <Text style={[styles.connectBtnText, isConnected && styles.connectedBtnText]}>
+                        {isConnected ? 'Connection Requested' : 'Connect & Say Hello'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {/* ── TAB 2: DIRECTORY (Resident Search with Tower & Skills Cloud) ── */}
+        {activeTab === 'DIRECTORY' && (
+          <View style={{ gap: SPACING.md }}>
+            {/* Tower Filter Strip */}
+            <View>
+              <Text style={styles.filterTitle}>Filter by Tower:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScrollContent}>
+                {towers.map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.chip, selectedTower === t && styles.chipActive]}
+                    onPress={() => setSelectedTower(t)}
+                  >
+                    <Text style={[styles.chipText, selectedTower === t && styles.chipTextActive]}>
+                      {t === 'ALL' ? '🏢 All Towers' : t}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Popular Skills Cloud */}
+            {topSkills.length > 0 && (
+              <View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={styles.filterTitle}>Top Resident Skills:</Text>
+                  {selectedSkill ? (
+                    <TouchableOpacity onPress={() => setSelectedSkill('')}>
+                      <Text style={{ fontSize: 11, color: COLORS.error, fontWeight: '700' }}>Clear Filter ✕</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScrollContent}>
+                  {topSkills.map((s: any) => {
+                    const skillName = typeof s === 'string' ? s : (s.skill || s.name);
+                    const count = s.count || s.userCount || 0;
+                    const isActive = selectedSkill.toLowerCase() === skillName.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={skillName}
+                        style={[styles.skillChip, isActive && styles.skillChipActive]}
+                        onPress={() => setSelectedSkill(isActive ? '' : skillName)}
+                      >
+                        <Text style={[styles.skillChipText, isActive && styles.skillChipTextActive]}>
+                          #{skillName} {count > 0 ? `(${count})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Directory Profiles List */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Verified Resident Profiles</Text>
+              <Text style={styles.sectionSub}>
+                {isProfilesLoading ? 'Searching...' : `${directoryProfiles.length} found`}
+              </Text>
+            </View>
+
+            {isProfilesLoading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 20 }} />
+            ) : directoryProfiles.length === 0 ? (
+              <View style={styles.emptyStateBox}>
+                <Ionicons name="shield-checkmark-outline" size={42} color={COLORS.textMuted} />
+                <Text style={styles.emptyStateTitle}>No Discoverable Profiles Found</Text>
+                <Text style={styles.emptyStateSub}>
+                  Zero-leakage privacy strictly enforces visibility rules. Private profiles are excluded.
+                </Text>
+              </View>
+            ) : (
+              directoryProfiles.map((p: any) => {
+                const pId = String(p.userId || p.id);
+                const isConnected = connectedIds.includes(pId);
+                const pName = p.fullName || p.name || 'Resident';
+
+                return (
+                  <View key={pId} style={styles.card}>
+                    <View style={styles.cardTop}>
+                      <View style={[styles.avatar, { backgroundColor: getAvatarColor(pName).bg }]}>
+                        <Text style={styles.avatarText}>{getInitials(pName)}</Text>
+                      </View>
+
+                      <View style={styles.cardInfo}>
+                        <View style={styles.nameRow}>
+                          <Text style={styles.nameText}>{pName}</Text>
+                          <View style={[styles.visBadge, p.visibility === 'PUBLIC' ? styles.visPublic : styles.visNeigh]}>
+                            <Text style={styles.visText}>{p.visibility || 'PUBLIC'}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.professionText}>{p.profession || 'Community Member'}</Text>
+                        <Text style={styles.unitText}>🏢 {p.tower || 'Society'} {p.flatNumber ? `• Flat ${p.flatNumber}` : ''}</Text>
+                      </View>
+                    </View>
+
+                    {p.bio ? <Text style={styles.descriptionText}>{p.bio}</Text> : null}
+
+                    {p.skills && p.skills.length > 0 && (
+                      <View style={styles.tagRow}>
+                        {p.skills.map((sk: string, i: number) => (
+                          <View key={i} style={styles.tag}>
+                            <Text style={styles.tagText}>#{sk}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    <View style={styles.directoryFooter}>
+                      <Text style={styles.contactMask}>
+                        📞 {p.phone || 'Masked'} • ✉️ {p.email || 'Masked'}
+                      </Text>
+
+                      <TouchableOpacity
+                        style={[styles.connectMiniBtn, isConnected && styles.connectedBtn]}
+                        onPress={() => handleOpenConnect(p)}
+                        disabled={isConnected}
+                      >
+                        <Ionicons
+                          name={isConnected ? 'checkmark-circle' : 'chatbubble-ellipses-outline'}
+                          size={14}
+                          color={isConnected ? '#059669' : '#FFFFFF'}
+                        />
+                        <Text style={[styles.connectMiniBtnText, isConnected && styles.connectedBtnText]}>
+                          {isConnected ? 'Sent' : 'Connect'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            )}
           </View>
         )}
 
-        {/* ── Discover Cards ── */}
-        <View style={{ gap: SPACING.md }}>
-          {filteredItems.map((item) => {
-            const isConnected = connectedIds.includes(item.id);
-            const initials = getInitials(item.name);
-
-            return (
-              <View key={item.id} style={styles.card}>
-                {/* Card Top */}
-                <View style={styles.cardTop}>
-                  <View style={[styles.avatar, { backgroundColor: item.avatarColor }]}>
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  </View>
-
-                  <View style={styles.cardInfo}>
-                    <View style={styles.nameRow}>
-                      <Text style={styles.nameText}>{item.name}</Text>
-                      {item.isVerified && (
-                        <View style={styles.verifiedTag}>
-                          <Ionicons name="shield-checkmark" size={12} color="#059669" />
-                          <Text style={styles.verifiedText}>Resident</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <Text style={styles.professionText}>{item.profession}</Text>
-                    <Text style={styles.unitText}>🏠 {item.tower}, Flat {item.flat}</Text>
-                  </View>
-
-                  <View style={styles.matchBadge}>
-                    <Text style={styles.matchScore}>{item.matchScore}%</Text>
-                    <Text style={styles.matchLabel}>AFFINITY</Text>
-                  </View>
-                </View>
-
-                {/* Description */}
-                <Text style={styles.descriptionText}>{item.description}</Text>
-
-                {/* Tags */}
-                <View style={styles.tagRow}>
-                  {item.tags.map((tag, idx) => (
-                    <View key={idx} style={styles.tag}>
-                      <Text style={styles.tagText}>#{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Availability Bar */}
-                <View style={styles.availRow}>
-                  <Ionicons name="time-outline" size={13} color={COLORS.textMuted} />
-                  <Text style={styles.availText}>Active: {item.availability}</Text>
-                </View>
-
-                {/* Action Button */}
-                <TouchableOpacity
-                  style={[styles.connectBtn, isConnected && styles.connectedBtn]}
-                  onPress={() => handleOpenConnect(item)}
-                  disabled={isConnected}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons
-                    name={isConnected ? 'checkmark-circle' : 'chatbubbles-outline'}
-                    size={16}
-                    color={isConnected ? '#059669' : '#FFFFFF'}
-                  />
-                  <Text style={[styles.connectBtnText, isConnected && styles.connectedBtnText]}>
-                    {isConnected ? 'Connection Requested' : 'Connect & Say Hello'}
+        {/* ── TAB 3: PRIVACY MATRIX (Zero-leakage Controls) ── */}
+        {activeTab === 'PRIVACY' && (
+          <View style={{ gap: SPACING.md }}>
+            <View style={styles.privacyCard}>
+              <View style={styles.privacyHeader}>
+                <Ionicons name="shield-checkmark" size={24} color="#059669" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.privacyCardTitle}>Community Graph Privacy Matrix</Text>
+                  <Text style={styles.privacyCardSub}>
+                    Server-enforced privacy policies ensure zero client-side leakage of contact data.
                   </Text>
-                </TouchableOpacity>
+                </View>
               </View>
-            );
-          })}
-        </View>
+
+              {privacySaved && (
+                <View style={styles.privacySavedAlert}>
+                  <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                  <Text style={styles.privacySavedText}>Privacy preferences updated successfully!</Text>
+                </View>
+              )}
+
+              <Text style={styles.privacySectionTitle}>Select Your Discovery Level:</Text>
+
+              <TouchableOpacity
+                style={[styles.privacyOption, privacySettings.skills === 'PUBLIC' && styles.privacyOptionActive]}
+                onPress={() => {
+                  setPrivacySettings((prev) => ({ ...prev, skills: 'PUBLIC' }));
+                  updateVisMutation.mutate('PUBLIC');
+                }}
+              >
+                <Ionicons name="globe-outline" size={22} color="#10B981" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.privacyOptionTitle}>PUBLIC (All Verified Residents)</Text>
+                  <Text style={styles.privacyOptionDesc}>Discoverable by verified residents across all towers in Mana.</Text>
+                </View>
+                {privacySettings.skills === 'PUBLIC' && (
+                  <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.privacyOption, privacySettings.skills === 'NEIGHBORS' && styles.privacyOptionActive]}
+                onPress={() => {
+                  setPrivacySettings((prev) => ({ ...prev, skills: 'NEIGHBORS' }));
+                  updateVisMutation.mutate('NEIGHBORS');
+                }}
+              >
+                <Ionicons name="home-outline" size={22} color="#3B82F6" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.privacyOptionTitle}>NEIGHBORS (Tower Only)</Text>
+                  <Text style={styles.privacyOptionDesc}>Only residents in your tower can discover your skills and profile.</Text>
+                </View>
+                {privacySettings.skills === 'NEIGHBORS' && (
+                  <Ionicons name="checkmark-circle" size={18} color="#3B82F6" />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.privacyOption, privacySettings.skills === 'PRIVATE' && styles.privacyOptionActive]}
+                onPress={() => {
+                  setPrivacySettings((prev) => ({ ...prev, skills: 'PRIVATE' }));
+                  updateVisMutation.mutate('PRIVATE');
+                }}
+              >
+                <Ionicons name="lock-closed-outline" size={22} color="#EF4444" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.privacyOptionTitle}>PRIVATE (Hidden)</Text>
+                  <Text style={styles.privacyOptionDesc}>Completely excluded from graph search and talent directory.</Text>
+                </View>
+                {privacySettings.skills === 'PRIVATE' && (
+                  <Ionicons name="checkmark-circle" size={18} color="#EF4444" />
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.privacyMatrixWrap}>
+                <Text style={styles.privacyMatrixHeading}>Field-Level Data Masking Policy</Text>
+
+                {[
+                  { field: 'Phone Number', rule: 'Strictly Masked until mutual connection accepted' },
+                  { field: 'Email Address', rule: 'Strictly Masked until mutual connection accepted' },
+                  { field: 'Unit Number', rule: 'Tower visible; Unit hidden for Private tier' },
+                  { field: 'Profession & Skills', rule: 'Filtered strictly by server discovery engine' },
+                ].map((item, idx) => (
+                  <View key={idx} style={styles.matrixRow}>
+                    <Text style={styles.matrixField}>{item.field}</Text>
+                    <Text style={styles.matrixRule}>{item.rule}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* ── Intro Message Dialog ── */}
@@ -779,5 +1111,219 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Bold',
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    gap: 8,
+    backgroundColor: COLORS.background,
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#F1F5F9',
+  },
+  tabBtnActive: {
+    backgroundColor: '#EDE9FE',
+  },
+  tabBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  tabBtnTextActive: {
+    color: '#7C3AED',
+    fontWeight: '700',
+  },
+  filterTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+  },
+  skillChip: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+    marginRight: 6,
+  },
+  skillChipActive: {
+    backgroundColor: '#7C3AED',
+  },
+  skillChipText: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  skillChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  directoryFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  contactMask: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  connectMiniBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.md,
+  },
+  connectMiniBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  visBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  visPublic: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  visNeigh: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+  visText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  emptyStateBox: {
+    padding: 30,
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 6,
+  },
+  emptyStateTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  emptyStateSub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  privacyCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 12,
+  },
+  privacyHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  privacyCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  privacyCardSub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  privacySavedAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    padding: 10,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  privacySavedText: {
+    fontSize: 12,
+    color: '#065F46',
+    fontWeight: '700',
+  },
+  privacySectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  privacyOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: '#F8FAFC',
+  },
+  privacyOptionActive: {
+    borderColor: '#7C3AED',
+    backgroundColor: '#F5F3FF',
+  },
+  privacyOptionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  privacyOptionDesc: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  privacyMatrixWrap: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: 12,
+    gap: 8,
+  },
+  privacyMatrixHeading: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  matrixRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  matrixField: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  matrixRule: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    maxWidth: '60%',
+    textAlign: 'right',
   },
 });

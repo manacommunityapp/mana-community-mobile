@@ -95,6 +95,21 @@ export default function CPOSScreen() {
   const [leadAmount, setLeadAmount] = useState('');
   const [leadNotes, setLeadNotes] = useState('');
 
+  // CRM SMS Modal
+  const [smsLead, setSmsLead] = useState<CrmLead | null>(null);
+  const [smsMessage, setSmsMessage] = useState('');
+  const [smsSending, setSmsSending] = useState(false);
+
+  // CRM Approval Modal
+  const [approvalLead, setApprovalLead] = useState<CrmLead | null>(null);
+  const [approvalReason, setApprovalReason] = useState('');
+  const [approvalComment, setApprovalComment] = useState('');
+  const [approvalDecide, setApprovalDecide] = useState<boolean | null>(null);
+  const [approvalSaving, setApprovalSaving] = useState(false);
+
+  // Approval queue (admin)
+  const [showApprovalQueue, setShowApprovalQueue] = useState(false);
+
   const goHome = useCallback(() => {
     if (router.canGoBack()) router.back();
     else router.replace('/tabs/feed');
@@ -105,11 +120,13 @@ export default function CPOSScreen() {
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
         if (nocModalVisible) { setNocModalVisible(false); return true; }
         if (crmModalVisible) { setCrmModalVisible(false); return true; }
+        if (smsLead) { setSmsLead(null); return true; }
+        if (approvalLead) { setApprovalLead(null); return true; }
         goHome();
         return true;
       });
       return () => sub.remove();
-    }, [goHome, nocModalVisible, crmModalVisible])
+    }, [goHome, nocModalVisible, crmModalVisible, smsLead, approvalLead])
   );
 
   // ── Data Fetching ─────────────────────────────────────────────
@@ -166,6 +183,12 @@ export default function CPOSScreen() {
     queryKey: ['cposCrm'],
     queryFn: cposService.getCrmLeads,
     staleTime: 30_000,
+  });
+
+  const { data: pendingApprovals = [], refetch: refetchApprovals } = useQuery({
+    queryKey: ['cposCrmApprovals'],
+    queryFn: cposService.getLeadsAwaitingApproval,
+    enabled: showApprovalQueue,
   });
 
   const { data: crmSummary, refetch: refetchCrmSummary } = useQuery({
@@ -243,11 +266,15 @@ export default function CPOSScreen() {
 
   const portfolioStats = useMemo(() => {
     const totalValue = properties.reduce((sum, p) => {
-      const num = parseFloat(p.estimatedMarketValue.replace(/[^\d.]/g, ''));
+      const valStr = String(p.estimatedMarketValue || '');
+      const num = parseFloat(valStr.replace(/[^\d.]/g, ''));
       return sum + (isNaN(num) ? 0 : num);
     }, 0);
     const avgYield = properties.length
-      ? (properties.reduce((sum, p) => sum + parseFloat(p.rentalYield), 0) / properties.length).toFixed(1)
+      ? (properties.reduce((sum, p) => {
+          const yieldNum = parseFloat(String(p.rentalYield || '0'));
+          return sum + (isNaN(yieldNum) ? 0 : yieldNum);
+        }, 0) / properties.length).toFixed(1)
       : '0';
     return { count: properties.length, totalValue, avgYield };
   }, [properties]);
@@ -392,10 +419,10 @@ export default function CPOSScreen() {
 
               <View style={s.metricsGrid}>
                 {[
-                  { label: 'CONFIG', value: p.configuration },
-                  { label: 'AREA', value: `${p.carpetAreaSqFt} sq.ft` },
-                  { label: 'VALUE', value: p.estimatedMarketValue },
-                  { label: 'YIELD', value: p.rentalYield },
+                  { label: 'CONFIG', value: p.configuration || '—' },
+                  { label: 'AREA', value: p.carpetAreaSqFt ? `${p.carpetAreaSqFt} sq.ft` : '—' },
+                  { label: 'VALUE', value: p.estimatedMarketValue || '—' },
+                  { label: 'YIELD', value: p.rentalYield || '—' },
                 ].map((m) => (
                   <View key={m.label} style={s.metricItem}>
                     <Text style={s.metricLabel}>{m.label}</Text>
@@ -404,12 +431,14 @@ export default function CPOSScreen() {
                 ))}
               </View>
 
-              <View style={s.parkingRow}>
-                <Ionicons name="car-outline" size={14} color={COLORS.primary} />
-                <Text style={s.parkingText}>
-                  Parking: <Text style={{ fontWeight: '800' }}>{p.parkingSlotsAssigned.join(', ')}</Text>
-                </Text>
-              </View>
+              {Array.isArray(p.parkingSlotsAssigned) && p.parkingSlotsAssigned.length > 0 && (
+                <View style={s.parkingRow}>
+                  <Ionicons name="car-outline" size={14} color={COLORS.primary} />
+                  <Text style={s.parkingText}>
+                    Parking: <Text style={{ fontWeight: '800' }}>{p.parkingSlotsAssigned.join(', ')}</Text>
+                  </Text>
+                </View>
+              )}
             </View>
           )}
           ListEmptyComponent={
@@ -857,6 +886,33 @@ export default function CPOSScreen() {
 
                   {lead.notes && <Text style={s.leadNotes} numberOfLines={2}>{lead.notes}</Text>}
 
+                  {/* Tags */}
+                  {lead.tags && lead.tags.length > 0 && (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: SPACING.xs }}>
+                      {lead.tags.map(tag => (
+                        <View key={tag.id} style={[s.tagChip, { backgroundColor: tag.color + '22', borderColor: tag.color }]}>
+                          <Text style={[s.tagChipText, { color: tag.color }]}>{tag.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Approval badge */}
+                  {lead.approvalStatus === 'PENDING_APPROVAL' && (
+                    <View style={s.approvalBadge}>
+                      <Ionicons name="time-outline" size={11} color="#D97706" />
+                      <Text style={s.approvalBadgeText}>Pending Approval</Text>
+                    </View>
+                  )}
+                  {lead.approvalStatus === 'REJECTED' && (
+                    <View style={[s.approvalBadge, { backgroundColor: '#FEE2E2' }]}>
+                      <Ionicons name="close-circle-outline" size={11} color="#DC2626" />
+                      <Text style={[s.approvalBadgeText, { color: '#DC2626' }]}>
+                        Rejected{lead.approvalComment ? `: ${lead.approvalComment}` : ''}
+                      </Text>
+                    </View>
+                  )}
+
                   <View style={[s.cardRow, { marginTop: SPACING.sm, gap: 8 }]}>
                     <TouchableOpacity
                       style={s.tenantActionBtn}
@@ -865,6 +921,24 @@ export default function CPOSScreen() {
                       <Ionicons name="call-outline" size={13} color={COLORS.primary} />
                       <Text style={[s.tenantActionText, { color: COLORS.primary }]}>Call</Text>
                     </TouchableOpacity>
+                    {lead.phone ? (
+                      <TouchableOpacity
+                        style={s.tenantActionBtn}
+                        onPress={() => { setSmsLead(lead); setSmsMessage(''); }}
+                      >
+                        <Ionicons name="chatbubble-outline" size={13} color="#6366F1" />
+                        <Text style={[s.tenantActionText, { color: '#6366F1' }]}>SMS</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    {lead.stage === 'NEGOTIATION' && !lead.approvalStatus && (
+                      <TouchableOpacity
+                        style={s.tenantActionBtn}
+                        onPress={() => { setApprovalLead(lead); setApprovalReason(''); setApprovalDecide(null); }}
+                      >
+                        <Ionicons name="checkmark-circle-outline" size={13} color="#D97706" />
+                        <Text style={[s.tenantActionText, { color: '#D97706' }]}>Approval</Text>
+                      </TouchableOpacity>
+                    )}
                     {lead.stage !== 'AGREEMENT' && (
                       <TouchableOpacity
                         style={s.tenantActionBtn}
@@ -913,6 +987,65 @@ export default function CPOSScreen() {
                 })}
             </>
           )}
+
+          {/* Approval Queue (admin) */}
+          <TouchableOpacity
+            style={[s.approvalQueueToggle, showApprovalQueue && { borderColor: '#D97706' }]}
+            onPress={() => setShowApprovalQueue(v => !v)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="shield-checkmark-outline" size={15} color="#D97706" />
+              <Text style={s.approvalQueueToggleText}>Approval Queue</Text>
+              {pendingApprovals.length > 0 && (
+                <View style={s.approvalCountBadge}>
+                  <Text style={s.approvalCountText}>{pendingApprovals.length}</Text>
+                </View>
+              )}
+            </View>
+            <Ionicons name={showApprovalQueue ? 'chevron-up' : 'chevron-down'} size={14} color="#D97706" />
+          </TouchableOpacity>
+
+          {showApprovalQueue && pendingApprovals.map(lead => (
+            <View key={lead.id} style={[s.card, { borderLeftWidth: 3, borderLeftColor: '#D97706', marginBottom: SPACING.sm }]}>
+              <View style={s.cardRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>{lead.name}</Text>
+                  <Text style={s.meta}>{lead.phone} · {lead.unitNumber}</Text>
+                </View>
+                <View style={[s.badge, { backgroundColor: '#FEF3C7' }]}>
+                  <Text style={[s.badgeText, { color: '#D97706' }]}>Pending</Text>
+                </View>
+              </View>
+              {lead.approvalReason ? (
+                <Text style={[s.leadNotes, { marginTop: 4 }]}>Reason: {lead.approvalReason}</Text>
+              ) : null}
+              <View style={[s.cardRow, { marginTop: SPACING.sm, gap: 8 }]}>
+                <TouchableOpacity
+                  style={[s.tenantActionBtn, { backgroundColor: '#D1FAE5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }]}
+                  onPress={() => {
+                    Alert.alert('Approve', `Approve ${lead.name}?`, [
+                      { text: 'Cancel' },
+                      { text: 'Approve', onPress: () =>
+                        cposService.approveOrRejectLead(lead.id, true)
+                          .then(() => { refetchApprovals(); refetchCrm(); })
+                          .catch(() => Alert.alert('Error', 'Could not approve lead.'))
+                      },
+                    ]);
+                  }}
+                >
+                  <Ionicons name="checkmark" size={13} color="#059669" />
+                  <Text style={[s.tenantActionText, { color: '#059669' }]}>Approve</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.tenantActionBtn, { backgroundColor: '#FEE2E2', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }]}
+                  onPress={() => { setApprovalLead(lead); setApprovalDecide(false); setApprovalComment(''); }}
+                >
+                  <Ionicons name="close" size={13} color="#DC2626" />
+                  <Text style={[s.tenantActionText, { color: '#DC2626' }]}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
         </ScrollView>
       )}
 
@@ -1065,6 +1198,142 @@ export default function CPOSScreen() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── SMS Modal ── */}
+      <Modal visible={!!smsLead} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>SMS — {smsLead?.name}</Text>
+              <TouchableOpacity onPress={() => setSmsLead(null)}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={s.fieldLabel}>Quick Templates</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: SPACING.sm }}>
+              {[
+                `Hi ${smsLead?.name}, thank you for your enquiry. We'll reach out shortly.`,
+                `Hello ${smsLead?.name}, your site visit has been confirmed!`,
+                `Hi ${smsLead?.name}, just checking if you have questions. Happy to help!`,
+              ].map((t, i) => (
+                <TouchableOpacity key={i} style={s.smsTemplateChip} onPress={() => setSmsMessage(t)}>
+                  <Text style={s.smsTemplateText}>Template {i + 1}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={s.fieldLabel}>Message</Text>
+            <TextInput
+              style={[s.fieldInput, { height: 90, textAlignVertical: 'top' }]}
+              multiline
+              value={smsMessage}
+              onChangeText={setSmsMessage}
+              maxLength={320}
+              placeholder="Type your message..."
+              placeholderTextColor={COLORS.textMuted}
+            />
+            <Text style={[s.meta, { textAlign: 'right', marginTop: 2 }]}>{smsMessage.length}/320</Text>
+            <View style={s.modalActions}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setSmsLead(null)}>
+                <Text style={s.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.confirmBtn, (smsSending || !smsMessage.trim()) && { opacity: 0.6 }]}
+                disabled={smsSending || !smsMessage.trim()}
+                onPress={async () => {
+                  if (!smsLead) return;
+                  setSmsSending(true);
+                  try {
+                    await cposService.sendLeadSms(smsLead.id, smsMessage.trim());
+                    Alert.alert('Sent', 'SMS delivered.');
+                    setSmsLead(null);
+                  } catch {
+                    Alert.alert('Error', 'Failed to send SMS.');
+                  } finally {
+                    setSmsSending(false);
+                  }
+                }}
+              >
+                {smsSending ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={s.confirmBtnText}>Send SMS</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Approval Modal (request or reject with comment) ── */}
+      <Modal visible={!!approvalLead} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>
+                {approvalDecide === false ? 'Reject' : 'Request Approval'} — {approvalLead?.name}
+              </Text>
+              <TouchableOpacity onPress={() => setApprovalLead(null)}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {approvalDecide === null ? (
+              <>
+                <Text style={s.fieldLabel}>Reason for Approval</Text>
+                <TextInput
+                  style={[s.fieldInput, { height: 80, textAlignVertical: 'top' }]}
+                  multiline
+                  value={approvalReason}
+                  onChangeText={setApprovalReason}
+                  placeholder="e.g. High-value deal above ₹50L..."
+                  placeholderTextColor={COLORS.textMuted}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={s.fieldLabel}>Rejection Comment (optional)</Text>
+                <TextInput
+                  style={[s.fieldInput, { height: 80, textAlignVertical: 'top' }]}
+                  multiline
+                  value={approvalComment}
+                  onChangeText={setApprovalComment}
+                  placeholder="Reason for rejection..."
+                  placeholderTextColor={COLORS.textMuted}
+                />
+              </>
+            )}
+            <View style={s.modalActions}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setApprovalLead(null)}>
+                <Text style={s.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.confirmBtn, approvalSaving && { opacity: 0.6 }, approvalDecide === false && { backgroundColor: '#DC2626' }]}
+                disabled={approvalSaving}
+                onPress={async () => {
+                  if (!approvalLead) return;
+                  setApprovalSaving(true);
+                  try {
+                    if (approvalDecide === false) {
+                      await cposService.approveOrRejectLead(approvalLead.id, false, approvalComment || undefined);
+                      Alert.alert('Rejected', 'Lead has been rejected.');
+                    } else {
+                      await cposService.requestLeadApproval(approvalLead.id, approvalReason);
+                      Alert.alert('Submitted', 'Approval request sent to admin.');
+                    }
+                    refetchCrm();
+                    if (showApprovalQueue) refetchApprovals();
+                    setApprovalLead(null);
+                  } catch {
+                    Alert.alert('Error', 'Action failed. Please try again.');
+                  } finally {
+                    setApprovalSaving(false);
+                  }
+                }}
+              >
+                {approvalSaving
+                  ? <ActivityIndicator color="#FFFFFF" size="small" />
+                  : <Text style={s.confirmBtnText}>{approvalDecide === false ? 'Reject' : 'Request'}</Text>
+                }
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1280,6 +1549,37 @@ const s = StyleSheet.create({
   leadDetailsRow: { flexDirection: 'row', gap: 16, marginTop: SPACING.sm },
   leadDetail: {},
   leadNotes: { fontSize: 11, color: COLORS.textSecondary, fontFamily: 'DMSans-Regular', marginTop: SPACING.xs },
+
+  tagChip: {
+    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1,
+  },
+  tagChipText: { fontSize: 9, fontWeight: '800', fontFamily: 'Outfit-Bold' },
+
+  approvalBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 6, marginTop: SPACING.xs, alignSelf: 'flex-start',
+  },
+  approvalBadgeText: { fontSize: 10, fontWeight: '700', color: '#D97706', fontFamily: 'DMSans-Medium' },
+
+  approvalQueueToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+    marginTop: SPACING.md, backgroundColor: COLORS.surface,
+  },
+  approvalQueueToggleText: { fontSize: 12, fontWeight: '800', color: '#D97706', fontFamily: 'Outfit-Bold' },
+  approvalCountBadge: {
+    backgroundColor: '#D97706', borderRadius: 10, minWidth: 18, height: 18,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
+  },
+  approvalCountText: { fontSize: 10, fontWeight: '900', color: '#FFFFFF', fontFamily: 'Outfit-Bold' },
+
+  smsTemplateChip: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.md,
+    backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE',
+  },
+  smsTemplateText: { fontSize: 11, fontWeight: '700', color: '#4F6AF5', fontFamily: 'DMSans-Medium' },
 
   // AI Advisor
   aiHeaderIcon: {

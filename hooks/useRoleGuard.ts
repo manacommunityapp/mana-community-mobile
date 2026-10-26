@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ADMIN_ROLES, GUARD_ROLES, type UserRole } from '@/constants/permissions';
-import { secureLog } from '@/security';
+import { secureLog } from '@/security/secureLogger';
 
 type PortalType = 'admin' | 'guard' | 'vendor' | 'sports-admin' | 'event-admin';
 
@@ -48,7 +48,7 @@ function usePortalGuard(portal: PortalType) {
     }
   }, [isLoading, user, authorized, router]);
 
-  return { authorized, isLoading };
+  return { authorized, isAuthorized: authorized, isAdmin: authorized, isLoading };
 }
 
 export function useAdminGuard() {
@@ -95,5 +95,5 @@ export function useRoleGuard(requiredRoles: UserRole[]) {
     }
   }, [isLoading, user, authorized, router]);
 
-  return { authorized, isLoading };
+  return { authorized, isAuthorized: authorized, isAdmin: authorized, isLoading };
 }
