@@ -55,6 +55,10 @@ export default function AdminDashboard() {
       route: '/admin/announcements',       color: COLORS.warning,
     },
     {
+      emoji: '🚨', label: 'Emergency Broadcast', sub: 'Push alert to all flats',
+      route: '/admin/broadcast',           color: '#DC2626',
+    },
+    {
       emoji: '⚙️', label: 'Community',     sub: 'Settings & invite',
       route: '/admin/community-settings',  color: COLORS.success,
     },
