@@ -70,7 +70,7 @@ export default function VehiclesScreen() {
     queryFn: () => vehicleRegistrationService.getMyVehicles(),
     staleTime: 30_000,
   });
-  const vehicles = raw && raw.length > 0 ? raw : MOCK_VEHICLES;
+  const vehicles = raw ?? [];
 
   const registerMutation = useMutation({
     mutationFn: (data: RegisterVehicleRequest) => vehicleRegistrationService.registerVehicle(data),

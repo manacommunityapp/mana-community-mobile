@@ -308,6 +308,12 @@ export default function ANPRScreen() {
                     <Text style={styles.categoryBadgeText}>{log.category}</Text>
                   </View>
                 </View>
+                {isFlagged && (
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                    <TouchableOpacity style={{ flex: 1, backgroundColor: COLORS.successLight, padding: 9, borderRadius: 8, alignItems: 'center' }} onPress={async () => { try { await parkingService.overrideANPRAction(log.id, 'OPEN'); Alert.alert('Barrier override saved', 'Vehicle marked OPEN by an authorised operator.'); refetchLogs(); } catch (e: any) { Alert.alert('Override failed', e?.response?.data?.message || 'Guard/admin access required.'); } }}><Text style={{ color: COLORS.successDark, fontWeight: '800', fontSize: 11 }}>OPEN</Text></TouchableOpacity>
+                    <TouchableOpacity style={{ flex: 1, backgroundColor: COLORS.errorLight, padding: 9, borderRadius: 8, alignItems: 'center' }} onPress={async () => { try { await parkingService.overrideANPRAction(log.id, 'DENY'); Alert.alert('Barrier override saved', 'Vehicle marked DENY.'); refetchLogs(); } catch (e: any) { Alert.alert('Override failed', e?.response?.data?.message || 'Guard/admin access required.'); } }}><Text style={{ color: COLORS.errorDark, fontWeight: '800', fontSize: 11 }}>DENY</Text></TouchableOpacity>
+                  </View>
+                )}
               </View>
             );
           })

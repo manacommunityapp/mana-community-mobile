@@ -16,5 +16,12 @@ export default function GuardLayout() {
 
   if (!authorized) return null;
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <Stack screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="index" />
+    <Stack.Screen name="tabs" />
+    <Stack.Screen name="tabs/attendance" />
+    <Stack.Screen name="tabs/handover" />
+    <Stack.Screen name="tabs/daily-log" />
+    <Stack.Screen name="tabs/scan" />
+  </Stack>;
 }

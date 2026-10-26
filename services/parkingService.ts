@@ -609,6 +609,11 @@ export const parkingService = {
     return inMemoryANPRLogs;
   },
 
+  async overrideANPRAction(eventId: string | number, action: 'OPEN' | 'HOLD' | 'DENY'): Promise<unknown> {
+    const res = await api.put(`/parking/anpr/events/${eventId}/override`, null, { params: { action } });
+    return res.data;
+  },
+
   async getVehicleWhitelist(): Promise<VehicleWhitelistDto[]> {
     try {
       const res = await api.get<VehicleWhitelistDto[]>('/parking/whitelist');
