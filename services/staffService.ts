@@ -66,7 +66,7 @@ export interface RegisterStaffRequest {
 export const staffService = {
   async getMyStaff(): Promise<StaffMember[]> {
     try {
-      const res = await api.get<StaffMember[]>('/staff/my-staff');
+      const res = await api.get<StaffMember[]>('/v1/home-services/staff');
       return res.data ?? [];
     } catch {
       return [];
@@ -75,7 +75,7 @@ export const staffService = {
 
   async getCommunityStaff(params?: { role?: StaffRole; status?: StaffStatus }): Promise<StaffMember[]> {
     try {
-      const res = await api.get<StaffMember[]>('/staff', { params });
+      const res = await api.get<StaffMember[]>('/v1/home-services/staff', { params });
       return res.data ?? [];
     } catch {
       return [];
@@ -84,7 +84,7 @@ export const staffService = {
 
   async getStaffById(id: number): Promise<StaffMember | null> {
     try {
-      const res = await api.get<StaffMember>(`/staff/${id}`);
+      const res = await api.get<StaffMember>(`/v1/home-services/staff/${id}`);
       return res.data;
     } catch {
       return null;
@@ -93,7 +93,7 @@ export const staffService = {
 
   async registerStaff(data: RegisterStaffRequest): Promise<StaffMember> {
     try {
-      const res = await api.post<StaffMember>('/staff/register', data);
+      const res = await api.post<StaffMember>('/v1/home-services/staff', data);
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to register staff. Please try again.');
@@ -102,7 +102,7 @@ export const staffService = {
 
   async updateStaff(id: number, data: Partial<RegisterStaffRequest>): Promise<StaffMember> {
     try {
-      const res = await api.put<StaffMember>(`/staff/${id}`, data);
+      const res = await api.put<StaffMember>(`/v1/home-services/staff/${id}`, data);
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to update staff details.');
@@ -111,7 +111,7 @@ export const staffService = {
 
   async removeStaff(id: number): Promise<void> {
     try {
-      await api.delete(`/staff/${id}`);
+      await api.delete(`/v1/home-services/staff/${id}`);
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to remove staff member.');
     }
@@ -119,7 +119,8 @@ export const staffService = {
 
   async getTodayAttendance(): Promise<StaffAttendanceLog[]> {
     try {
-      const res = await api.get<StaffAttendanceLog[]>('/staff/attendance/today');
+      const today = new Date().toISOString().split('T')[0];
+      const res = await api.get<StaffAttendanceLog[]>('/v1/home-services/attendance', { params: { date: today } });
       return res.data ?? [];
     } catch {
       return [];
@@ -128,7 +129,9 @@ export const staffService = {
 
   async getStaffAttendanceLogs(staffId: number, params?: { from?: string; to?: string }): Promise<StaffAttendanceLog[]> {
     try {
-      const res = await api.get<StaffAttendanceLog[]>(`/staff/${staffId}/attendance`, { params });
+      const res = await api.get<StaffAttendanceLog[]>('/v1/home-services/attendance', {
+        params: { staffId, ...params },
+      });
       return res.data ?? [];
     } catch {
       return [];
@@ -137,8 +140,8 @@ export const staffService = {
 
   async getAttendanceSummary(staffId: number, month?: string): Promise<StaffAttendanceSummary | null> {
     try {
-      const res = await api.get<StaffAttendanceSummary>(`/staff/${staffId}/attendance/summary`, {
-        params: { month },
+      const res = await api.get<StaffAttendanceSummary>('/v1/home-services/attendance/summary', {
+        params: { staffId, month },
       });
       return res.data;
     } catch {
@@ -159,7 +162,7 @@ export const staffService = {
 
   async markAttendance(staffId: number, action: AttendanceAction): Promise<StaffAttendanceLog> {
     try {
-      const res = await api.post<StaffAttendanceLog>(`/staff/${staffId}/attendance`, { action });
+      const res = await api.post<StaffAttendanceLog>('/v1/home-services/attendance', { staffId, action });
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to mark attendance.');

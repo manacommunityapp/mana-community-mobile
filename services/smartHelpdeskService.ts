@@ -94,7 +94,7 @@ export const smartHelpdeskService = {
   async getTickets(status?: string): Promise<HelpdeskTicketDto[]> {
     this._applyAutoEscalation();
     try {
-      const res = await api.get<HelpdeskTicketDto[]>('/helpdesk/tickets', {
+      const res = await api.get<HelpdeskTicketDto[]>('/v1/helpdesk/tickets', {
         params: status && status !== 'ALL' ? { status } : undefined,
       });
       const list = Array.isArray(res.data) ? res.data : (res.data as any)?.content || [];
@@ -119,7 +119,7 @@ export const smartHelpdeskService = {
     mediaUrls?: string[];
   }): Promise<HelpdeskTicketDto> {
     try {
-      const res = await api.post<HelpdeskTicketDto>('/helpdesk/tickets', payload);
+      const res = await api.post<HelpdeskTicketDto>('/v1/helpdesk/tickets', payload);
       const ticket = res.data;
       LOCAL_TICKETS.unshift(ticket);
       return ticket;
@@ -149,20 +149,20 @@ export const smartHelpdeskService = {
 
   /** 3. Get single ticket details */
   async getTicket(id: string): Promise<HelpdeskTicketDto> {
-    const res = await api.get<HelpdeskTicketDto>(`/helpdesk/tickets/${id}`);
+    const res = await api.get<HelpdeskTicketDto>(`/v1/helpdesk/tickets/${id}`);
     return res.data;
   },
 
   /** 4. Update ticket status */
   async updateTicketStatus(id: string, status: string, notes?: string): Promise<HelpdeskTicketDto> {
-    const res = await api.put<HelpdeskTicketDto>(`/helpdesk/tickets/${id}/status`, { status, notes });
+    const res = await api.patch<HelpdeskTicketDto>(`/v1/helpdesk/tickets/${id}/status`, null, { params: { status, remarks: notes } });
     return res.data;
   },
 
   /** 5. Submit resident rating and feedback */
   async submitFeedback(ticketId: string, rating: number, comments?: string): Promise<boolean> {
     try {
-      await api.post(`/helpdesk/tickets/${ticketId}/feedback`, { rating, comments });
+      await api.post(`/v1/helpdesk/tickets/${ticketId}/feedback`, { rating, comments });
     } catch {
       // Local fallback
     }
@@ -176,13 +176,13 @@ export const smartHelpdeskService = {
 
   /** 6. Add contextual discussion comment */
   async addComment(ticketId: string, message: string): Promise<TicketCommentDto> {
-    const res = await api.post<TicketCommentDto>(`/helpdesk/tickets/${ticketId}/comments`, { message });
+    const res = await api.post<TicketCommentDto>(`/v1/helpdesk/tickets/${ticketId}/comments`, null, { params: { message } });
     return res.data;
   },
 
   /** 7. Get ticket comments */
   async getComments(ticketId: string): Promise<TicketCommentDto[]> {
-    const res = await api.get<TicketCommentDto[]>(`/helpdesk/tickets/${ticketId}/comments`);
+    const res = await api.get<TicketCommentDto[]>(`/v1/helpdesk/tickets/${ticketId}/comments`);
     return res.data;
   },
 
@@ -204,10 +204,10 @@ export const smartHelpdeskService = {
     return res.data;
   },
 
-  /** 11. Reopen a resolved or closed ticket */
+  /** 11. Reopen a resolved or closed ticket via status update */
   async reopenTicket(ticketId: string, reason?: string): Promise<HelpdeskTicketDto> {
     try {
-      const res = await api.put<HelpdeskTicketDto>(`/helpdesk/tickets/${ticketId}/reopen`, { reason });
+      const res = await api.patch<HelpdeskTicketDto>(`/v1/helpdesk/tickets/${ticketId}/status`, null, { params: { status: 'OPEN', remarks: reason } });
       const found = LOCAL_TICKETS.find(t => t.id === ticketId);
       if (found) { found.status = 'OPEN'; }
       return res.data;
