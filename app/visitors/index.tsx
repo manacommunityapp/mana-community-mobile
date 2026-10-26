@@ -436,6 +436,29 @@ export default function VisitorsScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ── Quick Links: Whitelist & Watchlist ── */}
+      <View style={s.quickLinksRow}>
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/whitelist')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
+          <Text style={s.quickLinkText}>Frequent Visitors</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/watchlist')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="warning-outline" size={16} color="#DC2626" />
+          <Text style={[s.quickLinkText, { color: '#DC2626' }]}>Watchlist</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+      </View>
+
       {/* ── Tabs (Active / History) ── */}
       <View style={s.tabBar}>
         <TouchableOpacity
@@ -721,6 +744,33 @@ const s = StyleSheet.create({
   statDot: { width: 6, height: 6, borderRadius: 3, marginBottom: 2 },
   statVal: { fontSize: 16, fontWeight: '900', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   statLabel: { fontSize: 10, color: COLORS.textMuted, marginTop: 1, fontFamily: 'DMSans-Regular' },
+
+  quickLinksRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(99, 102, 241, 0.08)',
+  },
+  quickLinkBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+  },
+  quickLinkText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+    fontFamily: 'Outfit-Bold',
+  },
+  quickLinkDivider: {
+    width: 1,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    marginVertical: 8,
+  },
 
   tabBar: {
     flexDirection: 'row',
