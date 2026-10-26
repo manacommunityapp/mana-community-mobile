@@ -21,6 +21,8 @@ import type {
   ParkingWaitlistEntryDto,
   ParkingSlotSwapRequestDto,
   ParkingAnalyticsSummaryDto,
+  ResidentVehicleDto,
+  ResidentVehicleRequest,
 } from '@/types/parking';
 
 export * from '@/types/parking';
@@ -636,6 +638,26 @@ export const parkingService = {
       inMemoryWhitelist = [...inMemoryWhitelist, newV];
       return newV;
     }
+  },
+
+  // ── Resident vehicle registry (live API; no demo fallback) ───────
+  async getMyVehicles(): Promise<ResidentVehicleDto[]> {
+    const res = await api.get<ResidentVehicleDto[]>('/parking/vehicles/mine');
+    return Array.isArray(res.data) ? res.data : [];
+  },
+
+  async registerVehicle(data: ResidentVehicleRequest): Promise<ResidentVehicleDto> {
+    const res = await api.post<ResidentVehicleDto>('/parking/vehicles', data);
+    return res.data;
+  },
+
+  async updateVehicle(id: number, data: ResidentVehicleRequest): Promise<ResidentVehicleDto> {
+    const res = await api.put<ResidentVehicleDto>(`/parking/vehicles/${id}`, data);
+    return res.data;
+  },
+
+  async deleteVehicle(id: number): Promise<void> {
+    await api.delete(`/parking/vehicles/${id}`);
   },
 
   // ── 6. EV Charging & Metering ─────────────────────────────────────

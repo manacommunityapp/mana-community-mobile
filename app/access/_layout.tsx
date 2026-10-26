@@ -9,6 +9,7 @@ export default function AccessLayout() {
       }}
     >
       <Stack.Screen name="turnstiles" options={{ title: 'Smart Gates' }} />
+      <Stack.Screen name="logs" options={{ title: 'Access history' }} />
     </Stack>
   );
 }

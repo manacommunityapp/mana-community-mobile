@@ -682,6 +682,14 @@ export default function ProfileScreen() {
             iconColor="#4338CA"
             iconBg="#E0E7FF"
           />
+          <MenuItem
+            icon="car-sport-outline"
+            label="My Vehicles"
+            sublabel="Register plates for resident gate access"
+            onPress={() => router.push('/vehicles')}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
+          />
           {showHelpdesk && (
             <MenuItem
               icon="headset-outline"

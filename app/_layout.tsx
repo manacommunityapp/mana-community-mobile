@@ -151,6 +151,7 @@ function RootLayout() {
             <Stack.Screen name="food" />
             <Stack.Screen name="visitors" />
             <Stack.Screen name="parking" />
+            <Stack.Screen name="vehicles" />
             <Stack.Screen name="facilities" />
             <Stack.Screen name="inventory" />
             <Stack.Screen name="safety" />
