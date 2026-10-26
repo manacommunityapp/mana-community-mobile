@@ -640,6 +640,14 @@ export default function ProfileScreen() {
             iconBg="#CFFAFE"
           />
           <MenuItem
+            icon="people-circle-outline"
+            label="Resident Directory"
+            sublabel="Browse flat-wise residents in your society"
+            onPress={() => router.push('/community/directory')}
+            iconColor="#6366F1"
+            iconBg="#EEF2FF"
+          />
+          <MenuItem
             icon="fitness-outline"
             label="Facility Bookings"
             sublabel="Clubhouse, tennis, gym & pool slots"
@@ -991,6 +999,30 @@ export default function ProfileScreen() {
             iconColor="#4F46E5"
             iconBg="#EEF2FF"
             badge={unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined}
+          />
+          <MenuItem
+            icon="people-outline"
+            label="Family Members"
+            sublabel="Register family so security knows who can enter"
+            onPress={() => router.push('/profile/family')}
+            iconColor="#7C3AED"
+            iconBg="#F5F3FF"
+          />
+          <MenuItem
+            icon="car-outline"
+            label="My Vehicles"
+            sublabel="Register vehicles for ANPR auto gate entry"
+            onPress={() => router.push('/profile/vehicles')}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
+          />
+          <MenuItem
+            icon="finger-print-outline"
+            label="KYC Verification"
+            sublabel="Submit Aadhaar / PAN for identity verification"
+            onPress={() => router.push('/profile/kyc')}
+            iconColor="#059669"
+            iconBg="#D1FAE5"
           />
           <MenuItem
             icon="shield-checkmark-outline"
