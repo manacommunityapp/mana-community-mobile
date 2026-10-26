@@ -1,7 +1,8 @@
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert,
+  ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -9,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SHADOWS, RADIUS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
+import { safetyService, type GuardShift } from '@/services/safetyService';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -38,6 +40,8 @@ export default function GuardProfileScreen() {
   const router = useRouter();
   const displayName = user?.fullName || user?.name || (user?.email ? user.email.split('@')[0] : 'Guard');
   const avatarColor = getAvatarColor(displayName);
+  const [shift, setShift] = useState<GuardShift | null>(null);
+  useEffect(() => { safetyService.getGuardShifts(new Date().toISOString().slice(0, 10)).then(rows => setShift(rows.find(s => s.guardId === user?.id) || rows[0] || null)).catch(() => setShift(null)); }, [user?.id]);
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -84,8 +88,12 @@ export default function GuardProfileScreen() {
         {/* Shift Info */}
         <Text style={s.sectionHeader}>Shift Details</Text>
         <View style={s.menuSection}>
-          <MenuItem icon="time-outline" label="Current Shift: 6 AM – 2 PM" onPress={() => {}} iconColor={GUARD_COLORS.accent} iconBg={GUARD_COLORS.accentLight} />
-          <MenuItem icon="calendar-outline" label="Shift Schedule" onPress={() => {}} iconColor="#4F46E5" iconBg="#EEF2FF" />
+          <MenuItem icon="time-outline" label={shift ? `Current Shift: ${shift.startTime} – ${shift.endTime}` : 'No shift scheduled today'} onPress={() => router.push('/guard/tabs/attendance')} iconColor={GUARD_COLORS.accent} iconBg={GUARD_COLORS.accentLight} />
+          <MenuItem icon="calendar-outline" label={shift?.gate ? `Assigned Gate: ${shift.gate}` : 'Shift Schedule'} onPress={() => router.push('/guard/tabs/attendance')} iconColor="#4F46E5" iconBg="#EEF2FF" />
+          <MenuItem icon="finger-print-outline" label="Attendance" onPress={() => router.push('/guard/tabs/attendance')} iconColor="#0D9488" iconBg="#CCFBF1" />
+          <MenuItem icon="swap-horizontal-outline" label="Shift Handover" onPress={() => router.push('/guard/tabs/handover')} iconColor="#D97706" iconBg="#FEF3C7" />
+          <MenuItem icon="journal-outline" label="Daily Guard Log" onPress={() => router.push('/guard/tabs/daily-log')} iconColor="#059669" iconBg="#D1FAE5" />
+          <MenuItem icon="scan-outline" label="Scan Visitor Pass" onPress={() => router.push('/guard/tabs/scan')} iconColor="#2563EB" iconBg="#DBEAFE" />
           <MenuItem icon="document-text-outline" label="Patrol History" onPress={() => {}} iconColor="#7C3AED" iconBg="#EDE9FE" />
           <MenuItem icon="stats-chart-outline" label="My Reports" onPress={() => {}} iconColor="#059669" iconBg="#D1FAE5" />
         </View>

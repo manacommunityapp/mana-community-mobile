@@ -1,17 +1,23 @@
 import api from './apiClient';
 
 export interface EmergencyTriggerRequest {
+  /** Legacy UI field; it is translated to the service's emergencyType enum. */
   category: string;
   description?: string;
   tower?: string;
   flatNumber?: string;
   contactNumber?: string;
+  emergencyType?: 'MEDICAL' | 'FIRE' | 'SECURITY_INTRUDER' | 'GAS_LEAK' | 'LIFT_STUCK' | 'GENERAL_PANIC' | 'THEFT';
+  severity?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  buildingBlock?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface EmergencyAlertDto {
   id: string;
   category: string;
-  status: 'DISPATCHED' | 'ACKNOWLEDGED' | 'RESOLVED';
+  status: 'TRIGGERED' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'ON_SITE' | 'RESOLVED' | 'FALSE_ALARM' | string;
   timestamp: string;
   description?: string;
   requesterName?: string;
@@ -42,7 +48,17 @@ const pendingSOSQueue: Array<{ data: EmergencyTriggerRequest; timestamp: string 
 export const emergencyService = {
   async triggerSOS(data: EmergencyTriggerRequest): Promise<EmergencyAlertDto> {
     try {
-      const res = await api.post<EmergencyAlertDto>('/emergency/sos', data);
+      const categoryMap: Record<string, string> = { SECURITY: 'SECURITY_INTRUDER', INTRUDER: 'SECURITY_INTRUDER', PANIC: 'GENERAL_PANIC' };
+      const res = await api.post<EmergencyAlertDto>('/emergency/sos/trigger', {
+        emergencyType: data.emergencyType || categoryMap[data.category] || data.category,
+        severity: data.severity || 'CRITICAL',
+        flatNumber: data.flatNumber,
+        buildingBlock: data.buildingBlock || data.tower,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        locationDetails: data.description,
+        notes: data.description,
+      });
       return res.data;
     } catch (err) {
       // Store locally so the resident has a record, and retry is possible.

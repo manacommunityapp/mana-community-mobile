@@ -127,6 +127,10 @@ export default function BiometricTurnstileScreen() {
             icon: 'refresh-outline',
             onPress: loadTurnstiles,
           },
+          {
+            icon: 'list-outline',
+            onPress: () => router.push('/access/logs'),
+          },
         ]}
       />
       <ScrollView
