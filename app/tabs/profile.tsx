@@ -640,6 +640,14 @@ export default function ProfileScreen() {
             iconBg="#CFFAFE"
           />
           <MenuItem
+            icon="people-circle-outline"
+            label="Resident Directory"
+            sublabel="Browse flat-wise residents in your society"
+            onPress={() => router.push('/community/directory')}
+            iconColor="#6366F1"
+            iconBg="#EEF2FF"
+          />
+          <MenuItem
             icon="fitness-outline"
             label="Facility Bookings"
             sublabel="Clubhouse, tennis, gym & pool slots"
@@ -1036,7 +1044,11 @@ export default function ProfileScreen() {
             icon="car-outline"
             label="My Vehicles"
             sublabel="Register vehicles for ANPR auto gate entry"
+
             onPress={() => router.push('/vehicles')}
+
+            //onPress={() => router.push('/profile/vehicles')}
+
             iconColor="#2563EB"
             iconBg="#DBEAFE"
           />

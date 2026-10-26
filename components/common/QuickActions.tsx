@@ -20,8 +20,10 @@ export interface QuickActionItem {
 
 export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   // Safety & Help
-  { id: "emergency",        emoji: "🚨", icon: "alert-circle-outline",      label: "Emergency SOS", route: "/emergency",                bg: "#FEE2E2", color: "#DC2626", category: "Safety & Help",   badge: "24x7" },
-  { id: "visitors",         emoji: "🛡️", icon: "shield-checkmark-outline", label: "Visitors Gate", route: "/visitors",                 bg: "#CFFAFE", color: "#0891B2", category: "Safety & Help" },
+  { id: "emergency",        emoji: "🚨", icon: "alert-circle-outline",      label: "Emergency SOS",  route: "/emergency",               bg: "#FEE2E2", color: "#DC2626", category: "Safety & Help",   badge: "24x7" },
+  { id: "visitors",         emoji: "🛡️", icon: "shield-checkmark-outline", label: "Visitors Gate",  route: "/visitors",                bg: "#CFFAFE", color: "#0891B2", category: "Safety & Help" },
+  { id: "staff",            emoji: "👨‍🍳", icon: "people-outline",           label: "Domestic Staff", route: "/staff",                   bg: "#F5F3FF", color: "#7C3AED", category: "Safety & Help" },
+  { id: "school_bus",       emoji: "🚌", icon: "bus-outline",               label: "School Bus",     route: "/school-bus",              bg: "#FEF3C7", color: "#D97706", category: "Safety & Help",   badge: "LIVE" },
   { id: "turnstiles",       emoji: "🚪", icon: "hardware-chip-outline",     label: "Smart Gates",   route: "/access/turnstiles",        bg: "#E0F2FE", color: "#0284C7", category: "Safety & Help",   badge: "BIOMETRIC" },
   { id: "helpdesk",         emoji: "🎧", icon: "headset-outline",           label: "Helpdesk",      route: "/helpdesk",                 bg: "#FEF3C7", color: "#D97706", category: "Safety & Help" },
   { id: "insta_help",       emoji: "⚡", icon: "flash-outline",             label: "Insta-Help",    route: "/services/insta-help",      bg: "#FEF3C7", color: "#D97706", category: "Safety & Help",   badge: "15m" },
@@ -31,9 +33,13 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: "safety",           emoji: "🛡️", icon: "shield-half-outline",      label: "Safety Center", route: "/safety",                   bg: "#0F172A", color: "#0F172A", category: "Safety & Help",   badge: "NEW" },
   { id: "insurance",        emoji: "🛡️", icon: "shield-checkmark-outline", label: "Mana Insurance", route: "/insurance",               bg: "#EFF6FF", color: "#2563EB", category: "Safety & Help",   badge: "NEW" },
   { id: "home_services",    emoji: "🏠", icon: "hammer-outline",           label: "Home Services",  route: "/home-services",           bg: "#FEF9C3", color: "#A16207", category: "Safety & Help",   badge: "NEW" },
+  { id: "cctv",             emoji: "📷", icon: "videocam-outline",           label: "CCTV Monitor",   route: "/guard/cctv",               bg: "#0F172A", color: "#94A3B8", category: "Safety & Help" },
+  { id: "directory",        emoji: "📋", icon: "people-circle-outline",      label: "Residents",      route: "/community/directory",      bg: "#EEF2FF", color: "#6366F1", category: "Safety & Help" },
+  { id: "broadcast",        emoji: "📢", icon: "megaphone-outline",          label: "Broadcast",      route: "/admin/broadcast",          bg: "#FEE2E2", color: "#DC2626", category: "Safety & Help" },
 
   // Living & Bills
   { id: "dues",             emoji: "💳", icon: "card-outline",              label: "Dues",          route: "/finance",                  bg: "#EEF2FF", color: "#4F46E5", category: "Living & Bills" },
+  { id: "auto_debit",       emoji: "🔄", icon: "repeat-outline",             label: "Auto-Pay",       route: "/payments/auto-debit",      bg: "#D1FAE5", color: "#059669", category: "Living & Bills",  badge: "NACH" },
   { id: "mana_pay",         emoji: "⚡", icon: "flash-outline",             label: "Mana Pay",      route: "/bbps",                     bg: "#EFF6FF", color: "#2563EB", category: "Living & Bills",  badge: "BBPS" },
   { id: "recharge",         emoji: "📱", icon: "phone-portrait-outline",     label: "Recharge",      route: "/recharge",                 bg: "#F0F9FF", color: "#0284C7", category: "Living & Bills",  badge: "NEW" },
   { id: "my_money",         emoji: "💰", icon: "wallet-outline",            label: "My Money",      route: "/personal-finance",         bg: "#ECFDF5", color: "#059669", category: "Living & Bills",  badge: "NEW" },
