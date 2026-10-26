@@ -690,6 +690,30 @@ export default function ProfileScreen() {
             iconColor="#2563EB"
             iconBg="#DBEAFE"
           />
+          <MenuItem
+            icon="people-circle-outline"
+            label="Trusted Visitors"
+            sublabel="Recurring maid, driver and family entry"
+            onPress={() => router.push('/visitors/trusted')}
+            iconColor="#059669"
+            iconBg="#D1FAE5"
+          />
+          <MenuItem
+            icon="cube-outline"
+            label="Package Room"
+            sublabel="Delivery collection and OTPs"
+            onPress={() => router.push('/packages')}
+            iconColor="#D97706"
+            iconBg="#FEF3C7"
+          />
+          <MenuItem
+            icon="videocam-outline"
+            label="Resident Intercom"
+            sublabel="Call the gate guard before entry"
+            onPress={() => router.push('/intercom')}
+            iconColor="#4F46E5"
+            iconBg="#E0E7FF"
+          />
           {showHelpdesk && (
             <MenuItem
               icon="headset-outline"
@@ -999,6 +1023,30 @@ export default function ProfileScreen() {
             iconColor="#4F46E5"
             iconBg="#EEF2FF"
             badge={unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined}
+          />
+          <MenuItem
+            icon="people-outline"
+            label="Family Members"
+            sublabel="Register family so security knows who can enter"
+            onPress={() => router.push('/profile/family')}
+            iconColor="#7C3AED"
+            iconBg="#F5F3FF"
+          />
+          <MenuItem
+            icon="car-outline"
+            label="My Vehicles"
+            sublabel="Register vehicles for ANPR auto gate entry"
+            onPress={() => router.push('/vehicles')}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
+          />
+          <MenuItem
+            icon="finger-print-outline"
+            label="KYC Verification"
+            sublabel="Submit Aadhaar / PAN for identity verification"
+            onPress={() => router.push('/profile/kyc')}
+            iconColor="#059669"
+            iconBg="#D1FAE5"
           />
           <MenuItem
             icon="shield-checkmark-outline"

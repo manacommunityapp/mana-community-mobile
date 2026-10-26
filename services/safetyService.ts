@@ -318,4 +318,14 @@ export const safetyService = {
       return [];
     }
   },
+
+  async checkInShift(id: number): Promise<GuardShift> {
+    const res = await api.post<GuardShift>(`/guards/shifts/${id}/check-in`);
+    return res.data;
+  },
+
+  async checkOutShift(id: number): Promise<GuardShift> {
+    const res = await api.post<GuardShift>(`/guards/shifts/${id}/check-out`);
+    return res.data;
+  },
 };
