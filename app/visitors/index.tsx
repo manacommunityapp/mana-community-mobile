@@ -436,15 +436,25 @@ export default function VisitorsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── Quick Links: Whitelist & Watchlist ── */}
+      {/* ── Quick Links: Approvals / Whitelist / Watchlist ── */}
       <View style={s.quickLinksRow}>
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/pending-approvals')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="notifications-outline" size={16} color="#D97706" />
+          <Text style={[s.quickLinkText, { color: '#D97706' }]}>Approvals</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
         <TouchableOpacity
           style={s.quickLinkBtn}
           onPress={() => router.push('/visitors/whitelist')}
           activeOpacity={0.8}
         >
           <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
-          <Text style={s.quickLinkText}>Frequent Visitors</Text>
+          <Text style={s.quickLinkText}>Whitelist</Text>
           <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
         </TouchableOpacity>
         <View style={s.quickLinkDivider} />

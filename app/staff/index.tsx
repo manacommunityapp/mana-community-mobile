@@ -213,10 +213,15 @@ export default function StaffScreen() {
           <Text style={s.headerTitle}>Domestic Staff</Text>
           <Text style={s.headerSub}>Track household staff & attendance</Text>
         </View>
-        <TouchableOpacity onPress={() => setAddModal(true)} style={s.addBtn} activeOpacity={0.8}>
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <Text style={s.addBtnText}>Add</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <TouchableOpacity onPress={() => router.push('/staff/payroll')} style={s.headerBtn} hitSlop={8}>
+            <Ionicons name="cash-outline" size={18} color="#059669" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setAddModal(true)} style={s.addBtn} activeOpacity={0.8}>
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Text style={s.addBtnText}>Add</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats */}

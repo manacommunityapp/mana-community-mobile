@@ -37,11 +37,20 @@ export interface StaffAttendanceSummary {
   staffId: number;
   staffName: string;
   role: StaffRole;
-  totalDaysPresent: number;
-  totalDaysAbsent: number;
+  month: number;
+  year: number;
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  leaveDays: number;
+  halfDays: number;
+  attendancePercent: number;
+  // legacy fields kept for backward compat
+  totalDaysPresent?: number;
+  totalDaysAbsent?: number;
   lastEntry?: string;
   lastExit?: string;
-  monthlyLogs: { date: string; entry?: string; exit?: string; present: boolean }[];
+  monthlyLogs?: { date: string; entry?: string; exit?: string; present: boolean }[];
 }
 
 export interface RegisterStaffRequest {
@@ -133,6 +142,17 @@ export const staffService = {
       return res.data;
     } catch {
       return null;
+    }
+  },
+
+  async getMonthlyPayrollSummaries(month: number, year: number): Promise<StaffAttendanceSummary[]> {
+    try {
+      const res = await api.get<StaffAttendanceSummary[]>('/staff/attendance/monthly-summary', {
+        params: { month, year },
+      });
+      return res.data ?? [];
+    } catch {
+      return [];
     }
   },
 
