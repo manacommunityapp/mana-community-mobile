@@ -39,9 +39,9 @@ const MOCK_TODAY_ATTENDANCE: StaffAttendanceLog[] = [
 ];
 
 const MOCK_STAFF: StaffMember[] = [
-  { id: 1, name: 'Lakshmi Devi', role: 'MAID', phone: '9876543210', status: 'ACTIVE', policeVerified: true, flatNumber: 'Tower A-1204' },
-  { id: 2, name: 'Ramu', role: 'COOK', phone: '9123456789', status: 'ACTIVE', policeVerified: false, flatNumber: 'Tower A-1204' },
-  { id: 3, name: 'Suresh Kumar', role: 'DRIVER', phone: '9988776655', status: 'ACTIVE', policeVerified: true, flatNumber: 'Tower A-1204' },
+  { id: 1, name: 'Lakshmi Devi', role: 'MAID', phone: '9876543210', status: 'ACTIVE', policeVerified: true, bgVerified: true, flatNumber: 'Tower A-1204' },
+  { id: 2, name: 'Ramu', role: 'COOK', phone: '9123456789', status: 'ACTIVE', policeVerified: false, bgVerified: false, flatNumber: 'Tower A-1204' },
+  { id: 3, name: 'Suresh Kumar', role: 'DRIVER', phone: '9988776655', status: 'ACTIVE', policeVerified: true, bgVerified: undefined, flatNumber: 'Tower A-1204' },
 ];
 
 function timeAgo(isoStr: string): string {
@@ -160,6 +160,18 @@ export default function StaffScreen() {
               )}
             </View>
             <Text style={[s.rolePill, { color: meta.color }]}>{meta.label}</Text>
+            <View style={s.bgBadgeRow}>
+              <Ionicons
+                name={item.bgVerified === true ? 'shield-checkmark' : item.bgVerified === false ? 'shield-outline' : 'shield-outline'}
+                size={12}
+                color={item.bgVerified === true ? '#059669' : item.bgVerified === false ? '#D97706' : '#9CA3AF'}
+              />
+              <Text style={[s.bgBadgeText, {
+                color: item.bgVerified === true ? '#059669' : item.bgVerified === false ? '#D97706' : '#9CA3AF',
+              }]}>
+                {item.bgVerified === true ? 'BG Verified' : item.bgVerified === false ? 'Unverified' : 'Not Checked'}
+              </Text>
+            </View>
           </View>
           <TouchableOpacity onPress={() => confirmRemove(item)} style={s.removeBtn} hitSlop={8}>
             <Ionicons name="trash-outline" size={16} color="#EF4444" />
@@ -440,6 +452,8 @@ const s = StyleSheet.create({
   staffName: { fontSize: 15, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#D1FAE5', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
   verifiedText: { fontSize: 9, fontWeight: '700', color: '#059669', fontFamily: 'Outfit-Bold' },
+  bgBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  bgBadgeText: { fontSize: 10, fontWeight: '600', fontFamily: 'DMSans-Medium' },
   rolePill: { fontSize: 12, fontWeight: '600', fontFamily: 'DMSans-Medium', marginTop: 2 },
   removeBtn: { padding: 8 },
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: SPACING.sm, flexWrap: 'wrap' },

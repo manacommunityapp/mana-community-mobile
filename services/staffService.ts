@@ -16,6 +16,7 @@ export interface StaffMember {
   residentId?: number;
   status: StaffStatus;
   policeVerified: boolean;
+  bgVerified?: boolean;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
