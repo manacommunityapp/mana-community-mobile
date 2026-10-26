@@ -50,7 +50,7 @@ export default function AutoDebitScreen() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (id: number) => autoDebitService.cancelMandate(id),
+    mutationFn: () => autoDebitService.cancelMandate(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments', 'auto-debit'] });
       Alert.alert('Cancelled', 'Auto-Pay has been cancelled. It may take up to 3 working days to process.');
@@ -77,7 +77,7 @@ export default function AutoDebitScreen() {
       'This will stop future automatic deductions. Cancellation takes 3 working days. Continue?',
       [
         { text: 'Keep Auto-Pay', style: 'cancel' },
-        { text: 'Cancel Auto-Pay', style: 'destructive', onPress: () => cancelMutation.mutate(mandate.id) },
+        { text: 'Cancel Auto-Pay', style: 'destructive', onPress: () => cancelMutation.mutate() },
       ]
     );
   };

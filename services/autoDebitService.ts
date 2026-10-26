@@ -42,9 +42,9 @@ export const autoDebitService = {
     }
   },
 
-  async cancelMandate(id: number): Promise<void> {
+  async cancelMandate(): Promise<void> {
     try {
-      await api.delete(`/payments/auto-debit/mandate/${id}`);
+      await api.delete('/payments/auto-debit/mandate');
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to cancel auto-debit. Please try again.');
     }

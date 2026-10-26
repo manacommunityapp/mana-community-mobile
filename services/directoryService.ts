@@ -38,7 +38,7 @@ export const directoryService = {
 
   async getBlocks(): Promise<string[]> {
     try {
-      const res = await api.get<string[]>('/community/blocks');
+      const res = await api.get<string[]>('/community/directory/blocks');
       return res.data ?? [];
     } catch {
       return [];

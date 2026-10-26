@@ -60,7 +60,10 @@ export const watchlistService = {
 
   async resolveWatchlistEntry(id: number, notes?: string): Promise<WatchlistEntry> {
     try {
-      const res = await api.patch<WatchlistEntry>(`/security/watchlist/${id}/resolve`, { notes });
+      const res = await api.patch<WatchlistEntry>(`/security/watchlist/${id}/status`, {
+        status: 'RESOLVED',
+        notes,
+      });
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to resolve watchlist entry.');
