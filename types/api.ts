@@ -301,6 +301,7 @@ export interface PageResponse<T> {
   totalElements: number;
   totalPages: number;
   page: number;
+  number?: number;
   size: number;
 }
 

@@ -1,7 +1,7 @@
 import api from './apiClient';
 import type { PostDto, CommentDto, CreatePostRequest, PageResponse } from '@/types/api';
 
-const EMPTY_PAGE: PageResponse<any> = { content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 };
+const EMPTY_PAGE: PageResponse<any> = { content: [], totalElements: 0, totalPages: 0, page: 0, number: 0, size: 20 };
 
 export const feedService = {
   async getPosts(page = 0, size = 20): Promise<PageResponse<PostDto>> {

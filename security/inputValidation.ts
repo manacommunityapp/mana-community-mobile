@@ -179,8 +179,8 @@ export const schemas = {
 
 export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
   const result = schema.safeParse(data);
-  if (result.success) return { success: true, data: result.data };
-  const firstError = result.error.errors[0];
+  const issues = (result.error as any).issues || (result.error as any).errors || [];
+  const firstError = issues[0];
   return { success: false, error: firstError?.message ?? 'Validation failed' };
 }
 

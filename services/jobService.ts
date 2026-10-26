@@ -4,7 +4,7 @@ import type {
   ApplyJobRequest, PageResponse,
 } from '@/types/api';
 
-const EMPTY_PAGE: PageResponse<any> = { content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 };
+const EMPTY_PAGE: PageResponse<any> = { content: [], totalElements: 0, totalPages: 0, page: 0, number: 0, size: 20 };
 
 export const jobService = {
   async getJobs(

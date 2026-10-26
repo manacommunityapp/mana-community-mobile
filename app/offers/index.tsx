@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { offersService } from '@/services/offersService';
+import { marketBazaarService } from '@/services/marketBazaarService';
 import type {
   CommunityOffer,
   UserOfferClaim,
@@ -51,9 +52,9 @@ export default function DealsHubScreen() {
     queryFn: offersService.getMyClaims,
   });
 
-  const { data: marketDays = [], refetch: refetchMarkets } = useQuery({
-    queryKey: ['farmersMarketDays'],
-    queryFn: offersService.getMarketDays,
+  const { data: marketEvents = [], refetch: refetchMarkets, isError: marketEventsError } = useQuery({
+    queryKey: ['marketBazaarEvents', 'offers-home'],
+    queryFn: () => marketBazaarService.getEvents({ page: 0, size: 1 }),
   });
 
   const { data: demandPools = [], refetch: refetchDemand } = useQuery({
@@ -84,15 +85,11 @@ export default function DealsHubScreen() {
     },
   });
 
-  const rsvpMutation = useMutation({
-    mutationFn: (marketId: string) => offersService.rsvpMarketDay(marketId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['farmersMarketDays'] });
-    },
-  });
-
   const activeClaimsCount = claims.filter((c) => c.status === 'ACTIVE').length;
-  const primaryMarket = marketDays[0];
+  const primaryMarket = marketEvents[0];
+  const marketBadge = primaryMarket && !Number.isNaN(new Date(primaryMarket.startsAt).getTime())
+    ? new Date(primaryMarket.startsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : marketEventsError ? 'Offline' : 'Explore';
   const activeDemandPool = demandPools[0];
 
   // Filter offers by search query
@@ -150,7 +147,7 @@ export default function DealsHubScreen() {
                 <Ionicons name="leaf" size={16} color="#FFFFFF" />
               </View>
               <View style={[styles.quickBadge, { backgroundColor: '#D1FAE5' }]}>
-                <Text style={[styles.quickBadgeText, { color: '#065F46' }]}>This Sat</Text>
+                <Text style={[styles.quickBadgeText, { color: '#065F46' }]}>{marketBadge}</Text>
               </View>
             </View>
             <Text style={styles.quickTitle}>Market Days</Text>
@@ -217,36 +214,18 @@ export default function DealsHubScreen() {
             <View style={styles.marketBannerHeader}>
               <View style={styles.marketBadge}>
                 <Ionicons name="sparkles" size={12} color="#FDE68A" />
-                <Text style={styles.marketBadgeText}>WEEKEND SOCIETY EVENT</Text>
+                <Text style={styles.marketBadgeText}>COMMUNITY BAZAAR</Text>
               </View>
-              <TouchableOpacity
-                style={[styles.marketRsvpBtn, primaryMarket.userRsvp && styles.marketRsvpBtnActive]}
-                onPress={() => rsvpMutation.mutate(primaryMarket.id)}
-              >
-                <Ionicons
-                  name={primaryMarket.userRsvp ? 'checkmark' : 'calendar-outline'}
-                  size={12}
-                  color={primaryMarket.userRsvp ? '#065F46' : '#FFFFFF'}
-                />
-                <Text
-                  style={[
-                    styles.marketRsvpText,
-                    primaryMarket.userRsvp && { color: '#065F46' },
-                  ]}
-                >
-                  {primaryMarket.userRsvp ? 'RSVP Done' : 'RSVP'}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             <Text style={styles.marketBannerTitle}>{primaryMarket.title}</Text>
             <Text style={styles.marketBannerTime}>
-              📅 {primaryMarket.date} · ⏰ {primaryMarket.time} · 📍 Clubhouse Lawn
+              📅 {new Date(primaryMarket.startsAt).toLocaleString()} · 📍 {[primaryMarket.venue, primaryMarket.city].filter(Boolean).join(' · ') || 'Venue to be announced'}
             </Text>
 
             <View style={styles.marketBannerFooter}>
               <Text style={styles.marketStallsCount}>
-                👨‍🌾 {primaryMarket.vendorCount} Confirmed Stalls · {primaryMarket.rsvpCount} Attending
+                🏪 {primaryMarket.availableStallCount ?? '—'} stalls available · {primaryMarket.vendorCount ?? 0} vendors
               </Text>
               <TouchableOpacity
                 style={styles.viewStallsBtn}
@@ -255,6 +234,15 @@ export default function DealsHubScreen() {
                 <Text style={styles.viewStallsBtnText}>View Stalls & Pre-Order →</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        )}
+        {marketEventsError && !primaryMarket && (
+          <View style={styles.marketBanner}>
+            <Text style={styles.marketBannerTitle}>Community Bazaar</Text>
+            <Text style={styles.marketBannerTime}>Markets could not be loaded. Please check your connection.</Text>
+            <TouchableOpacity style={styles.viewStallsBtn} onPress={() => refetchMarkets()}>
+              <Text style={styles.viewStallsBtnText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         )}
 
