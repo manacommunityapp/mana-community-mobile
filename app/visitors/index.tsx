@@ -194,7 +194,7 @@ export default function VisitorsScreen() {
     }
   }, [refetch]);
 
-  // Merge Live API Visitors with Local/Sample
+  // Merge live API visitors with passes created during this session.
   const visitors: VisitorEntry[] = useMemo(() => {
     if (rawVisitors && rawVisitors.length > 0) {
       const live = rawVisitors.map(mapDtoToEntry);
@@ -202,10 +202,7 @@ export default function VisitorsScreen() {
       const nonOverlappingLocal = localVisitors.filter(v => !liveIds.has(v.id));
       return [...nonOverlappingLocal, ...live];
     }
-    if (localVisitors.length > 0) {
-      return [...localVisitors, ...INITIAL_VISITORS];
-    }
-    return INITIAL_VISITORS;
+    return localVisitors;
   }, [rawVisitors, localVisitors, mapDtoToEntry]);
 
   // ── 2. Pre-Approve Visitor Mutation ─────────────────────────────────────────
@@ -223,27 +220,8 @@ export default function VisitorsScreen() {
       setSelectedPass(newEntry);
       Alert.alert('✅ Pass Generated', `Digital Gate Pass ${newEntry.passCode} has been created.`);
     },
-    onError: () => {
-      // Offline fallback pass
-      const newCode = `MANA-${Math.floor(1000 + Math.random() * 9000)}`;
-      const newEntry: VisitorEntry = {
-        id: Date.now(),
-        name: guestName.trim(),
-        type: guestType,
-        purpose: guestPurpose.trim() || `${VISITOR_TYPE_CONFIG[guestType].label} Entry`,
-        vehicleNumber: guestVehicle.trim() || undefined,
-        expectedAt: 'Today, Just Now',
-        status: 'EXPECTED',
-        flat: `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`,
-        passCode: newCode,
-      };
-      setLocalVisitors(prev => [newEntry, ...prev]);
-      setIsPreApproveModal(false);
-      setGuestName('');
-      setGuestPhone('');
-      setGuestVehicle('');
-      setGuestPurpose('');
-      setSelectedPass(newEntry);
+    onError: (error: any) => {
+      Alert.alert('Could not create pass', error?.response?.data?.message || 'The visitor service is unavailable. Please try again.');
     },
   });
 

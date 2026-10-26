@@ -5,9 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 import { guardService, type GuardVisitor, type VisitorStatus } from '@/services/guardService';
+import { visitorService } from '@/services/visitorService';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 type FilterKey = 'all' | 'expected' | 'in' | 'out' | 'denied';
@@ -65,7 +67,15 @@ export default function GuardVisitorsScreen() {
         text: actionLabel,
         style: action === 'deny' ? 'destructive' : 'default',
         onPress: async () => {
-          if (action === 'check-in') await guardService.checkInVisitor(visitor.id);
+          if (action === 'check-in') {
+            const permission = await ImagePicker.requestCameraPermissionsAsync();
+            let photo: string | undefined;
+            if (permission.granted) {
+              const captured = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.55, allowsEditing: false });
+              if (!captured.canceled) photo = captured.assets[0]?.base64 ? `data:image/jpeg;base64,${captured.assets[0].base64}` : captured.assets[0]?.uri;
+            }
+            await visitorService.checkIn(visitor.id, 'Main Gate', undefined, photo);
+          }
           else if (action === 'check-out') await guardService.checkOutVisitor(visitor.id);
           else await guardService.denyVisitor(visitor.id);
           await loadVisitors();
