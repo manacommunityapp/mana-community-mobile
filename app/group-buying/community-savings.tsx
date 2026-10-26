@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,27 +8,15 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { groupBuyingService } from '../../services/groupBuyingService';
-import { CommunitySavings } from '../../types/groupBuying';
+import { useQuery } from '@tanstack/react-query';
+import { groupBuyingService } from '@/services/groupBuyingService';
+import type { CommunitySavings } from '@/types/groupBuying';
 
 export default function CommunitySavingsScreen() {
-  const [savings, setSavings] = useState<CommunitySavings | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadSavings();
-  }, []);
-
-  const loadSavings = async () => {
-    try {
-      const data = await groupBuyingService.getCommunitySavings();
-      setSavings(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: savings, isLoading: loading } = useQuery({
+    queryKey: ['community-savings'],
+    queryFn: groupBuyingService.getCommunitySavings,
+  });
 
   if (loading || !savings) {
     return (

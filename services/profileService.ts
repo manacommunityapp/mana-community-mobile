@@ -12,7 +12,6 @@ export interface UpdateProfileRequest {
 }
 
 export const profileService = {
-  // GET /api/users/me
   async getProfile(): Promise<UserProfileResponse> {
     const res = await api.get<UserProfileResponse>('/users/me');
     const data = res.data;
@@ -24,64 +23,69 @@ export const profileService = {
     };
   },
 
-  // PUT /api/users/me
   async updateProfile(data: UpdateProfileRequest): Promise<UserProfileResponse> {
-    const res = await api.put<UserProfileResponse>('/users/me', data);
-    const updated = res.data;
-    const resolvedName = updated.fullName || updated.name || (updated as any).username || (updated as any).displayName || (updated.email ? updated.email.split('@')[0] : '');
-    return {
-      ...updated,
-      fullName: resolvedName,
-      name: resolvedName,
-    };
+    try {
+      const res = await api.put<UserProfileResponse>('/users/me', data);
+      const updated = res.data;
+      const resolvedName = updated.fullName || updated.name || (updated as any).username || (updated as any).displayName || (updated.email ? updated.email.split('@')[0] : '');
+      return {
+        ...updated,
+        fullName: resolvedName,
+        name: resolvedName,
+      };
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to update profile. Please try again.');
+    }
   },
 
-  /**
-   * Upload a profile photo.
-   * Sends as multipart/form-data — Spring Boot expects:
-   *   PUT /api/users/me/profile-photo
-   *   Content-Type: multipart/form-data
-   *   Field name: "file"
-   */
   async uploadPhoto(
     localUri: string,
     declaredMimeType?: string,
     onProgress?: (pct: number) => void,
   ): Promise<{ photoUrl: string }> {
-    const fileName = localUri.split('/').pop() ?? 'photo.jpg';
-    const mimeType = inferMimeType(localUri, declaredMimeType);
+    try {
+      const fileName = localUri.split('/').pop() ?? 'photo.jpg';
+      const mimeType = inferMimeType(localUri, declaredMimeType);
 
-    const form = new FormData();
-    // React Native FormData accepts this object shape for files
-    form.append('file', {
-      uri:  localUri,
-      name: fileName,
-      type: mimeType,
-    } as any);
+      const form = new FormData();
+      form.append('file', {
+        uri:  localUri,
+        name: fileName,
+        type: mimeType,
+      } as any);
 
-    const res = await api.put<Record<string, unknown>>(
-      '/users/me/profile-photo',
-      form,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          if (e.total && onProgress) {
-            onProgress(Math.round((e.loaded / e.total) * 100));
-          }
+      const res = await api.put<Record<string, unknown>>(
+        '/users/me/profile-photo',
+        form,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (e) => {
+            if (e.total && onProgress) {
+              onProgress(Math.round((e.loaded / e.total) * 100));
+            }
+          },
         },
-      },
-    );
-    const photoUrl = verifyServerUploadResponse(res.data);
-    return { photoUrl };
+      );
+      const photoUrl = verifyServerUploadResponse(res.data);
+      return { photoUrl };
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to upload photo. Please try again.');
+    }
   },
 
-  // POST /api/users/push-token
   async registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void> {
-    await api.post('/users/push-token', { token, platform });
+    try {
+      await api.post('/users/push-token', { token, platform });
+    } catch {
+      // Push token registration failures are non-critical
+    }
   },
 
-  // DELETE /api/users/push-token  (call on logout)
   async removePushToken(token: string): Promise<void> {
-    await api.delete('/users/push-token', { data: { token } });
+    try {
+      await api.delete('/users/push-token', { data: { token } });
+    } catch {
+      // Push token removal failures are non-critical
+    }
   },
 };

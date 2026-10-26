@@ -60,7 +60,7 @@ export function useChatWindow(
         if (cancelled) return;
         // API returns newest-first (sort: createdAt,desc), reverse for display
         setMessages([...res.content].reverse());
-        setHasMore(res.page + 1 < res.totalPages);
+        setHasMore(((res.page ?? res.number ?? 0) + 1) < res.totalPages);
         setPage(0);
         // Mark read
         chatService.markRead(conversationId).catch(() => {});

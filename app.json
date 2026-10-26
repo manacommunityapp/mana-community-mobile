@@ -33,7 +33,9 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "intentFilters": [
         {
@@ -89,7 +91,13 @@
       ],
       "@sentry/react-native",
       "expo-image",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mana Mobility needs your location to find the nearest pickup point."
+        }
+      ]
     ],
     "scheme": "mana-community",
     "extra": {

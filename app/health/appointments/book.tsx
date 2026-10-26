@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { healthService } from "@/services/healthService";
 import { DoctorDto, FamilyMemberDto, ConsultationMode } from "@/types/health";
+
+type BookingMode = "slot" | "queue";
 
 export default function AppointmentBookScreen() {
   const { doctorId } = useLocalSearchParams<{ doctorId: string }>();
@@ -15,6 +17,10 @@ export default function AppointmentBookScreen() {
   const [selectedMode, setSelectedMode] = useState<ConsultationMode>("IN_PERSON");
   const [syncFinance, setSyncFinance] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [bookingMode, setBookingMode] = useState<BookingMode>("slot");
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
+  const [queueJoined, setQueueJoined] = useState(false);
+  const queueTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (doctorId) {
@@ -56,11 +62,97 @@ export default function AppointmentBookScreen() {
     }
   };
 
+  const handleJoinQueue = () => {
+    if (!selectedPatientId) { Alert.alert("Select Patient", "Please select a family member first."); return; }
+    const pos = Math.floor(Math.random() * 4) + 2;
+    setQueuePosition(pos);
+    setQueueJoined(true);
+    queueTimerRef.current = setInterval(() => {
+      setQueuePosition(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(queueTimerRef.current!);
+          Alert.alert("Your Turn! 🎉", `Dr. ${doctor?.name} is ready for you. Join the video call now.`, [
+            { text: "Join Call", onPress: () => router.replace("/health/appointments/video-room" as any) }
+          ]);
+          return 1;
+        }
+        return prev - 1;
+      });
+    }, 8000);
+  };
+
   if (!doctor) return null;
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {/* Booking Mode Toggle */}
+        <View style={styles.bookingModeCard}>
+          <Text style={styles.bookingModeLabel}>How would you like to consult?</Text>
+          <View style={styles.bookingModeRow}>
+            <TouchableOpacity
+              style={[styles.bookingModeOption, bookingMode === "slot" && styles.activeBookingMode]}
+              onPress={() => { setBookingMode("slot"); setQueueJoined(false); setQueuePosition(null); if (queueTimerRef.current) clearInterval(queueTimerRef.current); }}
+            >
+              <Ionicons name="calendar" size={18} color={bookingMode === "slot" ? "#0D9488" : "#6B7280"} />
+              <Text style={[styles.bookingModeText, bookingMode === "slot" && styles.activeBookingModeText]}>Book a Slot</Text>
+              <Text style={[styles.bookingModeDesc, bookingMode === "slot" && { color: "#0D9488" }]}>Pick a time</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bookingModeOption, bookingMode === "queue" && styles.activeBookingMode]}
+              onPress={() => { setBookingMode("queue"); }}
+            >
+              <Ionicons name="people" size={18} color={bookingMode === "queue" ? "#0D9488" : "#6B7280"} />
+              <Text style={[styles.bookingModeText, bookingMode === "queue" && styles.activeBookingModeText]}>Consult Now</Text>
+              <Text style={[styles.bookingModeDesc, bookingMode === "queue" && { color: "#0D9488" }]}>Join queue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* OPD Queue UI */}
+        {bookingMode === "queue" && (
+          <View style={styles.queueCard}>
+            {!queueJoined ? (
+              <>
+                <View style={styles.queueInfoRow}>
+                  <View style={styles.queueInfoItem}>
+                    <Text style={styles.queueInfoVal}>3</Text>
+                    <Text style={styles.queueInfoLabel}>In queue</Text>
+                  </View>
+                  <View style={styles.queueInfoDivider} />
+                  <View style={styles.queueInfoItem}>
+                    <Text style={styles.queueInfoVal}>~24 min</Text>
+                    <Text style={styles.queueInfoLabel}>Est. wait</Text>
+                  </View>
+                  <View style={styles.queueInfoDivider} />
+                  <View style={styles.queueInfoItem}>
+                    <Text style={[styles.queueInfoVal, { color: "#059669" }]}>Online</Text>
+                    <Text style={styles.queueInfoLabel}>Doctor status</Text>
+                  </View>
+                </View>
+                <Text style={styles.queueNote}>You'll receive a notification when it's your turn. Stay close to your device.</Text>
+              </>
+            ) : (
+              <View style={styles.queueActiveState}>
+                <View style={styles.queuePosBadge}>
+                  <Text style={styles.queuePosNum}>{queuePosition}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.queuePosLabel}>
+                    {queuePosition === 1 ? "You're next! Get ready." : `You are #${queuePosition} in queue`}
+                  </Text>
+                  <Text style={styles.queuePosEst}>
+                    Est. wait: ~{(queuePosition! - 1) * 8} min
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => { setQueueJoined(false); setQueuePosition(null); if (queueTimerRef.current) clearInterval(queueTimerRef.current); }}>
+                  <Text style={styles.leaveQueueText}>Leave queue</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Doctor Summary */}
         <View style={styles.card}>
           <Text style={styles.sectionHeader}>Consulting Doctor</Text>
@@ -111,21 +203,23 @@ export default function AppointmentBookScreen() {
           </View>
         </View>
 
-        {/* Select Time Slot */}
-        <View style={styles.card}>
-          <Text style={styles.sectionHeader}>Available Time Slots</Text>
-          <View style={styles.slotsWrap}>
-            {(doctor.availableSlots || (doctor.appointmentSlots ? doctor.appointmentSlots.map(s => s.time) : [doctor.nextAvailableSlot])).map(slot => (
-              <TouchableOpacity
-                key={slot}
-                style={[styles.slotChip, selectedSlot === slot && styles.activeSlotChip]}
-                onPress={() => setSelectedSlot(slot)}
-              >
-                <Text style={[styles.slotText, selectedSlot === slot && styles.activeSlotText]}>{slot}</Text>
-              </TouchableOpacity>
-            ))}
+        {/* Select Time Slot — only for slot mode */}
+        {bookingMode === "slot" && (
+          <View style={styles.card}>
+            <Text style={styles.sectionHeader}>Available Time Slots</Text>
+            <View style={styles.slotsWrap}>
+              {(doctor.availableSlots || (doctor.appointmentSlots ? doctor.appointmentSlots.map(s => s.time) : [doctor.nextAvailableSlot])).map(slot => (
+                <TouchableOpacity
+                  key={slot}
+                  style={[styles.slotChip, selectedSlot === slot && styles.activeSlotChip]}
+                  onPress={() => setSelectedSlot(slot)}
+                >
+                  <Text style={[styles.slotText, selectedSlot === slot && styles.activeSlotText]}>{slot}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Smart Personal Finance Sync */}
         <TouchableOpacity
@@ -147,13 +241,23 @@ export default function AppointmentBookScreen() {
           <Text style={styles.totalLabel}>Total Payable</Text>
           <Text style={styles.totalAmount}>₹{doctor.consultationFee}</Text>
         </View>
-        <TouchableOpacity
-          style={[styles.confirmBtn, booking && { opacity: 0.7 }]}
-          onPress={handleConfirm}
-          disabled={booking}
-        >
-          <Text style={styles.confirmBtnText}>{booking ? "Booking..." : "Confirm & Pay"}</Text>
-        </TouchableOpacity>
+        {bookingMode === "slot" ? (
+          <TouchableOpacity
+            style={[styles.confirmBtn, booking && { opacity: 0.7 }]}
+            onPress={handleConfirm}
+            disabled={booking}
+          >
+            <Text style={styles.confirmBtnText}>{booking ? "Booking..." : "Confirm & Pay"}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.confirmBtn, queueJoined && { backgroundColor: "#6B7280" }]}
+            onPress={queueJoined ? undefined : handleJoinQueue}
+            disabled={queueJoined}
+          >
+            <Text style={styles.confirmBtnText}>{queueJoined ? "In Queue..." : "Join Queue"}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -190,5 +294,28 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 11, color: "#6B7280" },
   totalAmount: { fontSize: 20, fontWeight: "bold", color: "#0D9488" },
   confirmBtn: { backgroundColor: "#0D9488", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  confirmBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 }
+  confirmBtnText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 14 },
+  // Booking mode
+  bookingModeCard: { backgroundColor: "#FFFFFF", padding: 14, borderRadius: 16, borderWidth: 1, borderColor: "#E5E7EB", gap: 10 },
+  bookingModeLabel: { fontSize: 14, fontWeight: "bold", color: "#111827" },
+  bookingModeRow: { flexDirection: "row", gap: 10 },
+  bookingModeOption: { flex: 1, alignItems: "center", padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: "#E5E7EB", gap: 4, backgroundColor: "#F9FAFB" },
+  activeBookingMode: { borderColor: "#0D9488", backgroundColor: "#F0FDFA" },
+  bookingModeText: { fontSize: 13, fontWeight: "700", color: "#374151" },
+  activeBookingModeText: { color: "#0D9488" },
+  bookingModeDesc: { fontSize: 11, color: "#9CA3AF" },
+  // Queue
+  queueCard: { backgroundColor: "#FFFFFF", padding: 14, borderRadius: 16, borderWidth: 1, borderColor: "#0D9488", gap: 10 },
+  queueInfoRow: { flexDirection: "row", alignItems: "center" },
+  queueInfoItem: { flex: 1, alignItems: "center" },
+  queueInfoVal: { fontSize: 16, fontWeight: "800", color: "#0F172A" },
+  queueInfoLabel: { fontSize: 10, color: "#6B7280", marginTop: 2 },
+  queueInfoDivider: { width: 1, height: 32, backgroundColor: "#E5E7EB" },
+  queueNote: { fontSize: 11, color: "#6B7280", textAlign: "center", fontStyle: "italic" },
+  queueActiveState: { flexDirection: "row", alignItems: "center", gap: 12 },
+  queuePosBadge: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#0D9488", justifyContent: "center", alignItems: "center" },
+  queuePosNum: { fontSize: 22, fontWeight: "900", color: "#FFFFFF" },
+  queuePosLabel: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
+  queuePosEst: { fontSize: 12, color: "#6B7280", marginTop: 2 },
+  leaveQueueText: { fontSize: 12, color: "#DC2626", fontWeight: "600" },
 });

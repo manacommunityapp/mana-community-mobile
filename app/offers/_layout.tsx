@@ -13,6 +13,7 @@ export default function OffersLayout() {
     >
       <Stack.Screen name="index" options={{ title: '🏷️ Community Deals & Offers' }} />
       <Stack.Screen name="market-days" options={{ title: '🥬 Society Farmers Market' }} />
+      <Stack.Screen name="organizer" options={{ title: '🏪 Bazaar Organizer' }} />
       <Stack.Screen name="partners" options={{ title: '🏪 Verified Merchant Directory' }} />
       <Stack.Screen name="demands" options={{ title: '🤝 Bulk Community Demand Pools' }} />
       <Stack.Screen name="my-claims" options={{ title: '🎟️ Resident Voucher Wallet' }} />

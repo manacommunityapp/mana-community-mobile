@@ -15,6 +15,30 @@ interface UseLiveScoreReturn {
   refetch:      () => Promise<void>;
 }
 
+let Notifications: typeof import('expo-notifications') | null = null;
+try {
+  Notifications = require('expo-notifications');
+} catch {}
+
+function notifyMatchEnded(match: MatchDto, homeScore?: number, awayScore?: number) {
+  if (!Notifications || typeof Notifications.scheduleNotificationAsync !== 'function') return;
+  try {
+    const h = homeScore ?? match.homeScore ?? 0;
+    const a = awayScore ?? match.awayScore ?? 0;
+    Notifications.scheduleNotificationAsync({
+      content: {
+        title: `🏆 ${match.homeTeamName} vs ${match.awayTeamName} - Full Time`,
+        body: `Final Result: ${match.homeTeamName} ${h} - ${a} ${match.awayTeamName}`,
+        data: { type: 'SPORTS_RESULT', matchId: match.id },
+        sound: 'default',
+      },
+      trigger: null,
+    });
+  } catch {
+    // Non-fatal if local notification cannot be scheduled
+  }
+}
+
 export function useLiveScore(matchId: number): UseLiveScoreReturn {
   const [match,      setMatch]      = useState<MatchDto | null>(null);
   const [events,     setEvents]     = useState<MatchEventDto[]>([]);
@@ -128,12 +152,17 @@ export function useLiveScore(matchId: number): UseLiveScoreReturn {
           break;
 
         case 'MATCH_ENDED':
-          setMatch((prev) => prev ? {
-            ...prev,
-            status:    'COMPLETED',
-            homeScore: ev.homeScore ?? prev.homeScore,
-            awayScore: ev.awayScore ?? prev.awayScore,
-          } : prev);
+          setMatch((prev) => {
+            if (!prev) return null;
+            const updated = {
+              ...prev,
+              status:    'COMPLETED' as const,
+              homeScore: ev.homeScore ?? prev.homeScore,
+              awayScore: ev.awayScore ?? prev.awayScore,
+            };
+            notifyMatchEnded(updated, ev.homeScore, ev.awayScore);
+            return updated;
+          });
           setMatchEnded(true);
           if (ev.event) setEvents((prev) => [...prev, ev.event!]);
           break;

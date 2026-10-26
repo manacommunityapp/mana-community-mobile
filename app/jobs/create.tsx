@@ -2,50 +2,56 @@ import { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, Switch, Alert, ActivityIndicator,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { Header } from '@/components/common/Header';
 import { jobService } from '@/services/jobService';
 import { JOB_CATEGORY_META, JOB_TYPE_LABEL } from '@/components/jobs/JobCard';
-import { COLORS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { JobCategory, JobType, PayType } from '@/types/api';
 
-const PAY_TYPES: { key: PayType; label: string; desc: string }[] = [
-  { key: 'HOURLY',     label: '₹/hr',     desc: 'Hourly rate'     },
-  { key: 'FIXED',      label: '₹ Fixed',  desc: 'One-time amount' },
-  { key: 'NEGOTIABLE', label: 'Negotiate',desc: 'Discuss later'   },
-  { key: 'VOLUNTEER',  label: 'Free',     desc: 'No pay'          },
+const PAY_TYPES: { key: PayType; label: string; desc: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'HOURLY',     label: 'Hourly (₹)', desc: 'Set per hr rate', icon: 'time-outline' },
+  { key: 'FIXED',      label: 'Fixed (₹)',  desc: 'Fixed lump-sum',  icon: 'cash-outline' },
+  { key: 'NEGOTIABLE', label: 'Negotiate',  desc: 'Discuss with neighbor', icon: 'chatbubbles-outline' },
+  { key: 'VOLUNTEER',  label: 'Volunteer',  desc: 'Free community help',  icon: 'heart-outline' },
 ];
 
-const CATEGORIES = Object.entries(JOB_CATEGORY_META) as [JobCategory, { emoji: string; label: string }][];
-const JOB_TYPES  = Object.entries(JOB_TYPE_LABEL)  as [JobType, string][];
+const CATEGORIES = Object.entries(JOB_CATEGORY_META) as [
+  JobCategory,
+  { emoji: string; label: string; bg: string; color: string }
+][];
+const JOB_TYPES = Object.entries(JOB_TYPE_LABEL) as [JobType, string][];
 
 export default function CreateJobScreen() {
   const router = useRouter();
-  const qc     = useQueryClient();
+  const qc = useQueryClient();
 
-  const [title,      setTitle]      = useState('');
-  const [description,setDesc]       = useState('');
-  const [category,   setCategory]   = useState<JobCategory>('HOME_REPAIRS');
-  const [jobType,    setJobType]     = useState<JobType>('ONE_TIME');
-  const [payType,    setPayType]     = useState<PayType>('NEGOTIABLE');
-  const [payAmount,  setPayAmount]   = useState('');
-  const [location,   setLocation]   = useState('Within community');
-  const [showFlat,   setShowFlat]   = useState(true);
+  const [title, setTitle] = useState('');
+  const [description, setDesc] = useState('');
+  const [category, setCategory] = useState<JobCategory>('HOME_REPAIRS');
+  const [jobType, setJobType] = useState<JobType>('ONE_TIME');
+  const [payType, setPayType] = useState<PayType>('NEGOTIABLE');
+  const [payAmount, setPayAmount] = useState('');
+  const [location, setLocation] = useState('Within community');
+  const [showFlat, setShowFlat] = useState(true);
 
   const createMutation = useMutation({
-    mutationFn: () => jobService.createJob({
-      title:       title.trim(),
-      description: description.trim(),
-      category,
-      jobType,
-      payType,
-      payAmount:   payAmount ? Number(payAmount) : undefined,
-      location:    location.trim() || 'Within community',
-      showFlat,
-    }),
+    mutationFn: () =>
+      jobService.createJob({
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        jobType,
+        payType,
+        payAmount: payAmount ? Number(payAmount) : undefined,
+        location: location.trim() || 'Within community',
+        showFlat,
+      }),
     onSuccess: (job) => {
       qc.invalidateQueries({ queryKey: ['jobs'] });
       qc.invalidateQueries({ queryKey: ['jobs-mine'] });
@@ -60,177 +66,464 @@ export default function CreateJobScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={s.cancel}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={s.title}>Post a Job</Text>
-        <TouchableOpacity onPress={() => createMutation.mutate()} disabled={!canPost || createMutation.isPending}>
-          {createMutation.isPending
-            ? <ActivityIndicator size="small" color={COLORS.primary} />
-            : <Text style={[s.post, !canPost && s.postDisabled]}>Post</Text>
-          }
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      {/* Modern Header */}
+      <Header
+        title="Post an Opportunity"
+        subtitle="Community Task & Job Listing"
+        leftIcon="close"
+        onLeftPress={() => router.back()}
+      />
 
-          {/* Title */}
-          <View style={s.section}>
-            <Text style={s.label}>Job title *</Text>
-            <TextInput
-              style={s.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="e.g. Need a plumber for bathroom repair"
-              placeholderTextColor={COLORS.textMuted}
-              maxLength={80}
-              autoFocus
-            />
-          </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title & Description Card */}
+          <View style={s.card}>
+            <Text style={s.sectionHeader}>Task Overview</Text>
 
-          {/* Description */}
-          <View style={s.section}>
-            <Text style={s.label}>Description *</Text>
-            <TextInput
-              style={[s.input, s.textArea]}
-              value={description}
-              onChangeText={setDesc}
-              placeholder="Describe the work, requirements, timing…"
-              placeholderTextColor={COLORS.textMuted}
-              multiline
-              textAlignVertical="top"
-              maxLength={800}
-            />
-            <Text style={s.charCount}>{description.length}/800</Text>
-          </View>
-
-          {/* Category */}
-          <View style={s.section}>
-            <Text style={s.label}>Category *</Text>
-            <View style={s.grid}>
-              {CATEGORIES.map(([key, meta]) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[s.gridItem, category === key && s.gridItemActive]}
-                  onPress={() => setCategory(key)}
-                >
-                  <Text style={s.gridEmoji}>{meta.emoji}</Text>
-                  <Text style={[s.gridLabel, category === key && s.gridLabelActive]} numberOfLines={1}>
-                    {meta.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Job type */}
-          <View style={s.section}>
-            <Text style={s.label}>Type</Text>
-            <View style={s.rowChips}>
-              {JOB_TYPES.map(([key, label]) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[s.rowChip, jobType === key && s.rowChipActive]}
-                  onPress={() => setJobType(key)}
-                >
-                  <Text style={[s.rowChipText, jobType === key && s.rowChipTextActive]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Pay */}
-          <View style={s.section}>
-            <Text style={s.label}>Compensation</Text>
-            <View style={s.rowChips}>
-              {PAY_TYPES.map((p) => (
-                <TouchableOpacity
-                  key={p.key}
-                  style={[s.rowChip, payType === p.key && s.rowChipActive]}
-                  onPress={() => setPayType(p.key)}
-                >
-                  <Text style={[s.rowChipText, payType === p.key && s.rowChipTextActive]}>
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {needsAmount && (
+            <View style={s.inputGroup}>
+              <Text style={s.label}>Job Title *</Text>
               <TextInput
-                style={[s.input, { marginTop: 10 }]}
-                value={payAmount}
-                onChangeText={(v) => setPayAmount(v.replace(/[^0-9]/g, ''))}
-                placeholder={payType === 'HOURLY' ? 'Hourly rate (₹)' : 'Fixed amount (₹)'}
+                style={s.input}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="e.g. Need help assembling IKEA furniture"
                 placeholderTextColor={COLORS.textMuted}
-                keyboardType="numeric"
+                maxLength={80}
               />
+            </View>
+
+            <View style={s.inputGroup}>
+              <View style={s.labelRow}>
+                <Text style={s.label}>Description *</Text>
+                <Text style={s.charCount}>{description.length}/800</Text>
+              </View>
+              <TextInput
+                style={[s.input, s.textArea]}
+                value={description}
+                onChangeText={setDesc}
+                placeholder="Describe what needs to be done, schedule, and any required tools or skills…"
+                placeholderTextColor={COLORS.textMuted}
+                multiline
+                textAlignVertical="top"
+                maxLength={800}
+              />
+            </View>
+          </View>
+
+          {/* Category Selector Card */}
+          <View style={s.card}>
+            <Text style={s.sectionHeader}>Category *</Text>
+            <View style={s.grid}>
+              {CATEGORIES.map(([key, meta]) => {
+                const isSelected = category === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      s.gridItem,
+                      isSelected && s.gridItemActive,
+                    ]}
+                    onPress={() => setCategory(key)}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        s.gridEmojiWrap,
+                        { backgroundColor: meta.bg },
+                        isSelected && { backgroundColor: '#EEF2FF' },
+                      ]}
+                    >
+                      <Text style={s.gridEmoji}>{meta.emoji}</Text>
+                    </View>
+                    <Text
+                      style={[s.gridLabel, isSelected && s.gridLabelActive]}
+                      numberOfLines={1}
+                    >
+                      {meta.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Job Type & Engagement */}
+          <View style={s.card}>
+            <Text style={s.sectionHeader}>Type of Engagement</Text>
+            <View style={s.rowChips}>
+              {JOB_TYPES.map(([key, label]) => {
+                const isSelected = jobType === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[s.rowChip, isSelected && s.rowChipActive]}
+                    onPress={() => setJobType(key)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[s.rowChipText, isSelected && s.rowChipTextActive]}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Compensation Section */}
+          <View style={s.card}>
+            <Text style={s.sectionHeader}>Compensation & Pay</Text>
+            <View style={s.payGrid}>
+              {PAY_TYPES.map((p) => {
+                const isSelected = payType === p.key;
+                return (
+                  <TouchableOpacity
+                    key={p.key}
+                    style={[s.payCard, isSelected && s.payCardActive]}
+                    onPress={() => setPayType(p.key)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={p.icon}
+                      size={20}
+                      color={isSelected ? COLORS.primary : '#64748B'}
+                    />
+                    <Text
+                      style={[s.payLabel, isSelected && s.payLabelActive]}
+                    >
+                      {p.label}
+                    </Text>
+                    <Text style={s.payDesc}>{p.desc}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {needsAmount && (
+              <View style={[s.inputGroup, { marginTop: 12 }]}>
+                <Text style={s.label}>Amount (in ₹) *</Text>
+                <View style={s.amountInputWrap}>
+                  <Text style={s.currencyPrefix}>₹</Text>
+                  <TextInput
+                    style={s.amountInput}
+                    value={payAmount}
+                    onChangeText={(v) => setPayAmount(v.replace(/[^0-9]/g, ''))}
+                    placeholder={
+                      payType === 'HOURLY' ? 'Hourly rate (e.g. 350)' : 'Total amount (e.g. 1200)'
+                    }
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
             )}
           </View>
 
-          {/* Location */}
-          <View style={s.section}>
-            <Text style={s.label}>Location</Text>
-            <TextInput
-              style={s.input}
-              value={location}
-              onChangeText={setLocation}
-              placeholder="e.g. Within community, Remote, Block A"
-              placeholderTextColor={COLORS.textMuted}
-              maxLength={60}
-            />
-          </View>
+          {/* Location & Visibility */}
+          <View style={s.card}>
+            <Text style={s.sectionHeader}>Location & Privacy</Text>
 
-          {/* Privacy */}
-          <View style={s.section}>
+            <View style={s.inputGroup}>
+              <Text style={s.label}>Task Location</Text>
+              <TextInput
+                style={s.input}
+                value={location}
+                onChangeText={setLocation}
+                placeholder="e.g. Tower B - Flat 402, Clubhouse, or Remote"
+                placeholderTextColor={COLORS.textMuted}
+                maxLength={60}
+              />
+            </View>
+
             <View style={s.toggleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.label}>Show my flat number</Text>
-                <Text style={s.hint}>Applicants will see your flat in your listing</Text>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={s.label}>Display Flat / Unit in Listing</Text>
+                <Text style={s.hint}>
+                  Enabling this helps verified neighbors know your block and flat.
+                </Text>
               </View>
               <Switch
                 value={showFlat}
                 onValueChange={setShowFlat}
-                trackColor={{ false: COLORS.border, true: COLORS.primary }}
-                thumbColor="#fff"
+                trackColor={{ false: '#E2E8F0', true: COLORS.primary }}
+                thumbColor="#FFFFFF"
               />
             </View>
           </View>
 
-          <View style={{ height: 32 }} />
+          <View style={{ height: 20 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Floating Submit Bottom Bar */}
+      <View style={s.submitBar}>
+        <TouchableOpacity
+          style={[s.submitBtn, !canPost && s.submitBtnDisabled]}
+          onPress={() => createMutation.mutate()}
+          disabled={!canPost || createMutation.isPending}
+          activeOpacity={0.85}
+        >
+          {createMutation.isPending ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+              <Text style={s.submitBtnText}>Publish Job Listing</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: COLORS.background },
-  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  cancel:          { fontSize: 16, color: COLORS.textMuted },
-  title:           { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
-  post:            { fontSize: 16, fontWeight: '700', color: COLORS.primary },
-  postDisabled:    { color: COLORS.textMuted },
-  scroll:          { padding: 16, gap: 14 },
-  section:         { backgroundColor: COLORS.surface, borderRadius: 14, padding: 14, gap: 10, borderWidth: 1, borderColor: COLORS.border },
-  label:           { fontSize: 14, fontWeight: '600', color: COLORS.text },
-  hint:            { fontSize: 12, color: COLORS.textMuted, marginTop: -6 },
-  input:           { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.text },
-  textArea:        { minHeight: 100, lineHeight: 22 },
-  charCount:       { fontSize: 11, color: COLORS.textMuted, textAlign: 'right' },
-  grid:            { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  gridItem:        { width: '30%', alignItems: 'center', paddingVertical: 10, borderRadius: 10, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: COLORS.border, gap: 4 },
-  gridItemActive:  { backgroundColor: '#EEF2FF', borderColor: COLORS.primary },
-  gridEmoji:       { fontSize: 20 },
-  gridLabel:       { fontSize: 11, color: COLORS.textMuted, fontWeight: '500', textAlign: 'center' },
-  gridLabelActive: { color: COLORS.primary, fontWeight: '700' },
-  rowChips:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  rowChip:         { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: COLORS.border },
-  rowChipActive:   { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  rowChipText:     { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
-  rowChipTextActive:{ color: '#fff', fontWeight: '700' },
-  toggleRow:       { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  scroll: {
+    padding: 16,
+    gap: 14,
+    paddingBottom: 20,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 12,
+    ...SHADOWS.sm,
+  },
+  sectionHeader: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    fontFamily: FONTS.displayBold,
+    color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  inputGroup: {
+    gap: 6,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: FONTS.medium,
+    color: '#1E293B',
+  },
+  hint: {
+    fontSize: 11.5,
+    color: '#64748B',
+    fontFamily: FONTS.regular,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
+    fontFamily: FONTS.regular,
+  },
+  textArea: {
+    minHeight: 100,
+    lineHeight: 20,
+  },
+  charCount: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontFamily: FONTS.regular,
+  },
+
+  // ── Category Grid ──────────────────────────────────────────────────
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  gridItem: {
+    width: '31%',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 5,
+  },
+  gridItemActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: COLORS.primary,
+    ...SHADOWS.sm,
+  },
+  gridEmojiWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridEmoji: {
+    fontSize: 16,
+  },
+  gridLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+    fontFamily: FONTS.medium,
+    textAlign: 'center',
+  },
+  gridLabelActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+    fontFamily: FONTS.bold,
+  },
+
+  // ── Engagement Chips ───────────────────────────────────────────────
+  rowChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  rowChip: {
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  rowChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    ...SHADOWS.sm,
+  },
+  rowChipText: {
+    fontSize: 12.5,
+    color: '#64748B',
+    fontWeight: '600',
+    fontFamily: FONTS.medium,
+  },
+  rowChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontFamily: FONTS.bold,
+  },
+
+  // ── Compensation Grid ──────────────────────────────────────────────
+  payGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  payCard: {
+    width: '48%',
+    padding: 12,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 3,
+  },
+  payCardActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: COLORS.primary,
+    ...SHADOWS.sm,
+  },
+  payLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+    fontFamily: FONTS.bold,
+    marginTop: 2,
+  },
+  payLabelActive: {
+    color: COLORS.primary,
+  },
+  payDesc: {
+    fontSize: 10.5,
+    color: '#64748B',
+    fontFamily: FONTS.regular,
+  },
+  amountInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: RADIUS.md,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+  },
+  currencyPrefix: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+    fontFamily: FONTS.bold,
+    marginRight: 6,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+    paddingVertical: 10,
+    fontFamily: FONTS.bold,
+  },
+
+  // ── Toggle Row ─────────────────────────────────────────────────────
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+  },
+
+  // ── Floating Submit Bar ────────────────────────────────────────────
+  submitBar: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    ...SHADOWS.md,
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: 14,
+    ...SHADOWS.sm,
+  },
+  submitBtnDisabled: {
+    opacity: 0.45,
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 15,
+    fontFamily: FONTS.bold,
+  },
 });
+

@@ -11,7 +11,8 @@ export type ProviderCategory =
   | "DIAGNOSTIC_CENTER"
   | "PHARMACY"
   | "PHYSIOTHERAPIST"
-  | "HOME_CARE";
+  | "HOME_CARE"
+  | "FITNESS_TRAINER";
 
 export interface ClinicHourSlot {
   day: string;
@@ -81,6 +82,60 @@ export interface DoctorDto {
   emergencyServicesAvailable?: boolean;
   homeVisitAvailable?: boolean;
   openNow?: boolean;
+  accreditations?: string[];
+  mapsUrl?: string;
+  department?: string;
+}
+
+export type AmbulanceVehicleType = "BASIC" | "ADVANCED" | "ICU";
+export type AmbulanceStatus = "REQUESTED" | "DISPATCHED" | "EN_ROUTE" | "ARRIVED" | "COMPLETED" | "CANCELLED";
+export type EmergencyCallbackStatus = "REQUESTED" | "AGENT_ASSIGNED" | "CALLED" | "RESOLVED" | "MISSED";
+export type IpdAdmissionStatus = "REQUESTED" | "CONFIRMED" | "ADMITTED" | "DISCHARGED" | "CANCELLED";
+export type WardType = "GENERAL" | "SEMI_PRIVATE" | "PRIVATE" | "ICU";
+
+export interface AmbulanceBookingDto {
+  id: string;
+  bookingUuid: string;
+  vehicleType: AmbulanceVehicleType;
+  status: AmbulanceStatus;
+  pickupAddress: string;
+  destinationAddress?: string;
+  driverName?: string;
+  driverPhone?: string;
+  vehicleNumber?: string;
+  estimatedMinutes?: number;
+  requestedAt: string;
+  dispatchedAt?: string;
+  arrivedAt?: string;
+}
+
+export interface EmergencyCallbackDto {
+  id: string;
+  callbackUuid: string;
+  callerName: string;
+  callerPhone: string;
+  emergencyDescription: string;
+  status: EmergencyCallbackStatus;
+  assignedAgentName?: string;
+  requestedAt: string;
+  resolvedAt?: string;
+}
+
+export interface IpdAdmissionDto {
+  id: string;
+  admissionUuid: string;
+  patientName: string;
+  hospitalName: string;
+  department: string;
+  admissionReason: string;
+  wardType: WardType;
+  status: IpdAdmissionStatus;
+  expectedAdmissionDate?: string;
+  actualAdmissionDate?: string;
+  dischargeDate?: string;
+  bedNumber?: string;
+  attendingDoctorName?: string;
+  requestedAt: string;
 }
 
 export interface HealthReminderDto {

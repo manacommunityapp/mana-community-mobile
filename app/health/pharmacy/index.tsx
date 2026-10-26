@@ -16,6 +16,31 @@ interface CartItem {
   strip?: string;
 }
 
+interface RefillSubscription {
+  id: string;
+  medicineName: string;
+  strip: string;
+  price: number;
+  frequency: "Monthly" | "Bi-Monthly" | "Weekly";
+  nextDispatch: string;
+  active: boolean;
+}
+
+const SEED_SUBSCRIPTIONS: RefillSubscription[] = [
+  { id: "sub-1", medicineName: "Metformin 500mg", strip: "30 tabs • 1 month supply", price: 105, frequency: "Monthly", nextDispatch: "15 Nov 2026", active: true },
+  { id: "sub-2", medicineName: "Amlodipine 5mg", strip: "30 tabs • 1 month supply", price: 144, frequency: "Monthly", nextDispatch: "15 Nov 2026", active: true },
+  { id: "sub-3", medicineName: "Atorvastatin 20mg", strip: "30 tabs • 1 month supply", price: 245, frequency: "Monthly", nextDispatch: "20 Nov 2026", active: false },
+];
+
+const CHRONIC_MEDS = [
+  { name: "Metformin 500mg", price: 105, strip: "30 tabs" },
+  { name: "Amlodipine 5mg", price: 144, strip: "30 tabs" },
+  { name: "Atorvastatin 20mg", price: 245, strip: "30 tabs" },
+  { name: "Losartan 50mg", price: 182, strip: "30 tabs" },
+  { name: "Levothyroxine 50mcg", price: 95, strip: "30 tabs" },
+  { name: "Pantoprazole 40mg", price: 68, strip: "30 tabs" },
+];
+
 const POPULAR_MEDICINES: CartItem[] = [
   { name: "Paracetamol 500mg", qty: 1, price: 28, strip: "10 tablets" },
   { name: "Cetirizine 10mg", qty: 1, price: 42, strip: "10 tablets" },
@@ -41,7 +66,11 @@ const DELIVERY_SLOTS = [
 
 export default function PharmacyScreen() {
   const router = useRouter();
-  const [tab, setTab] = useState<"rx" | "otc">("rx");
+  const [tab, setTab] = useState<"rx" | "otc" | "sub">("rx");
+  const [subscriptions, setSubscriptions] = useState<RefillSubscription[]>(SEED_SUBSCRIPTIONS);
+  const [showAddSubModal, setShowAddSubModal] = useState(false);
+  const [newSubMed, setNewSubMed] = useState(CHRONIC_MEDS[0].name);
+  const [newSubFreq, setNewSubFreq] = useState<RefillSubscription["frequency"]>("Monthly");
   const [prescriptions, setPrescriptions] = useState<MedicalRecordDto[]>([]);
   const [selectedRxId, setSelectedRxId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -162,14 +191,26 @@ export default function PharmacyScreen() {
           onPress={() => setTab("rx")}
         >
           <Ionicons name="document-text" size={14} color={tab === "rx" ? "#FFFFFF" : "#64748B"} />
-          <Text style={[styles.tabText, tab === "rx" && { color: "#FFFFFF" }]}>By Prescription</Text>
+          <Text style={[styles.tabText, tab === "rx" && { color: "#FFFFFF" }]}>By Rx</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabBtn, tab === "otc" && styles.tabBtnActive]}
           onPress={() => setTab("otc")}
         >
           <Ionicons name="search" size={14} color={tab === "otc" ? "#FFFFFF" : "#64748B"} />
-          <Text style={[styles.tabText, tab === "otc" && { color: "#FFFFFF" }]}>OTC / Search</Text>
+          <Text style={[styles.tabText, tab === "otc" && { color: "#FFFFFF" }]}>OTC</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabBtn, tab === "sub" && styles.tabBtnActive]}
+          onPress={() => setTab("sub")}
+        >
+          <Ionicons name="repeat" size={14} color={tab === "sub" ? "#FFFFFF" : "#64748B"} />
+          <Text style={[styles.tabText, tab === "sub" && { color: "#FFFFFF" }]}>Auto-Refill</Text>
+          {subscriptions.filter(s => s.active).length > 0 && (
+            <View style={styles.subBadge}>
+              <Text style={styles.subBadgeText}>{subscriptions.filter(s => s.active).length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -256,8 +297,65 @@ export default function PharmacyScreen() {
           </>
         )}
 
+        {/* AUTO-REFILL SUBSCRIPTIONS TAB */}
+        {tab === "sub" && (
+          <>
+            <View style={styles.subHeaderRow}>
+              <View>
+                <Text style={styles.subHeaderTitle}>Monthly Refill Subscriptions</Text>
+                <Text style={styles.subHeaderSub}>Never miss a dose — auto-dispatched before you run out</Text>
+              </View>
+              <TouchableOpacity style={styles.addSubBtn} onPress={() => setShowAddSubModal(true)}>
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <Text style={styles.addSubBtnText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {subscriptions.map(sub => (
+              <View key={sub.id} style={[styles.subCard, !sub.active && styles.subCardPaused]}>
+                <View style={styles.subCardLeft}>
+                  <View style={[styles.subIcon, { backgroundColor: sub.active ? "#CCFBF1" : "#F1F5F9" }]}>
+                    <Ionicons name="repeat" size={18} color={sub.active ? "#0D9488" : "#94A3B8"} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.subMedName}>{sub.medicineName}</Text>
+                    <Text style={styles.subStrip}>{sub.strip} • {sub.frequency}</Text>
+                    <Text style={[styles.subNext, !sub.active && { color: "#94A3B8" }]}>
+                      {sub.active ? `Next dispatch: ${sub.nextDispatch}` : "Paused"}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.subCardRight}>
+                  <Text style={styles.subPrice}>₹{sub.price}</Text>
+                  <TouchableOpacity
+                    style={[styles.subToggle, sub.active ? styles.subTogglePause : styles.subToggleResume]}
+                    onPress={() => setSubscriptions(prev => prev.map(s => s.id === sub.id ? { ...s, active: !s.active } : s))}
+                  >
+                    <Text style={styles.subToggleText}>{sub.active ? "Pause" : "Resume"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+
+            {subscriptions.length === 0 && (
+              <View style={styles.emptyCard}>
+                <Ionicons name="repeat-outline" size={36} color="#94A3B8" />
+                <Text style={styles.emptyText}>No auto-refill subscriptions yet.</Text>
+                <Text style={styles.emptySub}>Set up recurring delivery for chronic medicines.</Text>
+              </View>
+            )}
+
+            <View style={styles.subInfoBanner}>
+              <Ionicons name="information-circle" size={16} color="#2563EB" />
+              <Text style={styles.subInfoText}>
+                Subscriptions are auto-dispatched 3 days before your supply runs out. Cancel anytime.
+              </Text>
+            </View>
+          </>
+        )}
+
         {/* Delivery Slot Selector */}
-        {cart.length > 0 && (
+        {cart.length > 0 && tab !== "sub" && (
           <>
             <Text style={styles.tabHeading}>Delivery Options</Text>
             {DELIVERY_SLOTS.map(slot => (
@@ -287,7 +385,7 @@ export default function PharmacyScreen() {
       </ScrollView>
 
       {/* Bottom Bar */}
-      {cart.length > 0 && (
+      {cart.length > 0 && tab !== "sub" && (
         <View style={styles.bottomBar}>
           <View>
             <Text style={styles.bottomItems}>{cart.length} items</Text>
@@ -299,6 +397,62 @@ export default function PharmacyScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Add Subscription Modal */}
+      <Modal visible={showAddSubModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Set Up Auto-Refill</Text>
+              <TouchableOpacity onPress={() => setShowAddSubModal(false)}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.addSubLabel}>Choose Medicine</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {CHRONIC_MEDS.map(m => (
+                  <TouchableOpacity
+                    key={m.name}
+                    style={[styles.medChip, newSubMed === m.name && styles.medChipActive]}
+                    onPress={() => setNewSubMed(m.name)}
+                  >
+                    <Text style={[styles.medChipText, newSubMed === m.name && { color: "#FFFFFF" }]}>{m.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+            <Text style={styles.addSubLabel}>Dispatch Frequency</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+              {(["Monthly", "Bi-Monthly", "Weekly"] as RefillSubscription["frequency"][]).map(f => (
+                <TouchableOpacity
+                  key={f}
+                  style={[styles.freqChip, newSubFreq === f && styles.freqChipActive]}
+                  onPress={() => setNewSubFreq(f)}
+                >
+                  <Text style={[styles.freqChipText, newSubFreq === f && { color: "#FFFFFF" }]}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.placeOrderBtn}
+              onPress={() => {
+                const med = CHRONIC_MEDS.find(m => m.name === newSubMed)!;
+                const newSub: RefillSubscription = {
+                  id: `sub-${Date.now()}`, medicineName: med.name, strip: `${med.strip} • 1 month supply`,
+                  price: med.price, frequency: newSubFreq, nextDispatch: "15 Dec 2026", active: true,
+                };
+                setSubscriptions(prev => [newSub, ...prev]);
+                setShowAddSubModal(false);
+                Alert.alert("Auto-Refill Set!", `${med.name} will be dispatched ${newSubFreq.toLowerCase()} to your address.`);
+              }}
+            >
+              <Ionicons name="repeat" size={18} color="#FFFFFF" />
+              <Text style={styles.placeOrderText}>Activate Auto-Refill</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Cart Review Modal */}
       <Modal visible={showCartModal} transparent animationType="slide">
@@ -436,6 +590,39 @@ const styles = StyleSheet.create({
   deliverToText: { fontSize: 12, color: "#1D4ED8", fontWeight: "600", flex: 1 },
   placeOrderBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#0D9488", paddingVertical: 16, borderRadius: 14 },
   placeOrderText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
+
+  // Subscription tab
+  subHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  subHeaderTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A" },
+  subHeaderSub: { fontSize: 12, color: "#64748B", marginTop: 2 },
+  addSubBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#0D9488", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  addSubBtnText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
+  subCard: { backgroundColor: "#FFFFFF", borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: "#E2E8F0", flexDirection: "row", alignItems: "center", gap: 12 },
+  subCardPaused: { borderColor: "#E2E8F0", opacity: 0.7 },
+  subCardLeft: { flex: 1 },
+  subCardRight: { alignItems: "flex-end", gap: 6 },
+  subIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#CCFBF1", justifyContent: "center", alignItems: "center" },
+  subMedName: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
+  subStrip: { fontSize: 11, color: "#94A3B8", marginTop: 2 },
+  subNext: { fontSize: 11, color: "#0D9488", fontWeight: "600", marginTop: 3 },
+  subPrice: { fontSize: 14, fontWeight: "800", color: "#0F172A" },
+  subToggle: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+  subTogglePause: { borderColor: "#F59E0B", backgroundColor: "#FFFBEB" },
+  subToggleResume: { borderColor: "#0D9488", backgroundColor: "#F0FDFA" },
+  subToggleText: { fontSize: 11, fontWeight: "700" },
+  subBadge: { backgroundColor: "#0D9488", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, minWidth: 18, alignItems: "center" },
+  subBadgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "800" },
+  subInfoBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#EFF6FF", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#BFDBFE" },
+  subInfoText: { fontSize: 12, color: "#1D4ED8", flex: 1, lineHeight: 17 },
+
+  // Add subscription modal
+  addSubLabel: { fontSize: 13, fontWeight: "700", color: "#374151", marginBottom: 6 },
+  medChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#F8FAFC" },
+  medChipActive: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
+  medChipText: { fontSize: 12, fontWeight: "600", color: "#374151" },
+  freqChip: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#F8FAFC", alignItems: "center" },
+  freqChipActive: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
+  freqChipText: { fontSize: 12, fontWeight: "700", color: "#374151" },
 
   // Success
   successWrap: { flex: 1, backgroundColor: "#F8FAFC" },

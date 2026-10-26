@@ -93,6 +93,7 @@ export default function JobsScreen() {
       </LinearGradient>
 
       <FlatList
+        style={{ flex: 1 }}
         data={jobPosts}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}

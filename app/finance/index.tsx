@@ -1,5 +1,6 @@
 import { personalFinanceService } from '@/services/personalFinanceService';
 import { useState, useCallback, useMemo } from 'react';
+import { usePathname } from 'expo-router';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, ActivityIndicator, Alert, RefreshControl, Linking,
@@ -20,16 +21,32 @@ import {
 const FINANCE_HUBS = [
   { emoji: '🏦', label: 'Treasury',   color: THEME.indigo,   bg: THEME.indigoLight, route: '/finance/society-dashboard' },
   { emoji: '💳', label: 'Pay Dues',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/finance' },
+  { emoji: '⚡', label: 'Mana Pay',   color: '#2563EB',            bg: '#EFF6FF',              route: '/bbps' },
+  { emoji: '📱', label: 'Recharge',   color: '#0284C7',            bg: '#F0F9FF',              route: '/recharge' },
+  { emoji: '📷', label: 'Scan & Pay', color: '#7C3AED',            bg: '#F5F3FF',              route: '/scan-and-pay' },
+  { emoji: '👥', label: 'Send Money', color: '#7C3AED',            bg: '#F5F3FF',              route: '/send-money' },
+  { emoji: '📋', label: 'UPI History',color: '#0F766E',            bg: '#F0FDFA',              route: '/upi-history' },
+  { emoji: '🪙', label: 'Gold',       color: '#B45309',            bg: '#FFFBEB',              route: '/gold' },
+  { emoji: '📈', label: 'Mutual Funds',color: '#1D4ED8',           bg: '#EFF6FF',              route: '/mutual-funds' },
+  { emoji: '🤝', label: 'Split Bill', color: '#16A34A',            bg: '#F0FDF4',              route: '/split-bill' },
+  { emoji: '🎬', label: 'Movies',     color: '#DC2626',            bg: '#FEF2F2',              route: '/movies' },
   { emoji: '📑', label: 'Budget',     color: '#EA580C',            bg: '#FFF7ED',              route: '/finance/budget' },
+  { emoji: '📖', label: 'Ledger',     color: '#0D9488',            bg: '#CCFBF1',              route: '/finance/ledger' },
   { emoji: '📊', label: 'Reports',    color: '#D97706',            bg: '#FFFBEB',              route: '/finance/society-reports' },
   { emoji: '📋', label: 'Invoices',   color: '#0284C7',            bg: '#E0F2FE',              route: '/finance/invoices' },
   { emoji: '👥', label: 'Vendors',    color: '#7C3AED',            bg: '#F5F3FF',              route: '/finance/vendors' },
   { emoji: '✅', label: 'Approvals',  color: '#DC2626',            bg: '#FEF2F2',              route: '/finance/expenses' },
+  { emoji: '🧾', label: 'Vendor Bills', color: '#7C3AED',          bg: '#F5F3FF',              route: '/finance/vendor-bills' },
+  { emoji: '🏦', label: 'Fixed Deposit', color: '#1D4ED8',         bg: '#EFF6FF',              route: '/fd' },
+  { emoji: '💸', label: 'Loans',         color: '#DC2626',         bg: '#FEF2F2',              route: '/loans' },
   { emoji: '💰', label: 'My Money',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/personal-finance' },
+  { emoji: '📒', label: 'My Khata',   color: '#7C3AED',            bg: '#F5F3FF',              route: '/vendor-finance' },
+  { emoji: '🤝', label: 'Udhaar',     color: '#0284C7',            bg: '#E0F2FE',              route: '/personal-finance/khata' },
 ] as const;
 
 export default function MaintenanceDuesScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -104,24 +121,16 @@ export default function MaintenanceDuesScreen() {
   const initiatePaymentMutation = useMutation({
     mutationFn: (billId: string) => maintenanceDuesService.initiatePayment(billId),
     onSuccess: (order) => {
+      // The Razorpay order is ready (key + orderId + amount).
+      // To complete UPI/Card payment, integrate react-native-razorpay:
+      //   npx expo install react-native-razorpay
+      // Then open RazorpayCheckout.open({ key: order.key, order_id: order.orderId, amount: order.amount * 100 })
+      // and on success call verifyPaymentMutation.mutate with the real
+      // handler.razorpay_payment_id and handler.razorpay_signature.
       Alert.alert(
-        'Payment Gateway Initiated',
-        'Order ID: ' + order.orderId + '\nAmount: ₹' + order.amount.toLocaleString('en-IN') + '\nOpening payment checkout...',
-        [
-          {
-            text: 'Simulate Success',
-            onPress: () => {
-              verifyPaymentMutation.mutate({
-                billId: activeBill?.id || 'bill-1',
-                orderId: order.orderId,
-                paymentId: 'pay_mock_' + Math.random().toString(36).substring(2, 9),
-                signature: 'sig_mock_verified',
-                method: selectedMethod,
-              });
-            },
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ]
+        'Payment Gateway Ready',
+        `Order created (₹${order.amount.toLocaleString('en-IN')}).\n\nIn-app UPI/Card checkout requires the Razorpay SDK to be installed. Please pay via Wallet until it is set up, or contact the society office.`,
+        [{ text: 'OK' }]
       );
     },
     onError: (err: any) => {
@@ -227,12 +236,12 @@ export default function MaintenanceDuesScreen() {
           {FINANCE_HUBS.map((item) => (
             <TouchableOpacity
               key={item.label}
-              style={[s.hubPill, item.label === 'Pay Dues' && s.hubPillActive]}
+              style={[s.hubPill, pathname === item.route && s.hubPillActive]}
               onPress={() => router.push(item.route as any)}
               activeOpacity={0.75}
             >
               <Text style={s.hubEmoji}>{item.emoji}</Text>
-              <Text style={[s.hubLabel, item.label === 'Pay Dues' && s.hubLabelActive]}>{item.label}</Text>
+              <Text style={[s.hubLabel, pathname === item.route && s.hubLabelActive]}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>

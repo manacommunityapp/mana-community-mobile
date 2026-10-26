@@ -13,7 +13,13 @@ const CATEGORY_TABS: { id: ProviderCategory | "ALL"; label: string; icon: string
   { id: "DIAGNOSTIC_CENTER", label: "Labs", icon: "flask-outline" },
   { id: "PHARMACY", label: "Pharmacy", icon: "bandage-outline" },
   { id: "PHYSIOTHERAPIST", label: "Physio", icon: "fitness-outline" },
+  { id: "FITNESS_TRAINER", label: "Gym Trainers", icon: "barbell-outline" },
   { id: "HOME_CARE", label: "Home Care", icon: "home-outline" }
+];
+
+const DEPARTMENTS = [
+  "All Depts", "General Medicine", "Cardiology", "Orthopedics", "Pediatrics",
+  "Gynecology", "Dermatology", "ENT", "Ophthalmology", "Neurology", "Psychiatry"
 ];
 
 const DISTANCE_OPTIONS = [
@@ -34,15 +40,22 @@ const FEE_OPTIONS = [
 
 export default function HealthcareDirectoryScreen() {
   const router = useRouter();
-  const { specialty } = useLocalSearchParams<{ specialty?: string }>();
+  const { specialty, category } = useLocalSearchParams<{ specialty?: string; category?: ProviderCategory | "ALL" }>();
   const [providers, setProviders] = useState<DoctorDto[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<ProviderCategory | "ALL">("ALL");
+  const [selectedCategory, setSelectedCategory] = useState<ProviderCategory | "ALL">(category ?? "ALL");
   const [searchQuery, setSearchQuery] = useState(specialty ?? "");
   const [selectedDistance, setSelectedDistance] = useState<number>(999);
   const [selectedFeeIndex, setSelectedFeeIndex] = useState<number>(0);
   const [availableTodayOnly, setAvailableTodayOnly] = useState(false);
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [selectedDept, setSelectedDept] = useState("All Depts");
+
+  useEffect(() => {
+    if (category) {
+      setSelectedCategory(category);
+    }
+  }, [category]);
 
   useEffect(() => {
     healthService.getDoctors().then(setProviders);
@@ -92,9 +105,16 @@ export default function HealthcareDirectoryScreen() {
         return false;
       }
 
+      // Department filter
+      if (selectedDept && selectedDept !== "All Depts") {
+        const deptMatch = p.specialty?.toLowerCase().includes(selectedDept.toLowerCase()) ||
+          p.department?.toLowerCase().includes(selectedDept.toLowerCase());
+        if (!deptMatch) return false;
+      }
+
       return true;
     });
-  }, [providers, selectedCategory, searchQuery, selectedDistance, selectedFeeIndex, availableTodayOnly, openNowOnly]);
+  }, [providers, selectedCategory, searchQuery, selectedDistance, selectedFeeIndex, availableTodayOnly, openNowOnly, selectedDept]);
 
   return (
     <View style={styles.container}>
@@ -155,6 +175,22 @@ export default function HealthcareDirectoryScreen() {
               <Text style={[styles.tabChipText, isActive && styles.tabChipTextActive]}>
                 {tab.label}
               </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* ── 3b. DEPARTMENT FILTER ── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.deptScroll} contentContainerStyle={styles.tabsContent}>
+        {DEPARTMENTS.map(dept => {
+          const isActive = selectedDept === dept;
+          return (
+            <TouchableOpacity
+              key={dept}
+              style={[styles.deptChip, isActive && styles.deptChipActive]}
+              onPress={() => setSelectedDept(dept)}
+            >
+              <Text style={[styles.deptChipText, isActive && styles.deptChipTextActive]}>{dept}</Text>
             </TouchableOpacity>
           );
         })}
@@ -241,6 +277,18 @@ export default function HealthcareDirectoryScreen() {
                 )}
               </View>
 
+              {/* Accreditation Badges */}
+              {doc.accreditations && doc.accreditations.length > 0 && (
+                <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+                  {doc.accreditations.map((a, i) => (
+                    <View key={i} style={styles.accredBadge}>
+                      <Ionicons name="shield-checkmark" size={10} color="#0D9488" />
+                      <Text style={styles.accredText}>{a}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
               {/* Exclusive Society Offer */}
               {doc.communityOffer && (
                 <View style={styles.offerBadge}>
@@ -273,6 +321,17 @@ export default function HealthcareDirectoryScreen() {
                   <Text style={styles.slotText}>Next: {doc.nextAvailableSlot}</Text>
                 </View>
                 <View style={{ flexDirection: "row", gap: 8 }}>
+                  {doc.mapsUrl && (
+                    <TouchableOpacity
+                      style={styles.directionsBtn}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        Linking.openURL(doc.mapsUrl!);
+                      }}
+                    >
+                      <Ionicons name="navigate" size={14} color="#0D9488" />
+                    </TouchableOpacity>
+                  )}
                   {doc.phone && (
                     <TouchableOpacity
                       style={styles.callIconBtn}
@@ -556,5 +615,13 @@ const styles = StyleSheet.create({
   modalResetBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", alignItems: "center" },
   modalResetText: { color: "#6B7280", fontWeight: "600", fontSize: 13 },
   modalApplyBtn: { flex: 2, paddingVertical: 10, borderRadius: 10, backgroundColor: "#0D9488", alignItems: "center" },
-  modalApplyText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 13 }
+  modalApplyText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 13 },
+  deptScroll: { maxHeight: 40, marginBottom: 4 },
+  deptChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E5E7EB" },
+  deptChipActive: { backgroundColor: "#EEF2FF", borderColor: "#4F46E5" },
+  deptChipText: { fontSize: 11, fontWeight: "600", color: "#374151" },
+  deptChipTextActive: { color: "#4F46E5", fontWeight: "700" },
+  accredBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#F0FDFA", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: "#CCFBF1" },
+  accredText: { fontSize: 9, color: "#0F766E", fontWeight: "700" },
+  directionsBtn: { borderWidth: 1, borderColor: "#CCFBF1", backgroundColor: "#F0FDFA", width: 32, height: 32, borderRadius: 8, justifyContent: "center", alignItems: "center" },
 });

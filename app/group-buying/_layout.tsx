@@ -12,6 +12,14 @@ export default function GroupBuyingLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: '🛒 Group Buying & Deals' }} />
+      <Stack.Screen
+        name="join-success/[orderId]"
+        options={{
+          title: 'You\'re In! 🎉',
+          headerStyle: { backgroundColor: '#312E81' },
+          gestureEnabled: false,
+        }}
+      />
     </Stack>
   );
 }

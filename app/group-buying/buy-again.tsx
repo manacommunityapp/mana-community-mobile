@@ -6,6 +6,15 @@ import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { groupBuyingService } from '@/services/groupBuyingService';
 
+function safeFormatDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  } catch { return ''; }
+}
+
 export default function BuyAgain() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -34,18 +43,18 @@ export default function BuyAgain() {
             <View style={s.cardTop}>
               <View style={{ flex: 1 }}>
                 <Text style={s.categoryText}>{item.category}</Text>
-                <Text style={s.itemTitle}>{item.title}</Text>
-                <Text style={s.lastBought}>Last bought: {item.lastPurchasedAt} · Rs {item.lastPrice}/unit</Text>
+                <Text style={s.itemTitle}>{item.productName || item.title || ''}</Text>
+                <Text style={s.lastBought}>Last bought: {safeFormatDate(item.lastPurchasedAt)} · ₹{item.lastPrice}/unit</Text>
               </View>
               <View style={s.priceCol}>
                 {item.currentPrice ? (
                   <>
-                    <Text style={s.currentPrice}>Rs {item.currentPrice}</Text>
+                    <Text style={s.currentPrice}>₹{item.currentPrice}</Text>
                     {item.currentPrice < item.lastPrice && (
-                      <Text style={s.priceDown}>Rs {item.lastPrice - item.currentPrice} cheaper!</Text>
+                      <Text style={s.priceDown}>₹{item.lastPrice - item.currentPrice} cheaper!</Text>
                     )}
                     {item.currentPrice > item.lastPrice && (
-                      <Text style={s.priceUp}>Rs {item.currentPrice - item.lastPrice} higher</Text>
+                      <Text style={s.priceUp}>₹{item.currentPrice - item.lastPrice} higher</Text>
                     )}
                   </>
                 ) : (

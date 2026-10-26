@@ -128,9 +128,9 @@ export default function EventPassesScreen() {
                     <Text style={s.infoLabel}>DATE & TIME</Text>
                     <Text style={s.infoValue}>{item.startDate} {item.startTime || ''}</Text>
                   </View>
-                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                  <View style={{ flex: 1, alignItems: 'flex-end', paddingLeft: 10 }}>
                     <Text style={s.infoLabel}>VENUE</Text>
-                    <Text style={s.infoValue} numberOfLines={1}>{item.venue}</Text>
+                    <Text style={[s.infoValue, { textAlign: 'right' }]} numberOfLines={2}>{item.venue}</Text>
                   </View>
                 </View>
 
@@ -180,10 +180,17 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
-  filterRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#E2E8F0' },
+  filterRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8, alignItems: 'center' },
+  filterChip: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   filterChipActive: { backgroundColor: COLORS.primary },
-  filterChipText: { fontSize: 12, fontWeight: '700', color: '#475569' },
+  filterChipText: { fontSize: 12, fontWeight: '700', color: '#475569', lineHeight: 16 },
   filterChipTextActive: { color: '#fff' },
   listContent: { padding: 16, paddingBottom: 40 },
   ticketCard: {

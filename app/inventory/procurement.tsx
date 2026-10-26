@@ -55,6 +55,7 @@ export default function ProcurementScreen() {
   const { data: requests = [], isLoading, refetch } = useQuery<PurchaseRequest[]>({
     queryKey: ['inventory', 'procurement-screen'],
     queryFn: () => inventoryService.getPurchaseRequests(),
+    retry: false,
   });
 
   const createMutation = useMutation({

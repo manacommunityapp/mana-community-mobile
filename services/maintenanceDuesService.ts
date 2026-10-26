@@ -52,102 +52,12 @@ export interface WalletBalanceResponse {
   currency: string;
 }
 
-const FALLBACK_PENDING_BILLS: MaintenanceBillDto[] = [
-  {
-    id: 'bill-2026-10',
-    monthYear: 'October 2026',
-    billNumber: 'MB-2026-10-8841',
-    maintenanceAmount: 3800,
-    waterCharges: 750,
-    sinkingFund: 800,
-    penaltyLateFee: 200,
-    totalAmount: 5550,
-    paidAmount: 0,
-    dueAmount: 5550,
-    dueDate: '2026-10-15T23:59:59Z',
-    status: 'PENDING',
-    charges: [
-      { item: 'Society Maintenance & Security Common Area', amount: 3800 },
-      { item: 'Water Consumption & Sewage Treatment Charge', amount: 750 },
-      { item: 'Building Sinking & Major Repair Reserve Fund', amount: 800 },
-      { item: 'Late Payment Penalty Surcharge', amount: 200 },
-    ],
-  },
-];
+const FALLBACK_PENDING_BILLS: MaintenanceBillDto[] = [];
+const FALLBACK_HISTORY_BILLS: MaintenanceBillDto[] = [];
 
-const FALLBACK_HISTORY_BILLS: MaintenanceBillDto[] = [
-  {
-    id: 'bill-2026-09',
-    monthYear: 'September 2026',
-    billNumber: 'MB-2026-09-7719',
-    maintenanceAmount: 3800,
-    waterCharges: 800,
-    sinkingFund: 800,
-    penaltyLateFee: 0,
-    totalAmount: 5400,
-    paidAmount: 5400,
-    dueAmount: 0,
-    dueDate: '2026-09-15T23:59:59Z',
-    status: 'PAID',
-    paymentMethod: 'UPI (Google Pay)',
-    paidAt: '2026-09-10T14:35:10Z',
-    receiptUrl: 'https://society.storage/receipts/MB-2026-09-7719.pdf',
-    charges: [
-      { item: 'Society Maintenance & Security Common Area', amount: 3800 },
-      { item: 'Water Consumption & Sewage Treatment Charge', amount: 800 },
-      { item: 'Building Sinking & Major Repair Reserve Fund', amount: 800 },
-    ],
-  },
-  {
-    id: 'bill-2026-08',
-    monthYear: 'August 2026',
-    billNumber: 'MB-2026-08-6623',
-    maintenanceAmount: 3800,
-    waterCharges: 800,
-    sinkingFund: 800,
-    penaltyLateFee: 0,
-    totalAmount: 5400,
-    paidAmount: 5400,
-    dueAmount: 0,
-    dueDate: '2026-08-15T23:59:59Z',
-    status: 'PAID',
-    paymentMethod: 'WALLET',
-    paidAt: '2026-08-08T11:22:45Z',
-    receiptUrl: 'https://society.storage/receipts/MB-2026-08-6623.pdf',
-    charges: [
-      { item: 'Society Maintenance & Security Common Area', amount: 3800 },
-      { item: 'Water Consumption & Sewage Treatment Charge', amount: 800 },
-      { item: 'Building Sinking & Major Repair Reserve Fund', amount: 800 },
-    ],
-  },
-  {
-    id: 'bill-2026-07',
-    monthYear: 'July 2026',
-    billNumber: 'MB-2026-07-5510',
-    maintenanceAmount: 3700,
-    waterCharges: 700,
-    sinkingFund: 800,
-    penaltyLateFee: 0,
-    totalAmount: 5200,
-    paidAmount: 5200,
-    dueAmount: 0,
-    dueDate: '2026-07-15T23:59:59Z',
-    status: 'PAID',
-    paymentMethod: 'CARD (HDFC Credit Card)',
-    paidAt: '2026-07-12T16:04:12Z',
-    receiptUrl: 'https://society.storage/receipts/MB-2026-07-5510.pdf',
-    charges: [
-      { item: 'Society Maintenance & Security Common Area', amount: 3700 },
-      { item: 'Water Consumption & Sewage Treatment Charge', amount: 700 },
-      { item: 'Building Sinking & Major Repair Reserve Fund', amount: 800 },
-    ],
-  },
-];
-
-let LOCAL_PENDING_BILLS = [...FALLBACK_PENDING_BILLS];
-let LOCAL_HISTORY_BILLS = [...FALLBACK_HISTORY_BILLS];
-let LOCAL_WALLET_BALANCE = 2500;
-
+let LOCAL_PENDING_BILLS: MaintenanceBillDto[] = [];
+let LOCAL_HISTORY_BILLS: MaintenanceBillDto[] = [];
+let LOCAL_WALLET_BALANCE = 0;
 export const maintenanceDuesService = {
   /**
    * GET /finance/maintenance/bills/pending with hybrid fallback
@@ -155,12 +65,11 @@ export const maintenanceDuesService = {
   async getPendingBills(): Promise<MaintenanceBillDto[]> {
     try {
       const res = await api.get<MaintenanceBillDto[]>('/finance/maintenance/bills/pending');
-      const list = Array.isArray(res.data) ? res.data : [];
-      if (list.length > 0) return list;
+      return Array.isArray(res.data) ? res.data : [];
     } catch (err) {
-      secureLog.warn('[maintenanceDuesService] Backend pending bills unavailable, using hybrid fallback', err);
+      secureLog.warn('[maintenanceDuesService] Backend pending bills unavailable', err);
+      return [];
     }
-    return [...LOCAL_PENDING_BILLS];
   },
 
   /**
@@ -169,12 +78,11 @@ export const maintenanceDuesService = {
   async getPaymentHistory(): Promise<MaintenanceBillDto[]> {
     try {
       const res = await api.get<MaintenanceBillDto[]>('/finance/maintenance/bills/history');
-      const list = Array.isArray(res.data) ? res.data : [];
-      if (list.length > 0) return list;
+      return Array.isArray(res.data) ? res.data : [];
     } catch (err) {
-      secureLog.warn('[maintenanceDuesService] Backend payment history unavailable, using hybrid fallback', err);
+      secureLog.warn('[maintenanceDuesService] Backend payment history unavailable', err);
+      return [];
     }
-    return [...LOCAL_HISTORY_BILLS];
   },
 
   /**

@@ -96,7 +96,7 @@ export default function VendorProfileScreen() {
               {vendor.city && (
                 <View style={s.locationRow}>
                   <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.8)" />
-                  <Text style={s.locationText}>{vendor.city} ? Member since {vendor.memberSince}</Text>
+                  <Text style={s.locationText}>{vendor.city} · Member since {vendor.memberSince}</Text>
                 </View>
               )}
             </View>
@@ -240,13 +240,13 @@ export default function VendorProfileScreen() {
                   </View>
                   <View style={s.prodInfo}>
                     <Text style={s.prodName}>{prod.name}</Text>
-                    <Text style={s.prodPackSize}>{prod.packSize} ? SKU: {prod.sku}</Text>
+                    <Text style={s.prodPackSize}>{prod.packSize} · SKU: {prod.sku}</Text>
                     {prod.description ? (
                       <Text style={s.prodDesc} numberOfLines={2}>{prod.description}</Text>
                     ) : null}
                     <View style={s.prodPricingRow}>
-                      <Text style={s.prodSellingPrice}>?{prod.sellingPrice}</Text>
-                      <Text style={s.prodMrp}>MRP ?{prod.mrp}</Text>
+                      <Text style={s.prodSellingPrice}>₹{prod.sellingPrice}</Text>
+                      <Text style={s.prodMrp}>MRP ₹{prod.mrp}</Text>
                       <Text style={s.prodMoq}>MOQ: {prod.minOrderQty} units</Text>
                     </View>
                   </View>

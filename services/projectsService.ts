@@ -352,43 +352,41 @@ function computeMetrics(): ProjectMetricsDto {
 export async function getProjects(): Promise<CommunityProjectDto[]> {
   try {
     const res = await api.get<CommunityProjectDto[]>('/projects');
-    return res.data;
-  } catch {}
-  return [...MOCK_PROJECTS];
+    return res.data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getProjectById(id: string): Promise<CommunityProjectDto | null> {
   try {
     const res = await api.get<CommunityProjectDto>('/projects/' + id);
-    return res.data;
-  } catch {}
-  return MOCK_PROJECTS.find(p => p.id === id) ?? null;
+    return res.data ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getProjectMetrics(): Promise<ProjectMetricsDto> {
   try {
     const res = await api.get<ProjectMetricsDto>('/projects/metrics');
     return res.data;
-  } catch {}
-  return computeMetrics();
+  } catch {
+    return {
+      totalProjects: 0, activeProjects: 0, completedProjects: 0,
+      totalApprovedBudget: 0, totalSpent: 0, avgCompletionPercent: 0,
+      overBudgetProjects: 0, delayedMilestones: 0,
+    };
+  }
 }
 
 export async function advanceProjectStage(projectId: string): Promise<CommunityProjectDto | null> {
-  const stageOrder: ProjectLifecycleStatus[] = [
-    'PROPOSAL', 'VOTING', 'APPROVED', 'PLANNING', 'PROCUREMENT', 'IN_PROGRESS', 'QUALITY_CHECK', 'COMPLETED',
-  ];
   try {
     const res = await api.post<CommunityProjectDto>('/projects/' + projectId + '/advance');
     return res.data;
-  } catch {}
-  const project = MOCK_PROJECTS.find(p => p.id === projectId);
-  if (!project) return null;
-  const idx = stageOrder.indexOf(project.status);
-  if (idx < stageOrder.length - 1) {
-    project.status = stageOrder[idx + 1];
-    project.updatedAt = new Date().toISOString().split('T')[0];
+  } catch (err: any) {
+    throw new Error(err?.message || 'Failed to advance project stage.');
   }
-  return { ...project };
 }
 
 export async function createProjectFromGovernanceResolution(
@@ -399,38 +397,9 @@ export async function createProjectFromGovernanceResolution(
   try {
     const res = await api.post<CommunityProjectDto>('/projects/from-resolution', { resolutionId, proposalId, ...details });
     return res.data;
-  } catch {}
-  const newProject: CommunityProjectDto = {
-    id: 'proj-' + Date.now(),
-    title: details.title,
-    description: details.description,
-    category: details.category,
-    status: 'APPROVED',
-    priority: details.priority,
-    governanceProposalId: proposalId,
-    governanceResolutionId: resolutionId,
-    projectManager: 'Managing Committee',
-    targetCompletionDate: details.targetCompletionDate,
-    budget: {
-      approvedBudget: details.estimatedBudget,
-      spent: 0,
-      committed: 0,
-      remaining: details.estimatedBudget,
-      utilizationPercent: 0,
-      contingencyPercent: 10,
-      fundingSource: details.fundingSource,
-      approvedBy: 'Governance Resolution ' + resolutionId,
-      approvedDate: new Date().toISOString().split('T')[0],
-    },
-    milestones: [],
-    expenses: [],
-    documents: [],
-    completionPercent: 0,
-    createdAt: new Date().toISOString().split('T')[0],
-    updatedAt: new Date().toISOString().split('T')[0],
-  };
-  MOCK_PROJECTS.unshift(newProject);
-  return newProject;
+  } catch (err: any) {
+    throw new Error(err?.message || 'Failed to create project.');
+  }
 }
 
 export async function addProjectExpense(
@@ -440,16 +409,9 @@ export async function addProjectExpense(
   try {
     const res = await api.post<ProjectExpenseDto>('/projects/' + projectId + '/expenses', expense);
     return res.data;
-  } catch {}
-  const newExpense = { ...expense, id: 'exp-' + Date.now() };
-  const project = MOCK_PROJECTS.find(p => p.id === projectId);
-  if (project) {
-    project.expenses.unshift(newExpense);
-    project.budget.spent += expense.amount;
-    project.budget.remaining -= expense.amount;
-    project.budget.utilizationPercent = Math.round((project.budget.spent / project.budget.approvedBudget) * 100);
+  } catch (err: any) {
+    throw new Error(err?.message || 'Failed to add expense.');
   }
-  return newExpense;
 }
 
 export async function addProjectMilestone(
@@ -459,11 +421,9 @@ export async function addProjectMilestone(
   try {
     const res = await api.post<ProjectMilestoneDto>('/projects/' + projectId + '/milestones', milestone);
     return res.data;
-  } catch {}
-  const newMilestone = { ...milestone, id: 'ms-' + Date.now() };
-  const project = MOCK_PROJECTS.find(p => p.id === projectId);
-  if (project) project.milestones.push(newMilestone);
-  return newMilestone;
+  } catch (err: any) {
+    throw new Error(err?.message || 'Failed to add milestone.');
+  }
 }
 
 export function computeProjectCompletion(milestones: ProjectMilestoneDto[]): number {

@@ -84,30 +84,16 @@ export default function MyEventsScreen() {
 
         {/* Content */}
         <View style={st.cardContent}>
-          <View style={st.cardTopRow}>
-            <Text style={[st.cardTitle, eventIsPast && st.cardTitlePast]} numberOfLines={1}>
-              {item.title}
-            </Text>
-            {item.status && (
-              <View style={[
-                st.statusBadge,
-                item.status === 'CANCELLED' && { backgroundColor: '#FEF2F2' },
-                item.status === 'ONGOING' && { backgroundColor: '#ECFDF5' },
-                item.status === 'COMPLETED' && { backgroundColor: COLORS.surfaceAlt },
-              ]}>
-                <Text style={[
-                  st.statusText,
-                  item.status === 'CANCELLED' && { color: COLORS.error },
-                  item.status === 'ONGOING' && { color: '#059669' },
-                  item.status === 'COMPLETED' && { color: COLORS.textMuted },
-                ]}>
-                  {item.status === 'UPCOMING' ? 'Upcoming' : item.status === 'ONGOING' ? 'Live' : item.status === 'CANCELLED' ? 'Cancelled' : item.status === 'COMPLETED' ? 'Done' : item.status}
-                </Text>
-              </View>
-            )}
-          </View>
+          <Text style={[st.cardTitle, eventIsPast && st.cardTitlePast]} numberOfLines={2}>
+            {item.title}
+          </Text>
 
           <View style={st.cardChipRow}>
+            <View style={[st.typeChip, { backgroundColor: cfg.color + '18' }]}>
+              <Text style={[st.typeChipText, { color: cfg.color }]}>
+                {cfg.emoji} {item.type}
+              </Text>
+            </View>
             {item.status && (
               <View style={[st.statusBadge, { backgroundColor: statusCfg.bg }]}>
                 <Text style={st.statusEmoji}>{statusCfg.emoji}</Text>
@@ -120,12 +106,12 @@ export default function MyEventsScreen() {
 
           <View style={st.cardMetaRow}>
             {(item.venue || item.location) && (
-              <>
+              <View style={st.metaLocation}>
                 <Text style={st.metaEmoji}>📍</Text>
                 <Text style={st.cardMetaText} numberOfLines={1}>{item.venue || item.location}</Text>
-                <View style={st.metaDot} />
-              </>
+              </View>
             )}
+            <View style={st.metaDot} />
             <Text style={st.metaEmoji}>👥</Text>
             <Text style={st.cardMetaText}>{attendees} going</Text>
           </View>
@@ -294,12 +280,23 @@ const st = StyleSheet.create({
   miniDateMon: { fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
   miniTodayDot: { width: 4, height: 4, borderRadius: 2, marginTop: 3 },
 
-  cardContent: { flex: 1, gap: 4 },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, flex: 1, fontFamily: FONTS.displaySemi },
+  cardContent: { flex: 1, gap: 5 },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, fontFamily: FONTS.displaySemi, lineHeight: 20 },
   cardTitlePast: { color: COLORS.textMuted },
 
-  cardChipRow: { flexDirection: 'row', gap: 6 },
+  cardChipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  typeChip: {
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  typeChipText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: FONTS.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     borderRadius: RADIUS.sm, paddingHorizontal: 7, paddingVertical: 2,
@@ -307,10 +304,11 @@ const st = StyleSheet.create({
   statusEmoji: { fontSize: 9 },
   statusText: { fontSize: 10, fontWeight: '700', fontFamily: FONTS.bold },
 
-  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, flexWrap: 'wrap' },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaLocation: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 1 },
   metaEmoji: { fontSize: 10 },
-  cardMetaText: { fontSize: 12, color: COLORS.textMuted, fontFamily: FONTS.regular },
-  metaDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#E8E8F0' },
+  cardMetaText: { fontSize: 12, color: COLORS.textMuted, fontFamily: FONTS.regular, flexShrink: 1 },
+  metaDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#CBD5E1', flexShrink: 0 },
 
   // ── Empty ──
   empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },

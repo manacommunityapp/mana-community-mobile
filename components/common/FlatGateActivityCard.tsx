@@ -1,31 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Modal, TextInput, Alert, Share, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity,
+  Modal, TextInput, Alert, Share, ActivityIndicator, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
-import { THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 
 export type GateEntryType = 'GUEST' | 'DELIVERY' | 'CAB' | 'SERVICE' | 'STAFF';
-export type GateEntryStatus = 'PENDING' | 'CHECKED_IN' | 'EXPECTED' | 'CHECKED_OUT' | 'LEAVE_AT_GATE' | 'DENIED';
-
-interface FlatEntryItem {
-  id: number;
-  name: string;
-  type: GateEntryType;
-  purpose: string;
-  vehicleNumber?: string;
-  timestamp: string;
-  status: GateEntryStatus;
-  gateName: string;
-  passCode: string;
-}
 
 const TYPE_CONFIG: Record<GateEntryType, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; bg: string }> = {
   GUEST:    { label: 'Guest',       icon: 'person',              color: '#4F46E5', bg: '#EEF2FF' },
@@ -35,304 +21,193 @@ const TYPE_CONFIG: Record<GateEntryType, { label: string; icon: keyof typeof Ion
   STAFF:    { label: 'Daily Help',  icon: 'people',              color: '#DB2777', bg: '#FCE7F3' },
 };
 
-const STATUS_BADGE: Record<GateEntryStatus, { label: string; color: string; bg: string; dotColor: string }> = {
-  PENDING:       { label: 'At Gate (Action Required)', color: '#DC2626', bg: '#FEE2E2', dotColor: '#EF4444' },
-  CHECKED_IN:    { label: 'Inside Gate',               color: '#059669', bg: '#DCFCE7', dotColor: '#10B981' },
-  EXPECTED:      { label: 'Pre-Approved',              color: '#4F46E5', bg: '#EEF2FF', dotColor: '#6366F1' },
-  CHECKED_OUT:   { label: 'Departed',                  color: '#64748B', bg: '#F1F5F9', dotColor: '#94A3B8' },
-  LEAVE_AT_GATE: { label: 'Hold at Gate',              color: '#D97706', bg: '#FEF3C7', dotColor: '#F59E0B' },
-  DENIED:        { label: 'Denied Entry',              color: '#DC2626', bg: '#FEE2E2', dotColor: '#EF4444' },
-};
-
 export function FlatGateActivityCard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const [isPreApproveOpen, setIsPreApproveOpen] = useState(false);
-  const [selectedPass, setSelectedPass] = useState<FlatEntryItem | null>(null);
+  const [createdPass, setCreatedPass] = useState<{ code: string; name: string } | null>(null);
 
-  // Form state for quick pre-approval
+  // Quick form state
   const [visitorName, setVisitorName] = useState('');
   const [visitorPhone, setVisitorPhone] = useState('');
   const [visitorType, setVisitorType] = useState<GateEntryType>('GUEST');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [purpose, setPurpose] = useState('');
 
-  // Local state for live actions handled on dashboard
+  // Local state for actions
   const [dismissedPendingIds, setDismissedPendingIds] = useState<number[]>([]);
   const [approvedPendingIds, setApprovedPendingIds] = useState<number[]>([]);
-  const [heldPendingIds, setHeldPendingIds] = useState<number[]>([]);
 
   const flatLabel = useMemo(() => {
-    const tower = user?.tower || 'A';
-    const flat = user?.flatNumber || (user as any)?.unitNumber || '1204';
-    return `Tower ${tower} - ${flat}`;
+    const tower = user?.tower || user?.block || 'A';
+    const flat = user?.flatNumber || user?.flatNo || '1204';
+    return `Flat ${flat} · Tower ${tower}`;
   }, [user]);
 
-  // ── Fetch Live Visitor Logs ──────────────────────────────────────────────
+  // ── Live Visitors Query ──────────────────────────────────────────────
   const { data: rawVisitors = [] } = useQuery<VisitorDto[]>({
     queryKey: ['visitors', 'my-visitors'],
     queryFn: () => visitorService.getMyVisitors(),
     staleTime: 15_000,
   });
 
-  // ── Pre-Approve Mutation ─────────────────────────────────────────────────
+  // Calculate visitors currently inside flat
+  const visitorsInside = useMemo(() => {
+    return rawVisitors.filter(
+      (v) => (v.status || '').toUpperCase() === 'CHECKED_IN'
+    );
+  }, [rawVisitors]);
+
+  // Pending approval at gate (either live API or realistic demo when user tests)
+  const pendingVisitor = useMemo(() => {
+    const live = rawVisitors.find(
+      (v) => (v.status || '').toUpperCase() === 'PENDING' && !dismissedPendingIds.includes(v.id) && !approvedPendingIds.includes(v.id)
+    );
+    return live || null;
+  }, [rawVisitors, dismissedPendingIds, approvedPendingIds]);
+
+  // ── Pre-Approve Mutation ─────────────────────────────────────────────
   const preApproveMutation = useMutation({
     mutationFn: (data: PreApproveVisitorRequest) => visitorService.preApprove(data),
     onSuccess: (newPass) => {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       setIsPreApproveOpen(false);
+      const code = newPass.passCode || '9821';
+      setCreatedPass({ code, name: newPass.visitorName || visitorName });
       setVisitorName('');
       setVisitorPhone('');
       setVehicleNumber('');
       setPurpose('');
-      Alert.alert(
-        'Pass Created! 🎟️',
-        `Pass Code: ${newPass.passCode || 'MANA-9821'}\nShare this 4-digit entry code with your visitor.`,
-        [
-          {
-            text: 'Share via WhatsApp',
-            onPress: () => {
-              Share.share({
-                message: `Hi ${newPass.visitorName || 'Guest'}, your entry pass for Flat ${flatLabel} is ${newPass.passCode || 'MANA-9821'}. Show this at Gate 1 for instant access.`,
-              });
-            },
-          },
-          { text: 'Done' },
-        ]
-      );
     },
     onError: (err: any) => {
       Alert.alert('Error', err?.message || 'Could not generate gate pass.');
     },
   });
 
-  // ── Base Sample Activity Data (MyGate-Style Live Stream) ─────────────────
-  const defaultEntries: FlatEntryItem[] = useMemo(() => [
-    {
-      id: 101,
-      name: 'Zomato Food Delivery',
-      type: 'DELIVERY',
-      purpose: 'Dinner Order (Biryani Blues)',
-      vehicleNumber: 'KA-01-EZ-8819',
-      timestamp: 'Just now (Gate 1)',
-      status: 'PENDING',
-      gateName: 'Main Gate 1',
-      passCode: 'MANA-7821',
-    },
-    {
-      id: 102,
-      name: 'Anita Sharma (Maid)',
-      type: 'STAFF',
-      purpose: 'Morning Domestic Shift',
-      timestamp: '08:30 AM (Gate 2)',
-      status: 'CHECKED_IN',
-      gateName: 'Staff Gate 2',
-      passCode: 'MANA-1082',
-    },
-    {
-      id: 103,
-      name: 'Amazon Courier',
-      type: 'DELIVERY',
-      purpose: 'Package Delivery #84920',
-      vehicleNumber: 'KA-51-AB-1290',
-      timestamp: '11:45 AM (Gate 1)',
-      status: 'CHECKED_OUT',
-      gateName: 'Main Gate 1',
-      passCode: 'MANA-4412',
-    },
-    {
-      id: 104,
-      name: 'Suresh & Family',
-      type: 'GUEST',
-      purpose: 'Weekend Dinner Visit',
-      vehicleNumber: 'KA-04-MJ-9821',
-      timestamp: 'Today, 07:30 PM',
-      status: 'EXPECTED',
-      gateName: 'Main Gate 1',
-      passCode: 'MANA-5590',
-    },
-  ], []);
-
-  // Merge Live API visitors with realistic flat activity
-  const flatEntries: FlatEntryItem[] = useMemo(() => {
-    if (rawVisitors.length > 0) {
-      const live = rawVisitors.map((dto): FlatEntryItem => {
-        let mappedType: GateEntryType = 'GUEST';
-        const tp = (dto.passType || '').toUpperCase();
-        if (tp === 'DELIVERY') mappedType = 'DELIVERY';
-        else if (tp === 'CAB') mappedType = 'CAB';
-        else if (tp === 'SERVICE') mappedType = 'SERVICE';
-        else if (tp === 'STAFF') mappedType = 'STAFF';
-
-        let mappedStatus: GateEntryStatus = 'EXPECTED';
-        const st = (dto.status || '').toUpperCase();
-        if (st === 'CHECKED_IN') mappedStatus = 'CHECKED_IN';
-        else if (st === 'CHECKED_OUT') mappedStatus = 'CHECKED_OUT';
-        else if (st === 'DENIED' || st === 'REJECTED') mappedStatus = 'DENIED';
-        else if (st === 'PENDING') mappedStatus = 'PENDING';
-
-        return {
-          id: dto.id,
-          name: dto.visitorName,
-          type: mappedType,
-          purpose: dto.purpose || `${mappedType} Entry`,
-          vehicleNumber: dto.vehicleNumber,
-          timestamp: dto.checkedInAt || dto.expectedAt || 'Today',
-          status: mappedStatus,
-          gateName: dto.gateIn || 'Gate 1',
-          passCode: dto.passCode || 'MANA-0000',
-        };
-      });
-      return live;
-    }
-    return defaultEntries;
-  }, [rawVisitors, defaultEntries]);
-
-  // Active Pending Item awaiting immediate resident approval at gate
-  const pendingVisitor = useMemo(() => {
-    return flatEntries.find(
-      (e) => (e.status === 'PENDING' || e.id === 101) &&
-        !dismissedPendingIds.includes(e.id) &&
-        !approvedPendingIds.includes(e.id) &&
-        !heldPendingIds.includes(e.id)
-    );
-  }, [flatEntries, dismissedPendingIds, approvedPendingIds, heldPendingIds]);
-
-  // Filtered recent activity (excluding pending item shown in hero callout)
-  const recentActivities = useMemo(() => {
-    return flatEntries
-      .filter((e) => !pendingVisitor || e.id !== pendingVisitor.id)
-      .slice(0, 3);
-  }, [flatEntries, pendingVisitor]);
-
-  const handleAllowEntry = (item: FlatEntryItem) => {
-    setApprovedPendingIds((prev) => [...prev, item.id]);
-    visitorService.approve(item.id).catch(() => {});
-    Alert.alert('✅ Entry Approved', `Gate Guard has been notified to allow ${item.name}.`);
+  const handleAllowEntry = (visitor: VisitorDto) => {
+    setApprovedPendingIds((prev) => [...prev, visitor.id]);
+    visitorService.approve(visitor.id).catch(() => {});
+    Alert.alert('✅ Entry Approved', `Gate Guard has been notified to allow ${visitor.visitorName}.`);
   };
 
-  const handleHoldAtGate = (item: FlatEntryItem) => {
-    setHeldPendingIds((prev) => [...prev, item.id]);
-    Alert.alert('📦 Left at Security Desk', 'Guard has been instructed to keep the parcel at Gate security desk.');
+  const handleDenyEntry = (visitor: VisitorDto) => {
+    setDismissedPendingIds((prev) => [...prev, visitor.id]);
+    visitorService.denyEntry(visitor.id).catch(() => {});
+    Alert.alert('🚫 Entry Denied', 'Gate Guard has been notified to turn away this visitor.');
   };
 
-  const handleDenyEntry = (item: FlatEntryItem) => {
-    setDismissedPendingIds((prev) => [...prev, item.id]);
-    visitorService.denyEntry(item.id).catch(() => {});
-    Alert.alert('🚫 Entry Denied', 'Gate Guard has been instructed to turn away this visitor.');
-  };
+  const insideCount = visitorsInside.length;
 
   return (
-    <View style={s.container}>
-      {/* ── Header ────────────────────────────────────────── */}
-      <View style={s.headerRow}>
-        <Text style={s.mainTitle}>🚪 Gate</Text>
-        <View style={s.headerRight}>
-          <View style={s.liveStatusBadge}>
-            <View style={s.pulsingDot} />
-            <Text style={s.liveStatusText}>{flatLabel}</Text>
+    <View style={s.outer}>
+      {/* ── Main Gate Hero Card (Figma Deep Cyan/Indigo Style) ── */}
+      <LinearGradient
+        colors={['#0E7490', '#1E3A8A']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.heroCard}
+      >
+        {/* Glow ambient circle */}
+        <View style={s.ambientOrb} pointerEvents="none" />
+
+        {/* Top Eyebrow Row */}
+        <View style={s.topRow}>
+          <View style={s.eyebrowGroup}>
+            <View style={s.shieldIconBox}>
+              <Ionicons name="shield-checkmark" size={11} color="#67E8F9" />
+            </View>
+            <Text style={s.eyebrowText}>GATE ACCESS</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/visitors')} activeOpacity={0.7} hitSlop={8}>
-            <Text style={s.viewAllText}>Log →</Text>
+
+          <View style={s.statusPill}>
+            <View style={s.pulsingDot} />
+            <Text style={s.statusPillText}>{flatLabel}</Text>
+          </View>
+        </View>
+
+        {/* Central Compact Status */}
+        <View style={s.statusCenter}>
+          <Text style={s.headlineText} numberOfLines={1}>
+            {insideCount === 0
+              ? 'All clear · Main Gate 1'
+              : `${insideCount} visitor${insideCount > 1 ? 's' : ''} inside flat`}
+          </Text>
+        </View>
+
+        {/* Action Row — 2 compact, low-height buttons */}
+        <View style={s.actionRow}>
+          <TouchableOpacity
+            style={s.preApproveBtn}
+            onPress={() => setIsPreApproveOpen(true)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="qr-code-outline" size={12} color="#1E1B4B" />
+            <Text style={s.preApproveBtnText}>Pre-approve</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.logBtn}
+            onPress={() => router.push('/visitors')}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="time-outline" size={12} color="#E0F2FE" />
+            <Text style={s.logBtnText}>Gate Log</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
-      {/* ── Pending Approval Inline Alert ── */}
+      {/* ── Pending Action Required (shown only when a visitor is waiting) ── */}
       {pendingVisitor && (
-        <View style={s.pendingCard}>
-          <View style={s.pendingInfoRow}>
-            <View style={[s.pendingIcon, { backgroundColor: TYPE_CONFIG[pendingVisitor.type]?.bg || '#FEF3C7' }]}>
-              <Ionicons
-                name={TYPE_CONFIG[pendingVisitor.type]?.icon || 'cube'}
-                size={16}
-                color={TYPE_CONFIG[pendingVisitor.type]?.color || '#D97706'}
-              />
+        <View style={s.pendingAlertCard}>
+          <View style={s.pendingHeader}>
+            <View style={s.liveRedDot} />
+            <Text style={s.pendingAlertTitle}>AT THE GATE NOW</Text>
+          </View>
+
+          <View style={s.pendingBody}>
+            <View style={s.pendingIconWrap}>
+              <Ionicons name="person" size={18} color="#D97706" />
             </View>
-            <View style={s.pendingDetails}>
-              <Text style={s.pendingName} numberOfLines={1}>{pendingVisitor.name}</Text>
-              <Text style={s.pendingPurpose} numberOfLines={1}>{pendingVisitor.purpose}{pendingVisitor.vehicleNumber ? ` · ${pendingVisitor.vehicleNumber}` : ''}</Text>
+            <View style={s.pendingInfo}>
+              <Text style={s.pendingName} numberOfLines={1}>{pendingVisitor.visitorName}</Text>
+              <Text style={s.pendingMeta} numberOfLines={1}>
+                {pendingVisitor.purpose || 'Visitor'} · Main Gate 1
+              </Text>
             </View>
           </View>
-          <View style={s.pendingActionRow}>
-            <TouchableOpacity style={s.allowBtn} onPress={() => handleAllowEntry(pendingVisitor)} activeOpacity={0.8}>
-              <Ionicons name="checkmark" size={13} color="#fff" />
-              <Text style={s.allowBtnText}>Allow</Text>
+
+          <View style={s.pendingButtonRow}>
+            <TouchableOpacity
+              style={s.denyActionBtn}
+              onPress={() => handleDenyEntry(pendingVisitor)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close-circle-outline" size={15} color="#DC2626" />
+              <Text style={s.denyActionText}>Deny</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.holdBtn} onPress={() => handleHoldAtGate(pendingVisitor)} activeOpacity={0.7}>
-              <Text style={s.holdBtnText}>Hold</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.denyBtn} onPress={() => handleDenyEntry(pendingVisitor)} activeOpacity={0.7}>
-              <Text style={s.denyBtnText}>Deny</Text>
+
+            <TouchableOpacity
+              style={s.allowActionBtn}
+              onPress={() => handleAllowEntry(pendingVisitor)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-circle" size={15} color="#FFFFFF" />
+              <Text style={s.allowActionText}>Allow Entry</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* ── Recent Entries (horizontal scroll) ── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.entryScroll}
-      >
-        {recentActivities.map((entry) => {
-          const cfg = TYPE_CONFIG[entry.type] || TYPE_CONFIG.GUEST;
-          const statusCfg = STATUS_BADGE[entry.status] || STATUS_BADGE.CHECKED_IN;
-          return (
-            <TouchableOpacity
-              key={entry.id}
-              style={s.entryCard}
-              onPress={() => setSelectedPass(entry)}
-              activeOpacity={0.75}
-            >
-              <View style={[s.entryIconBox, { backgroundColor: cfg.bg }]}>
-                <Ionicons name={cfg.icon} size={16} color={cfg.color} />
-              </View>
-              <Text style={s.entryName} numberOfLines={1}>{entry.name}</Text>
-              <Text style={s.entryPurpose} numberOfLines={1}>{entry.purpose}</Text>
-              <View style={[s.statusTag, { backgroundColor: statusCfg.bg }]}>
-                <View style={[s.statusDot, { backgroundColor: statusCfg.dotColor }]} />
-                <Text style={[s.statusTagText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* ── Quick Shortcuts ── */}
-      <View style={s.quickShortcutsRow}>
-        {([
-          { type: 'GUEST' as GateEntryType, label: '+ Guest', bg: '#EEF2FF', color: '#4F46E5', icon: 'person-add' as keyof typeof Ionicons.glyphMap },
-          { type: 'DELIVERY' as GateEntryType, label: '+ Delivery', bg: '#FEF3C7', color: '#D97706', icon: 'cube' as keyof typeof Ionicons.glyphMap },
-          { type: 'CAB' as GateEntryType, label: '+ Cab', bg: '#DBEAFE', color: '#2563EB', icon: 'car' as keyof typeof Ionicons.glyphMap },
-        ]).map(item => (
-          <TouchableOpacity
-            key={item.type}
-            style={s.shortcutChip}
-            onPress={() => {
-              setVisitorType(item.type);
-              if (item.type === 'DELIVERY') { setVisitorName('Delivery Executive'); setPurpose('Package Drop'); }
-              else if (item.type === 'CAB') { setVisitorName('Cab / Auto'); setPurpose('Pickup / Drop'); }
-              setIsPreApproveOpen(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={item.icon} size={10} color={item.color} />
-            <Text style={[s.shortcutText, { color: item.color }]}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ── Pre-Approve Modal ────────────────────────────────────── */}
+      {/* ── Quick Pre-Approve Modal ── */}
       <Modal visible={isPreApproveOpen} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.modalCard}>
             <View style={s.modalHeader}>
               <View>
-                <Text style={s.modalTitle}>Generate Quick Gate Pass</Text>
-                <Text style={s.modalSub}>Instant OTP pass for {flatLabel}</Text>
+                <Text style={s.modalTitle}>Pre-approve Visitor</Text>
+                <Text style={s.modalSub}>Generate instant gate pass for {flatLabel}</Text>
               </View>
               <TouchableOpacity onPress={() => setIsPreApproveOpen(false)} style={s.modalCloseBtn}>
                 <Ionicons name="close" size={20} color={COLORS.textMuted} />
@@ -351,7 +226,7 @@ export function FlatGateActivityCard() {
                     onPress={() => setVisitorType(t)}
                   >
                     <Ionicons name={c.icon} size={15} color={active ? c.color : COLORS.textMuted} />
-                    <Text style={[s.modalTypeChipText, active && { color: c.color, fontWeight: '700' }]}>
+                    <Text style={[s.modalTypeChipText, active && { color: c.color, fontFamily: FONTS.bold }]}>
                       {c.label}
                     </Text>
                   </TouchableOpacity>
@@ -362,16 +237,16 @@ export function FlatGateActivityCard() {
             <Text style={s.inputLabel}>Visitor Name *</Text>
             <TextInput
               style={s.input}
-              placeholder="e.g. Rajesh Kumar / Swiggy"
+              placeholder="e.g. Swiggy Delivery / Amit Sharma"
               placeholderTextColor="#94A3B8"
               value={visitorName}
               onChangeText={setVisitorName}
             />
 
-            <Text style={s.inputLabel}>Phone (Optional)</Text>
+            <Text style={s.inputLabel}>Phone Number (Optional)</Text>
             <TextInput
               style={s.input}
-              placeholder="e.g. 9876543210"
+              placeholder="e.g. 98765 43210"
               placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
               value={visitorPhone}
@@ -381,30 +256,17 @@ export function FlatGateActivityCard() {
             <Text style={s.inputLabel}>Vehicle Number (Optional)</Text>
             <TextInput
               style={s.input}
-              placeholder="e.g. KA-01-AB-1234"
+              placeholder="e.g. KA-05-MN-4421"
               placeholderTextColor="#94A3B8"
               autoCapitalize="characters"
               value={vehicleNumber}
               onChangeText={setVehicleNumber}
             />
 
-            <Text style={s.inputLabel}>Purpose</Text>
-            <TextInput
-              style={s.input}
-              placeholder="e.g. Family Visit / Parcel Delivery"
-              placeholderTextColor="#94A3B8"
-              value={purpose}
-              onChangeText={setPurpose}
-            />
-
             <TouchableOpacity
-              style={[s.submitBtn, preApproveMutation.isPending && { opacity: 0.6 }]}
-              disabled={preApproveMutation.isPending}
+              style={[s.submitBtn, (!visitorName.trim() || preApproveMutation.isPending) && { opacity: 0.6 }]}
+              disabled={!visitorName.trim() || preApproveMutation.isPending}
               onPress={() => {
-                if (!visitorName.trim()) {
-                  Alert.alert('Required', 'Please enter visitor name.');
-                  return;
-                }
                 preApproveMutation.mutate({
                   visitorName: visitorName.trim(),
                   visitorPhone: visitorPhone.trim() || undefined,
@@ -414,71 +276,56 @@ export function FlatGateActivityCard() {
                   flatNumber: flatLabel,
                 });
               }}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <View style={[s.submitBtnGrad, { backgroundColor: THEME.brandDark }]}>
-                {preApproveMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
-                    <Text style={s.submitBtnText}>Generate Pass & Share Code</Text>
-                  </>
-                )}
-              </View>
+              {preApproveMutation.isPending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={s.submitBtnText}>Generate Entry Code</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* ── Pass Code Details Modal ────────────────────────────── */}
-      {selectedPass && (
+      {/* ── Pass Code Generated Modal ── */}
+      {createdPass && (
         <Modal visible transparent animationType="fade">
           <View style={s.modalOverlay}>
             <View style={s.passDetailCard}>
-              <View style={s.passHeader}>
-                <Text style={s.passHeaderTitle}>Gate Entry Pass</Text>
-                <TouchableOpacity onPress={() => setSelectedPass(null)}>
-                  <Ionicons name="close" size={20} color={COLORS.textMuted} />
-                </TouchableOpacity>
+              <View style={s.passCodeIconWrap}>
+                <Ionicons name="checkmark-circle" size={44} color="#10B981" />
               </View>
+
+              <Text style={s.passCodeTitle}>Gate Pass Ready</Text>
+              <Text style={s.passCodeSub}>Share this 4-digit entry code with {createdPass.name}</Text>
 
               <View style={s.passCodeBox}>
-                <Text style={s.passCodeLabel}>4-DIGIT GATE CODE</Text>
-                <Text style={s.passCodeValue}>{selectedPass.passCode}</Text>
-                <Text style={s.passCodeSub}>Valid for {selectedPass.name} at {selectedPass.gateName}</Text>
+                <Text style={s.passCodeValue}>{createdPass.code}</Text>
               </View>
 
-              <View style={s.passMetaList}>
-                <View style={s.passMetaRow}>
-                  <Text style={s.passMetaKey}>Visitor</Text>
-                  <Text style={s.passMetaVal}>{selectedPass.name}</Text>
-                </View>
-                <View style={s.passMetaRow}>
-                  <Text style={s.passMetaKey}>Purpose</Text>
-                  <Text style={s.passMetaVal}>{selectedPass.purpose}</Text>
-                </View>
-                <View style={s.passMetaRow}>
-                  <Text style={s.passMetaKey}>Status</Text>
-                  <Text style={s.passMetaVal}>{STATUS_BADGE[selectedPass.status]?.label || selectedPass.status}</Text>
-                </View>
-                <View style={s.passMetaRow}>
-                  <Text style={s.passMetaKey}>Time</Text>
-                  <Text style={s.passMetaVal}>{selectedPass.timestamp}</Text>
-                </View>
-              </View>
+              <View style={s.passActionsRow}>
+                <TouchableOpacity
+                  style={s.shareBtn}
+                  onPress={() => {
+                    Share.share({
+                      message: `Hi ${createdPass.name}, your entry code for ${flatLabel} is ${createdPass.code}. Valid at Gate 1.`,
+                    });
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="logo-whatsapp" size={16} color="#FFFFFF" />
+                  <Text style={s.shareBtnText}>Share Code</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={s.sharePassBtn}
-                onPress={() => {
-                  Share.share({
-                    message: `Entry Pass for ${selectedPass.name} at Flat ${flatLabel}: Use code ${selectedPass.passCode} at ${selectedPass.gateName}.`,
-                  });
-                }}
-              >
-                <Ionicons name="share-social" size={16} color="#FFFFFF" />
-                <Text style={s.sharePassText}>Share Pass with Visitor</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.doneBtn}
+                  onPress={() => setCreatedPass(null)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.doneBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -488,255 +335,239 @@ export function FlatGateActivityCard() {
 }
 
 const s = StyleSheet.create({
-  container: {
+  outer: {
     marginHorizontal: 16,
-    marginTop: 10,
-    marginBottom: 2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E8E8F0',
+    marginVertical: 4,
+  },
+  heroCard: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    position: 'relative',
+    overflow: 'hidden',
     ...SHADOWS.sm,
   },
-  headerRow: {
+  ambientOrb: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#67E8F9',
+    opacity: 0.12,
+    top: -30,
+    right: -20,
+  },
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  headerRight: {
+  eyebrowGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 5,
   },
-  liveStatusBadge: {
+  shieldIconBox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyebrowText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 9.5,
+    letterSpacing: 1.2,
+    color: '#A5F3FC',
+  },
+  statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 6,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: RADIUS.full,
   },
   pulsingDot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#10B981',
+    backgroundColor: '#34D399',
   },
-  liveStatusText: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: '#059669',
+  statusPillText: {
     fontFamily: FONTS.medium,
+    fontSize: 9.5,
+    color: '#FFFFFF',
   },
-  viewAllText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.primary,
-    fontFamily: FONTS.semiBold,
+  statusCenter: {
+    marginVertical: 2,
   },
-  mainTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.text,
+  headlineText: {
     fontFamily: FONTS.displayBold,
+    fontSize: 13.5,
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  preApproveBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#FDE68A',
+    paddingVertical: 6.5,
+    borderRadius: 8,
+  },
+  preApproveBtnText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 11,
+    color: '#1E1B4B',
+  },
+  logBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    paddingVertical: 6.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  logBtnText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 11,
+    color: '#FFFFFF',
   },
 
-  // ── Pending Approval Inline ──
-  pendingCard: {
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 6,
+  // ── Pending Visitor Callout ──
+  pendingAlertCard: {
     backgroundColor: '#FFFBEB',
+    borderRadius: RADIUS.xl,
+    padding: 14,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: '#FDE68A',
+    ...SHADOWS.sm,
   },
-  pendingInfoRow: {
+  pendingHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 6,
+    marginBottom: 8,
   },
-  pendingIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+  liveRedDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#EF4444',
   },
-  pendingDetails: {
-    flex: 1,
-  },
-  pendingName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#78350F',
-    fontFamily: FONTS.bold,
-  },
-  pendingPurpose: {
+  pendingAlertTitle: {
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    color: '#92400E',
-    fontFamily: FONTS.regular,
-  },
-  pendingActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  allowBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#059669',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  allowBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: FONTS.bold,
-  },
-  holdBtn: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  holdBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
+    letterSpacing: 1.2,
     color: '#B45309',
-    fontFamily: FONTS.bold,
   },
-  denyBtn: {
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  denyBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#DC2626',
-    fontFamily: FONTS.bold,
-  },
-
-  // ── Entry Cards (horizontal) ──
-  entryScroll: {
-    gap: 8,
-    paddingVertical: 2,
-  },
-  entryCard: {
-    width: 110,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#E8E8F0',
-    gap: 4,
+  pendingBody: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
   },
-  entryIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
+  pendingIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
   },
-  entryName: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.text,
-    fontFamily: FONTS.semiBold,
-    textAlign: 'center',
+  pendingInfo: { flex: 1 },
+  pendingName: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 14,
+    color: '#78350F',
   },
-  entryPurpose: {
-    fontSize: 9,
-    color: COLORS.textMuted,
+  pendingMeta: {
     fontFamily: FONTS.regular,
-    textAlign: 'center',
+    fontSize: 11,
+    color: '#92400E',
+    marginTop: 1,
   },
-  statusTag: {
+  pendingButtonRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 5,
-    paddingVertical: 1.5,
-    borderRadius: 4,
-    marginTop: 2,
+    gap: 8,
   },
-  statusDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  statusTagText: {
-    fontSize: 8,
-    fontWeight: '700',
-    fontFamily: FONTS.medium,
-  },
-
-  // ── Quick Shortcuts ──
-  quickShortcutsRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  shortcutChip: {
+  denyActionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#F8FAFC',
+    gap: 4,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#FEE2E2',
   },
-  shortcutText: {
-    fontSize: 9,
-    fontWeight: '700',
+  denyActionText: {
     fontFamily: FONTS.semiBold,
+    fontSize: 12,
+    color: '#DC2626',
+  },
+  allowActionBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#059669',
+  },
+  allowActionText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 12,
+    color: '#FFFFFF',
   },
 
-  // ── Modals ──
+  // ── Pre-Approve Modal ──
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 36,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 22,
+    paddingBottom: Platform.OS === 'ios' ? 38 : 24,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: COLORS.text,
+    fontSize: 18,
+    color: '#1E1B4B',
     fontFamily: FONTS.displayBold,
   },
   modalSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.textMuted,
-    marginTop: 1,
+    fontFamily: FONTS.regular,
+    marginTop: 2,
   },
   modalCloseBtn: {
     width: 32,
@@ -748,8 +579,8 @@ const s = StyleSheet.create({
   },
   modalTypeRow: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 14,
+    gap: 8,
+    marginBottom: 16,
   },
   modalTypeChip: {
     flex: 1,
@@ -757,8 +588,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingVertical: 9,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
@@ -766,121 +597,112 @@ const s = StyleSheet.create({
   modalTypeChipText: {
     fontSize: 11,
     color: COLORS.textMuted,
-    fontWeight: '600',
+    fontFamily: FONTS.medium,
   },
   inputLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.semiBold,
     color: COLORS.textSecondary,
     marginBottom: 4,
-    marginTop: 6,
+    marginTop: 8,
   },
   input: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     fontSize: 13,
     color: COLORS.text,
+    fontFamily: FONTS.regular,
   },
   submitBtn: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 16,
-  },
-  submitBtnGrad: {
-    flexDirection: 'row',
+    borderRadius: RADIUS.lg,
+    backgroundColor: '#4F46E5',
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
+    marginTop: 20,
   },
   submitBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 14,
     color: '#FFFFFF',
+    fontFamily: FONTS.displayBold,
   },
 
-  // ── Pass Details Modal ──
+  // ── Pass Generated Modal ──
   passDetailCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 24,
-    marginVertical: 'auto',
-    padding: 20,
-    ...SHADOWS.lg,
-  },
-  passHeader: {
-    flexDirection: 'row',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 38 : 24,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
   },
-  passHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: COLORS.text,
+  passCodeIconWrap: {
+    marginBottom: 10,
   },
-  passCodeBox: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: COLORS.primary,
-    marginBottom: 16,
-  },
-  passCodeLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.primary,
-    letterSpacing: 0.5,
-  },
-  passCodeValue: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: COLORS.primaryDark,
-    letterSpacing: 4,
-    marginVertical: 4,
+  passCodeTitle: {
+    fontSize: 20,
+    color: '#1E1B4B',
     fontFamily: FONTS.displayBold,
   },
   passCodeSub: {
-    fontSize: 10.5,
-    color: '#6366F1',
-    fontWeight: '600',
-  },
-  passMetaList: {
-    gap: 8,
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: FONTS.regular,
+    marginTop: 4,
+    textAlign: 'center',
     marginBottom: 16,
   },
-  passMetaRow: {
+  passCodeBox: {
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#0D9488',
+    borderRadius: RADIUS.xl,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    marginBottom: 20,
+  },
+  passCodeValue: {
+    fontSize: 36,
+    fontFamily: FONTS.displayEB,
+    color: '#0F766E',
+    letterSpacing: 6,
+  },
+  passActionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
+    width: '100%',
   },
-  passMetaKey: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-  passMetaVal: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  sharePassBtn: {
+  shareBtn: {
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: COLORS.primary,
-    paddingVertical: 11,
-    borderRadius: 12,
+    backgroundColor: '#10B981',
+    paddingVertical: 13,
+    borderRadius: RADIUS.lg,
   },
-  sharePassText: {
-    fontSize: 13,
-    fontWeight: '800',
+  shareBtnText: {
     color: '#FFFFFF',
+    fontFamily: FONTS.displayBold,
+    fontSize: 13,
+  },
+  doneBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 13,
+    borderRadius: RADIUS.lg,
+  },
+  doneBtnText: {
+    color: '#475569',
+    fontFamily: FONTS.semiBold,
+    fontSize: 13,
   },
 });
