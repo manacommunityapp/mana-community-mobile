@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
 import { mobilityDriverService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { VehicleType, DocumentType } from '@/types/mobility';
@@ -75,6 +76,25 @@ export default function DriverOnboardScreen() {
     },
     onError: () => Alert.alert('Error', 'Registration failed. Please try again.'),
   });
+
+  const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
+  async function pickAndUploadDocument(docType: DocumentType) {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { Alert.alert('Permission required', 'Allow photo access to upload your document.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.85, allowsEditing: false });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    const formData = new FormData();
+    formData.append('docType', docType);
+    formData.append('file', { uri: asset.uri, name: asset.fileName || `${docType}.jpg`, type: asset.mimeType || 'image/jpeg' } as any);
+    setUploadingType(docType);
+    try {
+      await mobilityDriverService.uploadDocument(formData);
+      await queryClient.invalidateQueries({ queryKey: ['mobility-driver-docs'] });
+      Alert.alert('Uploaded', `${docType.replaceAll('_', ' ')} submitted for review.`);
+    } catch { Alert.alert('Upload failed', 'Please choose a clear image and try again.'); }
+    finally { setUploadingType(null); }
+  }
 
   function handleVehicleNext() {
     if (!vehicleType)             { Alert.alert('Required', 'Select vehicle type'); return; }
@@ -201,10 +221,11 @@ export default function DriverOnboardScreen() {
                   </View>
                   <TouchableOpacity
                     style={[s.uploadBtn, isUploaded && s.uploadBtnDone]}
-                    onPress={() => Alert.alert('Upload', `Photo upload for ${doc.label} — connect to file picker`)}
+                    onPress={() => pickAndUploadDocument(doc.type)}
+                    disabled={uploadingType !== null}
                   >
                     <Text style={[s.uploadBtnText, isUploaded && s.uploadBtnTextDone]}>
-                      {isUploaded ? 'Uploaded' : 'Upload'}
+                      {uploadingType === doc.type ? 'Uploading…' : isUploaded ? 'Uploaded' : 'Upload'}
                     </Text>
                   </TouchableOpacity>
                 </View>
