@@ -44,6 +44,14 @@ export default function JewelleryHomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<FilterMode>('ALL');
   const [selectedMaterial, setSelectedMaterial] = useState<JewelleryMaterial | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { data: featured = [], isLoading: loadingFeatured, refetch: refetchFeatured } = useQuery({
     queryKey: ['jewellery-featured'],
@@ -56,11 +64,11 @@ export default function JewelleryHomeScreen() {
   });
 
   const { data: products = [], isLoading: loadingProducts, refetch: refetchProducts } = useQuery({
-    queryKey: ['jewellery-products', selectedCategory, selectedMaterial, search],
+    queryKey: ['jewellery-products', selectedCategory, selectedMaterial, debouncedSearch],
     queryFn: () => jewelleryService.getProducts({
       category: selectedCategory !== 'ALL' ? selectedCategory : undefined,
       material: selectedMaterial !== 'ALL' ? selectedMaterial : undefined,
-      search: search || undefined,
+      search: debouncedSearch || undefined,
     }),
   });
 

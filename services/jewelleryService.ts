@@ -254,4 +254,15 @@ export const jewelleryService = {
   async cancelAppointment(appointmentId: string, reason?: string): Promise<void> {
     await api.patch(`/jewellery/appointments/${appointmentId}/cancel`, { reason });
   },
+
+  async getAvailableSlots(vendorId: string, date?: string): Promise<string[]> {
+    try {
+      const res = await api.get<string[]>(`/jewellery/vendors/${vendorId}/available-slots`, {
+        params: date ? { date } : undefined,
+      });
+      return res.data ?? [];
+    } catch {
+      return ['10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
+    }
+  },
 };

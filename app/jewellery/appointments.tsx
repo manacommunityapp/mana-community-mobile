@@ -29,6 +29,15 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: '#EF4444',
 };
 
+const UPCOMING_DATES = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date();
+  d.setDate(d.getDate() + i + 1);
+  const iso = d.toISOString().split('T')[0];
+  const dayName = i === 0 ? 'Tomorrow' : d.toLocaleDateString('en-IN', { weekday: 'short' });
+  const dateStr = d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+  return { iso, label: `${dayName}, ${dateStr}` };
+});
+
 export default function JewelleryAppointmentsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -36,7 +45,7 @@ export default function JewelleryAppointmentsScreen() {
 
   const [showBooking, setShowBooking] = useState(!!preselectedVendorId);
   const [selectedVendorId, setSelectedVendorId] = useState(preselectedVendorId ?? '');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(UPCOMING_DATES[0].iso);
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedPurpose, setSelectedPurpose] = useState('BROWSE');
   const [notes, setNotes] = useState('');
@@ -50,6 +59,12 @@ export default function JewelleryAppointmentsScreen() {
   const { data: vendors = [] } = useQuery({
     queryKey: ['jewellery-vendors'],
     queryFn: jewelleryService.getNearbyVendors,
+  });
+
+  const { data: availableSlots = TIME_SLOTS, isLoading: loadingSlots } = useQuery({
+    queryKey: ['jewellery-available-slots', selectedVendorId, selectedDate],
+    queryFn: () => jewelleryService.getAvailableSlots(selectedVendorId, selectedDate),
+    enabled: !!selectedVendorId && !!selectedDate,
   });
 
   const bookMutation = useMutation({
@@ -188,30 +203,49 @@ export default function JewelleryAppointmentsScreen() {
               ))}
             </ScrollView>
 
-            {/* Date */}
-            <Text style={styles.fieldLabel}>Date</Text>
-            <TextInput
-              placeholder="YYYY-MM-DD (e.g. 2026-11-10)"
-              value={selectedDate}
-              onChangeText={setSelectedDate}
-              style={styles.dateInput}
-              placeholderTextColor="#94A3B8"
-              keyboardType="numbers-and-punctuation"
-            />
-
-            {/* Time Slots */}
-            <Text style={styles.fieldLabel}>Time Slot</Text>
-            <View style={styles.timeGrid}>
-              {TIME_SLOTS.map((slot) => (
+            {/* Date selection chips */}
+            <Text style={styles.fieldLabel}>Select Date</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+              {UPCOMING_DATES.map((item) => (
                 <TouchableOpacity
-                  key={slot}
-                  onPress={() => setSelectedTime(slot)}
-                  style={[styles.timeSlot, selectedTime === slot && styles.timeSlotActive]}
+                  key={item.iso}
+                  onPress={() => {
+                    setSelectedDate(item.iso);
+                    setSelectedTime('');
+                  }}
+                  style={[styles.dateChip, selectedDate === item.iso && styles.dateChipActive]}
                 >
-                  <Text style={[styles.timeSlotText, selectedTime === slot && { color: '#FFFFFF', fontWeight: '700' }]}>{slot}</Text>
+                  <Ionicons name="calendar-outline" size={13} color={selectedDate === item.iso ? '#FFFFFF' : COLORS.primary} />
+                  <Text style={[styles.dateChipText, selectedDate === item.iso && { color: '#FFFFFF', fontWeight: '700' }]}>
+                    {item.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+
+            {/* Time Slots */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 6 }}>
+              <Text style={[styles.fieldLabel, { marginVertical: 0 }]}>Available Time Slots</Text>
+              {loadingSlots && <ActivityIndicator size="small" color={COLORS.primary} />}
             </View>
+            {availableSlots.length === 0 ? (
+              <View style={styles.noSlotsWrap}>
+                <Ionicons name="time-outline" size={18} color="#94A3B8" />
+                <Text style={styles.noSlotsText}>No remaining slots for this date. Please pick another day.</Text>
+              </View>
+            ) : (
+              <View style={styles.timeGrid}>
+                {availableSlots.map((slot) => (
+                  <TouchableOpacity
+                    key={slot}
+                    onPress={() => setSelectedTime(slot)}
+                    style={[styles.timeSlot, selectedTime === slot && styles.timeSlotActive]}
+                  >
+                    <Text style={[styles.timeSlotText, selectedTime === slot && { color: '#FFFFFF', fontWeight: '700' }]}>{slot}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
             {/* Purpose */}
             <Text style={styles.fieldLabel}>Purpose of Visit</Text>
@@ -298,6 +332,11 @@ const styles = StyleSheet.create({
   vendorOptionText: { fontSize: 11, fontWeight: '700', color: '#334155' },
   vendorRating: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 },
   vendorRatingText: { fontSize: 10, color: '#64748B' },
+  dateChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' },
+  dateChipActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
+  dateChipText: { fontSize: 11, fontWeight: '600', color: '#334155' },
+  noSlotsWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, backgroundColor: '#F8FAFC', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#E2E8F0', marginTop: 4 },
+  noSlotsText: { fontSize: 12, color: '#64748B', flex: 1 },
   dateInput: { backgroundColor: '#F8FAFC', padding: 12, borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#E2E8F0', fontSize: 13, color: '#0F172A' },
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   timeSlot: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' },
