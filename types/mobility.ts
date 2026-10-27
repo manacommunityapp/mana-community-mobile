@@ -205,8 +205,8 @@ export interface PendingDocumentReviewDto {
 }
 
 export interface ReviewDocumentRequest {
-  status:          'APPROVED' | 'REJECTED';
-  rejectedReason?: string;
+  approved:        boolean;
+  rejectReason?:   string;
 }
 
 // ── Carpool (community) ──────────────────────────────────────────
