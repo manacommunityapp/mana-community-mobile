@@ -8,6 +8,7 @@ import type {
   JourneySlot,
   CreateJourneySlotRequest,
   JourneyMatchProposal,
+  JourneyBooking,
   JourneySearchRequest,
   JourneyTypeConfig,
 } from '@/types/journeySharing';
@@ -83,5 +84,18 @@ export const journeySharingService = {
 
   async respondToProposal(id: number, accept: boolean): Promise<void> {
     await api.post(`/mobility/journeys/proposals/${id}/respond`, { accept });
+  },
+
+  async getMyBookings(page = 0): Promise<JourneyPage<JourneyBooking>> {
+    const res = await api.get<JourneyPage<JourneyBooking>>('/mobility/journeys/bookings/mine', { params: { page, size: 20 } });
+    return res.data;
+  },
+
+  async cancelOffer(id: number): Promise<void> {
+    await api.post(`/mobility/journeys/offers/${id}/cancel`);
+  },
+
+  async cancelRequest(id: number): Promise<void> {
+    await api.post(`/mobility/journeys/requests/${id}/cancel`);
   },
 };

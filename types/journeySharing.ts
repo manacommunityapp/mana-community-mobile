@@ -103,6 +103,17 @@ export interface JourneyMatchProposal {
   offer: JourneyOffer;
 }
 
+export interface JourneyBooking {
+  id: number;
+  offerId: number;
+  userId: number;
+  userName?: string;
+  seats: number;
+  status: string;
+  bookedAt: string;
+  offer: JourneyOffer;
+}
+
 export interface CreateJourneySlotRequest {
   journeyType: JourneyTypeCode;
   direction: 'TO_HUB' | 'FROM_HUB';

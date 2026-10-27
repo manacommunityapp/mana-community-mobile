@@ -14,6 +14,7 @@ export default function MobilityLayout() {
       <Stack.Screen name="journeys/requests" />
       <Stack.Screen name="journeys/slots" />
       <Stack.Screen name="journeys/proposals" />
+      <Stack.Screen name="journeys/bookings" />
       <Stack.Screen name="ops" />
     </Stack>
   );
