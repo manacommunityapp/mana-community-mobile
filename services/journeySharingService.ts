@@ -9,6 +9,7 @@ import type {
   CreateJourneySlotRequest,
   JourneyMatchProposal,
   JourneyBooking,
+  JourneyPassenger,
   JourneySearchRequest,
   JourneyTypeConfig,
 } from '@/types/journeySharing';
@@ -91,11 +92,21 @@ export const journeySharingService = {
     return res.data;
   },
 
+  async getMyOffers(page = 0): Promise<JourneyPage<JourneyOffer>> {
+    const res = await api.get<JourneyPage<JourneyOffer>>('/mobility/journeys/offers/mine', { params: { page, size: 20 } });
+    return res.data;
+  },
+
   async cancelOffer(id: number): Promise<void> {
     await api.post(`/mobility/journeys/offers/${id}/cancel`);
   },
 
   async cancelRequest(id: number): Promise<void> {
     await api.post(`/mobility/journeys/requests/${id}/cancel`);
+  },
+
+  async getPassengers(offerId: number): Promise<JourneyPassenger[]> {
+    const res = await api.get<JourneyPassenger[]>(`/mobility/journeys/offers/${offerId}/passengers`);
+    return res.data ?? [];
   },
 };

@@ -10,6 +10,7 @@ export interface JourneyTypeConfig {
 
 export interface JourneyOffer {
   id: number;
+  driverUserId?: number;
   driverName: string;
   rating?: number;
   journeyType: JourneyTypeCode;
@@ -107,6 +108,18 @@ export interface JourneyMatchProposal {
 }
 
 export interface JourneyBooking {
+  id: number;
+  offerId: number;
+  userId: number;
+  userName?: string;
+  seats: number;
+  status: string;
+  bookedAt: string;
+  offer: JourneyOffer;
+  offerOwner?: boolean;
+}
+
+export interface JourneyPassenger {
   id: number;
   offerId: number;
   userId: number;
