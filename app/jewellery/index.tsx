@@ -72,6 +72,11 @@ export default function JewelleryHomeScreen() {
     }),
   });
 
+  const { data: recommendations = [] } = useQuery({
+    queryKey: ['jewellery-recommendations'],
+    queryFn: () => jewelleryService.getRecommendations('EARRINGS', 6),
+  });
+
   const isLoading = loadingFeatured || loadingVendors;
 
   const handleRefresh = () => {
@@ -248,6 +253,36 @@ export default function JewelleryHomeScreen() {
         </View>
       )}
 
+      {/* Recommended For You (Fit Profile matching) */}
+      {recommendations.length > 0 && (
+        <View style={styles.section}>
+          <View style={[styles.sectionRow, { paddingHorizontal: SPACING.md, marginBottom: 8 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="sparkles" size={16} color="#7C3AED" />
+              <Text style={styles.sectionTitle}>For You (Proportions Match)</Text>
+            </View>
+            <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '700' }}>Custom Fit</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: SPACING.md, gap: 12 }}>
+            {recommendations.map((item) => (
+              <TouchableOpacity
+                key={item.productId}
+                style={styles.recCard}
+                onPress={() => router.push(`/jewellery/${item.productId}`)}
+              >
+                <View style={styles.recBadge}>
+                  <Ionicons name="sparkles" size={10} color="#7C3AED" />
+                  <Text style={styles.recBadgeText}>Proportion Match</Text>
+                </View>
+                <Text style={styles.recName} numberOfLines={2}>{item.name}</Text>
+                <Text style={styles.recPrice}>₹{item.price.toLocaleString('en-IN')}</Text>
+                {item.reason && <Text style={styles.recReason} numberOfLines={1}>{item.reason}</Text>}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Products Grid */}
       <View style={[styles.section, { paddingHorizontal: SPACING.md }]}>
         <View style={styles.sectionRow}>
@@ -395,6 +430,19 @@ const styles = StyleSheet.create({
   vendorRating: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   vendorRatingText: { fontSize: 10, color: '#64748B' },
   vendorDist: { fontSize: 9, color: '#94A3B8' },
+  recCard: {
+    width: 150, backgroundColor: '#FAF5FF', borderRadius: RADIUS.md,
+    padding: 10, borderWidth: 1, borderColor: '#E9D5FF', ...SHADOWS.sm,
+  },
+  recBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#F3E8FF', alignSelf: 'flex-start',
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.full, marginBottom: 6,
+  },
+  recBadgeText: { fontSize: 9, fontWeight: '700', color: '#7C3AED' },
+  recName: { fontSize: 12, fontWeight: '700', color: '#1E1B4B', lineHeight: 16 },
+  recPrice: { fontSize: 13, fontWeight: '900', color: '#7C3AED', marginTop: 4 },
+  recReason: { fontSize: 10, color: '#6B21A8', marginTop: 2, fontStyle: 'italic' },
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
   productCard: {
     width: '47%', backgroundColor: '#FFFFFF', borderRadius: RADIUS.lg,

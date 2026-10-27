@@ -117,6 +117,21 @@ export interface TryOnUploadSlot {
   expiresAt: string;
 }
 
+export interface FitProfile {
+  faceShape: 'round' | 'oval' | 'square' | 'heart' | 'oblong' | 'unknown';
+  widthRatio?: number;
+  neckRatio?: number;
+  confidence: number;
+}
+
+export interface RecommendationItem {
+  productId: number;
+  name: string;
+  price: number;
+  score: number;
+  reason: string;
+}
+
 export const jewelleryService = {
   // ── Products ──────────────────────────────────────────────────
   async getProducts(params?: {
@@ -263,6 +278,35 @@ export const jewelleryService = {
       return res.data ?? [];
     } catch {
       return ['10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
+    }
+  },
+
+  // ── Fit Profile & Recommendations ──────────────────────────────
+  async saveFitProfile(profile: FitProfile): Promise<void> {
+    await api.put('/jewellery/fit-profile', profile);
+  },
+
+  async getFitProfile(): Promise<FitProfile | null> {
+    try {
+      const res = await api.get<FitProfile>('/jewellery/fit-profile');
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async deleteFitProfile(): Promise<void> {
+    await api.delete('/jewellery/fit-profile');
+  },
+
+  async getRecommendations(category = 'EARRINGS', limit = 12): Promise<RecommendationItem[]> {
+    try {
+      const res = await api.get<RecommendationItem[]>('/jewellery/recommendations', {
+        params: { category, limit },
+      });
+      return res.data ?? [];
+    } catch {
+      return [];
     }
   },
 };
