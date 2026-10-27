@@ -223,6 +223,7 @@ export function resolveRoute(data: Record<string, unknown>): string | null {
     case 'MOBILITY_WAITLISTED':
     case 'MOBILITY_WAITLIST_PROMOTED':
     case 'MOBILITY_GROUP_CANCELLED':
+    case 'MOBILITY_REQUEST_EXPIRED':
       return '/mobility/journeys/bookings';
 
     // Pets & Academy
