@@ -43,6 +43,17 @@ const SERVICES: ServiceCard[] = [
   },
   {
     type:     'CARPOOL',
+    icon:     'navigate-circle',
+    label:    'Community Group Travel',
+    sublabel: 'Office, school, events, stations & sports',
+    color:    '#7C3AED',
+    bg:       '#F5F3FF',
+    iconBg:   '#EDE9FE',
+    route:    '/mobility/journeys',
+    enabled:  true,
+  },
+  {
+    type:     'CARPOOL',
     icon:     'airplane',
     label:    'Airport Rides',
     sublabel: 'Share airport trips with neighbours',
