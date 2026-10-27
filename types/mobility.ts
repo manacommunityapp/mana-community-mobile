@@ -187,10 +187,12 @@ export interface MobilityStatsDto {
 
 // ── Service Zone ─────────────────────────────────────────────────
 export interface MobilityServiceZoneDto {
-  id:          number;
-  name:        string;
-  description?: string;
-  isActive:    boolean;
+  id:        number;
+  name:      string;
+  centerLat: number;
+  centerLng: number;
+  radiusKm:  number;
+  active:    boolean;
 }
 
 // ── Ops / Admin ──────────────────────────────────────────────────
