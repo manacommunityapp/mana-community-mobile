@@ -11,6 +11,7 @@ export default function MobilityLayout() {
       <Stack.Screen name="carpool" />
       <Stack.Screen name="airport-rides" />
       <Stack.Screen name="journeys" />
+      <Stack.Screen name="journeys/requests" />
       <Stack.Screen name="ops" />
     </Stack>
   );

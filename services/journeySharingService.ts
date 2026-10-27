@@ -42,4 +42,15 @@ export const journeySharingService = {
     });
     return res.data;
   },
+
+  async getRequestMatches(requestId: number, page = 0): Promise<JourneyPage<JourneyOffer>> {
+    const res = await api.get<JourneyPage<JourneyOffer>>(`/mobility/journeys/requests/${requestId}/matches`, {
+      params: { page, size: 20 },
+    });
+    return res.data;
+  },
+
+  async leave(id: number): Promise<void> {
+    await api.post(`/mobility/journeys/offers/${id}/leave`);
+  },
 };
