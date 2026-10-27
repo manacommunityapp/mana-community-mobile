@@ -132,7 +132,26 @@ export default function JewelleryHomeScreen() {
         <Text style={styles.sectionTitle}>Collections</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: SPACING.md, gap: 10 }}>
           {FESTIVE_COLLECTIONS.map((col) => (
-            <TouchableOpacity key={col.title} style={[styles.collectionCard, { backgroundColor: col.color }]}>
+            <TouchableOpacity
+              key={col.title}
+              style={[styles.collectionCard, { backgroundColor: col.color }]}
+              onPress={() => {
+                if (col.title === 'Bridal Sets') {
+                  setSelectedCategory('NECKLACE');
+                  setSearch('bridal');
+                } else if (col.title === 'Diwali Special') {
+                  setSelectedMaterial('GOLD');
+                  setSearch('diwali');
+                } else if (col.title === 'Under ₹5,000') {
+                  setSelectedMaterial('ARTIFICIAL');
+                  setSearch('');
+                } else {
+                  setSelectedCategory('ALL');
+                  setSelectedMaterial('ALL');
+                  setSearch('');
+                }
+              }}
+            >
               <Ionicons name={col.icon as any} size={20} color="#FFFFFF" />
               <Text style={styles.collectionTitle}>{col.title}</Text>
               <Text style={styles.collectionSub}>{col.subtitle}</Text>
