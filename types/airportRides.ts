@@ -62,6 +62,33 @@ export interface CreateAirportRideRequest {
   vehicleNumber?: string;
 }
 
+export interface AirportRideDemandRequest {
+  id: number;
+  direction: AirportRideDirection;
+  airportCode: string;
+  area: string;
+  travelAt: string;
+  timeWindowMinutes: number;
+  seats: number;
+  luggageCount: number;
+  flightNumber?: string;
+  terminal?: string;
+  status: 'OPEN' | 'MATCHED' | 'CANCELLED' | 'EXPIRED';
+  createdAt: string;
+}
+
+export interface CreateAirportRideDemandRequest {
+  direction: AirportRideDirection;
+  airportCode: string;
+  area: string;
+  travelAt: string;
+  timeWindowMinutes: number;
+  seats: number;
+  luggageCount: number;
+  flightNumber?: string;
+  terminal?: string;
+}
+
 export interface PageResponse<T> {
   content: T[];
   totalElements: number;

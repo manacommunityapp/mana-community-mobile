@@ -4,6 +4,8 @@ import type {
   AirportRideDto,
   AirportRideSearchRequest,
   CreateAirportRideRequest,
+  AirportRideDemandRequest,
+  CreateAirportRideDemandRequest,
   PageResponse,
 } from '@/types/airportRides';
 
@@ -44,6 +46,25 @@ export const airportRideService = {
 
   async getMyTrips(page = 0): Promise<PageResponse<AirportRideDto>> {
     const res = await api.get<PageResponse<AirportRideDto>>('/mobility/airport-rides/my-trips', {
+      params: { page, size: 20 },
+    });
+    return res.data;
+  },
+
+  async createDemand(req: CreateAirportRideDemandRequest): Promise<AirportRideDemandRequest> {
+    const res = await api.post<AirportRideDemandRequest>('/mobility/airport-rides/requests', req);
+    return res.data;
+  },
+
+  async getMyDemand(page = 0): Promise<PageResponse<AirportRideDemandRequest>> {
+    const res = await api.get<PageResponse<AirportRideDemandRequest>>('/mobility/airport-rides/requests/mine', {
+      params: { page, size: 20 },
+    });
+    return res.data;
+  },
+
+  async getDemandMatches(requestId: number, page = 0): Promise<PageResponse<AirportRideDto>> {
+    const res = await api.get<PageResponse<AirportRideDto>>(`/mobility/airport-rides/requests/${requestId}/matches`, {
       params: { page, size: 20 },
     });
     return res.data;
