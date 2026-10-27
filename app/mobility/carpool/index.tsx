@@ -175,7 +175,7 @@ export default function CarpoolScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* ── Modern Header ───────────────────────────────────── */}
       <View style={s.header}>

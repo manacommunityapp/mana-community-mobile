@@ -139,11 +139,10 @@ export interface DriverEarningsSummaryDto {
 // ── Driver Onboarding ────────────────────────────────────────────
 export interface RegisterDriverRequest {
   vehicleType:    VehicleType;
-  vehicleNumber:  string;
+  vehicleNumberPlate: string;
   vehicleModel:   string;
   vehicleColor:   string;
   vehicleYear:    number;
-  serviceZoneIds: number[];
 }
 
 // ── Ride Requests ────────────────────────────────────────────────

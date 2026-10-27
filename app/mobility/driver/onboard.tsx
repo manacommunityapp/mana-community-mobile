@@ -64,11 +64,10 @@ export default function DriverOnboardScreen() {
   const registerMutation = useMutation({
     mutationFn: () => mobilityDriverService.register({
       vehicleType:    vehicleType!,
-      vehicleNumber:  vehicleNumber.trim().toUpperCase(),
+      vehicleNumberPlate: vehicleNumber.trim().toUpperCase(),
       vehicleModel:   vehicleModel.trim(),
       vehicleColor:   vehicleColor.trim(),
       vehicleYear:    Number(vehicleYear),
-      serviceZoneIds: [],
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mobility-driver-profile'] });

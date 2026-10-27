@@ -2,7 +2,7 @@
  * Rapido / Uber-style booking screen:
  *   Phase 1 – Location inputs (pickup + destination) with quick-saved places & GPS
  *   Phase 2 – Vehicle types shown with live fare quotes & ETA
- *   Phase 3 – Confirmation sheet with itemized breakdown, promo code & payment
+ *   Phase 3 – Confirmation sheet with itemized breakdown & payment method
  */
 import { useState, useCallback, useRef } from 'react';
 import {
@@ -108,8 +108,6 @@ const DEFAULT_LNG = 78.4867;
 // ── Payment options ────────────────────────────────────────────────
 const PAYMENT_OPTIONS: { method: PaymentMethod; icon: keyof typeof Ionicons.glyphMap; label: string; sub: string }[] = [
   { method: 'CASH',   icon: 'cash-outline',           label: 'Cash',        sub: 'Pay driver directly' },
-  { method: 'UPI',    icon: 'phone-portrait-outline', label: 'UPI / QR',    sub: 'Instant GooglePay/PhonePe' },
-  { method: 'WALLET', icon: 'wallet-outline',         label: 'Mana Wallet', sub: 'Instant 1-tap checkout' },
 ];
 
 export default function BookRideScreen() {
@@ -132,6 +130,8 @@ export default function BookRideScreen() {
   // ── GPS state ──────────────────────────────────────────────────
   const [pickupLat, setPickupLat] = useState(DEFAULT_LAT);
   const [pickupLng, setPickupLng] = useState(DEFAULT_LNG);
+  const [destLat, setDestLat] = useState<number | null>(null);
+  const [destLng, setDestLng] = useState<number | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
 
   async function handleGps() {
@@ -179,13 +179,20 @@ export default function BookRideScreen() {
     }
     setLoadingQuotes(true);
     try {
+      const [destination] = await Location.geocodeAsync(destAddr.trim());
+      if (!destination) {
+        Alert.alert('Location not found', 'Please enter a more specific destination.');
+        return;
+      }
+      setDestLat(destination.latitude);
+      setDestLng(destination.longitude);
       const enabled = VEHICLE_OPTIONS.filter(v => v.enabled);
       const results = await Promise.allSettled(
         enabled.map(v =>
           mobilityPassengerService.getFareQuote({
             serviceType: v.type,
             pickupLat: pickupLat, pickupLng: pickupLng,
-            destLat:   pickupLat + 0.05, destLng: pickupLng + 0.05,
+            destLat:   destination.latitude, destLng: destination.longitude,
           }).then(q => ({ type: v.type, quote: q } as QuotedService)),
         ),
       );
@@ -211,13 +218,17 @@ export default function BookRideScreen() {
   function handleConfirmBook() {
     const chosen = quotes.find(q => q.type === selectedType);
     if (!chosen) return;
+    if (destLat == null || destLng == null) {
+      Alert.alert('Destination required', 'Please confirm a valid destination before booking.');
+      return;
+    }
     bookMutation.mutate({
       serviceType:     selectedType,
       pickupLat:       pickupLat,
       pickupLng:       pickupLng,
       pickupAddress:   pickupAddr,
-      destLat:         pickupLat + 0.05,
-      destLng:         pickupLng + 0.05,
+      destLat,
+      destLng,
       destAddress:     destAddr,
       quoteId:         chosen.quote.quoteId,
       idempotencyKey:  `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -234,7 +245,7 @@ export default function BookRideScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* ── Modern Navigation Header ──────────────────────────── */}
       <View style={s.header}>

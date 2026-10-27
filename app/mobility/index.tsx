@@ -13,8 +13,10 @@ import { mobilityPassengerService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { MobilityServiceType } from '@/types/mobility';
 
-// ── Feature flags — set to true once backend is ready ─────────────
-const ONDEMAND_ENABLED = false;
+// On-demand fare quote, dispatch, tracking and cancellation APIs are live.
+// Payment checkout remains optional; cash trips continue to work while gateway
+// checkout is completed.
+const ONDEMAND_ENABLED = true;
 
 interface ServiceCard {
   type:        MobilityServiceType;
@@ -175,7 +177,7 @@ export default function MobilityHubScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+      <StatusBar barStyle="light-content" />
 
       {/* ── Hero Header ────────────────────────────────────────── */}
       <LinearGradient
