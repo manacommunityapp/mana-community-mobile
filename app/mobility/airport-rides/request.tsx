@@ -11,7 +11,7 @@ export default function AirportRideRequestScreen() {
   const [direction, setDirection] = useState<AirportRideDirection>('TO_AIRPORT');
   const [form, setForm] = useState({ airportCode: 'HYD', area: '', travelAt: '', timeWindowMinutes: '30', seats: '1', luggageCount: '0', flightNumber: '', terminal: '' });
   const set = (key: keyof typeof form, value: string) => setForm(prev => ({ ...prev, [key]: value }));
-  const create = useMutation({ mutationFn: (req: CreateAirportRideDemandRequest) => airportRideService.createDemand(req), onSuccess: () => Alert.alert('Request added', 'We’ll look for compatible travellers and notify you when a group forms.', [{ text: 'Done', onPress: () => router.back() }]), onError: (e: any) => Alert.alert('Could not save request', e?.message || 'Please check the details and try again.') });
+  const create = useMutation({ mutationFn: (req: CreateAirportRideDemandRequest) => airportRideService.createDemand(req), onSuccess: () => Alert.alert('Request added', 'We’ll look for compatible travellers and notify you when a group forms.', [{ text: 'View requests', onPress: () => router.replace('/mobility/airport-rides/demand' as any) }]), onError: (e: any) => Alert.alert('Could not save request', e?.message || 'Please check the details and try again.') });
   const submit = () => {
     if (!form.area || !form.travelAt) { Alert.alert('Missing details', 'Add your area and travel time.'); return; }
     create.mutate({ direction, airportCode: form.airportCode.toUpperCase(), area: form.area, travelAt: form.travelAt, timeWindowMinutes: Number(form.timeWindowMinutes), seats: Number(form.seats), luggageCount: Number(form.luggageCount), flightNumber: form.flightNumber || undefined, terminal: form.terminal || undefined });
