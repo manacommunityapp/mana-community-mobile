@@ -128,8 +128,6 @@ export default function BookRideScreen() {
 
   // ── Confirm ────────────────────────────────────────────────────
   const [payment, setPayment]           = useState<PaymentMethod>('CASH');
-  const [promoCode, setPromoCode]       = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
 
   // ── GPS state ──────────────────────────────────────────────────
   const [pickupLat, setPickupLat] = useState(DEFAULT_LAT);
@@ -571,41 +569,6 @@ export default function BookRideScreen() {
                   <Text style={s.fareBreakdownAmt}>₹{amt.toFixed(2)}</Text>
                 </View>
               ))}
-            </View>
-
-            {/* Promo Code Input */}
-            <View style={s.promoCard}>
-              <Ionicons
-                name="pricetag-outline"
-                size={18}
-                color={promoApplied ? '#059669' : COLORS.textMuted}
-              />
-              <TextInput
-                style={s.promoInput}
-                placeholder="Apply Promo or Voucher"
-                placeholderTextColor={COLORS.textMuted}
-                value={promoCode}
-                onChangeText={setPromoCode}
-                autoCapitalize="characters"
-                editable={!promoApplied}
-              />
-              <TouchableOpacity
-                style={[s.promoActionBtn, promoApplied && s.promoActionBtnApplied]}
-                onPress={() => {
-                  if (promoApplied) {
-                    setPromoApplied(false);
-                    setPromoCode('');
-                    return;
-                  }
-                  if (!promoCode.trim()) return;
-                  Alert.alert('Promo Applied', `Code "${promoCode}" active for this trip.`);
-                  setPromoApplied(true);
-                }}
-              >
-                <Text style={[s.promoActionBtnText, promoApplied && s.promoActionBtnTextApplied]}>
-                  {promoApplied ? 'Remove' : 'Apply'}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Payment Method Selector */}
