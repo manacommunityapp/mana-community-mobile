@@ -130,6 +130,7 @@ export default function BookRideScreen() {
   // ── GPS state ──────────────────────────────────────────────────
   const [pickupLat, setPickupLat] = useState(DEFAULT_LAT);
   const [pickupLng, setPickupLng] = useState(DEFAULT_LNG);
+  const [pickupResolved, setPickupResolved] = useState(false);
   const [destLat, setDestLat] = useState<number | null>(null);
   const [destLng, setDestLng] = useState<number | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -145,6 +146,7 @@ export default function BookRideScreen() {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setPickupLat(pos.coords.latitude);
       setPickupLng(pos.coords.longitude);
+      setPickupResolved(true);
       const [geo] = await Location.reverseGeocodeAsync(pos.coords);
       if (geo) {
         const label = [geo.name, geo.street, geo.district, geo.city].filter(Boolean).join(', ');
@@ -179,6 +181,18 @@ export default function BookRideScreen() {
     }
     setLoadingQuotes(true);
     try {
+      let pickup = { latitude: pickupLat, longitude: pickupLng };
+      if (!pickupResolved) {
+        const [geocodedPickup] = await Location.geocodeAsync(pickupAddr.trim());
+        if (!geocodedPickup) {
+          Alert.alert('Pickup not found', 'Please enter a more specific pickup location or use Locate.');
+          return;
+        }
+        pickup = geocodedPickup;
+        setPickupLat(pickup.latitude);
+        setPickupLng(pickup.longitude);
+        setPickupResolved(true);
+      }
       const [destination] = await Location.geocodeAsync(destAddr.trim());
       if (!destination) {
         Alert.alert('Location not found', 'Please enter a more specific destination.');
@@ -191,7 +205,7 @@ export default function BookRideScreen() {
         enabled.map(v =>
           mobilityPassengerService.getFareQuote({
             serviceType: v.type,
-            pickupLat: pickupLat, pickupLng: pickupLng,
+            pickupLat: pickup.latitude, pickupLng: pickup.longitude,
             destLat:   destination.latitude, destLng: destination.longitude,
           }).then(q => ({ type: v.type, quote: q } as QuotedService)),
         ),
@@ -352,11 +366,11 @@ export default function BookRideScreen() {
                     placeholder="Enter pickup location"
                     placeholderTextColor={COLORS.textMuted}
                     value={pickupAddr}
-                    onChangeText={setPickupAddr}
+                     onChangeText={(value) => { setPickupAddr(value); setPickupResolved(false); }}
                     onFocus={() => setActiveInput('pickup')}
                   />
                   {pickupAddr.length > 0 && (
-                    <TouchableOpacity onPress={() => setPickupAddr('')} hitSlop={8}>
+                      <TouchableOpacity onPress={() => { setPickupAddr(''); setPickupResolved(false); }} hitSlop={8}>
                       <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
                     </TouchableOpacity>
                   )}
@@ -404,7 +418,7 @@ export default function BookRideScreen() {
                     style={s.savedCard}
                     onPress={() => {
                       if (sp.addr) {
-                        if (activeInput === 'pickup') setPickupAddr(sp.addr);
+                         if (activeInput === 'pickup') { setPickupAddr(sp.addr); setPickupResolved(false); }
                         else setDestAddr(sp.addr);
                       } else {
                         Alert.alert(`Set ${sp.label}`, `Please enter your ${sp.label.toLowerCase()} address above to set it for quick booking.`);

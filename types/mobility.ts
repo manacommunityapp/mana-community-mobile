@@ -70,6 +70,9 @@ export interface MobilityDriverDto {
   status:        DriverStatus;
   availability:  DriverAvailability;
   phone:         string;
+  currentLat?:   number;
+  currentLng?:   number;
+  locationUpdatedAt?: string;
 }
 
 // ── Ride Request / Trip ──────────────────────────────────────────
@@ -97,11 +100,11 @@ export interface MobilityTripDto {
 }
 
 export interface MobilityLocationUpdateDto {
-  tripId:    number;
-  driverLat: number;
-  driverLng: number;
+  tripId?:   number;
+  driverLat?: number;
+  driverLng?: number;
   etaMinutes?: number;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 // ── Driver Documents ─────────────────────────────────────────────
