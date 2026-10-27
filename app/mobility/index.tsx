@@ -307,7 +307,7 @@ export default function MobilityHubScreen() {
           <View style={s.servicesGrid}>
             {SERVICES.map((svc) => (
               <TouchableOpacity
-                key={svc.type}
+                key={svc.route}
                 style={[
                   s.svcCard,
                   { backgroundColor: svc.bg },
