@@ -228,6 +228,16 @@ export default function JewelleryProductScreen() {
         <TouchableOpacity
           style={[styles.addCartBtn, product.status === 'OUT_OF_STOCK' && styles.disabledBtn]}
           disabled={product.status === 'OUT_OF_STOCK'}
+          onPress={() => {
+            Alert.alert(
+              'Added to Bag',
+              `${product.name} (₹${product.totalPrice.toLocaleString('en-IN')}) has been added to your shopping bag.`,
+              [
+                { text: 'Continue Shopping', style: 'cancel' },
+                { text: 'Book Consultation', onPress: () => router.push({ pathname: '/jewellery/appointments', params: { vendorId: product.vendorId } }) },
+              ]
+            );
+          }}
         >
           <Ionicons name="bag-add-outline" size={16} color="#FFFFFF" />
           <Text style={styles.addCartBtnText}>

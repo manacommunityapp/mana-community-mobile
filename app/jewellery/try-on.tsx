@@ -1,16 +1,21 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
-  ScrollView, Alert, ActivityIndicator, Platform,
+  ScrollView, Alert, ActivityIndicator, Platform, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
-import { jewelleryService, JewelleryProduct, TryOnMode } from '@/services/jewelleryService';
+import {
+  jewelleryService,
+  JewelleryProduct,
+  TryOnMode,
+} from '@/services/jewelleryService';
 
-type ViewMode = 'SELECT' | 'LIVE_AR' | 'PHOTO';
+// ── Types ──────────────────────────────────────────────────────────────────
+type ViewMode = 'SELECT' | 'UPLOADING' | 'PROCESSING' | 'RESULT' | 'ERROR';
 
 const BODY_PART_LABELS: Record<string, string> = {
   EARRINGS:    'Ears & Face',
@@ -22,23 +27,33 @@ const BODY_PART_LABELS: Record<string, string> = {
   PENDANT:     'Neck',
 };
 
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLL_ATTEMPTS = 20; // 60 s timeout
+
+// ── Component ──────────────────────────────────────────────────────────────
 export default function JewelleryTryOnScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { productId } = useLocalSearchParams<{ productId?: string }>();
 
   const [viewMode, setViewMode] = useState<ViewMode>('SELECT');
   const [selectedProduct, setSelectedProduct] = useState<JewelleryProduct | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [sessionStarted, setSessionStarted] = useState(false);
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [consentVisible, setConsentVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'camera' | 'gallery' | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollCount = useRef(0);
 
+  // ── Data ─────────────────────────────────────────────────────────────────
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['jewellery-tryon-products'],
     queryFn: () => jewelleryService.getProducts(),
   });
 
-  // Pre-select product if navigated from product detail
   React.useEffect(() => {
     if (productId && products.length > 0) {
       const found = products.find((p) => p.id === productId);
@@ -46,115 +61,197 @@ export default function JewelleryTryOnScreen() {
     }
   }, [productId, products]);
 
-  const startSessionMutation = useMutation({
-    mutationFn: (mode: TryOnMode) =>
-      jewelleryService.startTryOnSession({
-        productId: selectedProduct!.id,
-        mode,
-        platform: Platform.OS,
-      }),
-    onSuccess: () => setSessionStarted(true),
+  // ── Wishlist ──────────────────────────────────────────────────────────────
+  const wishlistMutation = useMutation({
+    mutationFn: () => jewelleryService.addToWishlist(selectedProduct!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jewellery-wishlist'] });
+      Alert.alert('Saved!', `${selectedProduct?.name} added to your wishlist.`);
+    },
+    onError: () => Alert.alert('Error', 'Could not save to wishlist. Try again.'),
   });
 
-  const handlePickPhoto = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Needed', 'Allow access to your photo library to try on jewellery.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets?.[0]) {
-      setPhotoUri(result.assets[0].uri);
-      setViewMode('PHOTO');
-      if (selectedProduct) {
-        startSessionMutation.mutate('PHOTO');
-      }
-    }
-  }, [selectedProduct]);
+  // ── Poll job status ───────────────────────────────────────────────────────
+  const startPolling = useCallback((jobId: string) => {
+    pollCount.current = 0;
+    if (pollRef.current) clearInterval(pollRef.current);
+    setViewMode('PROCESSING');
 
-  const handleTakePhoto = useCallback(async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Camera Permission', 'Allow camera access to use live AR try-on.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets?.[0]) {
-      setPhotoUri(result.assets[0].uri);
-      setViewMode('PHOTO');
-      if (selectedProduct) {
-        startSessionMutation.mutate('PHOTO');
+    pollRef.current = setInterval(async () => {
+      pollCount.current += 1;
+      if (pollCount.current > MAX_POLL_ATTEMPTS) {
+        clearInterval(pollRef.current!);
+        setErrorMsg('Processing timed out. Please try with a clearer photo.');
+        setViewMode('ERROR');
+        return;
       }
-    }
-  }, [selectedProduct]);
+      try {
+        const job = await jewelleryService.getPhotoJobStatus(jobId);
+        if (job.status === 'COMPLETED' && job.outputUrl) {
+          clearInterval(pollRef.current!);
+          setResultUrl(job.outputUrl);
+          setViewMode('RESULT');
+        } else if (job.status === 'FAILED') {
+          clearInterval(pollRef.current!);
+          setErrorMsg('Processing failed. Please try a clearer, well-lit photo.');
+          setViewMode('ERROR');
+        }
+      } catch { /* transient — keep polling */ }
+    }, POLL_INTERVAL_MS);
+  }, []);
 
-  const handleLiveAR = () => {
+  // ── Upload pipeline ───────────────────────────────────────────────────────
+  const runUploadPipeline = useCallback(async (localUri: string) => {
+    if (!selectedProduct) return;
+    setPhotoUri(localUri);
+    setViewMode('UPLOADING');
+    setUploadProgress(10);
+
+    try {
+      // Step 1: Get presigned S3 URL
+      const slot = await jewelleryService.requestPhotoUploadUrl();
+      setUploadProgress(30);
+
+      // Step 2: PUT photo directly to S3
+      const photoBlob = await (await fetch(localUri)).blob();
+      setUploadProgress(50);
+      const s3Res = await fetch(slot.presignedUploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': slot.contentType },
+        body: photoBlob,
+      });
+      if (!s3Res.ok) throw new Error(`S3 upload failed (${s3Res.status})`);
+      setUploadProgress(70);
+
+      // Step 3: Start try-on session
+      const session = await jewelleryService.startTryOnSession({
+        productId: selectedProduct.id,
+        mode: 'PHOTO',
+        platform: Platform.OS,
+      });
+      setUploadProgress(85);
+
+      // Step 4: Submit photo job with s3Key
+      const job = await jewelleryService.submitPhotoJob(session.id, slot.s3Key);
+      setUploadProgress(100);
+
+      // Step 5: Poll for result
+      startPolling(job.id);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Upload failed. Please check your connection and try again.');
+      setViewMode('ERROR');
+    }
+  }, [selectedProduct, startPolling]);
+
+  // ── Photo pickers gated by consent ────────────────────────────────────────
+  const executeAfterConsent = useCallback(async (action: 'camera' | 'gallery') => {
+    if (action === 'gallery') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Allow access to your photo library to try on jewellery.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.85,
+      });
+      if (!res.canceled && res.assets?.[0]) runUploadPipeline(res.assets[0].uri);
+    } else {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Allow camera access to take a photo for try-on.');
+        return;
+      }
+      const res = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.85,
+      });
+      if (!res.canceled && res.assets?.[0]) runUploadPipeline(res.assets[0].uri);
+    }
+  }, [runUploadPipeline]);
+
+  const requestConsent = useCallback((action: 'camera' | 'gallery') => {
     if (!selectedProduct) {
       Alert.alert('Select Product', 'Please select a jewellery item first.');
       return;
     }
+    setPendingAction(action);
+    setConsentVisible(true);
+  }, [selectedProduct]);
+
+  const handleConsentAccept = useCallback(() => {
+    setConsentVisible(false);
+    if (pendingAction) executeAfterConsent(pendingAction);
+  }, [pendingAction, executeAfterConsent]);
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  const handleLiveAR = () =>
     Alert.alert(
       'Live AR Coming Soon',
-      'Live AR try-on will be enabled after integrating the MirrAR or Banuba SDK. ' +
-      'Currently, please use the Photo Try-On mode to preview this jewellery.',
-      [{ text: 'Use Photo Mode', onPress: handlePickPhoto }]
+      'Live AR try-on requires the MirrAR SDK integration. Use Photo mode for now.',
+      [{ text: 'Use Photo Mode', onPress: () => requestConsent('camera') }]
     );
-  };
 
   const handleSaveLook = () => {
-    if (!photoUri) return;
-    Alert.alert('Look Saved', 'Your jewellery look has been saved to your wishlist.');
+    if (!selectedProduct) return;
+    wishlistMutation.mutate();
   };
 
   const handleAddToCart = () => {
     if (!selectedProduct) return;
-    Alert.alert('Added to Cart', `${selectedProduct.name} has been added to your cart.`);
+    router.push({ pathname: '/cart', params: { productId: selectedProduct.id } });
   };
 
-  const clearPhoto = () => {
-    setPhotoUri(null);
+  const handleReset = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
     setViewMode('SELECT');
-    setSessionStarted(false);
+    setPhotoUri(null);
+    setResultUrl(null);
+    setErrorMsg(null);
+    setUploadProgress(0);
+    pollCount.current = 0;
   };
 
-  // Derive overlay position hint from category
-  const overlayHint = selectedProduct ? BODY_PART_LABELS[selectedProduct.category] ?? 'Body' : '';
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <View style={styles.root}>
-      {/* Try-On Studio Header */}
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
           <Ionicons name="chevron-back" size={22} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Virtual Try-On Studio</Text>
-        <TouchableOpacity onPress={() => setShowComparison(!showComparison)} style={styles.compareBtn}>
-          <Ionicons name="images-outline" size={20} color={COLORS.primary} />
-        </TouchableOpacity>
+        {resultUrl ? (
+          <TouchableOpacity onPress={() => setShowComparison(!showComparison)} style={styles.navBtn}>
+            <Ionicons name="images-outline" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
 
+      {/* Studio */}
       <View style={styles.studioArea}>
-        {/* Main Preview */}
         {viewMode === 'SELECT' && (
           <View style={styles.selectPrompt}>
-            <Ionicons name="diamond" size={48} color="#C7D2FE" />
-            <Text style={styles.selectTitle}>Choose a Jewellery Item</Text>
-            <Text style={styles.selectSub}>Select from the carousel below, then take or upload a photo.</Text>
+            <Ionicons name="diamond" size={52} color="#C7D2FE" />
+            <Text style={styles.selectTitle}>
+              {selectedProduct ? `Try on ${selectedProduct.name}` : 'Choose a Jewellery Item'}
+            </Text>
+            <Text style={styles.selectSub}>
+              {selectedProduct
+                ? 'Take or upload a photo to see how it looks on you.'
+                : 'Select from the carousel below, then take or upload a photo.'}
+            </Text>
             <View style={styles.modeButtons}>
-              <TouchableOpacity style={styles.modeBtn} onPress={handleTakePhoto}>
+              <TouchableOpacity style={styles.modeBtn} onPress={() => requestConsent('camera')}>
                 <Ionicons name="camera" size={20} color="#FFFFFF" />
                 <Text style={styles.modeBtnText}>Take Photo</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modeBtn} onPress={handlePickPhoto}>
+              <TouchableOpacity style={styles.modeBtn} onPress={() => requestConsent('gallery')}>
                 <Ionicons name="images" size={20} color="#FFFFFF" />
                 <Text style={styles.modeBtnText}>Upload Photo</Text>
               </TouchableOpacity>
@@ -166,262 +263,231 @@ export default function JewelleryTryOnScreen() {
           </View>
         )}
 
-        {viewMode === 'PHOTO' && photoUri && (
-          <View style={styles.photoPreview}>
-            <Image source={{ uri: photoUri }} style={styles.previewImage} resizeMode="cover" />
+        {(viewMode === 'UPLOADING' || viewMode === 'PROCESSING') && (
+          <View style={styles.loadingWrap}>
+            {photoUri && <Image source={{ uri: photoUri }} style={styles.loadingBg} resizeMode="cover" />}
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+              <Text style={styles.loadingTitle}>
+                {viewMode === 'UPLOADING' ? 'Uploading photo…' : 'Applying jewellery…'}
+              </Text>
+              {viewMode === 'UPLOADING' && (
+                <>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
+                  </View>
+                  <Text style={styles.progressPct}>{uploadProgress}%</Text>
+                </>
+              )}
+              {viewMode === 'PROCESSING' && (
+                <Text style={styles.loadingSub}>This usually takes 10–30 seconds</Text>
+              )}
+            </View>
+          </View>
+        )}
 
-            {/* Jewellery overlay: show product image positioned as a visual hint */}
-            {selectedProduct?.tryOnAssetUrl && (
-              <View style={[styles.jewelOverlay, getOverlayStyle(selectedProduct.category)]}>
-                <Image
-                  source={{ uri: selectedProduct.tryOnAssetUrl }}
-                  style={styles.jewelImage}
-                  resizeMode="contain"
-                />
+        {viewMode === 'RESULT' && resultUrl && (
+          <View style={styles.resultWrap}>
+            {showComparison ? (
+              <View style={styles.compRow}>
+                <View style={styles.compHalf}>
+                  {photoUri && <Image source={{ uri: photoUri }} style={styles.compImg} resizeMode="cover" />}
+                  <View style={styles.compLabel}><Text style={styles.compLabelText}>Before</Text></View>
+                </View>
+                <View style={styles.compHalf}>
+                  <Image source={{ uri: resultUrl }} style={styles.compImg} resizeMode="cover" />
+                  <View style={[styles.compLabel, { backgroundColor: COLORS.primary }]}>
+                    <Text style={styles.compLabelText}>With Jewellery</Text>
+                  </View>
+                </View>
               </View>
+            ) : (
+              <Image source={{ uri: resultUrl }} style={styles.resultImg} resizeMode="cover" />
             )}
-
-            {/* Processing indicator */}
-            {isProcessing && (
-              <View style={styles.processingOverlay}>
-                <ActivityIndicator size="large" color="#FFFFFF" />
-                <Text style={styles.processingText}>Applying jewellery...</Text>
-              </View>
-            )}
-
-            {/* Selected product info */}
             {selectedProduct && (
-              <View style={styles.selectedOverlay}>
-                <Text style={styles.selectedOverlayName} numberOfLines={1}>{selectedProduct.name}</Text>
-                <Text style={styles.selectedOverlayPrice}>₹{selectedProduct.totalPrice.toLocaleString('en-IN')}</Text>
+              <View style={styles.selectedStrip}>
+                <Text style={styles.selectedName} numberOfLines={1}>{selectedProduct.name}</Text>
+                <Text style={styles.selectedPrice}>₹{selectedProduct.totalPrice.toLocaleString('en-IN')}</Text>
               </View>
             )}
-
-            {/* Body part hint */}
-            {overlayHint && (
-              <View style={styles.bodyHintBadge}>
-                <Ionicons name="locate-outline" size={10} color="#FFFFFF" />
-                <Text style={styles.bodyHintText}>Tracking: {overlayHint}</Text>
-              </View>
-            )}
-
-            {/* Photo actions */}
-            <View style={styles.photoActions}>
-              <TouchableOpacity style={styles.photoActionBtn} onPress={clearPhoto}>
-                <Ionicons name="refresh-outline" size={20} color="#FFFFFF" />
+            <View style={styles.resultBar}>
+              <TouchableOpacity style={styles.resultBtn} onPress={handleReset}>
+                <Ionicons name="refresh" size={17} color="#64748B" />
+                <Text style={styles.resultBtnText}>Retake</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.photoActionBtn} onPress={handlePickPhoto}>
-                <Ionicons name="images-outline" size={20} color="#FFFFFF" />
+              <TouchableOpacity style={styles.resultBtn} onPress={handleSaveLook} disabled={wishlistMutation.isPending}>
+                <Ionicons name={wishlistMutation.isPending ? 'hourglass' : 'heart'} size={17} color="#EF4444" />
+                <Text style={styles.resultBtnText}>Save Look</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.photoActionBtn} onPress={handleSaveLook}>
-                <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
+              <TouchableOpacity style={[styles.resultBtn, styles.resultBtnPrimary]} onPress={handleAddToCart}>
+                <Ionicons name="bag-add" size={17} color="#FFFFFF" />
+                <Text style={[styles.resultBtnText, { color: '#FFFFFF' }]}>Add to Cart</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
+
+        {viewMode === 'ERROR' && (
+          <View style={styles.errorWrap}>
+            <Ionicons name="cloud-offline-outline" size={52} color="#FCA5A5" />
+            <Text style={styles.errorTitle}>Processing Failed</Text>
+            <Text style={styles.errorMsg}>{errorMsg}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={handleReset}>
+              <Text style={styles.retryText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
-      {/* Notice banner */}
-      <View style={styles.noticeBanner}>
-        <Ionicons name="information-circle-outline" size={12} color="#64748B" />
-        <Text style={styles.noticeText}>Preview is illustrative. Actual product may vary in size and appearance.</Text>
-      </View>
-
-      {/* Product Carousel */}
-      <View style={styles.carouselSection}>
-        <View style={styles.carouselHeader}>
-          <Text style={styles.carouselTitle}>Select Jewellery</Text>
-          {selectedProduct && (
-            <Text style={styles.carouselSelected}>{selectedProduct.name}</Text>
+      {/* Product carousel — visible only in SELECT mode */}
+      {viewMode === 'SELECT' && (
+        <View style={styles.carousel}>
+          <Text style={styles.carouselTitle}>Try-On Ready Items</Text>
+          {loadingProducts ? (
+            <ActivityIndicator color={COLORS.primary} style={{ marginTop: 8 }} />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: SPACING.md, gap: 10 }}>
+              {products.filter((p) => p.tryOnAssetUrl).map((product) => {
+                const active = selectedProduct?.id === product.id;
+                return (
+                  <TouchableOpacity key={product.id}
+                    style={[styles.carouselCard, active && styles.carouselCardActive]}
+                    onPress={() => setSelectedProduct(product)}>
+                    {product.imageUrls?.[0]
+                      ? <Image source={{ uri: product.imageUrls[0] }} style={styles.carouselImg} />
+                      : <View style={styles.carouselPlaceholder}><Ionicons name="diamond-outline" size={24} color="#C7D2FE" /></View>}
+                    <Text style={[styles.carouselName, active && { color: COLORS.primary }]} numberOfLines={1}>
+                      {product.name}
+                    </Text>
+                    <Text style={styles.carouselPrice}>₹{product.totalPrice.toLocaleString('en-IN')}</Text>
+                    <View style={styles.bodyChip}>
+                      <Text style={styles.bodyChipText}>{BODY_PART_LABELS[product.category] ?? 'Body'}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+              {products.filter((p) => p.tryOnAssetUrl).length === 0 && !loadingProducts && (
+                <View style={{ padding: 16 }}>
+                  <Text style={{ color: '#94A3B8', fontSize: 12 }}>No try-on items yet. Check back soon!</Text>
+                </View>
+              )}
+            </ScrollView>
           )}
         </View>
-        {loadingProducts ? (
-          <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 12 }} />
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: SPACING.md, gap: 10, paddingVertical: 8 }}
-          >
-            {products.map((p) => {
-              const isSelected = selectedProduct?.id === p.id;
-              return (
-                <TouchableOpacity
-                  key={p.id}
-                  style={[styles.productChip, isSelected && styles.productChipActive]}
-                  onPress={() => setSelectedProduct(p)}
-                >
-                  {p.imageUrls?.[0] ? (
-                    <Image source={{ uri: p.imageUrls[0] }} style={styles.chipImage} />
-                  ) : (
-                    <View style={styles.chipImagePlaceholder}>
-                      <Ionicons name="diamond-outline" size={16} color={isSelected ? '#FFFFFF' : COLORS.primary} />
-                    </View>
-                  )}
-                  <Text style={[styles.chipName, isSelected && styles.chipNameActive]} numberOfLines={1}>{p.name}</Text>
-                  <Text style={[styles.chipPrice, isSelected && styles.chipPriceActive]}>
-                    ₹{p.totalPrice.toLocaleString('en-IN')}
-                  </Text>
-                  {p.tryOnAssetUrl && (
-                    <View style={styles.chipTryOnDot} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
+      )}
 
-      {/* Bottom Bar */}
-      <View style={styles.bottomBar}>
-        {viewMode === 'PHOTO' && selectedProduct ? (
-          <>
-            <TouchableOpacity style={styles.detailBtn} onPress={() => router.push(`/jewellery/${selectedProduct.id}`)}>
-              <Ionicons name="information-circle-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.detailBtnText}>View Details</Text>
+      {/* ── DPDP Consent Modal ─────────────────────────────────────── */}
+      <Modal visible={consentVisible} transparent animationType="slide">
+        <View style={styles.consentBackdrop}>
+          <View style={styles.consentSheet}>
+            <View style={styles.consentHandle} />
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="shield-checkmark" size={36} color="#059669" />
+            </View>
+            <Text style={styles.consentTitle}>Your Photo, Your Privacy</Text>
+            <Text style={styles.consentBody}>
+              Your photo is used <Text style={{ fontWeight: '800', color: '#0F172A' }}>only to preview jewellery</Text> on
+              your image. It is processed securely and automatically deleted within{' '}
+              <Text style={{ fontWeight: '800', color: '#0F172A' }}>24 hours</Text>.{'\n\n'}
+              Mana Hub does not sell, share, or use your photo for face recognition.
+            </Text>
+            {[
+              { icon: 'time-outline',         text: 'Deleted automatically within 24 hours' },
+              { icon: 'lock-closed-outline',   text: 'Encrypted in transit and at rest' },
+              { icon: 'person-remove-outline', text: 'Not used for identity / face recognition' },
+              { icon: 'share-social-outline',  text: 'Never shared with third parties' },
+            ].map((b) => (
+              <View key={b.icon} style={styles.consentRow}>
+                <Ionicons name={b.icon as any} size={16} color="#059669" />
+                <Text style={styles.consentRowText}>{b.text}</Text>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.consentAccept} onPress={handleConsentAccept}>
+              <Text style={styles.consentAcceptText}>I Understand – Continue</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}>
-              <Ionicons name="bag-add-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.cartBtnText}>Add to Cart</Text>
+            <TouchableOpacity style={styles.consentDecline} onPress={() => { setConsentVisible(false); setPendingAction(null); }}>
+              <Text style={styles.consentDeclineText}>Cancel</Text>
             </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity style={styles.detailBtn} onPress={handlePickPhoto}>
-              <Ionicons name="images-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.detailBtnText}>Upload Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cartBtn} onPress={handleTakePhoto}>
-              <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.cartBtnText}>Take Photo</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-/** Returns approximate overlay positioning based on jewellery category */
-function getOverlayStyle(category: string): object {
-  switch (category) {
-    case 'EARRINGS':
-      return { top: '22%', left: '8%', width: '20%', height: '15%' };
-    case 'NECKLACE':
-    case 'PENDANT':
-      return { top: '38%', left: '20%', width: '60%', height: '18%' };
-    case 'RING':
-      return { bottom: '20%', right: '15%', width: '25%', height: '15%' };
-    case 'BANGLE':
-    case 'BRACELET':
-      return { bottom: '20%', left: '15%', width: '30%', height: '12%' };
-    case 'MAANG_TIKKA':
-      return { top: '10%', left: '35%', width: '30%', height: '12%' };
-    default:
-      return { top: '30%', left: '30%', width: '40%', height: '20%' };
-  }
-}
-
+// ── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0F172A' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md, paddingTop: 52, paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  compareBtn: { padding: 4 },
-  studioArea: { flex: 1, backgroundColor: '#0F172A' },
-  selectPrompt: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12,
-    paddingHorizontal: SPACING.lg,
-  },
-  selectTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' },
-  selectSub: { fontSize: 13, color: '#94A3B8', textAlign: 'center', lineHeight: 20 },
-  modeButtons: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  modeBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.primary, paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: RADIUS.md,
-  },
-  arBtn: { backgroundColor: '#7C3AED' },
-  modeBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  photoPreview: { flex: 1, position: 'relative' },
-  previewImage: { width: '100%', height: '100%' },
-  jewelOverlay: { position: 'absolute' },
-  jewelImage: { width: '100%', height: '100%' },
-  processingOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center', justifyContent: 'center', gap: 12,
-  },
-  processingText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  selectedOverlay: {
-    position: 'absolute', top: 12, left: 12, right: 60,
-    backgroundColor: 'rgba(0,0,0,0.6)', padding: 8, borderRadius: RADIUS.sm,
-  },
-  selectedOverlayName: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  selectedOverlayPrice: { color: '#FCD34D', fontSize: 12, fontWeight: '600' },
-  bodyHintBadge: {
-    position: 'absolute', bottom: 60, left: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(79,70,229,0.85)', paddingHorizontal: 8, paddingVertical: 4,
-    borderRadius: RADIUS.full,
-  },
-  bodyHintText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
-  photoActions: {
-    position: 'absolute', bottom: 12, right: 12,
-    gap: 10,
-  },
-  photoActionBtn: {
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 22,
-    padding: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
-  },
-  noticeBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#F1F5F9', paddingHorizontal: SPACING.md, paddingVertical: 6,
-  },
-  noticeText: { fontSize: 10, color: '#64748B', flex: 1 },
-  carouselSection: { backgroundColor: '#FFFFFF', paddingTop: 10 },
-  carouselHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-  },
-  carouselTitle: { fontSize: 13, fontWeight: '800', color: '#0F172A' },
-  carouselSelected: { fontSize: 11, color: COLORS.primary, fontWeight: '600', flex: 1, textAlign: 'right', marginLeft: 8 },
-  productChip: {
-    width: 90, backgroundColor: '#F8FAFC', borderRadius: RADIUS.lg,
-    padding: 8, borderWidth: 1.5, borderColor: '#E2E8F0', alignItems: 'center',
-    position: 'relative',
-  },
-  productChipActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
-  chipImage: { width: 56, height: 56, borderRadius: RADIUS.md, marginBottom: 4 },
-  chipImagePlaceholder: {
-    width: 56, height: 56, borderRadius: RADIUS.md, marginBottom: 4,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF2FF',
-  },
-  chipName: { fontSize: 9, fontWeight: '700', color: '#334155', textAlign: 'center' },
-  chipNameActive: { color: COLORS.primary },
-  chipPrice: { fontSize: 9, color: '#64748B' },
-  chipPriceActive: { color: COLORS.primary, fontWeight: '700' },
-  chipTryOnDot: {
-    position: 'absolute', top: 4, right: 4,
-    width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.success,
-  },
-  bottomBar: {
-    flexDirection: 'row', gap: 10,
-    paddingHorizontal: SPACING.md, paddingVertical: 12,
-    backgroundColor: '#FFFFFF', borderTopWidth: 1, borderColor: '#E2E8F0',
-  },
-  detailBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: COLORS.primary, paddingVertical: 12, borderRadius: RADIUS.md,
-  },
-  detailBtnText: { color: COLORS.primary, fontSize: 13, fontWeight: '700' },
-  cartBtn: {
-    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#B45309', paddingVertical: 12, borderRadius: RADIUS.md,
-  },
-  cartBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  root:             { flex: 1, backgroundColor: '#F8FAFC' },
+  header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 52, paddingBottom: 12, paddingHorizontal: SPACING.md, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#E2E8F0' },
+  navBtn:           { padding: 6 },
+  headerTitle:      { fontSize: 15, fontWeight: '800', color: '#0F172A' },
+  studioArea:       { flex: 1, backgroundColor: '#0F172A' },
+
+  // SELECT
+  selectPrompt:     { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.lg, gap: 12 },
+  selectTitle:      { fontSize: 17, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' },
+  selectSub:        { fontSize: 12, color: '#94A3B8', textAlign: 'center', lineHeight: 18 },
+  modeButtons:      { flexDirection: 'row', gap: 10, marginTop: 10 },
+  modeBtn:          { alignItems: 'center', gap: 5, backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 12, borderRadius: RADIUS.md },
+  modeBtnText:      { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  arBtn:            { backgroundColor: '#4F46E5' },
+
+  // LOADING (upload/processing)
+  loadingWrap:      { flex: 1, position: 'relative' },
+  loadingBg:        { ...StyleSheet.absoluteFillObject, opacity: 0.35 },
+  loadingOverlay:   { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 12, padding: SPACING.lg },
+  loadingTitle:     { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  loadingSub:       { color: '#CBD5E1', fontSize: 12 },
+  progressBar:      { width: '78%', height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden' },
+  progressFill:     { height: '100%', backgroundColor: '#22D3EE', borderRadius: 3 },
+  progressPct:      { color: '#CBD5E1', fontSize: 11 },
+
+  // RESULT
+  resultWrap:       { flex: 1 },
+  resultImg:        { flex: 1, width: '100%' },
+  compRow:          { flex: 1, flexDirection: 'row' },
+  compHalf:         { flex: 1, position: 'relative' },
+  compImg:          { flex: 1, width: '100%' },
+  compLabel:        { position: 'absolute', bottom: 6, left: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: RADIUS.sm, padding: 4, alignItems: 'center' },
+  compLabelText:    { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
+  selectedStrip:    { position: 'absolute', bottom: 58, left: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', justifyContent: 'space-between' },
+  selectedName:     { color: '#FFFFFF', fontSize: 12, fontWeight: '700', flex: 1 },
+  selectedPrice:    { color: '#FCD34D', fontSize: 13, fontWeight: '900' },
+  resultBar:        { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', padding: 8, gap: 8, backgroundColor: 'rgba(0,0,0,0.7)' },
+  resultBtn:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.15)', paddingVertical: 10, borderRadius: RADIUS.md },
+  resultBtnText:    { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  resultBtnPrimary: { backgroundColor: COLORS.primary },
+
+  // ERROR
+  errorWrap:        { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: SPACING.lg },
+  errorTitle:       { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
+  errorMsg:         { fontSize: 12, color: '#94A3B8', textAlign: 'center', lineHeight: 18 },
+  retryBtn:         { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: RADIUS.md, marginTop: 8 },
+  retryText:        { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+
+  // Carousel
+  carousel:         { backgroundColor: '#FFFFFF', borderTopWidth: 1, borderColor: '#E2E8F0', paddingVertical: 12 },
+  carouselTitle:    { fontSize: 11, fontWeight: '800', color: '#64748B', paddingHorizontal: SPACING.md, marginBottom: 8 },
+  carouselCard:     { width: 100, borderRadius: RADIUS.md, overflow: 'hidden', borderWidth: 2, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' },
+  carouselCardActive:{ borderColor: COLORS.primary },
+  carouselImg:      { width: '100%', height: 80, resizeMode: 'cover' },
+  carouselPlaceholder: { width: '100%', height: 80, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  carouselName:     { fontSize: 10, fontWeight: '700', color: '#0F172A', padding: 4, paddingBottom: 0 },
+  carouselPrice:    { fontSize: 9, color: '#B45309', fontWeight: '700', paddingHorizontal: 4 },
+  bodyChip:         { backgroundColor: COLORS.primary, margin: 4, paddingHorizontal: 5, paddingVertical: 2, borderRadius: RADIUS.full, alignSelf: 'flex-start' },
+  bodyChipText:     { color: '#FFFFFF', fontSize: 8, fontWeight: '800' },
+
+  // Consent
+  consentBackdrop:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  consentSheet:     { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: SPACING.lg, paddingBottom: 40, paddingTop: 16 },
+  consentHandle:    { width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  consentTitle:     { fontSize: 17, fontWeight: '900', color: '#0F172A', textAlign: 'center', marginBottom: 8 },
+  consentBody:      { fontSize: 13, color: '#475569', lineHeight: 20, textAlign: 'center', marginBottom: 16 },
+  consentRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  consentRowText:   { fontSize: 13, color: '#334155' },
+  consentAccept:    { backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: RADIUS.md, alignItems: 'center', marginTop: 12, marginBottom: 8 },
+  consentAcceptText:{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  consentDecline:   { paddingVertical: 10, alignItems: 'center' },
+  consentDeclineText:{ color: '#94A3B8', fontSize: 13, fontWeight: '600' },
 });

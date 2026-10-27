@@ -107,6 +107,16 @@ export interface StartTryOnRequest {
   platform: string;
 }
 
+/** Returned by POST /api/jewellery/try-on/uploads */
+export interface TryOnUploadSlot {
+  sessionId: string;          // UUID session for the presigned upload
+  presignedUploadUrl: string; // PUT directly to this URL
+  httpMethod: string;         // "PUT"
+  s3Key: string;              // Pass this to submitPhotoJob
+  contentType: string;        // "image/jpeg"
+  expiresAt: string;
+}
+
 export const jewelleryService = {
   // ── Products ──────────────────────────────────────────────────
   async getProducts(params?: {
@@ -172,6 +182,11 @@ export const jewelleryService = {
   },
 
   // ── Virtual Try-On ─────────────────────────────────────────────
+  async requestPhotoUploadUrl(): Promise<TryOnUploadSlot> {
+    const res = await api.post<TryOnUploadSlot>('/jewellery/try-on/uploads');
+    return res.data;
+  },
+
   async startTryOnSession(req: StartTryOnRequest): Promise<JewelleryTryOnSession> {
     const res = await api.post<JewelleryTryOnSession>('/jewellery/try-on/sessions', req);
     return res.data;
