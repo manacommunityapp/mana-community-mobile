@@ -173,60 +173,70 @@ export const jewelleryService = {
 
   // ── Virtual Try-On ─────────────────────────────────────────────
   async startTryOnSession(req: StartTryOnRequest): Promise<JewelleryTryOnSession> {
-    const res = await api.post<JewelleryTryOnSession>('/jewellery/tryon/sessions', req);
+    const res = await api.post<JewelleryTryOnSession>('/jewellery/try-on/sessions', req);
     return res.data;
   },
 
-  async submitPhotoJob(formData: FormData): Promise<JewelleryPhotoJob> {
-    const res = await api.post<JewelleryPhotoJob>('/jewellery/tryon/photo-jobs', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return res.data;
+  async submitPhotoJob(sessionId: string, sourceS3Key: string): Promise<JewelleryPhotoJob> {
+    const res = await api.post<JewelleryPhotoJob>(
+      `/jewellery/try-on/sessions/${sessionId}/photo-jobs`,
+      { sourceS3Key },
+    );
+    return { ...res.data, id: String(res.data.id) };
   },
 
   async getPhotoJobStatus(jobId: string): Promise<JewelleryPhotoJob> {
-    const res = await api.get<JewelleryPhotoJob>(`/jewellery/tryon/photo-jobs/${jobId}`);
-    return res.data;
+    const res = await api.get<JewelleryPhotoJob>(`/jewellery/try-on/photo-jobs/${jobId}`);
+    return { ...res.data, id: String(res.data.id) };
   },
 
-  async deletePhoto(photoId: string): Promise<void> {
-    await api.delete(`/jewellery/tryon/photos/${photoId}`);
+  async deletePhoto(jobId: string): Promise<void> {
+    await api.delete(`/jewellery/try-on/photo-jobs/${jobId}`);
   },
 
   // ── Wishlist ──────────────────────────────────────────────────
   async getWishlist(): Promise<JewelleryWishlistItem[]> {
     try {
       const res = await api.get<JewelleryWishlistItem[]>('/jewellery/wishlist');
-      return res.data ?? [];
+      return (res.data ?? []).map((w) => ({ ...w, id: String(w.id), productId: String(w.productId) }));
     } catch {
       return [];
     }
   },
 
   async addToWishlist(productId: string): Promise<void> {
-    await api.post('/jewellery/wishlist', { productId });
+    await api.post('/jewellery/wishlist', { productId: Number(productId) });
   },
 
   async removeFromWishlist(productId: string): Promise<void> {
     await api.delete(`/jewellery/wishlist/${productId}`);
   },
 
+  /** Convenience toggle used by product detail and vendor storefront. */
+  async toggleWishlist(product: JewelleryProduct): Promise<void> {
+    if (product.isWishlisted) {
+      await jewelleryService.removeFromWishlist(product.id);
+    } else {
+      await jewelleryService.addToWishlist(product.id);
+    }
+  },
+
   // ── Appointments ──────────────────────────────────────────────
   async bookAppointment(req: CreateAppointmentRequest): Promise<JewelleryAppointment> {
     const res = await api.post<JewelleryAppointment>('/jewellery/appointments', req);
-    return res.data;
+    return { ...res.data, id: String(res.data.id), vendorId: String(res.data.vendorId) };
   },
 
   async getMyAppointments(): Promise<JewelleryAppointment[]> {
     try {
-      const res = await api.get<JewelleryAppointment[]>('/jewellery/appointments/my');
-      return res.data ?? [];
+      const res = await api.get<JewelleryAppointment[]>('/jewellery/appointments');
+      return (res.data ?? []).map((a) => ({ ...a, id: String(a.id), vendorId: String(a.vendorId) }));
     } catch {
       return [];
     }
   },
 
-  async cancelAppointment(appointmentId: string): Promise<void> {
-    await api.put(`/jewellery/appointments/${appointmentId}/cancel`);
+  async cancelAppointment(appointmentId: string, reason?: string): Promise<void> {
+    await api.patch(`/jewellery/appointments/${appointmentId}/cancel`, { reason });
   },
 };

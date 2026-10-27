@@ -192,7 +192,11 @@ export default function JewelleryHomeScreen() {
           <Text style={styles.sectionTitle}>Verified Jewellers Nearby</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: SPACING.md, gap: 12 }}>
             {vendors.map((v) => (
-              <TouchableOpacity key={v.id} style={styles.vendorCard}>
+              <TouchableOpacity
+                key={v.id}
+                style={styles.vendorCard}
+                onPress={() => router.push({ pathname: '/jewellery/vendor/[vendorId]', params: { vendorId: v.id } })}
+              >
                 <View style={styles.vendorAvatar}>
                   {v.imageUrl ? (
                     <Image source={{ uri: v.imageUrl }} style={styles.vendorAvatarImg} />

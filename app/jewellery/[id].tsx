@@ -121,7 +121,11 @@ export default function JewelleryProductScreen() {
           </View>
 
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.vendorName}>by {product.vendorName}</Text>
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: '/jewellery/vendor/[vendorId]', params: { vendorId: product.vendorId } })}
+          >
+            <Text style={styles.vendorName}>by {product.vendorName} →</Text>
+          </TouchableOpacity>
 
           {/* Metal Details */}
           <View style={styles.detailRow}>

@@ -8,6 +8,8 @@ export default function JewelleryLayout() {
       <Stack.Screen name="try-on" options={{ title: 'Virtual Try-On', presentation: 'modal' }} />
       <Stack.Screen name="wishlist" options={{ title: 'My Wishlist', headerBackTitle: 'Back' }} />
       <Stack.Screen name="appointments" options={{ title: 'Appointments', headerBackTitle: 'Back' }} />
+      {/* Vendor storefront — buyer view */}
+      <Stack.Screen name="vendor/[vendorId]" options={{ title: 'Jeweller Profile', headerShown: false }} />
     </Stack>
   );
 }
