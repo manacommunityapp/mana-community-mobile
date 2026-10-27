@@ -9,6 +9,7 @@ export default function MobilityLayout() {
       <Stack.Screen name="track" />
       <Stack.Screen name="driver" />
       <Stack.Screen name="carpool" />
+      <Stack.Screen name="airport-rides" />
       <Stack.Screen name="ops" />
     </Stack>
   );
