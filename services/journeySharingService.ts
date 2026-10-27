@@ -5,6 +5,8 @@ import type {
   JourneyDemand,
   JourneyPage,
   JourneyOffer,
+  JourneySlot,
+  CreateJourneySlotRequest,
   JourneySearchRequest,
   JourneyTypeConfig,
 } from '@/types/journeySharing';
@@ -52,5 +54,20 @@ export const journeySharingService = {
 
   async leave(id: number): Promise<void> {
     await api.post(`/mobility/journeys/offers/${id}/leave`);
+  },
+
+  async getSlots(journeyType?: string, hubCode?: string): Promise<JourneySlot[]> {
+    const res = await api.get<JourneySlot[]>('/mobility/journeys/slots', { params: { journeyType, hubCode } });
+    return res.data ?? [];
+  },
+
+  async createSlot(req: CreateJourneySlotRequest): Promise<JourneySlot> {
+    const res = await api.post<JourneySlot>('/mobility/journeys/slots', req);
+    return res.data;
+  },
+
+  async updateSlotStatus(id: number, status: 'ACTIVE' | 'PAUSED'): Promise<JourneySlot> {
+    const res = await api.patch<JourneySlot>(`/mobility/journeys/slots/${id}/status`, { status });
+    return res.data;
   },
 };

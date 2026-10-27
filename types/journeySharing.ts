@@ -80,6 +80,34 @@ export interface JourneyDemand {
   createdAt: string;
 }
 
+export interface JourneySlot {
+  id: number;
+  journeyType: JourneyTypeCode;
+  direction: 'TO_HUB' | 'FROM_HUB';
+  hubCode: string;
+  origin: string;
+  destination: string;
+  departureTime: string;
+  daysOfWeek: string;
+  seatCapacity: number;
+  luggageCapacity: number;
+  pricePerSeat: number;
+  status: 'ACTIVE' | 'PAUSED';
+}
+
+export interface CreateJourneySlotRequest {
+  journeyType: JourneyTypeCode;
+  direction: 'TO_HUB' | 'FROM_HUB';
+  hubCode: string;
+  origin: string;
+  destination: string;
+  departureTime: string;
+  daysOfWeek: string;
+  seatCapacity: number;
+  luggageCapacity: number;
+  pricePerSeat: number;
+}
+
 export interface JourneyPage<T> {
   content: T[];
   totalElements: number;
