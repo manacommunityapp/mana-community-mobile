@@ -13,6 +13,7 @@ export interface JourneyOffer {
   driverName: string;
   rating?: number;
   journeyType: JourneyTypeCode;
+  journeyDirection?: 'TO_HUB' | 'FROM_HUB';
   hubCode?: string;
   contextName?: string;
   origin: string;
@@ -29,6 +30,7 @@ export interface JourneyOffer {
 
 export interface JourneySearchRequest {
   journeyType: JourneyTypeCode;
+  direction?: 'TO_HUB' | 'FROM_HUB';
   hubCode: string;
   area?: string;
   travelAt?: string;
@@ -53,6 +55,7 @@ export interface CreateJourneyRequest {
 
 export interface CreateJourneyOfferRequest {
   journeyType: JourneyTypeCode;
+  direction: 'TO_HUB' | 'FROM_HUB';
   hubCode: string;
   contextName?: string;
   origin: string;
