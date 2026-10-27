@@ -56,6 +56,10 @@ export const journeySharingService = {
     await api.post(`/mobility/journeys/offers/${id}/leave`);
   },
 
+  async waitlist(id: number, seats = 1): Promise<void> {
+    await api.post(`/mobility/journeys/offers/${id}/waitlist`, { seats });
+  },
+
   async getSlots(journeyType?: string, hubCode?: string): Promise<JourneySlot[]> {
     const res = await api.get<JourneySlot[]>('/mobility/journeys/slots', { params: { journeyType, hubCode } });
     return res.data ?? [];
