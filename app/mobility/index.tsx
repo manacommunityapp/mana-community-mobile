@@ -42,6 +42,17 @@ const SERVICES: ServiceCard[] = [
     enabled:  true,
   },
   {
+    type:     'CARPOOL',
+    icon:     'airplane',
+    label:    'Airport Rides',
+    sublabel: 'Share airport trips with neighbours',
+    color:    '#2563EB',
+    bg:       '#EFF6FF',
+    iconBg:   '#DBEAFE',
+    route:    '/mobility/airport-rides',
+    enabled:  true,
+  },
+  {
     type:     'GROUP_RIDE',
     icon:     'bus',
     label:    'Group Ride',
