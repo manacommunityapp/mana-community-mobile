@@ -7,6 +7,7 @@ import type {
   JourneyOffer,
   JourneySlot,
   CreateJourneySlotRequest,
+  JourneyMatchProposal,
   JourneySearchRequest,
   JourneyTypeConfig,
 } from '@/types/journeySharing';
@@ -73,5 +74,14 @@ export const journeySharingService = {
   async updateSlotStatus(id: number, status: 'ACTIVE' | 'PAUSED'): Promise<JourneySlot> {
     const res = await api.patch<JourneySlot>(`/mobility/journeys/slots/${id}/status`, { status });
     return res.data;
+  },
+
+  async getProposals(page = 0): Promise<JourneyPage<JourneyMatchProposal>> {
+    const res = await api.get<JourneyPage<JourneyMatchProposal>>('/mobility/journeys/proposals', { params: { page, size: 20 } });
+    return res.data;
+  },
+
+  async respondToProposal(id: number, accept: boolean): Promise<void> {
+    await api.post(`/mobility/journeys/proposals/${id}/respond`, { accept });
   },
 };

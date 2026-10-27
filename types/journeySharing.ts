@@ -95,6 +95,14 @@ export interface JourneySlot {
   status: 'ACTIVE' | 'PAUSED';
 }
 
+export interface JourneyMatchProposal {
+  id: number;
+  requestId: number;
+  status: 'PROPOSED' | 'ACCEPTED' | 'DECLINED';
+  createdAt: string;
+  offer: JourneyOffer;
+}
+
 export interface CreateJourneySlotRequest {
   journeyType: JourneyTypeCode;
   direction: 'TO_HUB' | 'FROM_HUB';
