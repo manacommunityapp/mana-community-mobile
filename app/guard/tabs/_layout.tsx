@@ -87,6 +87,14 @@ export default function GuardTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="sos"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="alert-circle-outline" iconFocused="alert-circle" label="SOS" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (

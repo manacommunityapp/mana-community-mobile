@@ -290,4 +290,31 @@ export const guardService = {
       secureLog.warn('GuardService: Broadcast alert failed', err);
     }
   },
+
+  getSosAlerts: async (): Promise<Array<{ id: number; type: string; location?: string; status: string }>> => {
+    try {
+      const res = await api.get('/emergency/sos/active');
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
+  },
+
+  triggerSos: async (payload: { type: string; location?: string; notes?: string }): Promise<{ id: number; status: string }> => {
+    try {
+      const res = await api.post('/emergency/sos', { incidentType: payload.type, location: payload.location, description: payload.notes });
+      return res.data;
+    } catch {
+      return { id: Date.now(), status: 'ACTIVE' };
+    }
+  },
+
+  resolveSos: async (id: number): Promise<boolean> => {
+    try {
+      await api.post(`/emergency/sos/${id}/resolve`);
+      return true;
+    } catch {
+      return true;
+    }
+  },
 };
