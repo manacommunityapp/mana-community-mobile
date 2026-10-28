@@ -2,7 +2,7 @@
  * Rapido / Uber-style booking screen:
  *   Phase 1 – Location inputs (pickup + destination) with quick-saved places & GPS
  *   Phase 2 – Vehicle types shown with live fare quotes & ETA
- *   Phase 3 – Confirmation sheet with itemized breakdown, promo code & payment
+ *   Phase 3 – Confirmation sheet with itemized breakdown & payment method
  */
 import { useState, useCallback, useRef } from 'react';
 import {
@@ -108,8 +108,6 @@ const DEFAULT_LNG = 78.4867;
 // ── Payment options ────────────────────────────────────────────────
 const PAYMENT_OPTIONS: { method: PaymentMethod; icon: keyof typeof Ionicons.glyphMap; label: string; sub: string }[] = [
   { method: 'CASH',   icon: 'cash-outline',           label: 'Cash',        sub: 'Pay driver directly' },
-  { method: 'UPI',    icon: 'phone-portrait-outline', label: 'UPI / QR',    sub: 'Instant GooglePay/PhonePe' },
-  { method: 'WALLET', icon: 'wallet-outline',         label: 'Mana Wallet', sub: 'Instant 1-tap checkout' },
 ];
 
 export default function BookRideScreen() {
@@ -128,12 +126,13 @@ export default function BookRideScreen() {
 
   // ── Confirm ────────────────────────────────────────────────────
   const [payment, setPayment]           = useState<PaymentMethod>('CASH');
-  const [promoCode, setPromoCode]       = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
 
   // ── GPS state ──────────────────────────────────────────────────
   const [pickupLat, setPickupLat] = useState(DEFAULT_LAT);
   const [pickupLng, setPickupLng] = useState(DEFAULT_LNG);
+  const [pickupResolved, setPickupResolved] = useState(false);
+  const [destLat, setDestLat] = useState<number | null>(null);
+  const [destLng, setDestLng] = useState<number | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
 
   async function handleGps() {
@@ -147,6 +146,7 @@ export default function BookRideScreen() {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setPickupLat(pos.coords.latitude);
       setPickupLng(pos.coords.longitude);
+      setPickupResolved(true);
       const [geo] = await Location.reverseGeocodeAsync(pos.coords);
       if (geo) {
         const label = [geo.name, geo.street, geo.district, geo.city].filter(Boolean).join(', ');
@@ -181,13 +181,32 @@ export default function BookRideScreen() {
     }
     setLoadingQuotes(true);
     try {
+      let pickup = { latitude: pickupLat, longitude: pickupLng };
+      if (!pickupResolved) {
+        const [geocodedPickup] = await Location.geocodeAsync(pickupAddr.trim());
+        if (!geocodedPickup) {
+          Alert.alert('Pickup not found', 'Please enter a more specific pickup location or use Locate.');
+          return;
+        }
+        pickup = geocodedPickup;
+        setPickupLat(pickup.latitude);
+        setPickupLng(pickup.longitude);
+        setPickupResolved(true);
+      }
+      const [destination] = await Location.geocodeAsync(destAddr.trim());
+      if (!destination) {
+        Alert.alert('Location not found', 'Please enter a more specific destination.');
+        return;
+      }
+      setDestLat(destination.latitude);
+      setDestLng(destination.longitude);
       const enabled = VEHICLE_OPTIONS.filter(v => v.enabled);
       const results = await Promise.allSettled(
         enabled.map(v =>
           mobilityPassengerService.getFareQuote({
             serviceType: v.type,
-            pickupLat: pickupLat, pickupLng: pickupLng,
-            destLat:   pickupLat + 0.05, destLng: pickupLng + 0.05,
+            pickupLat: pickup.latitude, pickupLng: pickup.longitude,
+            destLat:   destination.latitude, destLng: destination.longitude,
           }).then(q => ({ type: v.type, quote: q } as QuotedService)),
         ),
       );
@@ -213,13 +232,17 @@ export default function BookRideScreen() {
   function handleConfirmBook() {
     const chosen = quotes.find(q => q.type === selectedType);
     if (!chosen) return;
+    if (destLat == null || destLng == null) {
+      Alert.alert('Destination required', 'Please confirm a valid destination before booking.');
+      return;
+    }
     bookMutation.mutate({
       serviceType:     selectedType,
       pickupLat:       pickupLat,
       pickupLng:       pickupLng,
       pickupAddress:   pickupAddr,
-      destLat:         pickupLat + 0.05,
-      destLng:         pickupLng + 0.05,
+      destLat,
+      destLng,
       destAddress:     destAddr,
       quoteId:         chosen.quote.quoteId,
       idempotencyKey:  `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -236,7 +259,7 @@ export default function BookRideScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* ── Modern Navigation Header ──────────────────────────── */}
       <View style={s.header}>
@@ -343,11 +366,11 @@ export default function BookRideScreen() {
                     placeholder="Enter pickup location"
                     placeholderTextColor={COLORS.textMuted}
                     value={pickupAddr}
-                    onChangeText={setPickupAddr}
+                     onChangeText={(value) => { setPickupAddr(value); setPickupResolved(false); }}
                     onFocus={() => setActiveInput('pickup')}
                   />
                   {pickupAddr.length > 0 && (
-                    <TouchableOpacity onPress={() => setPickupAddr('')} hitSlop={8}>
+                      <TouchableOpacity onPress={() => { setPickupAddr(''); setPickupResolved(false); }} hitSlop={8}>
                       <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
                     </TouchableOpacity>
                   )}
@@ -395,7 +418,7 @@ export default function BookRideScreen() {
                     style={s.savedCard}
                     onPress={() => {
                       if (sp.addr) {
-                        if (activeInput === 'pickup') setPickupAddr(sp.addr);
+                         if (activeInput === 'pickup') { setPickupAddr(sp.addr); setPickupResolved(false); }
                         else setDestAddr(sp.addr);
                       } else {
                         Alert.alert(`Set ${sp.label}`, `Please enter your ${sp.label.toLowerCase()} address above to set it for quick booking.`);
@@ -571,41 +594,6 @@ export default function BookRideScreen() {
                   <Text style={s.fareBreakdownAmt}>₹{amt.toFixed(2)}</Text>
                 </View>
               ))}
-            </View>
-
-            {/* Promo Code Input */}
-            <View style={s.promoCard}>
-              <Ionicons
-                name="pricetag-outline"
-                size={18}
-                color={promoApplied ? '#059669' : COLORS.textMuted}
-              />
-              <TextInput
-                style={s.promoInput}
-                placeholder="Apply Promo or Voucher"
-                placeholderTextColor={COLORS.textMuted}
-                value={promoCode}
-                onChangeText={setPromoCode}
-                autoCapitalize="characters"
-                editable={!promoApplied}
-              />
-              <TouchableOpacity
-                style={[s.promoActionBtn, promoApplied && s.promoActionBtnApplied]}
-                onPress={() => {
-                  if (promoApplied) {
-                    setPromoApplied(false);
-                    setPromoCode('');
-                    return;
-                  }
-                  if (!promoCode.trim()) return;
-                  Alert.alert('Promo Applied', `Code "${promoCode}" active for this trip.`);
-                  setPromoApplied(true);
-                }}
-              >
-                <Text style={[s.promoActionBtnText, promoApplied && s.promoActionBtnTextApplied]}>
-                  {promoApplied ? 'Remove' : 'Apply'}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Payment Method Selector */}

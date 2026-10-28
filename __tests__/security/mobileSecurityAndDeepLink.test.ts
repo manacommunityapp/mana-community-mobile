@@ -155,5 +155,10 @@ describe('Mobile Platform Verification Suite', () => {
     it('routes VISITOR_ARRIVAL to visitors screen', () => {
       expect(resolveRoute({ type: 'VISITOR_ARRIVAL' })).toBe('/visitors');
     });
+
+    it('routes shared journey notifications to the matching workflow', () => {
+      expect(resolveRoute({ type: 'MOBILITY_GROUP_MATCH' })).toBe('/mobility/journeys/proposals');
+      expect(resolveRoute({ type: 'MOBILITY_WAITLIST_PROMOTED' })).toBe('/mobility/journeys/bookings');
+    });
   });
 });

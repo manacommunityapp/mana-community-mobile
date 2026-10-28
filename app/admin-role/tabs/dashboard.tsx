@@ -195,6 +195,12 @@ export default function AdminDashboardScreen() {
           );
         })}
 
+        <TouchableOpacity style={s.mobilityLink} onPress={() => router.push('/admin-role/mobility' as any)}>
+          <Ionicons name="car-outline" size={18} color={ADMIN_COLORS.accent} />
+          <View style={{ flex: 1 }}><Text style={s.mobilityTitle}>Mobility operations</Text><Text style={s.mobilityMeta}>Review driver documents and active trips</Text></View>
+          <Ionicons name="chevron-forward" size={16} color={ADMIN_COLORS.accent} />
+        </TouchableOpacity>
+
         <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
@@ -272,6 +278,9 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
   },
   urgentBorder: { borderColor: COLORS.error, borderWidth: 1.5 },
+  mobilityLink: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 12, marginTop: 12, padding: 14, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: ADMIN_COLORS.accentMid, ...SHADOWS.sm },
+  mobilityTitle: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
+  mobilityMeta: { color: COLORS.textMuted, fontSize: 11, marginTop: 2 },
   activityIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   activityBody: { flex: 1, gap: 1 },
   activityTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text },
