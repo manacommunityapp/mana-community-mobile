@@ -13,8 +13,10 @@ import { mobilityPassengerService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { MobilityServiceType } from '@/types/mobility';
 
-// ── Feature flags — set to true once backend is ready ─────────────
-const ONDEMAND_ENABLED = false;
+// On-demand fare quote, dispatch, tracking and cancellation APIs are live.
+// Payment checkout remains optional; cash trips continue to work while gateway
+// checkout is completed.
+const ONDEMAND_ENABLED = true;
 
 interface ServiceCard {
   type:        MobilityServiceType;
@@ -39,6 +41,28 @@ const SERVICES: ServiceCard[] = [
     bg:       '#EEF2FF',
     iconBg:   '#E0E7FF',
     route:    '/mobility/carpool',
+    enabled:  true,
+  },
+  {
+    type:     'CARPOOL',
+    icon:     'navigate-circle',
+    label:    'Community Group Travel',
+    sublabel: 'Office, school, events, stations & sports',
+    color:    '#7C3AED',
+    bg:       '#F5F3FF',
+    iconBg:   '#EDE9FE',
+    route:    '/mobility/journeys',
+    enabled:  true,
+  },
+  {
+    type:     'CARPOOL',
+    icon:     'airplane',
+    label:    'Airport Rides',
+    sublabel: 'Share airport trips with neighbours',
+    color:    '#2563EB',
+    bg:       '#EFF6FF',
+    iconBg:   '#DBEAFE',
+    route:    '/mobility/airport-rides',
     enabled:  true,
   },
   {
@@ -153,7 +177,7 @@ export default function MobilityHubScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+      <StatusBar barStyle="light-content" />
 
       {/* ── Hero Header ────────────────────────────────────────── */}
       <LinearGradient
@@ -285,7 +309,7 @@ export default function MobilityHubScreen() {
           <View style={s.servicesGrid}>
             {SERVICES.map((svc) => (
               <TouchableOpacity
-                key={svc.type}
+                key={svc.route}
                 style={[
                   s.svcCard,
                   { backgroundColor: svc.bg },

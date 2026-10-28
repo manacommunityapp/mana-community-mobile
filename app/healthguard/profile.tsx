@@ -188,7 +188,9 @@ export default function HealthProfileScreen() {
           </View>
           <Switch
             value={profile.organDonorConsent ?? false}
-            onValueChange={v => editing && set('organDonorConsent', v)}
+            onValueChange={v => {
+              if (editing) set('organDonorConsent', v);
+            }}
             trackColor={{ true: COLORS.primary }}
             disabled={!editing}
           />
@@ -215,7 +217,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', color: COLORS.text },
   editBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: COLORS.primary, borderRadius: RADIUS.md },
   editBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  card: { backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.sm },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.sm },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm },
   fieldLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: SPACING.xs, marginBottom: 4 },
   input: {

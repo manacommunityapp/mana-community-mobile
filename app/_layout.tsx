@@ -197,6 +197,19 @@ function RootLayout() {
             <Stack.Screen name="projects" />
             <Stack.Screen name="mobility" />
             <Stack.Screen name="experiences" />
+            <Stack.Screen name="fd" />
+            <Stack.Screen name="gold" />
+            <Stack.Screen name="loans" />
+            <Stack.Screen name="mutual-funds" />
+            <Stack.Screen name="movies" />
+            <Stack.Screen name="split-bill" />
+            <Stack.Screen name="scan-and-pay" />
+            <Stack.Screen name="send-money" />
+            <Stack.Screen name="upi-history" />
+            <Stack.Screen name="vehicle-care" />
+            <Stack.Screen name="calendar" />
+            <Stack.Screen name="healthguard" />
+            <Stack.Screen name="procurement" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
