@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, Alert, ActivityIndicator, Switch, KeyboardAvoidingView,
-  Platform, Modal,
+  TextInput, ActivityIndicator, Switch, KeyboardAvoidingView,
+  Platform, Modal, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,6 @@ import {
   type ShiftHandover,
   type ShiftType,
   type HandoverItem,
-  type HandoverStatus,
   type CreateHandoverRequest,
 } from '@/services/shiftHandoverService';
 
@@ -25,22 +24,22 @@ type ItemCategory = HandoverItem['category'];
 type ItemPriority = HandoverItem['priority'];
 type NewItem = Omit<HandoverItem, 'id'>;
 
-// ─────────────── Metadata maps ───────────────
+// ─────────────── Metadata ───────────────
 
 const SHIFT_META: Record<ShiftType, {
   label: string; icon: IoniconsName; color: string; bg: string; time: string;
 }> = {
-  MORNING:   { label: 'Morning',   icon: 'sunny-outline',          color: '#D97706', bg: '#FEF3C7', time: '06:00 – 14:00' },
-  AFTERNOON: { label: 'Afternoon', icon: 'partly-sunny-outline',   color: '#2563EB', bg: '#DBEAFE', time: '14:00 – 22:00' },
-  NIGHT:     { label: 'Night',     icon: 'moon-outline',           color: '#7C3AED', bg: '#EDE9FE', time: '22:00 – 06:00' },
+  MORNING:   { label: 'Morning',   icon: 'sunny-outline',         color: '#D97706', bg: '#FEF3C7', time: '06:00 – 14:00' },
+  AFTERNOON: { label: 'Afternoon', icon: 'partly-sunny-outline',  color: '#2563EB', bg: '#DBEAFE', time: '14:00 – 22:00' },
+  NIGHT:     { label: 'Night',     icon: 'moon-outline',          color: '#7C3AED', bg: '#EDE9FE', time: '22:00 – 06:00' },
 };
 
 const CATEGORY_META: Record<ItemCategory, { icon: IoniconsName; label: string }> = {
-  VISITOR:     { icon: 'person-outline',               label: 'Visitor'     },
-  VEHICLE:     { icon: 'car-outline',                  label: 'Vehicle'     },
-  INCIDENT:    { icon: 'warning-outline',              label: 'Incident'    },
-  MAINTENANCE: { icon: 'construct-outline',            label: 'Maintenance' },
-  OTHER:       { icon: 'ellipsis-horizontal-outline',  label: 'Other'       },
+  VISITOR:     { icon: 'person-outline',              label: 'Visitor'     },
+  VEHICLE:     { icon: 'car-outline',                 label: 'Vehicle'     },
+  INCIDENT:    { icon: 'warning-outline',             label: 'Incident'    },
+  MAINTENANCE: { icon: 'construct-outline',           label: 'Maintenance' },
+  OTHER:       { icon: 'ellipsis-horizontal-outline', label: 'Other'       },
 };
 
 const PRIORITY_META: Record<ItemPriority, { color: string; bg: string; label: string; border: string }> = {
@@ -51,9 +50,18 @@ const PRIORITY_META: Record<ItemPriority, { color: string; bg: string; label: st
 
 const BLANK_ITEM: NewItem = { category: 'OTHER', description: '', resolvedBefore: false, priority: 'MEDIUM' };
 
+// ─────────────── Helpers ───────────────
+
+const TODAY = new Date().toISOString().split('T')[0];
+
 function fmtDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+  return new Date(dateStr).toLocaleDateString('en-IN', {
+    weekday: 'short', day: '2-digit', month: 'short',
+  });
+}
+
+function fmtTime(isoStr: string): string {
+  return new Date(isoStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 // ─────────────── Handover Card ───────────────
@@ -63,69 +71,75 @@ interface HandoverCardProps {
   expanded: boolean;
   onToggle: () => void;
   ackLoading: boolean;
+  ackError: string;
   onAcknowledge: () => void;
   showAck?: boolean;
 }
 
-function HandoverCard({ item, expanded, onToggle, ackLoading, onAcknowledge, showAck = true }: HandoverCardProps) {
+function HandoverCard({
+  item, expanded, onToggle, ackLoading, ackError, onAcknowledge, showAck = true,
+}: HandoverCardProps) {
   const sm = SHIFT_META[item.shiftType];
   const pending = item.status === 'PENDING';
+  const isToday = item.date === TODAY;
 
   return (
-    <View style={[s.card, pending && s.cardPending]}>
+    <View style={[c.card, pending && c.cardPending]}>
       {/* Pending banner */}
       {pending && showAck && (
-        <View style={s.pendingBanner}>
+        <View style={c.pendingBanner}>
           <Ionicons name="time-outline" size={13} color="#92400E" />
-          <Text style={s.pendingBannerText}>Incoming shift — acknowledge this handover</Text>
+          <Text style={c.pendingBannerText}>Incoming shift — acknowledge this handover</Text>
         </View>
       )}
 
-      {/* Tap header */}
-      <TouchableOpacity style={s.cardHeader} onPress={onToggle} activeOpacity={0.8}>
-        <View style={[s.shiftPill, { backgroundColor: sm.bg }]}>
+      {/* Tap-to-expand header */}
+      <TouchableOpacity style={c.cardHeader} onPress={onToggle} activeOpacity={0.8}>
+        <View style={[c.shiftPill, { backgroundColor: sm.bg }]}>
           <Ionicons name={sm.icon} size={14} color={sm.color} />
-          <Text style={[s.shiftPillText, { color: sm.color }]}>{sm.label}</Text>
+          <Text style={[c.shiftPillText, { color: sm.color }]}>{sm.label}</Text>
         </View>
-        <View style={s.cardMeta}>
-          <Text style={s.guardName}>{item.outgoingGuardName}</Text>
-          <Text style={s.handoverSub}>{item.date !== new Date().toISOString().split('T')[0] ? fmtDate(item.date) + ' · ' : ''}{item.handoverTime} · {item.items.length} item{item.items.length !== 1 ? 's' : ''}</Text>
+        <View style={c.cardMeta}>
+          <Text style={c.guardName}>{item.outgoingGuardName}</Text>
+          <Text style={c.handoverSub}>
+            {!isToday ? fmtDate(item.date) + ' · ' : ''}
+            {item.handoverTime} · {item.items.length} item{item.items.length !== 1 ? 's' : ''}
+          </Text>
         </View>
-        <View style={[s.statusChip, { backgroundColor: pending ? '#FEF3C7' : '#D1FAE5' }]}>
-          <Text style={[s.statusChipText, { color: pending ? '#92400E' : '#065F46' }]}>
+        <View style={[c.statusChip, { backgroundColor: pending ? '#FEF3C7' : '#D1FAE5' }]}>
+          <Text style={[c.statusChipText, { color: pending ? '#92400E' : '#065F46' }]}>
             {pending ? 'Pending' : 'Done'}
           </Text>
         </View>
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={16}
-          color={COLORS.textMuted}
+          size={16} color={COLORS.textMuted}
           style={{ marginLeft: 4 }}
         />
       </TouchableOpacity>
 
-      {/* Expanded body */}
+      {/* Expanded detail */}
       {expanded && (
-        <View style={s.itemsBody}>
+        <View style={c.itemsBody}>
           {item.items.map((it, idx) => {
             const cat = CATEGORY_META[it.category] ?? CATEGORY_META.OTHER;
             const pri = PRIORITY_META[it.priority];
             return (
-              <View key={it.id ?? idx} style={s.itemRow}>
-                <View style={s.itemIconBox}>
+              <View key={it.id ?? idx} style={c.itemRow}>
+                <View style={c.itemIconBox}>
                   <Ionicons name={cat.icon} size={14} color={GUARD_COLORS.accent} />
                 </View>
-                <View style={s.itemContent}>
-                  <Text style={s.itemDesc}>{it.description}</Text>
-                  <View style={s.itemChips}>
-                    <View style={[s.priChip, { backgroundColor: pri.bg, borderColor: pri.border }]}>
-                      <Text style={[s.priChipText, { color: pri.color }]}>{pri.label}</Text>
+                <View style={c.itemContent}>
+                  <Text style={c.itemDesc}>{it.description}</Text>
+                  <View style={c.itemChips}>
+                    <View style={[c.priChip, { backgroundColor: pri.bg, borderColor: pri.border }]}>
+                      <Text style={[c.priChipText, { color: pri.color }]}>{pri.label}</Text>
                     </View>
-                    <Text style={s.catLabel}>{cat.label}</Text>
+                    <Text style={c.catLabel}>{cat.label}</Text>
                     {it.resolvedBefore && (
-                      <View style={s.resolvedChip}>
+                      <View style={c.resolvedChip}>
                         <Ionicons name="checkmark-circle" size={9} color="#059669" />
-                        <Text style={s.resolvedText}>Resolved</Text>
+                        <Text style={c.resolvedText}>Resolved</Text>
                       </View>
                     )}
                   </View>
@@ -135,25 +149,32 @@ function HandoverCard({ item, expanded, onToggle, ackLoading, onAcknowledge, sho
           })}
 
           {!!item.notes && (
-            <View style={s.notesBox}>
-              <Text style={s.notesLabel}>Notes from outgoing guard</Text>
-              <Text style={s.notesText}>{item.notes}</Text>
+            <View style={c.notesBox}>
+              <Text style={c.notesLabel}>Notes from outgoing guard</Text>
+              <Text style={c.notesText}>{item.notes}</Text>
             </View>
           )}
 
           {!!item.incomingGuardName && (
-            <View style={s.incomingRow}>
+            <View style={c.incomingRow}>
               <Ionicons name="person-circle-outline" size={14} color={COLORS.textMuted} />
-              <Text style={s.incomingText}>Incoming: {item.incomingGuardName}</Text>
+              <Text style={c.incomingText}>Incoming: {item.incomingGuardName}</Text>
               {item.acknowledgedAt && (
-                <Text style={s.ackTimeText}>· Ack {new Date(item.acknowledgedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text>
+                <Text style={c.ackTimeText}>· Ack {fmtTime(item.acknowledgedAt)}</Text>
               )}
             </View>
           )}
 
+          {ackError ? (
+            <View style={c.ackErrorRow}>
+              <Ionicons name="alert-circle-outline" size={13} color={COLORS.error} />
+              <Text style={c.ackErrorText}>{ackError}</Text>
+            </View>
+          ) : null}
+
           {pending && showAck && (
             <TouchableOpacity
-              style={[s.ackBtn, ackLoading && { opacity: 0.7 }]}
+              style={[c.ackBtn, ackLoading && { opacity: 0.7 }]}
               onPress={onAcknowledge}
               disabled={ackLoading}
             >
@@ -162,7 +183,7 @@ function HandoverCard({ item, expanded, onToggle, ackLoading, onAcknowledge, sho
               ) : (
                 <>
                   <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
-                  <Text style={s.ackBtnText}>Acknowledge Handover</Text>
+                  <Text style={c.ackBtnText}>Acknowledge Handover</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -183,35 +204,59 @@ export default function GuardHandoverScreen() {
   const [todayList, setTodayList] = useState<ShiftHandover[]>([]);
   const [historyList, setHistoryList] = useState<ShiftHandover[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [ackingId, setAckingId] = useState<number | null>(null);
+  const [ackErrors, setAckErrors] = useState<Map<number, string>>(new Map());
 
-  // Create form state
+  // Create form
   const [showCreate, setShowCreate] = useState(false);
   const [newShift, setNewShift] = useState<ShiftType>('AFTERNOON');
   const [newItems, setNewItems] = useState<NewItem[]>([{ ...BLANK_ITEM }]);
   const [newNotes, setNewNotes] = useState('');
+  const [createError, setCreateError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [todayRes, historyRes] = await Promise.allSettled([
       shiftHandoverService.getTodayHandovers(),
       shiftHandoverService.getHandoverHistory(30),
     ]);
-    if (todayRes.status === 'fulfilled')   setTodayList(todayRes.value);
+    if (todayRes.status === 'fulfilled') {
+      const list = todayRes.value;
+      setTodayList(list);
+      // Auto-expand the latest PENDING card
+      if (!silent) {
+        const firstPending = list.find(h => h.status === 'PENDING');
+        if (firstPending) setExpandedId(firstPending.id);
+      }
+    }
     if (historyRes.status === 'fulfilled') setHistoryList(historyRes.value);
     setLoading(false);
+    setRefreshing(false);
   }, []);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData(true);
+  }, [loadData]);
+
   const handleAcknowledge = async (id: number) => {
     setAckingId(id);
+    setAckErrors(prev => { const m = new Map(prev); m.delete(id); return m; });
     try {
       const updated = await shiftHandoverService.acknowledgeHandover(id);
       setTodayList(prev => prev.map(h => h.id === id ? updated : h));
+      loadData(true);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not acknowledge handover.');
+      setAckErrors(prev => {
+        const m = new Map(prev);
+        m.set(id, err?.message || 'Could not acknowledge handover.');
+        return m;
+      });
     } finally {
       setAckingId(null);
     }
@@ -223,12 +268,21 @@ export default function GuardHandoverScreen() {
   const removeItem = (idx: number) =>
     setNewItems(prev => prev.filter((_, i) => i !== idx));
 
+  const openCreate = () => {
+    setNewShift('AFTERNOON');
+    setNewItems([{ ...BLANK_ITEM }]);
+    setNewNotes('');
+    setCreateError('');
+    setShowCreate(true);
+  };
+
   const handleCreate = async () => {
     const validItems = newItems.filter(i => i.description.trim());
     if (validItems.length === 0) {
-      Alert.alert('Required', 'Add at least one handover item with a description.');
+      setCreateError('Add at least one item with a description.');
       return;
     }
+    setCreateError('');
     setSubmitting(true);
     try {
       const created = await shiftHandoverService.createHandover({
@@ -238,12 +292,11 @@ export default function GuardHandoverScreen() {
       });
       setTodayList(prev => [created, ...prev]);
       setShowCreate(false);
-      setNewItems([{ ...BLANK_ITEM }]);
-      setNewNotes('');
       setTab('today');
       setExpandedId(created.id);
+      loadData(true);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not create handover log.');
+      setCreateError(err?.message || 'Could not create handover log. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -267,7 +320,7 @@ export default function GuardHandoverScreen() {
             </View>
           )}
         </View>
-        <TouchableOpacity style={s.newBtn} onPress={() => setShowCreate(true)}>
+        <TouchableOpacity style={s.newBtn} onPress={openCreate}>
           <Ionicons name="add" size={16} color="#fff" />
           <Text style={s.newBtnText}>New</Text>
         </TouchableOpacity>
@@ -302,6 +355,13 @@ export default function GuardHandoverScreen() {
         <ScrollView
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={GUARD_COLORS.accent}
+            />
+          }
         >
           {displayList.length === 0 ? (
             <View style={s.empty}>
@@ -311,7 +371,8 @@ export default function GuardHandoverScreen() {
                 {tab === 'today' ? 'No handover logs for today yet.' : 'No history found.'}
               </Text>
               {tab === 'today' && (
-                <TouchableOpacity style={s.emptyBtn} onPress={() => setShowCreate(true)}>
+                <TouchableOpacity style={s.emptyBtn} onPress={openCreate}>
+                  <Ionicons name="add" size={16} color="#fff" />
                   <Text style={s.emptyBtnText}>Create Handover Log</Text>
                 </TouchableOpacity>
               )}
@@ -324,6 +385,7 @@ export default function GuardHandoverScreen() {
                 expanded={expandedId === h.id}
                 onToggle={() => setExpandedId(expandedId === h.id ? null : h.id)}
                 ackLoading={ackingId === h.id}
+                ackError={ackErrors.get(h.id) ?? ''}
                 onAcknowledge={() => handleAcknowledge(h.id)}
                 showAck={tab === 'today'}
               />
@@ -332,13 +394,13 @@ export default function GuardHandoverScreen() {
         </ScrollView>
       )}
 
-      {/* Create handover bottom sheet */}
-      <Modal visible={showCreate} transparent animationType="slide">
+      {/* ── Create Handover Bottom Sheet ── */}
+      <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
         <KeyboardAvoidingView
-          style={s.sheetOverlay}
+          style={s.overlay}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowCreate(false)} />
+          <TouchableOpacity style={s.backdropTouch} onPress={() => setShowCreate(false)} />
           <View style={s.bottomSheet}>
             <View style={s.sheetHandle} />
             <View style={s.sheetHeaderRow}>
@@ -348,7 +410,11 @@ export default function GuardHandoverScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={s.sheetBody}
+            >
               {/* Shift type */}
               <Text style={s.fieldLabel}>Shift Type</Text>
               <View style={s.shiftRow}>
@@ -372,17 +438,18 @@ export default function GuardHandoverScreen() {
               </View>
 
               {/* Items */}
-              <Text style={[s.fieldLabel, { marginTop: 16 }]}>Handover Items</Text>
+              <Text style={[s.fieldLabel, { marginTop: 16 }]}>
+                Handover Items
+                <Text style={s.fieldSub}> ({newItems.length})</Text>
+              </Text>
               {newItems.map((item, idx) => (
                 <View key={idx} style={s.newItemCard}>
-                  {/* Remove button (only if more than 1 item) */}
                   {newItems.length > 1 && (
                     <TouchableOpacity style={s.removeItemBtn} onPress={() => removeItem(idx)}>
                       <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
                     </TouchableOpacity>
                   )}
 
-                  {/* Category chips */}
                   <Text style={s.miniLabel}>Category</Text>
                   <View style={s.chipRow}>
                     {(Object.keys(CATEGORY_META) as ItemCategory[]).map(cat => {
@@ -406,17 +473,15 @@ export default function GuardHandoverScreen() {
                     })}
                   </View>
 
-                  {/* Description */}
                   <TextInput
                     style={s.itemInput}
-                    placeholder="Describe the handover item..."
+                    placeholder="Describe the handover item…"
                     placeholderTextColor={COLORS.textMuted}
                     value={item.description}
                     onChangeText={v => updateItem(idx, { description: v })}
                     multiline
                   />
 
-                  {/* Priority + resolved */}
                   <View style={s.itemFooterRow}>
                     <View style={s.priRow}>
                       {(['LOW', 'MEDIUM', 'HIGH'] as ItemPriority[]).map(p => {
@@ -428,7 +493,9 @@ export default function GuardHandoverScreen() {
                             style={[s.priBtn, sel && { backgroundColor: pm.bg, borderColor: pm.color }]}
                             onPress={() => updateItem(idx, { priority: p })}
                           >
-                            <Text style={[s.priBtnText, sel && { color: pm.color }]}>{pm.label}</Text>
+                            <Text style={[s.priBtnText, sel && { color: pm.color, fontWeight: '700' }]}>
+                              {pm.label}
+                            </Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -458,12 +525,20 @@ export default function GuardHandoverScreen() {
               <Text style={[s.fieldLabel, { marginTop: 14 }]}>Notes (Optional)</Text>
               <TextInput
                 style={[s.textInput, { height: 72, textAlignVertical: 'top' }]}
-                placeholder="Any additional notes for the incoming guard..."
+                placeholder="Any additional notes for the incoming guard…"
                 placeholderTextColor={COLORS.textMuted}
                 value={newNotes}
                 onChangeText={setNewNotes}
                 multiline
               />
+
+              {/* Inline error */}
+              {createError ? (
+                <View style={s.errorRow}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.errorText}>{createError}</Text>
+                </View>
+              ) : null}
 
               {/* Submit */}
               <TouchableOpacity
@@ -474,7 +549,10 @@ export default function GuardHandoverScreen() {
                 {submitting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={s.submitBtnText}>Submit Handover Log</Text>
+                  <>
+                    <Ionicons name="send-outline" size={16} color="#fff" />
+                    <Text style={s.submitBtnText}>Submit Handover Log</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -485,56 +563,9 @@ export default function GuardHandoverScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+// ─────────────── Card styles ───────────────
 
-  // Header
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
-    gap: 12,
-  },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerTitle: { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
-  pendingDot: {
-    minWidth: 20, height: 20, borderRadius: 10,
-    backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A',
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
-  },
-  pendingDotText: { fontSize: 10, fontWeight: '800', color: '#92400E' },
-  newBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: GUARD_COLORS.accent, paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: RADIUS.md, ...SHADOWS.sm,
-  },
-  newBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-
-  // Tab bar
-  tabBar: {
-    flexDirection: 'row', backgroundColor: COLORS.surface,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  tabItem: { flex: 1, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
-  tabItemActive: { borderBottomWidth: 2, borderBottomColor: GUARD_COLORS.accent },
-  tabLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
-  tabLabelActive: { color: GUARD_COLORS.accent, fontWeight: '700' },
-  tabBadge: {
-    minWidth: 18, height: 18, borderRadius: 9,
-    backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A',
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
-  },
-  tabBadgeText: { fontSize: 9, fontWeight: '800', color: '#92400E' },
-
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  listContent: { padding: 12, gap: 10, paddingBottom: 40 },
-
-  // Card
+const c = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
     overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
@@ -545,9 +576,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FEF3C7', paddingHorizontal: 14, paddingVertical: 7,
   },
   pendingBannerText: { fontSize: 11, fontWeight: '700', color: '#92400E', flex: 1 },
-  cardHeader: {
-    flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10,
-  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 },
   shiftPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
@@ -558,8 +587,6 @@ const s = StyleSheet.create({
   handoverSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   statusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusChipText: { fontSize: 10, fontWeight: '700' },
-
-  // Items body (expanded)
   itemsBody: {
     paddingHorizontal: 14, paddingBottom: 14,
     borderTopWidth: 1, borderTopColor: COLORS.border,
@@ -573,9 +600,7 @@ const s = StyleSheet.create({
   itemContent: { flex: 1 },
   itemDesc: { fontSize: 12, color: COLORS.text, lineHeight: 17 },
   itemChips: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' },
-  priChip: {
-    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1,
-  },
+  priChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
   priChipText: { fontSize: 9, fontWeight: '700' },
   catLabel: { fontSize: 10, color: COLORS.textMuted },
   resolvedChip: {
@@ -592,41 +617,108 @@ const s = StyleSheet.create({
   incomingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   incomingText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500' },
   ackTimeText: { fontSize: 11, color: COLORS.textMuted },
+  ackErrorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: COLORS.errorLight, borderRadius: RADIUS.md,
+    paddingHorizontal: 10, paddingVertical: 7,
+  },
+  ackErrorText: { flex: 1, fontSize: 12, color: COLORS.error, fontWeight: '600' },
   ackBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: '#059669', paddingVertical: 10, borderRadius: RADIUS.md, ...SHADOWS.sm,
     marginTop: 4,
   },
   ackBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+});
 
-  // Empty
+// ─────────────── Screen styles ───────────────
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: SPACING.md, paddingVertical: 12,
+    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    gap: 12,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 },
+  pendingDot: {
+    minWidth: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A',
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+  },
+  pendingDotText: { fontSize: 10, fontWeight: '800', color: '#92400E' },
+  newBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: GUARD_COLORS.accent, paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: RADIUS.md, ...SHADOWS.sm,
+  },
+  newBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+
+  tabBar: {
+    flexDirection: 'row', backgroundColor: COLORS.surface,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  tabItem: {
+    flex: 1, paddingVertical: 12, alignItems: 'center',
+    flexDirection: 'row', justifyContent: 'center', gap: 6,
+  },
+  tabItemActive: { borderBottomWidth: 2, borderBottomColor: GUARD_COLORS.accent },
+  tabLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+  tabLabelActive: { color: GUARD_COLORS.accent, fontWeight: '700' },
+  tabBadge: {
+    minWidth: 18, height: 18, borderRadius: 9,
+    backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A',
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
+  },
+  tabBadgeText: { fontSize: 9, fontWeight: '800', color: '#92400E' },
+
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  listContent: { padding: SPACING.sm + 4, gap: SPACING.sm + 2, paddingBottom: 40 },
+
   empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text, marginTop: 14 },
   emptyDesc: { fontSize: 13, color: COLORS.textMuted, marginTop: 4, textAlign: 'center', lineHeight: 19 },
   emptyBtn: {
-    marginTop: 20, paddingHorizontal: 20, paddingVertical: 10,
-    backgroundColor: GUARD_COLORS.accent, borderRadius: RADIUS.md,
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20,
+    backgroundColor: GUARD_COLORS.accent, paddingHorizontal: 20, paddingVertical: 10,
+    borderRadius: RADIUS.md, ...SHADOWS.sm,
   },
   emptyBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
-  // Bottom sheet
-  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  // Sheet
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdropTouch: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
   bottomSheet: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
-    paddingHorizontal: 20, paddingBottom: 36, maxHeight: '92%',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    maxHeight: '92%', ...SHADOWS.floating,
   },
   sheetHandle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: COLORS.border, alignSelf: 'center', marginTop: 12, marginBottom: 16,
+    width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginTop: 12, marginBottom: 4,
   },
   sheetHeaderRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   sheetTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text },
+  sheetBody: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, paddingBottom: 36, gap: 2 },
 
   // Form
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
+  fieldLabel: {
+    fontSize: 11, fontWeight: '800', color: COLORS.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8,
+  },
+  fieldSub: { fontSize: 10, fontWeight: '600', color: COLORS.textMuted, textTransform: 'none', letterSpacing: 0 },
   shiftRow: { flexDirection: 'row', gap: 8 },
   shiftChip: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -680,9 +772,18 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10, fontSize: 14,
     color: COLORS.text, borderWidth: 1, borderColor: COLORS.border,
   },
+
+  errorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: COLORS.errorLight, borderRadius: RADIUS.md,
+    paddingHorizontal: 12, paddingVertical: 8, marginTop: 8,
+  },
+  errorText: { flex: 1, fontSize: 12, color: COLORS.error, fontWeight: '600' },
+
   submitBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: GUARD_COLORS.accent, paddingVertical: 14,
-    borderRadius: RADIUS.md, alignItems: 'center', marginTop: 16, marginBottom: 8, ...SHADOWS.sm,
+    borderRadius: RADIUS.md, marginTop: 14, ...SHADOWS.sm,
   },
   submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });
