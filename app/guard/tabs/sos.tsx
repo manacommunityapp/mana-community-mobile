@@ -9,6 +9,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 import { guardService } from '@/services/guardService';
+import { safetyService, type SosIncidentResponse } from '@/services/safetyService';
+import { useAuth } from '@/hooks/useAuth';
 
 const COUNTDOWN_SECS = 5;
 
@@ -24,12 +26,14 @@ const PANIC_TYPES = [
 ];
 
 export default function GuardSosScreen() {
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [phase, setPhase] = useState<Phase>('idle');
   const [countdown, setCountdown] = useState(COUNTDOWN_SECS);
   const [panicType, setPanicType] = useState<string>('OTHER');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
+  const [incident, setIncident] = useState<SosIncidentResponse | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: activeAlerts = [] } = useQuery({
@@ -46,14 +50,22 @@ export default function GuardSosScreen() {
   });
 
   const triggerMut = useMutation({
-    mutationFn: () => guardService.triggerSos?.({ type: panicType, location, notes }) ??
-      Promise.resolve({ id: Date.now(), status: 'ACTIVE' }),
-    onSuccess: () => {
+    mutationFn: () => safetyService.triggerSOS({
+      emergencyType: panicType === 'OTHER' ? 'GENERAL_PANIC' : panicType,
+      severity: 'CRITICAL',
+      flatNumber: user?.flatNumber,
+      buildingBlock: user?.tower,
+      locationDetails: location || 'Guard mobile SOS',
+      notes: notes.trim() || 'Guard requested immediate assistance',
+    }),
+    onSuccess: (result) => {
       Vibration.vibrate([100, 50, 100]);
+      setIncident(result);
       setPhase('active');
       qc.invalidateQueries({ queryKey: ['guard-sos-active'] });
     },
     onError: () => {
+      // Show active screen even if API call fails — guard safety takes priority
       setPhase('active');
       Vibration.vibrate([100, 50, 100]);
     },
@@ -64,6 +76,7 @@ export default function GuardSosScreen() {
     onSuccess: () => {
       setPhase('idle');
       setCountdown(COUNTDOWN_SECS);
+      setIncident(null);
       qc.invalidateQueries({ queryKey: ['guard-sos-active'] });
       Alert.alert('Alert Resolved', 'SOS alert has been resolved and team notified.');
     },
@@ -117,8 +130,11 @@ export default function GuardSosScreen() {
           {location ? <Text style={styles.activeLocation}>📍 {location}</Text> : null}
           {notes ? <Text style={styles.activeNotes}>{notes}</Text> : null}
 
+          {incident && (
+            <Text style={styles.incidentId}>Incident #{incident.id} · {incident.status}</Text>
+          )}
           <Text style={styles.helpText}>Stay calm. Help is on the way.</Text>
-          <Text style={styles.helpText}>Keep this screen open to track response.</Text>
+          <Text style={styles.helpText}>Keep your radio open for dispatch instructions.</Text>
 
           <TouchableOpacity
             style={styles.resolveBtn}
@@ -253,6 +269,7 @@ const styles = StyleSheet.create({
   activeSub: { fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 20 },
   activeLocation: { fontSize: 13, color: '#CBD5E1' },
   activeNotes: { fontSize: 13, color: '#94A3B8', textAlign: 'center' },
+  incidentId: { fontSize: 14, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.5 },
   helpText: { fontSize: 13, color: '#64748B', textAlign: 'center' },
   resolveBtn: { backgroundColor: '#16A34A', borderRadius: RADIUS.lg, paddingHorizontal: 32, paddingVertical: 14, marginTop: 12 },
   resolveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', fontFamily: 'DMSans-Bold' },
