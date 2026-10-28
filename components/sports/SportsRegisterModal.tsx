@@ -42,6 +42,7 @@ interface SportsRegisterModalProps {
   visible: boolean;
   onClose: () => void;
   onRegistered?: (reg: RegistrationRecord) => void;
+  initialEventId?: number | null;
 }
 
 interface EventItem {
@@ -76,13 +77,26 @@ const PLANS = [
 // No static fallback events: real categories load from the backend open tournaments list
 const FALLBACK_EVENTS: EventItem[] = [];
 
-export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRegisterModalProps) {
+export function SportsRegisterModal({ visible, onClose, onRegistered, initialEventId }: SportsRegisterModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState(0);
   const [selectedSportFilter, setSelectedSportFilter] = useState('ALL');
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      if (initialEventId) {
+        setSelectedEventId(initialEventId);
+        setStep(1);
+      } else {
+        setStep(0);
+      }
+    } else {
+      setDone(null);
+    }
+  }, [visible, initialEventId]);
 
   // Form State
   const [isForFamily, setIsForFamily] = useState(false);
