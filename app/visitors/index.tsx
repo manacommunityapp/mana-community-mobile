@@ -477,6 +477,26 @@ export default function VisitorsScreen() {
           <Text style={[s.quickLinkText, { color: '#7C3AED' }]}>Group Invite</Text>
           <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
         </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/intercom')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="videocam-outline" size={16} color="#0891B2" />
+          <Text style={[s.quickLinkText, { color: '#0891B2' }]}>Intercom</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/packages')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="cube-outline" size={16} color="#D97706" />
+          <Text style={[s.quickLinkText, { color: '#D97706' }]}>Packages</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {/* ── Tabs (Active / History) ── */}
