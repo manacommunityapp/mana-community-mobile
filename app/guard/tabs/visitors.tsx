@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, RefreshControl, TextInput, Linking,
-  ActivityIndicator, Animated,
+  ActivityIndicator, Animated, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,10 +17,13 @@ import {
   type VisitorAnalyticsDto,
 } from '@/services/visitorService';
 
+// ─────────────── Types ───────────────
+
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 type FilterKey = 'all' | 'expected' | 'in' | 'out' | 'denied';
+type ActionType = 'checkIn' | 'checkOut' | 'deny';
 
-// ── constants ─────────────────────────────────────────────────────────────────
+// ─────────────── Constants ───────────────
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: IoniconsName }> = {
   EXPECTED:    { label: 'Expected',  color: '#D97706', bg: '#FEF3C7', icon: 'time-outline' },
@@ -32,16 +35,9 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ic
   CANCELLED:   { label: 'Cancelled', color: '#6B7280', bg: '#F3F4F6', icon: 'close-outline' },
 };
 
-const FILTER_STATUS: Record<FilterKey, string | null> = {
-  all: null,
-  expected: 'EXPECTED',
-  in: 'CHECKED_IN',
-  out: 'CHECKED_OUT',
-  denied: 'DENIED',
-};
-
 const PURPOSE_ICONS: Record<string, IoniconsName> = {
   delivery: 'cube-outline',
+  package: 'cube-outline',
   food: 'fast-food-outline',
   cab: 'car-outline',
   taxi: 'car-outline',
@@ -51,6 +47,7 @@ const PURPOSE_ICONS: Record<string, IoniconsName> = {
   service: 'construct-outline',
   maid: 'home-outline',
   cook: 'restaurant-outline',
+  courier: 'bicycle-outline',
 };
 
 function purposeIcon(purpose: string): IoniconsName {
@@ -61,11 +58,16 @@ function purposeIcon(purpose: string): IoniconsName {
   return 'person-outline';
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+const DENY_REASONS = [
+  'No valid ID', 'Not on expected list', 'Resident unavailable',
+  'Suspicious behaviour', 'Access hours violation', 'Other',
+];
 
-function timeAgo(isoStr?: string) {
-  if (!isoStr) return '';
-  const mins = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
+// ─────────────── Helpers ───────────────
+
+function timeAgo(iso?: string) {
+  if (!iso) return '';
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
@@ -73,48 +75,33 @@ function timeAgo(isoStr?: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function fmtTime(isoStr?: string) {
-  if (!isoStr) return '';
-  return new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function fmtTime(iso?: string) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-function dwellStr(fromIso?: string, toIso?: string) {
-  if (!fromIso) return '';
-  const end = toIso ? new Date(toIso).getTime() : Date.now();
-  const mins = Math.floor((end - new Date(fromIso).getTime()) / 60000);
+function dwellStr(from?: string, to?: string) {
+  if (!from) return '';
+  const mins = Math.floor(((to ? new Date(to).getTime() : Date.now()) - new Date(from).getTime()) / 60000);
   if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
+  const h = Math.floor(mins / 60), m = mins % 60;
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
-// ── Live dwell for CHECKED_IN visitors ───────────────────────────────────────
+// ─────────────── VisitorCard ───────────────
 
-function useLiveDwell(checkedInAt?: string, active = false) {
-  const [, tick] = useState(0);
-  useEffect(() => {
-    if (!active || !checkedInAt) return;
-    const id = setInterval(() => tick(n => n + 1), 30_000);
-    return () => clearInterval(id);
-  }, [active, checkedInAt]);
-  return dwellStr(checkedInAt);
+interface CardProps {
+  item: VisitorDto;
+  loadingAction: ActionType | null;
+  onCheckIn: () => void;
+  onCheckOut: () => void;
+  onDenyPress: () => void;
 }
 
-// ── VisitorCard ───────────────────────────────────────────────────────────────
-
-function VisitorCard({
-  item, onCheckIn, onCheckOut, onDeny, loading,
-}: {
-  item: VisitorDto;
-  onCheckIn: (v: VisitorDto) => void;
-  onCheckOut: (v: VisitorDto) => void;
-  onDeny: (v: VisitorDto) => void;
-  loading: boolean;
-}) {
+function VisitorCard({ item, loadingAction, onCheckIn, onCheckOut, onDenyPress }: CardProps) {
   const meta = STATUS_META[item.status] ?? STATUS_META['EXPECTED'];
-  const isIn = item.status === 'CHECKED_IN';
-  const dwell = useLiveDwell(item.checkedInAt, isIn);
   const isExpected = item.status === 'EXPECTED';
+  const isIn = item.status === 'CHECKED_IN';
 
   return (
     <View style={c.card}>
@@ -127,7 +114,7 @@ function VisitorCard({
         <View style={c.info}>
           <View style={c.nameRow}>
             <Text style={c.name} numberOfLines={1}>{item.visitorName}</Text>
-            {(item.status === 'EXPECTED' && item.residentId) && (
+            {isExpected && !!item.residentId && (
               <View style={c.approvedBadge}>
                 <Ionicons name="shield-checkmark" size={9} color={COLORS.success} />
                 <Text style={c.approvedText}>Pre-approved</Text>
@@ -141,6 +128,12 @@ function VisitorCard({
               <View style={c.metaChip}>
                 <Ionicons name="home-outline" size={10} color={COLORS.textMuted} />
                 <Text style={c.metaText}>{item.flatNumber}</Text>
+              </View>
+            )}
+            {item.residentName && item.residentId && (
+              <View style={c.metaChip}>
+                <Ionicons name="person-outline" size={10} color={COLORS.textMuted} />
+                <Text style={c.metaText}>{item.residentName}</Text>
               </View>
             )}
             {item.vehicleNumber && (
@@ -160,6 +153,14 @@ function VisitorCard({
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Pass code chip */}
+          {item.passCode && (
+            <View style={c.passCodeWrap}>
+              <Ionicons name="qr-code-outline" size={10} color={COLORS.textMuted} />
+              <Text style={c.passCodeText}>{item.passCode}</Text>
+            </View>
+          )}
         </View>
 
         <View style={c.right}>
@@ -167,8 +168,8 @@ function VisitorCard({
             <Ionicons name={meta.icon} size={11} color={meta.color} />
             <Text style={[c.statusText, { color: meta.color }]}>{meta.label}</Text>
           </View>
-          {isIn && dwell ? (
-            <Text style={c.dwellText}>{dwell}</Text>
+          {isIn ? (
+            <Text style={c.dwellText}>{dwellStr(item.checkedInAt)}</Text>
           ) : isExpected && item.expectedAt ? (
             <Text style={c.timeText}>{fmtTime(item.expectedAt)}</Text>
           ) : item.checkedOutAt ? (
@@ -205,33 +206,35 @@ function VisitorCard({
       {isExpected && (
         <View style={c.actions}>
           <TouchableOpacity
-            style={[c.actionBtn, c.actionCheckIn]}
-            onPress={() => onCheckIn(item)}
-            disabled={loading}
+            style={[c.actionBtn, c.actionCheckIn, loadingAction === 'checkIn' && { opacity: 0.7 }]}
+            onPress={onCheckIn}
+            disabled={!!loadingAction}
           >
-            {loading
+            {loadingAction === 'checkIn'
               ? <ActivityIndicator size="small" color="#fff" />
               : <><Ionicons name="checkmark" size={15} color="#fff" /><Text style={c.actionTextPrimary}>Check In</Text></>
             }
           </TouchableOpacity>
           <TouchableOpacity
-            style={[c.actionBtn, c.actionDeny]}
-            onPress={() => onDeny(item)}
-            disabled={loading}
+            style={[c.actionBtn, c.actionDeny, loadingAction === 'deny' && { opacity: 0.7 }]}
+            onPress={onDenyPress}
+            disabled={!!loadingAction}
           >
-            <Ionicons name="close" size={15} color={COLORS.error} />
-            <Text style={c.actionTextDanger}>Deny</Text>
+            {loadingAction === 'deny'
+              ? <ActivityIndicator size="small" color={COLORS.error} />
+              : <><Ionicons name="close" size={15} color={COLORS.error} /><Text style={c.actionTextDanger}>Deny</Text></>
+            }
           </TouchableOpacity>
         </View>
       )}
       {isIn && (
         <View style={c.actions}>
           <TouchableOpacity
-            style={[c.actionBtn, c.actionCheckOut]}
-            onPress={() => onCheckOut(item)}
-            disabled={loading}
+            style={[c.actionBtn, c.actionCheckOut, loadingAction === 'checkOut' && { opacity: 0.7 }]}
+            onPress={onCheckOut}
+            disabled={!!loadingAction}
           >
-            {loading
+            {loadingAction === 'checkOut'
               ? <ActivityIndicator size="small" color={GUARD_COLORS.accent} />
               : <><Ionicons name="exit-outline" size={15} color={GUARD_COLORS.accent} /><Text style={c.actionTextOutline}>Check Out</Text></>
             }
@@ -242,11 +245,10 @@ function VisitorCard({
   );
 }
 
-// ── main screen ───────────────────────────────────────────────────────────────
+// ─────────────── Main Screen ───────────────
 
 export default function GuardVisitorsScreen() {
   const router = useRouter();
-
   const [visitors, setVisitors] = useState<VisitorDto[]>([]);
   const [analytics, setAnalytics] = useState<VisitorAnalyticsDto | null>(null);
   const [filter, setFilter] = useState<FilterKey>('all');
@@ -254,32 +256,44 @@ export default function GuardVisitorsScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [actionId, setActionId] = useState<number | null>(null);
-  const searchRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  // Per-card, per-action loading: Map<visitorId, ActionType>
+  const [actionLoading, setActionLoading] = useState<Map<number, ActionType>>(new Map());
+  // Deny confirmation sheet
+  const [denyTarget, setDenyTarget] = useState<VisitorDto | null>(null);
+  const [denyReason, setDenyReason] = useState('');
+  const [denying, setDenying] = useState(false);
+
   const searchAnim = useRef(new Animated.Value(0)).current;
 
-  const loadData = useCallback(async () => {
+  const setAction = (id: number, action: ActionType | null) => {
+    setActionLoading(prev => {
+      const next = new Map(prev);
+      if (action === null) next.delete(id);
+      else next.set(id, action);
+      return next;
+    });
+  };
+
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [vRes, aRes] = await Promise.allSettled([
       visitorService.getTodaysPasses(),
       visitorService.getAnalytics(),
     ]);
     if (vRes.status === 'fulfilled') setVisitors(vRes.value);
     if (aRes.status === 'fulfilled') setAnalytics(aRes.value);
+    setLoading(false);
+    setRefreshing(false);
   }, []);
-
-  useEffect(() => {
-    loadData().finally(() => setLoading(false));
-  }, [loadData]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+    loadData(true);
+  }, [loadData]);
 
-  // Search bar animation
+  // Animated search toggle
   const toggleSearch = () => {
     if (showSearch) {
       setSearch('');
@@ -290,7 +304,6 @@ export default function GuardVisitorsScreen() {
     }
   };
 
-  // Count per filter
   const counts = useMemo(() => ({
     all: visitors.length,
     expected: visitors.filter(v => v.status === 'EXPECTED').length,
@@ -300,11 +313,12 @@ export default function GuardVisitorsScreen() {
   }), [visitors]);
 
   const filtered = useMemo(() => {
-    let list = filter === 'all'
-      ? visitors
-      : filter === 'denied'
-        ? visitors.filter(v => v.status === 'DENIED' || v.status === 'REJECTED')
-        : visitors.filter(v => v.status === FILTER_STATUS[filter]);
+    let list = visitors.filter(v => {
+      if (filter === 'all') return true;
+      if (filter === 'denied') return v.status === 'DENIED' || v.status === 'REJECTED';
+      const map: Record<FilterKey, string> = { all: '', expected: 'EXPECTED', in: 'CHECKED_IN', out: 'CHECKED_OUT', denied: '' };
+      return v.status === map[filter];
+    });
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(v =>
@@ -312,53 +326,71 @@ export default function GuardVisitorsScreen() {
         v.purpose.toLowerCase().includes(q) ||
         (v.flatNumber ?? '').toLowerCase().includes(q) ||
         (v.vehicleNumber ?? '').toLowerCase().includes(q) ||
-        (v.visitorPhone ?? '').includes(q),
+        (v.visitorPhone ?? '').includes(q) ||
+        (v.passCode ?? '').toLowerCase().includes(q),
       );
     }
     return list;
   }, [visitors, filter, search]);
 
   const handleCheckIn = async (v: VisitorDto) => {
-    setActionId(v.id);
+    setAction(v.id, 'checkIn');
+    // Optimistic update
+    setVisitors(prev => prev.map(x =>
+      x.id === v.id ? { ...x, status: 'CHECKED_IN', checkedInAt: new Date().toISOString() } : x
+    ));
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       let photo: string | undefined;
       if (perm.granted) {
         const captured = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.55, allowsEditing: false });
-        if (!captured.canceled && captured.assets[0]) {
-          photo = captured.assets[0].base64
-            ? `data:image/jpeg;base64,${captured.assets[0].base64}`
-            : captured.assets[0].uri;
+        if (!captured.canceled && captured.assets[0]?.base64) {
+          photo = `data:image/jpeg;base64,${captured.assets[0].base64}`;
         }
       }
       await visitorService.checkIn(v.id, 'Main Gate', undefined, photo);
-      await loadData();
-    } catch (e: any) {
-      // silently fail — visitor list will stay as-is
+      loadData(true);
+    } catch {
+      // Rollback optimistic update
+      setVisitors(prev => prev.map(x => x.id === v.id ? { ...x, status: v.status, checkedInAt: v.checkedInAt } : x));
     } finally {
-      setActionId(null);
+      setAction(v.id, null);
     }
   };
 
   const handleCheckOut = async (v: VisitorDto) => {
-    setActionId(v.id);
+    setAction(v.id, 'checkOut');
+    // Optimistic update
+    setVisitors(prev => prev.map(x =>
+      x.id === v.id ? { ...x, status: 'CHECKED_OUT', checkedOutAt: new Date().toISOString() } : x
+    ));
     try {
       await visitorService.checkOut(v.id);
-      await loadData();
+      loadData(true);
     } catch {
+      setVisitors(prev => prev.map(x => x.id === v.id ? { ...x, status: v.status, checkedOutAt: v.checkedOutAt } : x));
     } finally {
-      setActionId(null);
+      setAction(v.id, null);
     }
   };
 
-  const handleDeny = async (v: VisitorDto) => {
-    setActionId(v.id);
+  const handleDenyConfirm = async () => {
+    if (!denyTarget) return;
+    setDenying(true);
+    setAction(denyTarget.id, 'deny');
+    const target = denyTarget;
+    setDenyTarget(null);
+    // Optimistic update
+    setVisitors(prev => prev.map(x => x.id === target.id ? { ...x, status: 'DENIED' } : x));
     try {
-      await visitorService.denyEntry(v.id);
-      await loadData();
+      await visitorService.denyEntry(target.id);
+      loadData(true);
     } catch {
+      setVisitors(prev => prev.map(x => x.id === target.id ? { ...x, status: target.status } : x));
     } finally {
-      setActionId(null);
+      setDenying(false);
+      setAction(target.id, null);
+      setDenyReason('');
     }
   };
 
@@ -395,14 +427,13 @@ export default function GuardVisitorsScreen() {
         </View>
       </View>
 
-      {/* Search bar */}
+      {/* Search bar (animated slide-down) */}
       <Animated.View style={[s.searchWrap, { height: searchHeight, overflow: 'hidden' }]}>
         <View style={s.searchInner}>
           <Ionicons name="search-outline" size={16} color={COLORS.textMuted} />
           <TextInput
-            ref={searchRef}
             style={s.searchInput}
-            placeholder="Search by name, flat, purpose…"
+            placeholder="Search name, flat, pass code…"
             placeholderTextColor={COLORS.textMuted}
             value={search}
             onChangeText={setSearch}
@@ -419,25 +450,20 @@ export default function GuardVisitorsScreen() {
       {/* Analytics strip */}
       {analytics && !loading && (
         <View style={s.analyticsStrip}>
-          <View style={s.analyticsCell}>
-            <Text style={[s.analyticsVal, { color: GUARD_COLORS.accent }]}>{analytics.totalToday ?? visitors.length}</Text>
-            <Text style={s.analyticsLabel}>Total</Text>
-          </View>
-          <View style={s.analyticsDivider} />
-          <View style={s.analyticsCell}>
-            <Text style={[s.analyticsVal, { color: COLORS.success }]}>{analytics.currentlyInside ?? counts.in}</Text>
-            <Text style={s.analyticsLabel}>Inside</Text>
-          </View>
-          <View style={s.analyticsDivider} />
-          <View style={s.analyticsCell}>
-            <Text style={[s.analyticsVal, { color: COLORS.warning }]}>{analytics.pendingExpected ?? counts.expected}</Text>
-            <Text style={s.analyticsLabel}>Expected</Text>
-          </View>
-          <View style={s.analyticsDivider} />
-          <View style={s.analyticsCell}>
-            <Text style={[s.analyticsVal, { color: COLORS.error }]}>{analytics.deniedToday ?? counts.denied}</Text>
-            <Text style={s.analyticsLabel}>Denied</Text>
-          </View>
+          {[
+            { val: analytics.totalToday ?? counts.all,      label: 'Total',    color: GUARD_COLORS.accent },
+            { val: analytics.currentlyInside ?? counts.in,  label: 'Inside',   color: COLORS.success },
+            { val: analytics.pendingExpected ?? counts.expected, label: 'Expected', color: COLORS.warning },
+            { val: analytics.deniedToday ?? counts.denied,  label: 'Denied',   color: COLORS.error },
+          ].map((cell, i) => (
+            <View key={cell.label} style={{ flexDirection: 'row', flex: 1 }}>
+              {i > 0 && <View style={s.analyticsDivider} />}
+              <View style={s.analyticsCell}>
+                <Text style={[s.analyticsVal, { color: cell.color }]}>{cell.val}</Text>
+                <Text style={s.analyticsLabel}>{cell.label}</Text>
+              </View>
+            </View>
+          ))}
         </View>
       )}
 
@@ -461,11 +487,9 @@ export default function GuardVisitorsScreen() {
         ))}
       </View>
 
-      {/* List */}
+      {/* Visitor list */}
       {loading ? (
-        <View style={s.loaderWrap}>
-          <ActivityIndicator size="large" color={GUARD_COLORS.accent} />
-        </View>
+        <View style={s.loaderWrap}><ActivityIndicator size="large" color={GUARD_COLORS.accent} /></View>
       ) : (
         <FlatList
           data={filtered}
@@ -473,23 +497,29 @@ export default function GuardVisitorsScreen() {
           renderItem={({ item }) => (
             <VisitorCard
               item={item}
-              onCheckIn={handleCheckIn}
-              onCheckOut={handleCheckOut}
-              onDeny={handleDeny}
-              loading={actionId === item.id}
+              loadingAction={actionLoading.get(item.id) ?? null}
+              onCheckIn={() => handleCheckIn(item)}
+              onCheckOut={() => handleCheckOut(item)}
+              onDenyPress={() => { setDenyTarget(item); setDenyReason(''); }}
             />
           )}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GUARD_COLORS.accent} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GUARD_COLORS.accent} />
+          }
           ListEmptyComponent={
             <View style={s.empty}>
               <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
               <Text style={s.emptyTitle}>
-                {search ? 'No results' : filter === 'all' ? 'No visitors today' : `No ${FILTERS.find(f => f.key === filter)?.label.toLowerCase()} visitors`}
+                {search
+                  ? 'No results'
+                  : filter === 'all'
+                    ? 'No visitors today'
+                    : `No ${FILTERS.find(f => f.key === filter)?.label.toLowerCase()} visitors`}
               </Text>
               <Text style={s.emptySub}>
-                {search ? `No visitor matches "${search}"` : 'Pull down to refresh'}
+                {search ? `No match for "${search}"` : 'Pull down to refresh'}
               </Text>
               {filter === 'all' && !search && (
                 <TouchableOpacity style={s.emptyBtn} onPress={() => router.push('/guard/walk-in')}>
@@ -501,11 +531,74 @@ export default function GuardVisitorsScreen() {
           }
         />
       )}
+
+      {/* Deny confirmation modal */}
+      <Modal visible={!!denyTarget} transparent animationType="slide" onRequestClose={() => setDenyTarget(null)}>
+        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <TouchableOpacity style={s.backdropTouch} onPress={() => setDenyTarget(null)} />
+          <View style={s.denySheet}>
+            <View style={s.sheetHandle} />
+            <View style={s.sheetHeader}>
+              <View>
+                <Text style={s.sheetTitle}>Deny Entry</Text>
+                {denyTarget && (
+                  <Text style={s.sheetSub}>{denyTarget.visitorName} · {denyTarget.flatNumber ?? denyTarget.purpose}</Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => setDenyTarget(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={s.denyBody}>
+              <Text style={s.denyLabel}>Reason (optional)</Text>
+              <View style={s.denyChips}>
+                {DENY_REASONS.map(r => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[s.denyChip, denyReason === r && s.denyChipActive]}
+                    onPress={() => setDenyReason(denyReason === r ? '' : r)}
+                  >
+                    <Text style={[s.denyChipText, denyReason === r && s.denyChipTextActive]}>{r}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                style={s.denyInput}
+                placeholder="Or type a custom reason…"
+                placeholderTextColor={COLORS.textMuted}
+                value={DENY_REASONS.includes(denyReason) ? '' : denyReason}
+                onChangeText={setDenyReason}
+              />
+
+              <View style={s.denyActions}>
+                <TouchableOpacity style={s.denyCancelBtn} onPress={() => setDenyTarget(null)}>
+                  <Text style={s.denyCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.denyConfirmBtn, denying && { opacity: 0.6 }]}
+                  onPress={handleDenyConfirm}
+                  disabled={denying}
+                >
+                  {denying ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="close-circle" size={16} color="#fff" />
+                      <Text style={s.denyConfirmText}>Deny Entry</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-// ── styles ────────────────────────────────────────────────────────────────────
+// ─────────────── Styles ───────────────
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
@@ -535,10 +628,8 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, color: COLORS.text, padding: 0 },
 
   analyticsStrip: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-    paddingVertical: 10,
+    flexDirection: 'row', backgroundColor: COLORS.surface,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingVertical: 10,
   },
   analyticsCell: { flex: 1, alignItems: 'center', gap: 2 },
   analyticsVal: { fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
@@ -546,16 +637,13 @@ const s = StyleSheet.create({
   analyticsDivider: { width: 1, backgroundColor: COLORS.border, marginVertical: 4 },
 
   filterRow: {
-    flexDirection: 'row', gap: 6,
-    paddingHorizontal: SPACING.md, paddingVertical: 10,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row', gap: 6, paddingHorizontal: SPACING.md, paddingVertical: 10,
+    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   filterChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 11, paddingVertical: 6,
-    borderRadius: RADIUS.full, backgroundColor: COLORS.surfaceAlt,
-    borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: 11, paddingVertical: 6, borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
   },
   filterChipActive: { backgroundColor: GUARD_COLORS.accent, borderColor: GUARD_COLORS.accentDark },
   filterText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
@@ -569,7 +657,6 @@ const s = StyleSheet.create({
   filterBadgeTextActive: { color: '#fff' },
 
   loaderWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-
   list: { padding: SPACING.md, gap: SPACING.sm, paddingBottom: 32 },
 
   empty: { alignItems: 'center', paddingTop: 64, gap: 6 },
@@ -581,6 +668,57 @@ const s = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 20, ...SHADOWS.sm,
   },
   emptyBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+
+  // Deny confirmation modal
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdropTouch: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
+  denySheet: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    ...SHADOWS.floating,
+  },
+  sheetHandle: {
+    width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginTop: 12, marginBottom: 4,
+  },
+  sheetHeader: {
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  sheetTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  sheetSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  denyBody: { padding: SPACING.lg, gap: 14 },
+  denyLabel: {
+    fontSize: 11, fontWeight: '800', color: COLORS.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.8,
+  },
+  denyChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  denyChip: {
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
+  },
+  denyChipActive: { backgroundColor: COLORS.errorLight, borderColor: COLORS.error },
+  denyChipText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  denyChipTextActive: { color: COLORS.error, fontWeight: '700' },
+  denyInput: {
+    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: 14, paddingVertical: 11,
+    fontSize: 13, color: COLORS.text,
+  },
+  denyActions: { flexDirection: 'row', gap: SPACING.md, paddingBottom: 8 },
+  denyCancelBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, alignItems: 'center',
+  },
+  denyCancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary },
+  denyConfirmBtn: {
+    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 14, borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.error, ...SHADOWS.sm,
+  },
+  denyConfirmText: { fontSize: 15, fontWeight: '800', color: '#fff' },
 });
 
 const c = StyleSheet.create({
@@ -589,10 +727,7 @@ const c = StyleSheet.create({
     padding: 14, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
   },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  icon: {
-    width: 46, height: 46, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  icon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1, gap: 3 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   name: { fontSize: 15, fontWeight: '700', color: COLORS.text },
@@ -605,6 +740,14 @@ const c = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   metaChip: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   metaText: { fontSize: 11, color: COLORS.textMuted },
+  passCodeWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginTop: 2, alignSelf: 'flex-start',
+    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.sm,
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  passCodeText: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 0.5 },
 
   right: { alignItems: 'flex-end', gap: 4 },
   statusPill: {
@@ -616,8 +759,9 @@ const c = StyleSheet.create({
   timeText: { fontSize: 11, color: COLORS.textMuted },
 
   timeline: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10,
-    paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border,
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+    marginTop: 10, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
   },
   timelineChip: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
