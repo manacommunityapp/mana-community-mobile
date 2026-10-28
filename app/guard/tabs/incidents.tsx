@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, RefreshControl, TextInput, Alert, ActivityIndicator,
+  FlatList, RefreshControl, TextInput, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,8 @@ import {
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 type FilterKey = 'ALL' | 'OPEN' | 'ESCALATED' | 'RESOLVED';
 
+// ─────────────── Constants ───────────────
+
 const PRIORITY_META: Record<IncidentPriority, {
   label: string; color: string; bg: string; border: string; icon: IoniconsName;
 }> = {
@@ -29,10 +31,12 @@ const PRIORITY_META: Record<IncidentPriority, {
   CRITICAL: { label: 'Critical', color: '#DC2626', bg: '#FEF2F2', border: '#FCA5A5', icon: 'alert-circle-outline' },
 };
 
-const STATUS_META: Record<IncidentStatus, { label: string; color: string; bg: string; next: IncidentStatus }> = {
-  OPEN:      { label: 'Open',      color: '#DC2626', bg: '#FEF2F2', next: 'ESCALATED' },
-  ESCALATED: { label: 'Escalated', color: '#D97706', bg: '#FFFBEB', next: 'RESOLVED' },
-  RESOLVED:  { label: 'Resolved',  color: '#059669', bg: '#ECFDF5', next: 'OPEN' },
+const STATUS_META: Record<IncidentStatus, {
+  label: string; color: string; bg: string; next: IncidentStatus; nextLabel: string;
+}> = {
+  OPEN:      { label: 'Open',      color: '#DC2626', bg: '#FEF2F2', next: 'ESCALATED', nextLabel: 'Escalate' },
+  ESCALATED: { label: 'Escalated', color: '#D97706', bg: '#FFFBEB', next: 'RESOLVED',  nextLabel: 'Resolve' },
+  RESOLVED:  { label: 'Resolved',  color: '#059669', bg: '#ECFDF5', next: 'OPEN',      nextLabel: 'Re-open' },
 };
 
 const LOCATION_CHIPS = [
@@ -47,9 +51,10 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'RESOLVED',  label: 'Resolved' },
 ];
 
+// ─────────────── Helpers ───────────────
+
 function fmtTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
+  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
@@ -58,73 +63,72 @@ function fmtTimeAgo(dateStr: string): string {
 }
 
 function fmtAbsolute(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
+  return new Date(dateStr).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,
+  });
 }
 
-// ─────────────────────────── Incident Card ───────────────────────────
+// ─────────────── Incident Card ───────────────
 
 interface IncidentCardProps {
   item: GuardIncident;
-  actionId: number | null;
+  loadingId: number | null;
   onStatusPress: (item: GuardIncident) => void;
 }
 
-function IncidentCard({ item, actionId, onStatusPress }: IncidentCardProps) {
+function IncidentCard({ item, loadingId, onStatusPress }: IncidentCardProps) {
   const pm = PRIORITY_META[item.priority];
   const sm = STATUS_META[item.status];
   const isUrgent = item.priority === 'HIGH' || item.priority === 'CRITICAL';
-  const isLoading = actionId === item.id;
+  const isLoading = loadingId === item.id;
 
   return (
-    <View style={[s.card, isUrgent && { borderLeftWidth: 4, borderLeftColor: pm.color }]}>
-      {/* Card Top */}
-      <View style={s.cardTop}>
-        <View style={[s.iconBox, { backgroundColor: pm.bg }]}>
+    <View style={[c.card, isUrgent && { borderLeftWidth: 4, borderLeftColor: pm.color }]}>
+      <View style={c.cardTop}>
+        <View style={[c.iconBox, { backgroundColor: pm.bg }]}>
           <Ionicons name={pm.icon} size={20} color={pm.color} />
         </View>
-        <View style={s.cardBody}>
-          <Text style={s.cardTitle} numberOfLines={2}>{item.title}</Text>
+        <View style={c.cardBody}>
+          <Text style={c.cardTitle} numberOfLines={2}>{item.title}</Text>
           {!!item.description && (
-            <Text style={s.cardDesc} numberOfLines={2}>{item.description}</Text>
+            <Text style={c.cardDesc} numberOfLines={2}>{item.description}</Text>
           )}
-          <View style={s.metaRow}>
+          <View style={c.metaRow}>
             <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
-            <Text style={s.metaText}>{item.location}</Text>
-            <Text style={s.metaDot}>·</Text>
+            <Text style={c.metaText}>{item.location}</Text>
+            <Text style={c.metaDot}>·</Text>
             <Ionicons name="time-outline" size={11} color={COLORS.textMuted} />
-            <Text style={s.metaText}>{fmtTimeAgo(item.reportedAt)}</Text>
+            <Text style={c.metaText}>{fmtTimeAgo(item.reportedAt)}</Text>
           </View>
-          <Text style={s.absTime}>{fmtAbsolute(item.reportedAt)}</Text>
+          <Text style={c.absTime}>{fmtAbsolute(item.reportedAt)}</Text>
         </View>
       </View>
 
-      {/* Card Footer */}
-      <View style={s.cardFooter}>
-        <View style={[s.priorityBadge, { backgroundColor: pm.bg, borderColor: pm.border }]}>
+      <View style={c.cardFooter}>
+        <View style={[c.priorityBadge, { backgroundColor: pm.bg, borderColor: pm.border }]}>
           <Ionicons name={pm.icon} size={10} color={pm.color} />
-          <Text style={[s.priorityText, { color: pm.color }]}>{pm.label}</Text>
+          <Text style={[c.priorityText, { color: pm.color }]}>{pm.label}</Text>
         </View>
 
-        <View style={s.footerRight}>
+        <View style={c.footerRight}>
           {item.assignedTo ? (
-            <View style={s.assignedRow}>
+            <View style={c.assignedRow}>
               <Ionicons name="person-circle-outline" size={13} color={COLORS.textMuted} />
-              <Text style={s.assignedText}>{item.assignedTo}</Text>
+              <Text style={c.assignedText}>{item.assignedTo}</Text>
             </View>
           ) : (
-            <Text style={s.reportedBy}>by {item.reportedBy}</Text>
+            <Text style={c.reportedBy}>by {item.reportedBy}</Text>
           )}
 
           <TouchableOpacity
-            style={[s.statusChip, { backgroundColor: sm.bg }]}
+            style={[c.statusChip, { backgroundColor: sm.bg }]}
             onPress={() => onStatusPress(item)}
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator size="small" color={sm.color} />
+              <ActivityIndicator size="small" color={sm.color} style={{ marginHorizontal: 8 }} />
             ) : (
-              <Text style={[s.statusText, { color: sm.color }]}>{sm.label} ▾</Text>
+              <Text style={[c.statusText, { color: sm.color }]}>{sm.label} ▾</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -133,7 +137,7 @@ function IncidentCard({ item, actionId, onStatusPress }: IncidentCardProps) {
   );
 }
 
-// ─────────────────────────── Main Screen ───────────────────────────
+// ─────────────── Main Screen ───────────────
 
 export default function GuardIncidentsScreen() {
   const { user } = useAuth();
@@ -142,102 +146,103 @@ export default function GuardIncidentsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('ALL');
   const [search, setSearch] = useState('');
-  const [actionId, setActionId] = useState<number | null>(null);
+  // Per-card loading: id of the incident whose status is being updated
+  const [loadingId, setLoadingId] = useState<number | null>(null);
 
-  // Modal state
-  const [modalVisible, setModalVisible] = useState(false);
+  // Create incident modal
+  const [createVisible, setCreateVisible] = useState(false);
   const [formTitle, setFormTitle] = useState('');
   const [formLocation, setFormLocation] = useState('');
   const [formDesc, setFormDesc] = useState('');
   const [formPriority, setFormPriority] = useState<IncidentPriority>('MEDIUM');
+  const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Status update with resolve note
-  const [statusModal, setStatusModal] = useState<{ incident: GuardIncident; next: IncidentStatus } | null>(null);
+  // Status update bottom sheet
+  const [statusSheet, setStatusSheet] = useState<{ incident: GuardIncident; next: IncidentStatus } | null>(null);
   const [resolveNote, setResolveNote] = useState('');
   const [statusUpdating, setStatusUpdating] = useState(false);
 
-  const loadIncidents = useCallback(async () => {
-    const result = await Promise.allSettled([guardService.getIncidents()]);
-    if (result[0].status === 'fulfilled') {
-      setIncidents(result[0].value);
-    }
+  const loadIncidents = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    const [result] = await Promise.allSettled([guardService.getIncidents()]);
+    if (result.status === 'fulfilled') setIncidents(result.value);
     setLoading(false);
+    setRefreshing(false);
   }, []);
 
   useFocusEffect(useCallback(() => { loadIncidents(); }, [loadIncidents]));
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await loadIncidents();
-    setRefreshing(false);
-  };
+    loadIncidents(true);
+  }, [loadIncidents]);
 
-  const counts: Record<FilterKey, number> = {
+  const counts = useMemo<Record<FilterKey, number>>(() => ({
     ALL:       incidents.length,
     OPEN:      incidents.filter(i => i.status === 'OPEN').length,
     ESCALATED: incidents.filter(i => i.status === 'ESCALATED').length,
     RESOLVED:  incidents.filter(i => i.status === 'RESOLVED').length,
-  };
+  }), [incidents]);
 
-  const filtered = incidents.filter(i => {
-    const matchFilter = filter === 'ALL' || i.status === filter;
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const matchSearch = !q ||
-      i.title.toLowerCase().includes(q) ||
-      i.location.toLowerCase().includes(q) ||
-      (i.description || '').toLowerCase().includes(q);
-    return matchFilter && matchSearch;
-  });
+    return incidents.filter(i => {
+      const matchFilter = filter === 'ALL' || i.status === filter;
+      const matchSearch = !q ||
+        i.title.toLowerCase().includes(q) ||
+        i.location.toLowerCase().includes(q) ||
+        (i.description || '').toLowerCase().includes(q);
+      return matchFilter && matchSearch;
+    });
+  }, [incidents, filter, search]);
 
   const handleStatusPress = (item: GuardIncident) => {
-    const next = STATUS_META[item.status].next;
     setResolveNote('');
-    setStatusModal({ incident: item, next });
+    setStatusSheet({ incident: item, next: STATUS_META[item.status].next });
   };
 
   const confirmStatusUpdate = async () => {
-    if (!statusModal) return;
-    setStatusUpdating(true);
+    if (!statusSheet) return;
+    const { incident, next } = statusSheet;
+    setStatusSheet(null);
+    setLoadingId(incident.id);
+    // Optimistic update
+    setIncidents(prev => prev.map(i => i.id === incident.id ? { ...i, status: next } : i));
     try {
-      await guardService.updateIncidentStatus(statusModal.incident.id, statusModal.next);
-      setIncidents(prev =>
-        prev.map(i => i.id === statusModal.incident.id ? { ...i, status: statusModal.next } : i)
-      );
-      setStatusModal(null);
+      await guardService.updateIncidentStatus(incident.id, next);
+      loadIncidents(true);
     } catch {
-      Alert.alert('Error', 'Could not update incident status.');
+      // Rollback on error
+      setIncidents(prev => prev.map(i => i.id === incident.id ? { ...i, status: incident.status } : i));
     } finally {
-      setStatusUpdating(false);
+      setLoadingId(null);
     }
   };
 
+  const openCreate = () => {
+    setFormTitle(''); setFormLocation(''); setFormDesc('');
+    setFormPriority('MEDIUM'); setFormError('');
+    setCreateVisible(true);
+  };
+
   const handleCreate = async () => {
-    if (!formTitle.trim()) {
-      Alert.alert('Required', 'Please enter an incident title.');
-      return;
-    }
-    if (!formLocation.trim()) {
-      Alert.alert('Required', 'Please select or enter a location.');
-      return;
-    }
+    if (!formTitle.trim()) { setFormError('Please enter an incident title.'); return; }
+    if (!formLocation.trim()) { setFormError('Please select or enter a location.'); return; }
+    setFormError('');
     setSubmitting(true);
     try {
       const created = await guardService.createIncident({
         title: formTitle.trim(),
-        description: formDesc.trim() || '',
+        description: formDesc.trim(),
         location: formLocation.trim(),
         priority: formPriority,
         reportedBy: user?.fullName ?? user?.name ?? 'Gate Guard',
       });
       setIncidents(prev => [created, ...prev]);
-      setModalVisible(false);
-      setFormTitle('');
-      setFormLocation('');
-      setFormDesc('');
-      setFormPriority('MEDIUM');
+      setCreateVisible(false);
     } catch {
-      Alert.alert('Error', 'Unable to submit incident report.');
+      setFormError('Unable to submit incident report. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -245,64 +250,81 @@ export default function GuardIncidentsScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      {/* ── Header ── */}
+      {/* Header */}
       <View style={s.header}>
         <View>
           <Text style={s.headerTitle}>Incidents</Text>
           <Text style={s.headerSub}>
-            {counts.OPEN + counts.ESCALATED} active · {counts.RESOLVED} resolved
+            {loading ? 'Loading…' : `${counts.OPEN + counts.ESCALATED} active · ${counts.RESOLVED} resolved`}
           </Text>
         </View>
-        <TouchableOpacity style={s.addBtn} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity style={s.addBtn} onPress={openCreate}>
           <Ionicons name="add" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* ── Search ── */}
+      {/* Stats strip */}
+      {!loading && incidents.length > 0 && (
+        <View style={s.statsStrip}>
+          {[
+            { key: 'OPEN' as FilterKey,      val: counts.OPEN,      label: 'Open',      color: '#DC2626' },
+            { key: 'ESCALATED' as FilterKey, val: counts.ESCALATED, label: 'Escalated', color: '#D97706' },
+            { key: 'RESOLVED' as FilterKey,  val: counts.RESOLVED,  label: 'Resolved',  color: '#059669' },
+          ].map((cell, i) => (
+            <TouchableOpacity
+              key={cell.key}
+              style={[s.statsCell, filter === cell.key && s.statsCellActive, i > 0 && s.statsBorder]}
+              onPress={() => setFilter(filter === cell.key ? 'ALL' : cell.key)}
+            >
+              <Text style={[s.statsVal, { color: cell.color }]}>{cell.val}</Text>
+              <Text style={s.statsLabel}>{cell.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* Search */}
       <View style={s.searchWrap}>
-        <Ionicons name="search-outline" size={16} color={COLORS.textMuted} style={s.searchIcon} />
+        <Ionicons name="search-outline" size={16} color={COLORS.textMuted} />
         <TextInput
           style={s.searchInput}
-          placeholder="Search incidents..."
+          placeholder="Search incidents…"
           placeholderTextColor={COLORS.textMuted}
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
         />
         {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')} style={s.searchClear}>
+          <TouchableOpacity onPress={() => setSearch('')}>
             <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* ── Filter Chips ── */}
+      {/* Filter chips */}
       <ScrollView
         horizontal showsHorizontalScrollIndicator={false}
         contentContainerStyle={s.filterRow}
       >
-        {FILTERS.map(f => {
-          const active = filter === f.key;
-          return (
-            <TouchableOpacity
-              key={f.key}
-              style={[s.filterChip, active && s.filterChipActive]}
-              onPress={() => setFilter(f.key)}
-            >
-              <Text style={[s.filterText, active && s.filterTextActive]}>{f.label}</Text>
-              {counts[f.key] > 0 && (
-                <View style={[s.filterBadge, active && s.filterBadgeActive]}>
-                  <Text style={[s.filterBadgeText, active && s.filterBadgeTextActive]}>
-                    {counts[f.key]}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+        {FILTERS.map(f => (
+          <TouchableOpacity
+            key={f.key}
+            style={[s.filterChip, filter === f.key && s.filterChipActive]}
+            onPress={() => setFilter(f.key)}
+          >
+            <Text style={[s.filterText, filter === f.key && s.filterTextActive]}>{f.label}</Text>
+            {counts[f.key] > 0 && (
+              <View style={[s.filterBadge, filter === f.key && s.filterBadgeActive]}>
+                <Text style={[s.filterBadgeText, filter === f.key && s.filterBadgeTextActive]}>
+                  {counts[f.key]}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
       </ScrollView>
 
-      {/* ── List ── */}
+      {/* List */}
       {loading ? (
         <View style={s.loadingWrap}>
           <ActivityIndicator size="large" color={GUARD_COLORS.accent} />
@@ -314,7 +336,7 @@ export default function GuardIncidentsScreen() {
           renderItem={({ item }) => (
             <IncidentCard
               item={item}
-              actionId={actionId}
+              loadingId={loadingId}
               onStatusPress={handleStatusPress}
             />
           )}
@@ -327,181 +349,219 @@ export default function GuardIncidentsScreen() {
             <View style={s.empty}>
               <Ionicons
                 name={search ? 'search-outline' : 'checkmark-circle-outline'}
-                size={52}
-                color={COLORS.textMuted}
+                size={52} color={COLORS.textMuted}
               />
-              <Text style={s.emptyTitle}>
-                {search ? 'No results' : 'All clear'}
-              </Text>
+              <Text style={s.emptyTitle}>{search ? 'No results' : 'All clear'}</Text>
               <Text style={s.emptyDesc}>
-                {search ? `No incidents matching "${search}"` : `No ${filter === 'ALL' ? '' : filter.toLowerCase() + ' '}incidents`}
+                {search
+                  ? `No incidents matching "${search}"`
+                  : `No ${filter === 'ALL' ? '' : filter.toLowerCase() + ' '}incidents`}
               </Text>
+              {filter === 'ALL' && !search && (
+                <TouchableOpacity style={s.emptyBtn} onPress={openCreate}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={s.emptyBtnText}>Report Incident</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
       )}
 
-      {/* ── Status Update Modal ── */}
-      <Modal visible={!!statusModal} transparent animationType="fade">
-        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setStatusModal(null)}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <TouchableOpacity activeOpacity={1}>
-              <View style={s.sheetCard}>
-                <Text style={s.sheetTitle}>Update Status</Text>
-                {statusModal && (
-                  <>
-                    <Text style={s.sheetSub}>
-                      Move "{statusModal.incident.title}" to{' '}
-                      <Text style={{ fontWeight: '700', color: STATUS_META[statusModal.next].color }}>
-                        {STATUS_META[statusModal.next].label}
-                      </Text>?
-                    </Text>
-
-                    {statusModal.next === 'RESOLVED' && (
-                      <>
-                        <Text style={s.fieldLabel}>Resolution Note (optional)</Text>
-                        <TextInput
-                          style={[s.textInput, { height: 72, textAlignVertical: 'top' }]}
-                          placeholder="Describe how the incident was resolved..."
-                          placeholderTextColor={COLORS.textMuted}
-                          multiline
-                          value={resolveNote}
-                          onChangeText={setResolveNote}
-                          autoFocus
-                        />
-                      </>
-                    )}
-
-                    <View style={s.sheetBtns}>
-                      <TouchableOpacity style={s.cancelBtn} onPress={() => setStatusModal(null)}>
-                        <Text style={s.cancelBtnText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[s.confirmBtn, { backgroundColor: STATUS_META[statusModal.next].color }]}
-                        onPress={confirmStatusUpdate}
-                        disabled={statusUpdating}
-                      >
-                        {statusUpdating ? (
-                          <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                          <Text style={s.confirmBtnText}>Confirm</Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                )}
-              </View>
-            </TouchableOpacity>
-          </KeyboardAvoidingView>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* ── Create Incident Bottom Sheet ── */}
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={s.sheetOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setModalVisible(false)} />
+      {/* ── Status Update Bottom Sheet ── */}
+      <Modal visible={!!statusSheet} transparent animationType="slide" onRequestClose={() => setStatusSheet(null)}>
+        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <TouchableOpacity style={s.backdropTouch} onPress={() => setStatusSheet(null)} />
           <View style={s.bottomSheet}>
             <View style={s.sheetHandle} />
             <View style={s.sheetHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.sheetTitle}>Update Status</Text>
+                {statusSheet && (
+                  <Text style={s.sheetSub} numberOfLines={2}>
+                    Move to{' '}
+                    <Text style={{ fontWeight: '800', color: STATUS_META[statusSheet.next].color }}>
+                      {STATUS_META[statusSheet.next].label}
+                    </Text>
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => setStatusSheet(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={s.sheetBody}>
+              {statusSheet?.incident.title ? (
+                <View style={s.incidentPreview}>
+                  <Ionicons
+                    name={PRIORITY_META[statusSheet.incident.priority].icon}
+                    size={14}
+                    color={PRIORITY_META[statusSheet.incident.priority].color}
+                  />
+                  <Text style={s.incidentPreviewText} numberOfLines={1}>
+                    {statusSheet.incident.title}
+                  </Text>
+                </View>
+              ) : null}
+
+              {statusSheet?.next === 'RESOLVED' && (
+                <>
+                  <Text style={s.fieldLabel}>Resolution Note (optional)</Text>
+                  <TextInput
+                    style={[s.textInput, { height: 80, textAlignVertical: 'top' }]}
+                    placeholder="Describe how the incident was resolved…"
+                    placeholderTextColor={COLORS.textMuted}
+                    multiline
+                    value={resolveNote}
+                    onChangeText={setResolveNote}
+                    autoFocus
+                  />
+                </>
+              )}
+
+              <View style={s.sheetBtns}>
+                <TouchableOpacity style={s.cancelBtn} onPress={() => setStatusSheet(null)}>
+                  <Text style={s.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    s.confirmBtn,
+                    { backgroundColor: statusSheet ? STATUS_META[statusSheet.next].color : GUARD_COLORS.accent },
+                    statusUpdating && { opacity: 0.7 },
+                  ]}
+                  onPress={confirmStatusUpdate}
+                  disabled={statusUpdating}
+                >
+                  {statusUpdating ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={s.confirmBtnText}>
+                      {statusSheet ? STATUS_META[statusSheet.next].nextLabel : 'Confirm'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Create Incident Bottom Sheet ── */}
+      <Modal visible={createVisible} transparent animationType="slide" onRequestClose={() => setCreateVisible(false)}>
+        <KeyboardAvoidingView
+          style={s.overlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <TouchableOpacity style={s.backdropTouch} onPress={() => setCreateVisible(false)} />
+          <View style={[s.bottomSheet, { maxHeight: '92%' }]}>
+            <View style={s.sheetHandle} />
+            <View style={s.sheetHeaderRow}>
               <Text style={s.sheetTitle}>Report Incident</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => setCreateVisible(false)}>
                 <Ionicons name="close" size={22} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              {/* Title */}
-              <Text style={s.fieldLabel}>Incident Title *</Text>
-              <TextInput
-                style={s.textInput}
-                placeholder="e.g. Blocked Emergency Exit, Noise Complaint"
-                placeholderTextColor={COLORS.textMuted}
-                value={formTitle}
-                onChangeText={setFormTitle}
-                returnKeyType="next"
-              />
+              <View style={s.sheetBody}>
+                {/* Title */}
+                <Text style={s.fieldLabel}>Incident Title *</Text>
+                <TextInput
+                  style={s.textInput}
+                  placeholder="e.g. Blocked Emergency Exit, Noise Complaint"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={formTitle}
+                  onChangeText={t => { setFormTitle(t); setFormError(''); }}
+                  returnKeyType="next"
+                />
 
-              {/* Location quick chips */}
-              <Text style={s.fieldLabel}>Location *</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.locationChips}
-              >
-                {LOCATION_CHIPS.map(loc => (
-                  <TouchableOpacity
-                    key={loc}
-                    style={[s.locChip, formLocation === loc && s.locChipActive]}
-                    onPress={() => setFormLocation(formLocation === loc ? '' : loc)}
-                  >
-                    <Text style={[s.locChipText, formLocation === loc && s.locChipTextActive]}>
-                      {loc}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              {!LOCATION_CHIPS.includes(formLocation) && formLocation.length > 0 && (
-                <Text style={s.customLocLabel}>Custom: {formLocation}</Text>
-              )}
-              <TextInput
-                style={[s.textInput, { marginTop: 6 }]}
-                placeholder="Or type a custom location"
-                placeholderTextColor={COLORS.textMuted}
-                value={LOCATION_CHIPS.includes(formLocation) ? '' : formLocation}
-                onChangeText={setFormLocation}
-              />
-
-              {/* Priority */}
-              <Text style={s.fieldLabel}>Priority</Text>
-              <View style={s.priorityRow}>
-                {(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as IncidentPriority[]).map(p => {
-                  const pm = PRIORITY_META[p];
-                  const sel = formPriority === p;
-                  return (
+                {/* Location */}
+                <Text style={s.fieldLabel}>Location *</Text>
+                <ScrollView
+                  horizontal showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.chipRow}
+                >
+                  {LOCATION_CHIPS.map(loc => (
                     <TouchableOpacity
-                      key={p}
-                      style={[s.priorityChip, sel && { backgroundColor: pm.bg, borderColor: pm.color }]}
-                      onPress={() => setFormPriority(p)}
+                      key={loc}
+                      style={[s.locChip, formLocation === loc && s.locChipActive]}
+                      onPress={() => { setFormLocation(formLocation === loc ? '' : loc); setFormError(''); }}
                     >
-                      <Ionicons name={pm.icon} size={12} color={sel ? pm.color : COLORS.textMuted} />
-                      <Text style={[s.priorityChipText, sel && { color: pm.color, fontWeight: '700' }]}>
-                        {pm.label}
+                      <Text style={[s.locChipText, formLocation === loc && s.locChipTextActive]}>
+                        {loc}
                       </Text>
                     </TouchableOpacity>
-                  );
-                })}
-              </View>
+                  ))}
+                </ScrollView>
+                <TextInput
+                  style={[s.textInput, { marginTop: 8 }]}
+                  placeholder="Or type a custom location"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={LOCATION_CHIPS.includes(formLocation) ? '' : formLocation}
+                  onChangeText={v => { setFormLocation(v); setFormError(''); }}
+                />
 
-              {/* Description */}
-              <Text style={s.fieldLabel}>Details</Text>
-              <TextInput
-                style={[s.textInput, { height: 80, textAlignVertical: 'top' }]}
-                placeholder="Describe the incident, immediate actions taken..."
-                placeholderTextColor={COLORS.textMuted}
-                multiline
-                value={formDesc}
-                onChangeText={setFormDesc}
-              />
+                {/* Priority */}
+                <Text style={s.fieldLabel}>Priority</Text>
+                <View style={s.priorityRow}>
+                  {(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as IncidentPriority[]).map(p => {
+                    const pm = PRIORITY_META[p];
+                    const sel = formPriority === p;
+                    return (
+                      <TouchableOpacity
+                        key={p}
+                        style={[s.priorityChip, sel && { backgroundColor: pm.bg, borderColor: pm.color }]}
+                        onPress={() => setFormPriority(p)}
+                      >
+                        <Ionicons name={pm.icon} size={12} color={sel ? pm.color : COLORS.textMuted} />
+                        <Text style={[s.priorityChipText, sel && { color: pm.color, fontWeight: '700' }]}>
+                          {pm.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
-              {/* Actions */}
-              <View style={s.sheetBtns}>
-                <TouchableOpacity style={s.cancelBtn} onPress={() => setModalVisible(false)}>
-                  <Text style={s.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[s.confirmBtn, { backgroundColor: GUARD_COLORS.accent }, submitting && { opacity: 0.7 }]}
-                  onPress={handleCreate}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={s.confirmBtnText}>Submit Report</Text>
-                  )}
-                </TouchableOpacity>
+                {/* Details */}
+                <Text style={s.fieldLabel}>Details</Text>
+                <TextInput
+                  style={[s.textInput, { height: 80, textAlignVertical: 'top' }]}
+                  placeholder="Describe the incident, immediate actions taken…"
+                  placeholderTextColor={COLORS.textMuted}
+                  multiline
+                  value={formDesc}
+                  onChangeText={setFormDesc}
+                />
+
+                {/* Inline error */}
+                {formError ? (
+                  <View style={s.errorRow}>
+                    <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                    <Text style={s.errorText}>{formError}</Text>
+                  </View>
+                ) : null}
+
+                {/* Actions */}
+                <View style={[s.sheetBtns, { marginBottom: 8 }]}>
+                  <TouchableOpacity style={s.cancelBtn} onPress={() => setCreateVisible(false)}>
+                    <Text style={s.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.confirmBtn, { backgroundColor: GUARD_COLORS.accent }, submitting && { opacity: 0.7 }]}
+                    onPress={handleCreate}
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="send-outline" size={15} color="#fff" />
+                        <Text style={s.confirmBtnText}>Submit Report</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             </ScrollView>
           </View>
@@ -511,73 +571,16 @@ export default function GuardIncidentsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+// ─────────────── Card styles ───────────────
 
-  // Header
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  headerTitle: { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text },
-  headerSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  addBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: GUARD_COLORS.accent, alignItems: 'center', justifyContent: 'center',
-  },
-
-  // Search
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
-    paddingHorizontal: 12, paddingVertical: 8, gap: 8,
-  },
-  searchIcon: { marginLeft: 2 },
-  searchInput: {
-    flex: 1, fontSize: 14, color: COLORS.text, paddingVertical: 6,
-  },
-  searchClear: { padding: 2 },
-
-  // Filters
-  filterRow: {
-    flexDirection: 'row', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 10,
-  },
-  filterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: RADIUS.full, backgroundColor: COLORS.surfaceAlt,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  filterChipActive: { backgroundColor: GUARD_COLORS.accent, borderColor: GUARD_COLORS.accentDark },
-  filterText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
-  filterTextActive: { color: '#fff' },
-  filterBadge: {
-    minWidth: 18, height: 18, borderRadius: 9,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.border, paddingHorizontal: 4,
-  },
-  filterBadgeActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
-  filterBadgeText: { fontSize: 10, fontWeight: '800', color: COLORS.textMuted },
-  filterBadgeTextActive: { color: '#fff' },
-
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-
-  // List
-  list: { padding: 12, gap: 10, paddingBottom: 32 },
-
-  // Card
+const c = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
     padding: 14, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
     overflow: 'hidden',
   },
   cardTop: { flexDirection: 'row', gap: 12, marginBottom: 10 },
-  iconBox: {
-    width: 44, height: 44, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  iconBox: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cardBody: { flex: 1, gap: 3 },
   cardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, lineHeight: 20 },
   cardDesc: { fontSize: 12, color: COLORS.textMuted, lineHeight: 17 },
@@ -591,8 +594,7 @@ const s = StyleSheet.create({
   },
   priorityBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.xs,
-    borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.xs, borderWidth: 1,
   },
   priorityText: { fontSize: 10, fontWeight: '700' },
   footerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -601,72 +603,150 @@ const s = StyleSheet.create({
   reportedBy: { fontSize: 11, color: COLORS.textMuted },
   statusChip: {
     paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: RADIUS.sm, minWidth: 60, alignItems: 'center',
+    borderRadius: RADIUS.sm, minWidth: 68, alignItems: 'center',
   },
   statusText: { fontSize: 11, fontWeight: '700' },
+});
 
-  // Empty
+// ─────────────── Screen styles ───────────────
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md, paddingVertical: 12,
+    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 },
+  headerSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  addBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: GUARD_COLORS.accent, alignItems: 'center', justifyContent: 'center',
+    ...SHADOWS.sm,
+  },
+
+  statsStrip: {
+    flexDirection: 'row', backgroundColor: COLORS.surface,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingVertical: 10,
+  },
+  statsCell: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 2 },
+  statsCellActive: { backgroundColor: COLORS.surfaceAlt },
+  statsBorder: { borderLeftWidth: 1, borderLeftColor: COLORS.border },
+  statsVal: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
+  statsLabel: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.4 },
+
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.md, paddingVertical: 8,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: COLORS.text, paddingVertical: 6 },
+
+  filterRow: { flexDirection: 'row', gap: 6, paddingHorizontal: SPACING.md, paddingVertical: 10 },
+  filterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: RADIUS.full, backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  filterChipActive: { backgroundColor: GUARD_COLORS.accent, borderColor: GUARD_COLORS.accentDark },
+  filterText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  filterTextActive: { color: '#fff' },
+  filterBadge: {
+    minWidth: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.border, paddingHorizontal: 4,
+  },
+  filterBadgeActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
+  filterBadgeText: { fontSize: 10, fontWeight: '800', color: COLORS.textMuted },
+  filterBadgeTextActive: { color: '#fff' },
+
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  list: { padding: SPACING.sm + 4, gap: SPACING.sm, paddingBottom: 32 },
+
   empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text, marginTop: 14 },
   emptyDesc: { fontSize: 13, color: COLORS.textMuted, marginTop: 4, textAlign: 'center', lineHeight: 19 },
+  emptyBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16,
+    backgroundColor: GUARD_COLORS.accent, borderRadius: RADIUS.lg,
+    paddingVertical: 10, paddingHorizontal: 20, ...SHADOWS.sm,
+  },
+  emptyBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
-  // Status modal
-  overlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', padding: 24,
-  },
-  sheetCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 20,
-  },
-  sheetTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 6 },
-  sheetSub: { fontSize: 14, color: COLORS.textMuted, marginBottom: 12, lineHeight: 20 },
-  sheetBtns: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  cancelBtn: {
-    flex: 1, paddingVertical: 12, borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt, alignItems: 'center',
-  },
-  cancelBtnText: { fontWeight: '700', color: COLORS.text },
-  confirmBtn: {
-    flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center',
-  },
-  confirmBtnText: { fontWeight: '700', color: '#fff' },
-
-  // Create bottom sheet
-  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  // Shared sheet layout
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdropTouch: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
   bottomSheet: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
-    paddingHorizontal: 20, paddingBottom: 32, maxHeight: '90%',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    ...SHADOWS.floating,
   },
   sheetHandle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: COLORS.border, alignSelf: 'center', marginTop: 12, marginBottom: 16,
+    width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginTop: 12, marginBottom: 4,
   },
   sheetHeaderRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
+  sheetTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  sheetSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  sheetBody: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, gap: 4 },
+
+  incidentPreview: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: COLORS.border,
+    marginBottom: 4,
+  },
+  incidentPreviewText: { flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.text },
+
+  sheetBtns: { flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.md },
+  cancelBtn: {
+    flex: 1, paddingVertical: 13, borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceAlt, alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  cancelBtnText: { fontWeight: '700', color: COLORS.textSecondary },
+  confirmBtn: {
+    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 13, borderRadius: RADIUS.md, ...SHADOWS.sm,
+  },
+  confirmBtnText: { fontWeight: '800', fontSize: 14, color: '#fff' },
 
   // Form
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: COLORS.text, marginTop: 12, marginBottom: 5 },
+  fieldLabel: {
+    fontSize: 11, fontWeight: '800', color: COLORS.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 12, marginBottom: 6,
+  },
   textInput: {
     backgroundColor: COLORS.surfaceAlt, borderRadius: RADIUS.md,
-    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14,
+    paddingHorizontal: 14, paddingVertical: 11, fontSize: 14,
     color: COLORS.text, borderWidth: 1, borderColor: COLORS.border,
   },
-  locationChips: { flexDirection: 'row', gap: 8, paddingBottom: 4 },
+  chipRow: { flexDirection: 'row', gap: 8, paddingBottom: 4 },
   locChip: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
   },
   locChipActive: { backgroundColor: GUARD_COLORS.accentLight, borderColor: GUARD_COLORS.accent },
   locChipText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
-  locChipTextActive: { color: GUARD_COLORS.accentDark },
-  customLocLabel: { fontSize: 11, color: GUARD_COLORS.accent, marginTop: 4, fontWeight: '600' },
+  locChipTextActive: { color: GUARD_COLORS.accentDark, fontWeight: '700' },
   priorityRow: { flexDirection: 'row', gap: 6 },
   priorityChip: {
-    flex: 1, paddingVertical: 7, borderRadius: RADIUS.sm,
+    flex: 1, paddingVertical: 8, borderRadius: RADIUS.sm,
     backgroundColor: COLORS.surfaceAlt, borderWidth: 1, borderColor: COLORS.border,
     alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4,
   },
   priorityChipText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
+
+  errorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,
+    backgroundColor: COLORS.errorLight, borderRadius: RADIUS.md,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  errorText: { flex: 1, fontSize: 12, color: COLORS.error, fontWeight: '600' },
 });
