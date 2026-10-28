@@ -20,32 +20,6 @@ const TYPE_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: s
   COURIER:  { icon: 'mail-outline',      color: '#0891B2',      bg: '#CFFAFE' },
 };
 
-const MOCK_PENDING: PendingApproval[] = [
-  {
-    id: 101,
-    visitorName: 'Swiggy Delivery',
-    purpose: 'Food Delivery',
-    passType: 'DELIVERY',
-    passCode: 'MANA-4471',
-    arrivedAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-    gate: 'Gate 1',
-    guardName: 'Ramesh',
-    flatNumber: 'Tower A-1204',
-  },
-  {
-    id: 102,
-    visitorName: 'Arjun Sharma',
-    visitorPhone: '9876543210',
-    purpose: 'Guest Visit',
-    passType: 'GUEST',
-    passCode: 'MANA-8823',
-    arrivedAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-    gate: 'Gate 1',
-    guardName: 'Ramesh',
-    flatNumber: 'Tower A-1204',
-    vehicleNumber: 'KA-04-MN-7788',
-  },
-];
 
 function waitingTime(iso: string): string {
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -76,7 +50,7 @@ export default function PendingApprovalsScreen() {
     staleTime: 3_000,
   });
 
-  const pending = (raw && raw.length > 0) ? raw : MOCK_PENDING;
+  const pending = raw ?? [];
 
   // Vibrate when a new visitor arrives while screen is open
   const prevCountRef = React.useRef(0);
@@ -136,7 +110,11 @@ export default function PendingApprovalsScreen() {
     const isUrgent = waitMins >= 5;
 
     return (
-      <View style={[s.card, isUrgent && s.cardUrgent]}>
+      <TouchableOpacity
+        style={[s.card, isUrgent && s.cardUrgent]}
+        onPress={() => router.push({ pathname: '/visitors/approve-visitor', params: { data: JSON.stringify(item) } })}
+        activeOpacity={0.92}
+      >
         {isUrgent && (
           <View style={s.urgentBanner}>
             <Ionicons name="time-outline" size={12} color="#B45309" />
@@ -212,7 +190,7 @@ export default function PendingApprovalsScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
