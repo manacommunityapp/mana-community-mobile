@@ -83,8 +83,26 @@ export const sportsService = {
   },
 
   async getTodayMatches(): Promise<MatchDto[]> {
-    const res = await api.get<MatchDto[]>('/sports/matches/today');
-    return res.data;
+    try {
+      const res = await api.get<MatchDto[]>('/sports/matches/today');
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {
+      // Backend provides /sports/matches (PagedResponse<SportsMatchResponse>)
+    }
+    try {
+      const res = await api.get<PageResponse<MatchDto>>('/sports/matches', {
+        params: { page: 0, size: 50 },
+      });
+      const all = res.data?.content || [];
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayList = all.filter((m: any) => {
+        const sched = m.scheduledAt || m.date;
+        return sched && sched.slice(0, 10) === todayStr;
+      });
+      return todayList.length > 0 ? todayList : all.slice(0, 6);
+    } catch {
+      return [];
+    }
   },
 
   async getMatch(id: number): Promise<MatchDto> {
@@ -147,28 +165,64 @@ export const sportsService = {
   },
 
   async getDashboardStats(): Promise<import('@/types/api').DashboardStatsDto> {
-    const res = await api.get<import('@/types/api').DashboardStatsDto>('/sports/dashboard/stats');
-    return res.data;
+    try {
+      const res = await api.get<import('@/types/api').DashboardStatsDto>('/sports/dashboard/stats');
+      return res.data;
+    } catch {
+      return { yourRegistrations: 0, liveEvents: 0, openRegistrations: 0, upcomingTournaments: 0 };
+    }
   },
 
   async getUpcomingEvents(): Promise<import('@/types/api').DashboardUpcomingEventDto[]> {
-    const res = await api.get<import('@/types/api').DashboardUpcomingEventDto[]>('/sports/dashboard/upcoming-events');
-    return res.data;
+    try {
+      const res = await api.get<import('@/types/api').DashboardUpcomingEventDto[]>('/sports/dashboard/upcoming');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    try {
+      const res = await api.get<import('@/types/api').DashboardUpcomingEventDto[]>('/sports/dashboard/upcoming-events');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   async getOpenTournaments(): Promise<import('@/types/api').DashboardTournamentCardDto[]> {
-    const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/tournaments/open');
-    return res.data;
+    try {
+      const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/dashboard/open-tournaments');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    try {
+      const res = await api.get<any>('/sports/tournaments/open');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   async getClosedTournaments(): Promise<import('@/types/api').DashboardTournamentCardDto[]> {
-    const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/tournaments/closed');
-    return res.data;
+    try {
+      const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/dashboard/closed-tournaments');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    try {
+      const res = await api.get<any>('/sports/tournaments/closed');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   async getMyRegistrations(): Promise<import('@/types/api').DashboardMyRegistrationDto[]> {
-    const res = await api.get<import('@/types/api').DashboardMyRegistrationDto[]>('/sports/dashboard/my-registrations');
-    return res.data;
+    try {
+      const res = await api.get<import('@/types/api').DashboardMyRegistrationDto[]>('/sports/dashboard/my-registrations');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    try {
+      const res = await api.get<any>('/sports/registrations/mine');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   async registerForEvent(
@@ -207,31 +261,46 @@ export const sportsService = {
     category: LeaderboardCategory,
     period: 'MONTH' | 'SEASON' | 'ALL_TIME' = 'ALL_TIME',
   ): Promise<LeaderboardEntryDto[]> {
-    const res = await api.get<LeaderboardEntryDto[]>('/sports/leaderboard', {
-      params: {
-        sport:    sport === 'ALL' ? undefined : sport,
-        category,
-        period,
-      },
-    });
-    return res.data;
+    try {
+      const res = await api.get<LeaderboardEntryDto[]>('/sports/leaderboard', {
+        params: {
+          sport:    sport === 'ALL' ? undefined : sport,
+          category,
+          period,
+        },
+      });
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return [];
   },
 
   // ── Badges ───────────────────────────────────────────────────
   async getAllBadges(): Promise<BadgeDto[]> {
-    const res = await api.get<BadgeDto[]>('/sports/badges');
-    return res.data;
+    try {
+      const res = await api.get<BadgeDto[]>('/sports/badges');
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 
   async getPlayerBadges(userId: number): Promise<BadgeDto[]> {
-    const res = await api.get<BadgeDto[]>(`/sports/players/${userId}/badges`);
-    return res.data;
+    try {
+      const res = await api.get<BadgeDto[]>(`/sports/players/${userId}/badges`);
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 
   // ── Match Photo Gallery ──────────────────────────────────────
   async getMatchPhotos(matchId: number): Promise<MatchPhotoDto[]> {
-    const res = await api.get<MatchPhotoDto[]>(`/sports/matches/${matchId}/photos`);
-    return res.data;
+    try {
+      const res = await api.get<MatchPhotoDto[]>(`/sports/matches/${matchId}/photos`);
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 
   async uploadMatchPhoto(
@@ -278,26 +347,28 @@ export const sportsService = {
       const res = await api.get<SportsChallengeDto[]>('/sports/challenges', {
         params: { sport },
       });
-      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+      if (Array.isArray(res.data)) {
+        return sport ? res.data.filter((c) => c.sport === sport) : res.data;
+      }
     } catch (err: any) {
       if (err?.response?.status !== 404) {
-        secureLog.warn('[sportsService] Challenges API unavailable, using fallback', err?.message);
+        secureLog.warn('[sportsService] Challenges API unavailable', err?.message);
       }
     }
     return sport
-      ? FALLBACK_CHALLENGES.filter((c) => c.sport === sport)
-      : [...FALLBACK_CHALLENGES];
+      ? sessionChallenges.filter((c) => c.sport === sport)
+      : [...sessionChallenges];
   },
 
   async createChallenge(req: CreateSportsChallengeRequest): Promise<SportsChallengeDto> {
     try {
       const res = await api.post<SportsChallengeDto>('/sports/challenges', req);
       if (res.data) {
-        FALLBACK_CHALLENGES.unshift(res.data);
+        sessionChallenges.unshift(res.data);
         return res.data;
       }
     } catch (err: any) {
-      secureLog.warn('[sportsService] Create challenge API unavailable, creating local challenge', err?.message);
+      secureLog.warn('[sportsService] Create challenge API unavailable, saving to session', err?.message);
     }
     const emojiMap: Record<string, { emoji: string; color: string; bg: string }> = {
       BADMINTON:    { emoji: '🏸', color: '#7C3AED', bg: '#F5F3FF' },
@@ -315,10 +386,10 @@ export const sportsService = {
       sport: req.sport,
       creatorId: 1,
       creatorName: 'You (Host)',
-      creatorFlat: 'Flat 504 (Tower B)',
+      creatorFlat: 'Resident',
       format: req.format,
       venue: req.venue || 'Clubhouse Sports Arena',
-      scheduledTime: req.scheduledTime || 'Today 6:00 PM',
+      scheduledTime: req.scheduledTime || 'Scheduled',
       status: 'OPEN',
       emoji: style.emoji,
       color: style.color,
@@ -326,99 +397,30 @@ export const sportsService = {
       notes: req.notes,
       createdAt: new Date().toISOString(),
     };
-    FALLBACK_CHALLENGES.unshift(newChallenge);
+    sessionChallenges.unshift(newChallenge);
     return newChallenge;
   },
 
-  async acceptChallenge(challengeId: number, challengerName = 'You', challengerFlat = 'Flat 504'): Promise<SportsChallengeDto> {
+  async acceptChallenge(challengeId: number, challengerName = 'You', challengerFlat = 'Resident'): Promise<SportsChallengeDto> {
     try {
       const res = await api.post<SportsChallengeDto>(`/sports/challenges/${challengeId}/accept`);
       if (res.data) return res.data;
     } catch (err: any) {
-      secureLog.warn(`[sportsService] Accept challenge API failed for ${challengeId}, updating locally`, err?.message);
+      secureLog.warn(`[sportsService] Accept challenge API failed for ${challengeId}`, err?.message);
     }
-    const idx = FALLBACK_CHALLENGES.findIndex((c) => c.id === challengeId);
+    const idx = sessionChallenges.findIndex((c) => c.id === challengeId);
     if (idx !== -1) {
-      FALLBACK_CHALLENGES[idx] = {
-        ...FALLBACK_CHALLENGES[idx],
+      sessionChallenges[idx] = {
+        ...sessionChallenges[idx],
         status: 'ACCEPTED',
         challengerName,
         challengerFlat,
       };
-      return FALLBACK_CHALLENGES[idx];
+      return sessionChallenges[idx];
     }
     throw new Error('Challenge not found');
   },
 };
 
-const FALLBACK_CHALLENGES: SportsChallengeDto[] = [
-  {
-    id: 1,
-    title: 'Badminton Singles Match',
-    sport: 'BADMINTON',
-    creatorId: 101,
-    creatorName: 'Tower A & B Residents (Vikram)',
-    creatorFlat: 'Tower A-202',
-    format: '1v1 Friendly',
-    venue: 'Clubhouse Court 1',
-    scheduledTime: 'Today 7:00 PM',
-    status: 'OPEN',
-    emoji: '🏸',
-    color: '#7C3AED',
-    bg: '#F5F3FF',
-    notes: 'Intermediate level, Yonex Mavis 350 nylon shuttles',
-    createdAt: new Date(Date.now() - 2 * 3600000).toISOString(),
-  },
-  {
-    id: 2,
-    title: 'Box Cricket Tournament',
-    sport: 'CRICKET',
-    creatorId: 102,
-    creatorName: 'Society Sports Committee',
-    creatorFlat: 'Tower C-404',
-    format: '6v6 Box',
-    venue: 'Central Turf Arena',
-    scheduledTime: 'Tomorrow 6:30 AM',
-    status: 'OPEN',
-    emoji: '🏏',
-    color: '#2563EB',
-    bg: '#EFF6FF',
-    notes: 'Tennis ball box cricket, 6 overs per side',
-    createdAt: new Date(Date.now() - 5 * 3600000).toISOString(),
-  },
-  {
-    id: 3,
-    title: 'Table Tennis Knockout',
-    sport: 'TABLE_TENNIS',
-    creatorId: 103,
-    creatorName: 'Clubhouse Wing (Amit P)',
-    creatorFlat: 'Tower B-102',
-    format: '1v1 Knockout',
-    venue: 'Clubhouse 1st Floor TT Room',
-    scheduledTime: 'Sunday 5:00 PM',
-    status: 'OPEN',
-    emoji: '🏓',
-    color: '#4F46E5',
-    bg: '#EEF2FF',
-    notes: 'Best of 3 sets, 11 points each',
-    createdAt: new Date(Date.now() - 10 * 3600000).toISOString(),
-  },
-  {
-    id: 4,
-    title: 'Weekend Tennis Doubles',
-    sport: 'TENNIS',
-    creatorId: 104,
-    creatorName: 'Tennis Enthusiasts (Rahul)',
-    creatorFlat: 'Tower D-801',
-    format: '2v2 Doubles',
-    venue: 'Outdoor Court 2',
-    scheduledTime: 'Saturday 7:30 AM',
-    status: 'OPEN',
-    emoji: '🎾',
-    color: '#059669',
-    bg: '#ECFDF5',
-    notes: 'Looking for 1 partner and 2 opponents for friendly doubles',
-    createdAt: new Date(Date.now() - 18 * 3600000).toISOString(),
-  },
-];
+const sessionChallenges: SportsChallengeDto[] = [];
 

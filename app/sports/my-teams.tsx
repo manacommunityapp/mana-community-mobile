@@ -5,8 +5,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { sportsService } from '@/services/sportsService';
-import { COLORS, getInitials } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, getInitials } from '@/constants/config';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import type { TeamDto } from '@/types/api';
 
@@ -147,12 +148,20 @@ export default function MyTeamsScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={s.back}>‹</Text>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={s.title}>My Teams</Text>
-        <TouchableOpacity style={s.joinBtn} onPress={() => router.push('/sports/tournaments')}>
-          <Text style={s.joinBtnText}>+ Join</Text>
+        <View style={s.headerCenter}>
+          <Text style={s.title}>My Squads & Teams</Text>
+          <Text style={s.subTitle}>{teams.length} team{teams.length !== 1 ? 's' : ''} enrolled</Text>
+        </View>
+        <TouchableOpacity
+          style={s.joinBtn}
+          onPress={() => router.push('/sports/tournaments')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={14} color="#fff" />
+          <Text style={s.joinBtnText}>Join Team</Text>
         </TouchableOpacity>
       </View>
 
@@ -163,14 +172,21 @@ export default function MyTeamsScreen() {
           data={teams}
           keyExtractor={(t) => String(t.id)}
           renderItem={({ item }) => <TeamCard team={item} onLeave={handleLeave} onDissolve={handleDissolve} />}
-          contentContainerStyle={{ paddingVertical: 8 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          contentContainerStyle={{ paddingVertical: 12 }}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Text style={s.emptyEmoji}>👥</Text>
+              <View style={s.emptyIconCircle}>
+                <Ionicons name="people-outline" size={40} color={COLORS.primary} />
+              </View>
               <Text style={s.emptyTitle}>No teams yet</Text>
-              <Text style={s.emptySub}>Join a tournament and register your team.</Text>
-              <TouchableOpacity style={s.emptyBtn} onPress={() => router.push('/sports/tournaments')}>
+              <Text style={s.emptySub}>Register or join a squad to compete in community sports tournaments.</Text>
+              <TouchableOpacity
+                style={s.emptyBtn}
+                onPress={() => router.push('/sports/tournaments')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="trophy-outline" size={15} color="#fff" />
                 <Text style={s.emptyBtnText}>Browse Tournaments</Text>
               </TouchableOpacity>
             </View>
@@ -183,15 +199,17 @@ export default function MyTeamsScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: COLORS.background },
-  header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
-  back:         { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:        { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
-  joinBtn:      { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 },
-  joinBtnText:  { color: '#fff', fontWeight: '700', fontSize: 14 },
-  empty:        { alignItems: 'center', paddingTop: 80, gap: 10 },
-  emptyEmoji:   { fontSize: 48 },
-  emptyTitle:   { fontSize: 18, fontWeight: '700', color: COLORS.text },
-  emptySub:     { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', paddingHorizontal: 32 },
-  emptyBtn:     { backgroundColor: COLORS.primary, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10, marginTop: 4 },
-  emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 12, ...SHADOWS.sm },
+  backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+  headerCenter: { flex: 1 },
+  title:        { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '800', color: COLORS.text, letterSpacing: -0.2 },
+  subTitle:     { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  joinBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.primary, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 7 },
+  joinBtnText:  { color: '#fff', fontWeight: '700', fontSize: 13 },
+  empty:        { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32, gap: 10 },
+  emptyIconCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  emptyTitle:   { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  emptySub:     { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', lineHeight: 18 },
+  emptyBtn:     { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, borderRadius: RADIUS.full, paddingHorizontal: 18, paddingVertical: 10, marginTop: 8 },
+  emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });

@@ -77,7 +77,7 @@ export default function TrainerProfileScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />
         }
       >
         {/* Header */}

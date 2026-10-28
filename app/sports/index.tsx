@@ -153,6 +153,16 @@ export default function SportsHubScreen() {
     staleTime: 30_000,
   });
 
+  // 9. Community Sports Overall Dashboard Stats
+  const {
+    data: dashStats,
+    refetch: refetchStats,
+  } = useQuery({
+    queryKey: ['sports-dashboard-stats'],
+    queryFn: sportsService.getDashboardStats,
+    staleTime: 30_000,
+  });
+
   // ── Refetch All ───────────────────────────────────────────────────────
   const isRefreshing = isRefetchingLive;
   const handleRefresh = async () => {
@@ -165,6 +175,7 @@ export default function SportsHubScreen() {
       refetchLeaderboard(),
       refetchOpenTournaments(),
       refetchRegistrations(),
+      refetchStats(),
     ]);
   };
 
@@ -227,11 +238,41 @@ export default function SportsHubScreen() {
   }, [myRegistrationsApi, customRegistrations, user?.name, user?.fullName]);
 
   const sportsKpis = [
-    { label: 'Tournaments', value: String(openTournamentsDash.length), sub: 'Open for entry', icon: 'trophy', color: COLORS.success, bg: '#ECFDF5' },
-    { label: 'Live Now', value: String(filteredLive.length), sub: 'Games ongoing', icon: 'flash', color: COLORS.error, bg: '#FEF2F2' },
-    { label: 'Upcoming', value: String(filteredToday.length), sub: 'Next 7 days', icon: 'calendar', color: COLORS.warning, bg: '#FFFBEB' },
-    { label: 'Facilities', value: String(sportsFacilities.length), sub: 'Available to book', icon: 'football', color: COLORS.primary, bg: '#EEF2FF' },
+    {
+      label: 'Tournaments',
+      value: String(dashStats?.openRegistrations ?? openTournamentsDash.length),
+      sub: 'Open for entry',
+      icon: 'trophy',
+      color: COLORS.success,
+      bg: '#ECFDF5',
+    },
+    {
+      label: 'Live Now',
+      value: String(dashStats?.liveEvents ?? filteredLive.length),
+      sub: 'Games ongoing',
+      icon: 'flash',
+      color: COLORS.error,
+      bg: '#FEF2F2',
+    },
+    {
+      label: 'Upcoming',
+      value: String(dashStats?.upcomingTournaments ?? filteredToday.length),
+      sub: 'Next 7 days',
+      icon: 'calendar',
+      color: COLORS.warning,
+      bg: '#FFFBEB',
+    },
+    {
+      label: 'Facilities',
+      value: String(sportsFacilities.length),
+      sub: 'Available to book',
+      icon: 'football',
+      color: COLORS.primary,
+      bg: '#EEF2FF',
+    },
   ];
+
+  const communityLabel = (user as any)?.community?.name || (user as any)?.communityName || 'Mana Community';
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -247,7 +288,7 @@ export default function SportsHubScreen() {
           </TouchableOpacity>
           <View style={s.headerMid}>
             <Text style={s.headerTitle}>🏟️  Sports Hub</Text>
-            <Text style={s.headerSub}>Summer 2026 Season League</Text>
+            <Text style={s.headerSub} numberOfLines={1}>{communityLabel} Sports Arena</Text>
           </View>
           <View style={s.headerRight}>
             {isSportsAdmin && (
@@ -551,7 +592,7 @@ export default function SportsHubScreen() {
                     </Text>
                     <View style={s.fixtureMetaRow}>
                       <Ionicons name="time-outline" size={11} color={COLORS.textMuted} />
-                      <Text style={s.fixtureMetaText}>{m.scheduledAt ? new Date(m.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '7:00 PM'}</Text>
+                      <Text style={s.fixtureMetaText}>{m.scheduledAt ? new Date(m.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Scheduled'}</Text>
                       <Text style={s.fixtureMetaDot}>·</Text>
                       <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
                       <Text style={s.fixtureMetaText} numberOfLines={1}>
@@ -643,7 +684,7 @@ export default function SportsHubScreen() {
                     </View>
                     <Text style={s.courtName} numberOfLines={1}>{court.name}</Text>
                     <Text style={s.courtSlot} numberOfLines={1}>
-                      {court.openTime} - {court.closeTime}
+                      {court.openTime && court.closeTime ? `${court.openTime} - ${court.closeTime}` : 'Open Daily'}
                     </Text>
                     {court.hourlyRate > 0 ? (
                       <Text style={s.courtFee}>₹{court.hourlyRate}/hr</Text>
@@ -698,23 +739,44 @@ export default function SportsHubScreen() {
           )}
         </View>
 
-        {/* ── Summer 2026 Season Promo Banner ── */}
+        {/* ── Dynamic Open Tournament or Community Action Banner ── */}
         <View style={s.promoBanner}>
           <LinearGradient
             colors={['#1E1B4B', '#3730A3']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={s.promoGradient}
           >
-            <Ionicons name="trending-up" size={24} color="#C7D2FE" style={{ marginBottom: 6 }} />
-            <Text style={s.promoTitle}>Summer 2026 Season</Text>
-            <Text style={s.promoSub}>Registration is open. Join a team or create your own squad.</Text>
-            <TouchableOpacity
-              style={s.promoBtn}
-              onPress={() => setShowRegisterModal(true)}
-              activeOpacity={0.88}
-            >
-              <Text style={s.promoBtnText}>Register Your Team</Text>
-            </TouchableOpacity>
+            {openTournamentsDash.length > 0 ? (
+              <>
+                <Ionicons name="trophy" size={24} color="#FBBF24" style={{ marginBottom: 6 }} />
+                <Text style={s.promoTitle}>{openTournamentsDash[0].name}</Text>
+                <Text style={s.promoSub}>
+                  {openTournamentsDash[0].events?.length
+                    ? `${openTournamentsDash[0].events.length} sports categories open for entry. Join with your squad or as a solo player.`
+                    : 'Registration is open now! Participate in community sports tournaments.'}
+                </Text>
+                <TouchableOpacity
+                  style={s.promoBtn}
+                  onPress={() => router.push(`/sports/tournament/${openTournamentsDash[0].id}`)}
+                  activeOpacity={0.88}
+                >
+                  <Text style={s.promoBtnText}>View Tournament & Register →</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Ionicons name="flash" size={24} color="#C7D2FE" style={{ marginBottom: 6 }} />
+                <Text style={s.promoTitle}>Community Sports Hub</Text>
+                <Text style={s.promoSub}>Book court slots, post open challenges, and join upcoming leagues with your neighbors.</Text>
+                <TouchableOpacity
+                  style={s.promoBtn}
+                  onPress={() => setShowRegisterModal(true)}
+                  activeOpacity={0.88}
+                >
+                  <Text style={s.promoBtnText}>Register Your Squad</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </LinearGradient>
         </View>
 
