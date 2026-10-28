@@ -102,14 +102,11 @@ export default function GuardTabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="sos"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="alert-circle-outline" iconFocused="alert-circle" label="SOS" focused={focused} />
-          ),
-        }}
-      />
+      {/* Hidden screens — navigable from dashboard, not shown in tab bar */}
+      <Tabs.Screen name="attendance" options={{ href: null }} />
+      <Tabs.Screen name="daily-log" options={{ href: null }} />
+      <Tabs.Screen name="handover" options={{ href: null }} />
+      <Tabs.Screen name="scan" options={{ href: null }} />
     </Tabs>
   );
 }
