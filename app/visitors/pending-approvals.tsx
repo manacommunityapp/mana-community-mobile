@@ -1,10 +1,10 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, RefreshControl, TextInput, Modal,
+  Alert, ActivityIndicator, RefreshControl, TextInput, Modal, Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
@@ -61,14 +61,32 @@ export default function PendingApprovalsScreen() {
   const [rejectReason, setRejectReason] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
+  const [isFocused, setIsFocused] = useState(false);
+
+  useFocusEffect(useCallback(() => {
+    setIsFocused(true);
+    return () => setIsFocused(false);
+  }, []));
+
   const { data: raw, isLoading, refetch } = useQuery<PendingApproval[]>({
     queryKey: ['visitors', 'pending-approvals'],
     queryFn: () => visitorApprovalService.getPendingApprovals(),
-    refetchInterval: 15_000,
-    staleTime: 10_000,
+    // Poll every 5s when screen is open, 20s in background
+    refetchInterval: isFocused ? 5_000 : 20_000,
+    staleTime: 3_000,
   });
 
   const pending = (raw && raw.length > 0) ? raw : MOCK_PENDING;
+
+  // Vibrate when a new visitor arrives while screen is open
+  const prevCountRef = React.useRef(0);
+  React.useEffect(() => {
+    const count = raw?.length ?? 0;
+    if (isFocused && count > prevCountRef.current) {
+      Vibration.vibrate([100, 60, 100]);
+    }
+    prevCountRef.current = count;
+  }, [raw?.length, isFocused]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

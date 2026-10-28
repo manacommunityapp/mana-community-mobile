@@ -19,6 +19,7 @@ export default function GuardLayout() {
   return <Stack screenOptions={{ headerShown: false }}>
     <Stack.Screen name="index" />
     <Stack.Screen name="tabs" />
+    <Stack.Screen name="walk-in" />
     <Stack.Screen name="tabs/attendance" />
     <Stack.Screen name="tabs/handover" />
     <Stack.Screen name="tabs/daily-log" />

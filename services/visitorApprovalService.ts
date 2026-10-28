@@ -15,6 +15,20 @@ export interface PendingApproval {
   guardName?: string;
   expiresAt?: string;
   flatNumber?: string;
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'DENIED';
+  approvalDecision?: string;
+  denialReason?: string;
+}
+
+export interface WalkInRequest {
+  visitorName: string;
+  visitorPhone?: string;
+  purpose: string;
+  passType: string;
+  vehicleNumber?: string;
+  flatNumber: string;
+  gate?: string;
+  guardName?: string;
 }
 
 export interface ApprovalDecision {
@@ -56,6 +70,24 @@ export const visitorApprovalService = {
       return res.data?.length ?? 0;
     } catch {
       return 0;
+    }
+  },
+
+  async createWalkInRequest(req: WalkInRequest): Promise<PendingApproval> {
+    try {
+      const res = await api.post<PendingApproval>('/visitors/walk-in', req);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to send approval request to resident.');
+    }
+  },
+
+  async pollApprovalStatus(id: number): Promise<PendingApproval | null> {
+    try {
+      const res = await api.get<PendingApproval>(`/visitors/${id}/approval-status`);
+      return res.data ?? null;
+    } catch {
+      return null;
     }
   },
 };

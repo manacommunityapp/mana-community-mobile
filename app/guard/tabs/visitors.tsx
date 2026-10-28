@@ -4,6 +4,7 @@ import {
   FlatList, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
@@ -38,6 +39,7 @@ const FILTER_STATUS: Record<FilterKey, VisitorStatus | null> = {
 };
 
 export default function GuardVisitorsScreen() {
+  const router = useRouter();
   const [visitors, setVisitors] = useState<GuardVisitor[]>([]);
   const [filter, setFilter] = useState<FilterKey>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -178,8 +180,11 @@ export default function GuardVisitorsScreen() {
           <TouchableOpacity style={s.headerBtn}>
             <Ionicons name="search" size={18} color={COLORS.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={s.headerBtn}>
-            <Ionicons name="add" size={20} color={COLORS.text} />
+          <TouchableOpacity
+            style={[s.headerBtn, { backgroundColor: GUARD_COLORS.accentLight }]}
+            onPress={() => router.push('/guard/walk-in')}
+          >
+            <Ionicons name="add" size={20} color={GUARD_COLORS.accent} />
           </TouchableOpacity>
         </View>
       </View>
