@@ -698,6 +698,38 @@ export default function ProfileScreen() {
             iconColor="#4338CA"
             iconBg="#E0E7FF"
           />
+          <MenuItem
+            icon="car-sport-outline"
+            label="My Vehicles"
+            sublabel="Register plates for resident gate access"
+            onPress={() => router.push('/vehicles')}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
+          />
+          <MenuItem
+            icon="people-circle-outline"
+            label="Trusted Visitors"
+            sublabel="Recurring maid, driver and family entry"
+            onPress={() => router.push('/visitors/trusted')}
+            iconColor="#059669"
+            iconBg="#D1FAE5"
+          />
+          <MenuItem
+            icon="cube-outline"
+            label="Package Room"
+            sublabel="Delivery collection and OTPs"
+            onPress={() => router.push('/packages')}
+            iconColor="#D97706"
+            iconBg="#FEF3C7"
+          />
+          <MenuItem
+            icon="videocam-outline"
+            label="Resident Intercom"
+            sublabel="Call the gate guard before entry"
+            onPress={() => router.push('/intercom')}
+            iconColor="#4F46E5"
+            iconBg="#E0E7FF"
+          />
           {showHelpdesk && (
             <MenuItem
               icon="headset-outline"
@@ -1020,7 +1052,11 @@ export default function ProfileScreen() {
             icon="car-outline"
             label="My Vehicles"
             sublabel="Register vehicles for ANPR auto gate entry"
-            onPress={() => router.push('/profile/vehicles')}
+
+            onPress={() => router.push('/vehicles')}
+
+            //onPress={() => router.push('/profile/vehicles')}
+
             iconColor="#2563EB"
             iconBg="#DBEAFE"
           />
