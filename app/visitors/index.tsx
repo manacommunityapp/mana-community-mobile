@@ -12,6 +12,7 @@ import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
+import GatePassQR from '@/components/common/GatePassQR';
 
 type VisitorStatus = 'EXPECTED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'DENIED';
 type VisitorType = 'GUEST' | 'DELIVERY' | 'CAB' | 'SERVICE';
@@ -657,69 +658,23 @@ export default function VisitorsScreen() {
         </View>
       </Modal>
 
-      {/* ── Gate Pass QR / Share Modal ── */}
+      {/* ── Gate Pass QR Modal ── */}
       <Modal visible={!!selectedPass} transparent animationType="fade">
         <View style={s.modalOverlay}>
           <View style={s.passModalCard}>
-            <View style={s.passHeaderRow}>
-              <View style={s.passBadge}>
-                <Ionicons name="shield-checkmark" size={16} color={COLORS.primary} />
-                <Text style={s.passBadgeText}>Verified Gate Entry Pass</Text>
-              </View>
-              <TouchableOpacity onPress={() => setSelectedPass(null)}>
-                <Ionicons name="close" size={22} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            </View>
-
             {selectedPass && (
-              <View style={s.passModalBody}>
-                <Text style={s.passGuestName}>{selectedPass.name}</Text>
-                <Text style={s.passFlat}>{selectedPass.flat}</Text>
-
-                {/* Gate Pass Code Box */}
-                <View style={s.passCodeBox}>
-                  <Text style={s.passCodeLabel}>Security Entry Passcode</Text>
-                  <Text style={s.passCodeVal}>{selectedPass.passCode}</Text>
-                  <Ionicons name="qr-code-outline" size={54} color={COLORS.primary} style={{ marginTop: 8 }} />
-                  <Text style={s.passCodeSub}>Show code or scan QR at Mana security checkpoint</Text>
-                </View>
-
-                <View style={s.passMetaList}>
-                  <View style={s.passMetaItem}>
-                    <Text style={s.passMetaKey}>Purpose:</Text>
-                    <Text style={s.passMetaVal}>{selectedPass.purpose}</Text>
-                  </View>
-                  {selectedPass.vehicleNumber && (
-                    <View style={s.passMetaItem}>
-                      <Text style={s.passMetaKey}>Vehicle:</Text>
-                      <Text style={s.passMetaVal}>{selectedPass.vehicleNumber}</Text>
-                    </View>
-                  )}
-                  <View style={s.passMetaItem}>
-                    <Text style={s.passMetaKey}>Status:</Text>
-                    <Text style={[s.passMetaVal, { color: STATUS_META[selectedPass.status].color, fontWeight: '800' }]}>
-                      {STATUS_META[selectedPass.status].label}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* WhatsApp & Done Actions */}
-                <View style={s.passModalActions}>
-                  <TouchableOpacity
-                    style={s.whatsappShareBtn}
-                    onPress={() => handleSharePass(selectedPass)}
-                  >
-                    <Ionicons name="share-social-outline" size={16} color="#FFFFFF" />
-                    <Text style={s.whatsappShareBtnText}>Share Pass</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={s.passDoneBtn}
-                    onPress={() => setSelectedPass(null)}
-                  >
-                    <Text style={s.passDoneBtnText}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <GatePassQR
+                pass={{
+                  passCode: selectedPass.passCode,
+                  visitorName: selectedPass.name,
+                  flat: selectedPass.flat,
+                  purpose: selectedPass.purpose,
+                  vehicleNumber: selectedPass.vehicleNumber,
+                  status: selectedPass.status,
+                  expectedAt: selectedPass.expectedAt,
+                }}
+                onClose={() => setSelectedPass(null)}
+              />
             )}
           </View>
         </View>
