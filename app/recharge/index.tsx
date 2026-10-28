@@ -508,7 +508,8 @@ export default function RechargeScreen() {
         </View>
 
         {/* ── Frequent & Family Recharges Carousel with Expiry ──── */}
-        {COMMUNITY_CONTACTS.length > 0 && <View style={s.sectionHeader}>
+        {COMMUNITY_CONTACTS.length > 0 && <>
+          <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>Household & Staff Telecom</Text>
           <TouchableOpacity onPress={() => setShowContactPicker(true)}>
             <Text style={s.viewAllContactsText}>View All ({COMMUNITY_CONTACTS.length}) →</Text>
@@ -566,7 +567,8 @@ export default function RechargeScreen() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>}
+          </ScrollView>
+        </>}
 
         {/* ── Select Operator Grid ───────────────────────────────── */}
         <View style={s.card}>
