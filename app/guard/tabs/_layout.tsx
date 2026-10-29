@@ -107,6 +107,8 @@ export default function GuardTabsLayout() {
       <Tabs.Screen name="daily-log" options={{ href: null }} />
       <Tabs.Screen name="handover" options={{ href: null }} />
       <Tabs.Screen name="scan" options={{ href: null }} />
+      <Tabs.Screen name="parcels" options={{ href: null }} />
+      <Tabs.Screen name="vehicles" options={{ href: null }} />
     </Tabs>
   );
 }

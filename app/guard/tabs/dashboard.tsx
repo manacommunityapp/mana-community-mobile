@@ -375,6 +375,8 @@ export default function GuardDashboard() {
           <QuickBtn icon="journal-outline"  label="Daily Log"    onPress={() => router.push('/guard/tabs/daily-log')}  color="#059669" bg="#D1FAE5" />
           <QuickBtn icon="walk-outline"     label="Patrol"       onPress={() => router.push('/guard/tabs/patrol')}     color="#4F46E5" bg="#EEF2FF" />
           <QuickBtn icon="swap-horizontal"  label="Handover"     onPress={() => router.push('/guard/tabs/handover')}   color="#0D9488" bg="#CCFBF1" />
+          <QuickBtn icon="cube-outline"     label="Parcels"      onPress={() => router.push('/guard/tabs/parcels')}    color="#D97706" bg="#FEF3C7" />
+          <QuickBtn icon="car-outline"      label="Vehicles"     onPress={() => router.push('/guard/tabs/vehicles')}   color="#0F766E" bg="#CCFBF1" />
           <QuickBtn icon="videocam-outline" label="CCTV"         onPress={() => router.push('/guard/cctv')}            color="#6B7280" bg="#F3F4F6" />
         </ScrollView>
 
