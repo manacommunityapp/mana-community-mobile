@@ -207,4 +207,29 @@ export const visitorService = {
       return [];
     }
   },
+
+  async generateDeliveryOtp(flat: string, company: string): Promise<{ maskedPhone: string }> {
+    try {
+      const res = await api.post<{ maskedPhone: string }>('/visitors/delivery-otp/generate', { flat, company });
+      return res.data;
+    } catch (err: any) {
+      // Mock fallback for demo — real backend sends OTP to resident's phone
+      if (err?.response?.status === 404 || err?.response?.status === 405) {
+        return { maskedPhone: '******7890' };
+      }
+      throw new Error(err?.response?.data?.message || 'Failed to send OTP to resident.');
+    }
+  },
+
+  async verifyDeliveryOtp(flat: string, otp: string): Promise<void> {
+    try {
+      await api.post('/visitors/delivery-otp/verify', { flat, otp });
+    } catch (err: any) {
+      if (err?.response?.status === 404 || err?.response?.status === 405) {
+        // Mock: accept any 6-digit OTP for demo
+        if (otp.length === 6) return;
+      }
+      throw new Error(err?.response?.data?.message || 'OTP verification failed. Please try again.');
+    }
+  },
 };

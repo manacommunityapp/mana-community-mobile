@@ -15,7 +15,7 @@ import { visitorApprovalService, type PendingApproval } from '@/services/visitor
 import { staffService } from '@/services/staffService';
 import { useAuth } from '@/hooks/useAuth';
 
-type Mode = 'scanner' | 'manual' | 'walkin' | 'staffotp';
+type Mode = 'scanner' | 'manual' | 'walkin' | 'staffotp' | 'deliveryotp';
 
 interface ScanRecord {
   code: string;
@@ -82,6 +82,16 @@ export default function GuardScanScreen() {
   const [staffOtpError, setStaffOtpError] = useState('');
   const [staffOtpSuccess, setStaffOtpSuccess] = useState(false);
 
+  // Delivery OTP flow
+  const [deliveryFlat, setDeliveryFlat] = useState('');
+  const [deliveryCompany, setDeliveryCompany] = useState('');
+  const [deliveryOtpSent, setDeliveryOtpSent] = useState(false);
+  const [deliveryMaskedPhone, setDeliveryMaskedPhone] = useState('');
+  const [deliveryOtpInput, setDeliveryOtpInput] = useState('');
+  const [deliveryOtpLoading, setDeliveryOtpLoading] = useState(false);
+  const [deliveryOtpError, setDeliveryOtpError] = useState('');
+  const [deliveryOtpSuccess, setDeliveryOtpSuccess] = useState(false);
+
   // Prevent double-scans: ignore same QR code for 3 seconds
   const lastScanned = useRef<{ code: string; at: number } | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -138,6 +148,43 @@ export default function GuardScanScreen() {
   const resetStaffOtp = () => {
     setStaffIdInput(''); setStaffOtpSent(false); setStaffMaskedPhone('');
     setStaffOtpInput(''); setStaffOtpError(''); setStaffOtpSuccess(false);
+  };
+
+  const resetDeliveryOtp = () => {
+    setDeliveryFlat(''); setDeliveryCompany(''); setDeliveryOtpSent(false);
+    setDeliveryMaskedPhone(''); setDeliveryOtpInput(''); setDeliveryOtpError(''); setDeliveryOtpSuccess(false);
+  };
+
+  const handleDeliverySendOtp = async () => {
+    if (!deliveryFlat.trim()) { setDeliveryOtpError('Enter the flat number.'); return; }
+    if (!deliveryCompany.trim()) { setDeliveryOtpError('Select a delivery company.'); return; }
+    setDeliveryOtpError('');
+    setDeliveryOtpLoading(true);
+    try {
+      const res = await visitorService.generateDeliveryOtp(deliveryFlat.trim(), deliveryCompany);
+      setDeliveryMaskedPhone(res.maskedPhone ?? '');
+      setDeliveryOtpSent(true);
+    } catch (err: any) {
+      setDeliveryOtpError(err?.message || 'Failed to send OTP.');
+    } finally {
+      setDeliveryOtpLoading(false);
+    }
+  };
+
+  const handleDeliveryVerifyOtp = async () => {
+    if (!deliveryOtpInput.trim()) { setDeliveryOtpError('Enter the OTP.'); return; }
+    setDeliveryOtpError('');
+    setDeliveryOtpLoading(true);
+    try {
+      await visitorService.verifyDeliveryOtp(deliveryFlat.trim(), deliveryOtpInput.trim());
+      setDeliveryOtpSuccess(true);
+      Vibration.vibrate([80, 60, 80, 60, 120]);
+      pushHistory({ code: `DLVRY-${deliveryFlat.trim()}`, visitorName: `${deliveryCompany} delivery`, action: 'OTP Entry', time: new Date(), ok: true });
+    } catch (err: any) {
+      setDeliveryOtpError(err?.message || 'OTP verification failed.');
+    } finally {
+      setDeliveryOtpLoading(false);
+    }
   };
 
   const handleStaffRequestOtp = async () => {
@@ -290,7 +337,7 @@ export default function GuardScanScreen() {
         )}
       </View>
 
-      {/* Mode toggle — 2×2 grid */}
+      {/* Mode toggle — 3 on top, 2 on bottom */}
       <View style={s.toggle}>
         <View style={s.toggleRow}>
           <TouchableOpacity
@@ -307,8 +354,6 @@ export default function GuardScanScreen() {
             <Ionicons name="keypad" size={14} color={mode === 'manual' ? '#fff' : COLORS.textMuted} />
             <Text style={[s.toggleText, mode === 'manual' && s.toggleTextActive]}>Manual</Text>
           </TouchableOpacity>
-        </View>
-        <View style={s.toggleRow}>
           <TouchableOpacity
             style={[s.toggleBtn, mode === 'walkin' && { backgroundColor: '#059669', ...SHADOWS.sm }]}
             onPress={() => setMode('walkin')}
@@ -316,12 +361,21 @@ export default function GuardScanScreen() {
             <Ionicons name="person-add" size={14} color={mode === 'walkin' ? '#fff' : COLORS.textMuted} />
             <Text style={[s.toggleText, mode === 'walkin' && s.toggleTextActive]}>Walk-In</Text>
           </TouchableOpacity>
+        </View>
+        <View style={s.toggleRow}>
           <TouchableOpacity
             style={[s.toggleBtn, mode === 'staffotp' && { backgroundColor: '#7C3AED', ...SHADOWS.sm }]}
             onPress={() => setMode('staffotp')}
           >
             <Ionicons name="shield-checkmark" size={14} color={mode === 'staffotp' ? '#fff' : COLORS.textMuted} />
             <Text style={[s.toggleText, mode === 'staffotp' && s.toggleTextActive]}>Staff OTP</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'deliveryotp' && { backgroundColor: '#D97706', ...SHADOWS.sm }]}
+            onPress={() => setMode('deliveryotp')}
+          >
+            <Ionicons name="cube" size={14} color={mode === 'deliveryotp' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'deliveryotp' && s.toggleTextActive]}>Delivery OTP</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -607,6 +661,105 @@ export default function GuardScanScreen() {
 
               <TouchableOpacity style={s.walkInCancelBtn} onPress={resetStaffOtp}>
                 <Text style={s.walkInCancelBtnText}>{staffOtpSuccess ? 'New Request' : 'Cancel'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Delivery OTP flow */}
+          {mode === 'deliveryotp' && (
+            <View style={s.walkInForm}>
+              <Text style={s.walkInFormTitle}>Delivery Express Entry</Text>
+              <Text style={s.walkInFormSub}>
+                Send a one-time password to the resident to confirm delivery arrival.
+              </Text>
+
+              {deliveryOtpSuccess ? (
+                <View style={s.walkInApprovedBanner}>
+                  <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                  <Text style={s.walkInApprovedText}>Delivery confirmed! Entry logged.</Text>
+                </View>
+              ) : null}
+
+              {deliveryOtpError ? (
+                <View style={s.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.errorBannerText}>{deliveryOtpError}</Text>
+                </View>
+              ) : null}
+
+              {!deliveryOtpSuccess && (
+                <>
+                  <Text style={s.walkInLabel}>Flat Number *</Text>
+                  <TextInput
+                    style={s.walkInInput}
+                    placeholder="e.g. A-1204"
+                    autoCapitalize="characters"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={deliveryFlat}
+                    onChangeText={setDeliveryFlat}
+                    editable={!deliveryOtpSent}
+                  />
+
+                  <Text style={s.walkInLabel}>Delivery Company *</Text>
+                  <View style={s.companyChipRow}>
+                    {['Swiggy', 'Zomato', 'Amazon', 'Blinkit', 'Zepto', 'Other'].map(c => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[s.companyChip, deliveryCompany === c && s.companyChipActive, deliveryOtpSent && { opacity: 0.5 }]}
+                        onPress={() => !deliveryOtpSent && setDeliveryCompany(c)}
+                        disabled={deliveryOtpSent}
+                      >
+                        <Text style={[s.companyChipText, deliveryCompany === c && s.companyChipTextActive]}>{c}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {!deliveryOtpSent ? (
+                    <TouchableOpacity
+                      style={[s.walkInSubmitBtn, { backgroundColor: '#D97706' }, deliveryOtpLoading && { opacity: 0.7 }]}
+                      onPress={handleDeliverySendOtp}
+                      disabled={deliveryOtpLoading}
+                    >
+                      {deliveryOtpLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <><Ionicons name="send" size={16} color="#fff" /><Text style={s.walkInSubmitBtnText}>Send OTP to Resident</Text></>
+                      }
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <View style={[s.walkInPendingRow, { backgroundColor: '#FEF3C7' }]}>
+                        <Ionicons name="phone-portrait" size={16} color="#D97706" />
+                        <Text style={[s.walkInPendingText, { color: '#D97706' }]}>
+                          OTP sent{deliveryMaskedPhone ? ` to ${deliveryMaskedPhone}` : ''}. Ask resident for the code.
+                        </Text>
+                      </View>
+                      <Text style={s.walkInLabel}>Enter OTP from Resident</Text>
+                      <TextInput
+                        style={[s.walkInInput, { fontSize: 22, letterSpacing: 8, textAlign: 'center', fontWeight: '800' }]}
+                        placeholder="● ● ● ●"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        placeholderTextColor={COLORS.textMuted}
+                        value={deliveryOtpInput}
+                        onChangeText={setDeliveryOtpInput}
+                      />
+                      <TouchableOpacity
+                        style={[s.walkInSubmitBtn, { backgroundColor: '#059669' }, deliveryOtpLoading && { opacity: 0.7 }]}
+                        onPress={handleDeliveryVerifyOtp}
+                        disabled={deliveryOtpLoading}
+                      >
+                        {deliveryOtpLoading
+                          ? <ActivityIndicator size="small" color="#fff" />
+                          : <><Ionicons name="checkmark-done" size={16} color="#fff" /><Text style={s.walkInSubmitBtnText}>Verify & Allow Entry</Text></>
+                        }
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </>
+              )}
+
+              <TouchableOpacity style={s.walkInCancelBtn} onPress={resetDeliveryOtp}>
+                <Text style={s.walkInCancelBtnText}>{deliveryOtpSuccess ? 'New Delivery' : 'Cancel'}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1048,4 +1201,13 @@ const s = StyleSheet.create({
   walkInCheckInBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
   walkInCancelBtn: { alignItems: 'center', paddingVertical: 10 },
   walkInCancelBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+
+  companyChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 4 },
+  companyChip: {
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: RADIUS.full,
+    backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: COLORS.border,
+  },
+  companyChipActive: { backgroundColor: '#D97706', borderColor: '#D97706' },
+  companyChipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  companyChipTextActive: { color: '#fff', fontWeight: '700' },
 });
