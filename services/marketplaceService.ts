@@ -7,10 +7,10 @@ import type {
 } from '@/types/api';
 
 /**
- * Marketplace service — all URLs aligned to the actual backend (PR #167 / develop).
+ * Marketplace service.
  *
- * Backend base paths:
- *   Listings  → /api/marketplace/listings
+ * Backend base paths (mobile-friendly, isAuthenticated() only):
+ *   Listings  → /api/marketplace/mobile/listings
  *   Wishlist  → /api/marketplace/wishlist
  *   Images    → /api/media/upload  (shared MediaController)
  *   Reports   → /api/marketplace/admin/moderation/report
@@ -18,21 +18,13 @@ import type {
 export const marketplaceService = {
 
   // ── Browse ───────────────────────────────────────────────────
-  /**
-   * GET /api/marketplace/listings
-   * Params: type, category, search, minPrice, maxPrice, freeOnly, page, size
-   *
-   * The backend supports listing types beyond SELL:
-   *   SELL | RENT | FOOD | SERVICE | DONATION | BARTER
-   * Pass type=SELL to limit to buy/sell listings (mobile default).
-   */
   async getListings(
     filters: MarketplaceFilters = {},
     page = 0,
   ): Promise<PageResponse<MarketplaceListingDto>> {
     try {
       const res = await api.get<PageResponse<MarketplaceListingDto>>(
-        '/marketplace/listings',
+        '/marketplace/mobile/listings',
         { params: { ...filters, page, size: 20 } },
       );
       if (res.data?.content && res.data.content.length > 0) {
@@ -46,7 +38,7 @@ export const marketplaceService = {
 
   async getListing(id: number): Promise<MarketplaceListingDto> {
     try {
-      const res = await api.get<MarketplaceListingDto>(`/marketplace/listings/${id}`);
+      const res = await api.get<MarketplaceListingDto>(`/marketplace/mobile/listings/${id}`);
       if (res.data) return res.data;
     } catch {
       // Fallback
@@ -56,24 +48,23 @@ export const marketplaceService = {
   },
 
   // ── My Listings ──────────────────────────────────────────────
-  /**
-   * GET /api/marketplace/listings/mine
-   * Param: status (ACTIVE | SOLD | EXPIRED — omit for all)
-   */
   async getMyListings(
     status?: 'ACTIVE' | 'SOLD' | 'EXPIRED',
     page = 0,
   ): Promise<PageResponse<MarketplaceListingDto>> {
-    const res = await api.get<PageResponse<MarketplaceListingDto>>(
-      '/marketplace/listings/mine',
-      { params: { ...(status ? { status } : {}), page, size: 20 } },
-    );
-    return res.data;
+    try {
+      const res = await api.get<PageResponse<MarketplaceListingDto>>(
+        '/marketplace/mobile/my-listings',
+        { params: { ...(status ? { status } : {}), page, size: 20 } },
+      );
+      if (res.data) return res.data;
+    } catch {}
+    return { content: [], totalPages: 0, totalElements: 0, number: 0, size: 20 } as any;
   },
 
   // ── CRUD ─────────────────────────────────────────────────────
   async createListing(data: CreateListingRequest): Promise<MarketplaceListingDto> {
-    const res = await api.post<MarketplaceListingDto>('/marketplace/listings', data);
+    const res = await api.post<MarketplaceListingDto>('/marketplace/mobile/listings', data);
     return res.data;
   },
 
@@ -81,7 +72,7 @@ export const marketplaceService = {
     id: number,
     data: Partial<CreateListingRequest>,
   ): Promise<MarketplaceListingDto> {
-    const res = await api.put<MarketplaceListingDto>(`/marketplace/listings/${id}`, data);
+    const res = await api.put<MarketplaceListingDto>(`/marketplace/mobile/listings/${id}`, data);
     return res.data;
   },
 
@@ -90,12 +81,11 @@ export const marketplaceService = {
   },
 
   /**
-   * PUT /api/marketplace/listings/{id}/status
-   * Body: { status: "SOLD" }
+   * PUT /api/marketplace/mobile/listings/{id}/status
    * Backend supports: ACTIVE | SOLD | RESERVED | EXPIRED | UNDER_REVIEW
    */
   async markAsSold(id: number): Promise<void> {
-    await api.put(`/marketplace/listings/${id}/status`, { status: 'SOLD' });
+    await api.put(`/marketplace/mobile/listings/${id}/status`, null, { params: { status: 'SOLD' } });
   },
 
   // ── Wishlist ─────────────────────────────────────────────────

@@ -26,15 +26,6 @@ const STATUS_META: Record<CameraStatus, { color: string; label: string }> = {
   MAINTENANCE: { color: '#F59E0B', label: 'Maintenance' },
 };
 
-const MOCK_CAMERAS: Camera[] = [
-  { id: 1, name: 'Main Gate',      location: 'MAIN_GATE',  status: 'ONLINE',      isNightMode: false },
-  { id: 2, name: 'Exit Gate',      location: 'EXIT_GATE',  status: 'ONLINE',      isNightMode: false },
-  { id: 3, name: 'Parking A',      location: 'PARKING',    status: 'ONLINE',      isNightMode: false },
-  { id: 4, name: 'Lobby Tower A',  location: 'LOBBY',      status: 'OFFLINE',     isNightMode: false },
-  { id: 5, name: 'Lobby Tower B',  location: 'LOBBY',      status: 'MAINTENANCE', isNightMode: false },
-  { id: 6, name: 'Playground',     location: 'PLAYGROUND', status: 'ONLINE',      isNightMode: true,
-    lastSnapshotAt: new Date(Date.now() - 5 * 60000).toISOString() },
-];
 
 function formatSnapshotTime(iso?: string) {
   if (!iso) return null;
@@ -56,7 +47,7 @@ export default function CCTVScreen() {
     queryFn: () => cctvService.getCameras(),
     staleTime: 60_000,
   });
-  const cameras = raw && raw.length > 0 ? raw : MOCK_CAMERAS;
+  const cameras = raw ?? [];
 
   const onlineCount = cameras.filter(c => c.status === 'ONLINE').length;
   const offlineCount = cameras.filter(c => c.status === 'OFFLINE').length;

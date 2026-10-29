@@ -271,7 +271,7 @@ export default function AnnouncementsScreen() {
             <AnnouncementCard item={item} onPin={handlePin} onDelete={handleDelete} />
           )}
           contentContainerStyle={{ paddingVertical: 8 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={s.empty}>
               <Text style={s.emptyEmoji}>📢</Text>

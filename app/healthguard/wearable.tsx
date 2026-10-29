@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
 
   metricsRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
   metricTile: {
-    flex: 1, backgroundColor: COLORS.card, borderRadius: RADIUS.md,
+    flex: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
     padding: SPACING.sm, alignItems: 'center', borderTopWidth: 3, ...SHADOWS.sm,
   },
   metricIcon: { fontSize: 20, marginBottom: 2 },
@@ -335,14 +335,14 @@ const styles = StyleSheet.create({
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.sm },
   addBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-  emptyCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.xl, alignItems: 'center', ...SHADOWS.sm },
+  emptyCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.xl, alignItems: 'center', ...SHADOWS.sm },
   emptyIcon: { fontSize: 40, marginBottom: SPACING.sm },
   emptyText: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: 4 },
   emptySub: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginBottom: SPACING.md },
   connectBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: RADIUS.md },
   connectBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  deviceCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs, ...SHADOWS.sm },
+  deviceCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs, ...SHADOWS.sm },
   deviceIcon: { fontSize: 28 },
   deviceName: { fontSize: 15, fontWeight: '700', color: COLORS.text },
   deviceSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
 
   eventGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   eventBtn: {
-    width: '47%', backgroundColor: COLORS.card, borderRadius: RADIUS.md,
+    width: '47%', backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
     padding: SPACING.sm, alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: COLORS.border, ...SHADOWS.sm,
   },
   eventBtnCritical: { backgroundColor: '#fef2f2', borderColor: '#fca5a5' },
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   eventBtnLabelCritical: { color: '#dc2626', fontWeight: '600' },
 
   noEvents: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', paddingVertical: SPACING.lg },
-  eventRow: { backgroundColor: COLORS.card, borderRadius: RADIUS.sm, padding: SPACING.sm, flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, marginBottom: SPACING.xs, ...SHADOWS.sm },
+  eventRow: { backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, padding: SPACING.sm, flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, marginBottom: SPACING.xs, ...SHADOWS.sm },
   eventRowCritical: { backgroundColor: '#fff1f2', borderLeftWidth: 3, borderLeftColor: '#ef4444' },
   eventRowIcon: { fontSize: 20, marginTop: 2 },
   eventRowLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text },

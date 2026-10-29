@@ -4,5 +4,7 @@ export default function VisitorsLayout() {
   return <Stack screenOptions={{ headerShown: false }}>
     <Stack.Screen name="index" />
     <Stack.Screen name="trusted" />
+    <Stack.Screen name="pending-approvals" />
+    <Stack.Screen name="approve-visitor" />
   </Stack>;
 }

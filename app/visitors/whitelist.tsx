@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Modal, TextInput, Alert, ActivityIndicator, ScrollView,
+  Modal, TextInput, ActivityIndicator, ScrollView,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,11 +23,6 @@ const CATEGORY_META: Record<WhitelistCategory, { label: string; icon: keyof type
 
 const CATEGORIES: WhitelistCategory[] = ['FAMILY', 'FRIEND', 'DRIVER', 'DOMESTIC_HELP', 'DELIVERY_AGENT', 'OTHER'];
 
-const MOCK_WHITELIST: WhitelistEntry[] = [
-  { id: 1, visitorName: 'Priya (Sister)', visitorPhone: '9876500001', category: 'FAMILY', isActive: true, visitCount: 14, lastVisit: new Date(Date.now() - 86400000).toISOString() },
-  { id: 2, visitorName: 'Rajan (Driver)', vehicleNumber: 'KA-01-AB-1234', category: 'DRIVER', isActive: true, visitCount: 42, lastVisit: new Date(Date.now() - 3600000).toISOString() },
-  { id: 3, visitorName: 'Amazon Delivery', category: 'DELIVERY_AGENT', isActive: true, visitCount: 7, lastVisit: new Date(Date.now() - 259200000).toISOString() },
-];
 
 function formatLastVisit(iso?: string): string {
   if (!iso) return 'Never';
@@ -42,6 +37,8 @@ export default function WhitelistScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [addModal, setAddModal] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [removeConfirmEntry, setRemoveConfirmEntry] = useState<WhitelistEntry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [form, setForm] = useState<AddWhitelistRequest>({ visitorName: '', category: 'FAMILY', visitorPhone: '', vehicleNumber: '', notes: '' });
 
@@ -51,7 +48,7 @@ export default function WhitelistScreen() {
     staleTime: 30_000,
   });
 
-  const list = (rawList && rawList.length > 0) ? rawList : MOCK_WHITELIST;
+  const list = rawList ?? [];
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -63,35 +60,31 @@ export default function WhitelistScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visitors', 'whitelist'] });
       setAddModal(false);
+      setAddError('');
       setForm({ visitorName: '', category: 'FAMILY', visitorPhone: '', vehicleNumber: '', notes: '' });
-      Alert.alert('✅ Added', 'Person added to your frequent visitor whitelist.');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setAddError(err?.message || 'Failed to add. Try again.'),
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: number) => whitelistService.removeFromWhitelist(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visitors', 'whitelist'] }),
-    onError: (err: any) => Alert.alert('Error', err.message),
   });
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       whitelistService.toggleWhitelistStatus(id, isActive),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visitors', 'whitelist'] }),
-    onError: (err: any) => Alert.alert('Error', err.message),
   });
 
   const handleAdd = () => {
-    if (!form.visitorName.trim()) { Alert.alert('Name Required', 'Please enter a name.'); return; }
+    if (!form.visitorName.trim()) { setAddError('Please enter a name.'); return; }
+    setAddError('');
     addMutation.mutate({ ...form, visitorName: form.visitorName.trim() });
   };
 
   const confirmRemove = (entry: WhitelistEntry) => {
-    Alert.alert('Remove from Whitelist', `Remove ${entry.visitorName}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeMutation.mutate(entry.id) },
-    ]);
+    setRemoveConfirmEntry(entry);
   };
 
   const renderItem = ({ item }: { item: WhitelistEntry }) => {
@@ -231,8 +224,14 @@ export default function WhitelistScreen() {
               <Text style={s.label}>Notes</Text>
               <TextInput style={s.input} placeholder="e.g. Mon-Sat mornings" placeholderTextColor={COLORS.textMuted} value={form.notes} onChangeText={v => setForm(f => ({ ...f, notes: v }))} />
 
+              {addError ? (
+                <View style={s.inlineError}>
+                  <Ionicons name="alert-circle-outline" size={14} color="#B91C1C" />
+                  <Text style={s.inlineErrorText}>{addError}</Text>
+                </View>
+              ) : null}
               <View style={s.modalActions}>
-                <TouchableOpacity style={s.cancelBtn} onPress={() => setAddModal(false)}>
+                <TouchableOpacity style={s.cancelBtn} onPress={() => { setAddModal(false); setAddError(''); }}>
                   <Text style={s.cancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.confirmBtn, addMutation.isPending && { opacity: 0.7 }]} onPress={handleAdd} disabled={addMutation.isPending}>
@@ -241,6 +240,28 @@ export default function WhitelistScreen() {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Remove confirm bottom sheet */}
+      <Modal visible={!!removeConfirmEntry} transparent animationType="slide" onRequestClose={() => setRemoveConfirmEntry(null)}>
+        <TouchableOpacity style={s.removeOverlay} onPress={() => setRemoveConfirmEntry(null)} activeOpacity={1} />
+        <View style={s.removeSheet}>
+          <View style={s.removeHandle} />
+          <Text style={s.removeTitle}>Remove from Whitelist?</Text>
+          <Text style={s.removeSub}>
+            Remove <Text style={{ fontWeight: '800' }}>{removeConfirmEntry?.visitorName}</Text>? They will need manual approval on next visit.
+          </Text>
+          <TouchableOpacity
+            style={[s.removeConfirmBtn, removeMutation.isPending && { opacity: 0.7 }]}
+            onPress={() => { if (removeConfirmEntry) { removeMutation.mutate(removeConfirmEntry.id); setRemoveConfirmEntry(null); } }}
+            disabled={removeMutation.isPending}
+          >
+            {removeMutation.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.removeConfirmText}>Remove</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity style={s.removeCancelBtn} onPress={() => setRemoveConfirmEntry(null)}>
+            <Text style={s.removeCancelText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </SafeAreaView>
@@ -288,4 +309,15 @@ const s = StyleSheet.create({
   cancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
   confirmBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center', ...SHADOWS.sm },
   confirmText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  inlineError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  inlineErrorText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
+  removeOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
+  removeSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.lg, paddingBottom: 36, gap: 12 },
+  removeHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 8 },
+  removeTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center', fontFamily: 'Outfit-Bold' },
+  removeSub: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20, fontFamily: 'DMSans-Regular' },
+  removeConfirmBtn: { backgroundColor: '#EF4444', borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
+  removeConfirmText: { fontSize: 15, fontWeight: '800', color: '#fff', fontFamily: 'Outfit-Bold' },
+  removeCancelBtn: { backgroundColor: '#F1F5F9', borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
+  removeCancelText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
 });

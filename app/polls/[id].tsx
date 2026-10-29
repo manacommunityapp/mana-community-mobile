@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform,
+  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,7 +10,7 @@ import { pollService } from '@/services/pollService';
 import { feedService } from '@/services/feedService';
 import { PollCard } from '@/components/polls/PollCard';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS, getInitials } from '@/constants/config';
+import { COLORS, RADIUS, SPACING, getInitials } from '@/constants/config';
 import { safeFormat, safeFormatDistanceToNow, safeIsPast } from '@/utils/dateUtils';
 
 export default function PollDetailScreen() {
@@ -19,6 +19,8 @@ export default function PollDetailScreen() {
   const qc      = useQueryClient();
   const { user } = useAuth();
   const [comment, setComment] = useState('');
+  const [closeConfirm, setCloseConfirm] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['poll', id],
@@ -49,15 +51,8 @@ export default function PollDetailScreen() {
     onSuccess: () => router.replace('/polls'),
   });
 
-  const handleClose = () => Alert.alert('Close Poll', 'Stop accepting new votes?', [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Close Poll', onPress: () => closeMutation.mutate() },
-  ]);
-
-  const handleDelete = () => Alert.alert('Delete Poll', 'Permanently delete this poll and all votes?', [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate() },
-  ]);
+  const handleClose = () => setCloseConfirm(true);
+  const handleDelete = () => setDeleteConfirm(true);
 
   if (isLoading) {
     return (
@@ -217,6 +212,52 @@ export default function PollDetailScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Close poll confirm */}
+      <Modal visible={closeConfirm} transparent animationType="slide" onRequestClose={() => setCloseConfirm(false)}>
+        <TouchableOpacity style={s.overlay} onPress={() => setCloseConfirm(false)} activeOpacity={1} />
+        <View style={s.confirmSheet}>
+          <View style={s.sheetHandle} />
+          <Text style={s.confirmTitle}>Close Poll?</Text>
+          <Text style={s.confirmSub}>Stop accepting new votes. Results will be finalized.</Text>
+          <TouchableOpacity
+            style={[s.confirmDangerBtn, closeMutation.isPending && { opacity: 0.7 }]}
+            onPress={() => { closeMutation.mutate(); setCloseConfirm(false); }}
+            disabled={closeMutation.isPending}
+          >
+            {closeMutation.isPending
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={s.confirmDangerBtnText}>Close Poll</Text>
+            }
+          </TouchableOpacity>
+          <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setCloseConfirm(false)}>
+            <Text style={s.confirmCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Delete poll confirm */}
+      <Modal visible={deleteConfirm} transparent animationType="slide" onRequestClose={() => setDeleteConfirm(false)}>
+        <TouchableOpacity style={s.overlay} onPress={() => setDeleteConfirm(false)} activeOpacity={1} />
+        <View style={s.confirmSheet}>
+          <View style={s.sheetHandle} />
+          <Text style={s.confirmTitle}>Delete Poll?</Text>
+          <Text style={s.confirmSub}>Permanently delete this poll and all votes. This cannot be undone.</Text>
+          <TouchableOpacity
+            style={[s.confirmDangerBtn, { backgroundColor: COLORS.error }, deleteMutation.isPending && { opacity: 0.7 }]}
+            onPress={() => { deleteMutation.mutate(); setDeleteConfirm(false); }}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={s.confirmDangerBtnText}>Delete Poll</Text>
+            }
+          </TouchableOpacity>
+          <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setDeleteConfirm(false)}>
+            <Text style={s.confirmCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -261,4 +302,13 @@ const s = StyleSheet.create({
   sendBtn:            { backgroundColor: COLORS.primary, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
   sendBtnDisabled:    { backgroundColor: COLORS.border },
   sendBtnText:        { color: '#fff', fontWeight: '700', fontSize: 13 },
+  overlay:            { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  confirmSheet:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, paddingBottom: 36, gap: 12 },
+  sheetHandle:        { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 8 },
+  confirmTitle:       { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+  confirmSub:         { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
+  confirmDangerBtn:   { backgroundColor: COLORS.primary, borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
+  confirmDangerBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  confirmCancelBtn:   { backgroundColor: '#F1F5F9', borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
+  confirmCancelBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
 });

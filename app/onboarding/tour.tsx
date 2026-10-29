@@ -21,15 +21,15 @@ const SLIDES = [
     emoji:    '🛒',
     color:    '#059669',
     title:    'Buy · Sell · Trade',
-    desc:     'A full marketplace just for your community — buy items, list what you no longer need, and bid in live auctions.',
-    features: ['Listings & Marketplace', 'Live Auctions', 'Wishlist & Offers', 'Safe Handover'],
+    desc:     'A full marketplace just for your community — buy pre-loved items, list what you no longer need, and bid in live resident auctions.',
+    features: ['Verified Listings', 'Live Auctions', 'Group Deals', 'Safe Handover'],
   },
   {
-    emoji:    '⚽',
-    color:    '#DC2626',
-    title:    'More to Explore',
-    desc:     'From tournaments and live scores to the job board and admin tools — there\'s something for every resident.',
-    features: ['Sports & Tournaments', 'Job Board', 'Admin Panel', 'Chat & Messaging'],
+    emoji:    '⚡',
+    color:    '#F59E0B',
+    title:    'Everything in One Place',
+    desc:     'Pay maintenance dues, book amenities, raise helpdesk tickets, track your visitor gate passes — all from one app.',
+    features: ['Maintenance Payments', 'Court & Hall Booking', 'Visitor Gate Pass', 'Helpdesk Tickets'],
   },
 ];
 
@@ -47,7 +47,7 @@ export default function TourScreen() {
     if (activeIndex < SLIDES.length - 1) {
       scrollRef.current?.scrollTo({ x: (activeIndex + 1) * width, animated: true });
     } else {
-      router.replace('/tabs/feed');
+      router.replace('/onboarding/account');
     }
   }
 
@@ -56,7 +56,7 @@ export default function TourScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       {/* Skip button */}
-      <TouchableOpacity style={s.skip} onPress={() => router.replace('/tabs/feed')}>
+      <TouchableOpacity style={s.skip} onPress={() => router.back()}>
         <Text style={s.skipText}>Skip</Text>
       </TouchableOpacity>
 

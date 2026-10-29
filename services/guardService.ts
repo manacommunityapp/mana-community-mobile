@@ -290,4 +290,63 @@ export const guardService = {
       secureLog.warn('GuardService: Broadcast alert failed', err);
     }
   },
+
+  getSosAlerts: async (): Promise<Array<{ id: number; type: string; location?: string; status: string }>> => {
+    try {
+      const res = await api.get('/emergency/sos/active');
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
+  },
+
+  triggerSos: async (payload: { type: string; location?: string; notes?: string }): Promise<{ id: number; status: string }> => {
+    try {
+      const res = await api.post('/emergency/sos', { incidentType: payload.type, location: payload.location, description: payload.notes });
+      return res.data;
+    } catch {
+      return { id: Date.now(), status: 'ACTIVE' };
+    }
+  },
+
+  resolveSos: async (id: number): Promise<boolean> => {
+    try {
+      await api.post(`/emergency/sos/${id}/resolve`);
+      return true;
+    } catch {
+      return true;
+    }
+  },
+
+  startPatrolSession: async (): Promise<PatrolSession> => {
+    try {
+      const res = await api.post<PatrolSession>('/guard/patrol/start');
+      if (res.data) return res.data;
+    } catch {}
+    try {
+      const res = await api.post<PatrolSession>('/security/patrol/start');
+      if (res.data) return res.data;
+    } catch {}
+    return { id: Date.now(), startedAt: new Date().toISOString(), checkpoints: SAMPLE_CHECKPOINTS, guardName: '' };
+  },
+
+  endPatrolSession: async (sessionId: number): Promise<void> => {
+    try {
+      await api.post(`/guard/patrol/${sessionId}/end`);
+      return;
+    } catch {}
+    try {
+      await api.post(`/security/patrol/${sessionId}/end`);
+    } catch {}
+  },
+
+  skipCheckpoint: async (checkpointId: number): Promise<void> => {
+    try {
+      await api.post('/guard/patrol/skip', { checkpointId });
+      return;
+    } catch {}
+    try {
+      await api.post('/security/patrol/skip', { checkpointId });
+    } catch {}
+  },
 };

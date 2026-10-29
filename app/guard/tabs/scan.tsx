@@ -1,8 +1,1213 @@
-import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  TextInput, ActivityIndicator, ScrollView, Modal,
+  KeyboardAvoidingView, Platform, Vibration,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
+import { GUARD_COLORS } from '@/constants/guardTheme';
 import { visitorService, type VisitorDto } from '@/services/visitorService';
-import { COLORS, RADIUS, SPACING } from '@/constants/config';
-export default function GuardScanScreen() { const [code, setCode] = useState(''); const [result, setResult] = useState<VisitorDto | null>(null); const [permission, requestPermission] = useCameraPermissions(); const verifyValue = async (value: string) => { if (!value.trim()) return; setCode(value); try { setResult(await visitorService.verifyPass(value.trim())); } catch (e: any) { setResult(null); Alert.alert('Pass not found', e?.response?.data?.message || 'Check the code or OTP.'); } }; const verify = () => verifyValue(code); const checkIn = async () => { if (!result) return; try { const updated = await visitorService.checkIn(result.id, 'Main Gate', undefined); setResult(updated); Alert.alert('Visitor checked in'); } catch (e: any) { Alert.alert('Check-in failed', e?.message || 'Try again.'); } }; return <SafeAreaView style={s.container}><Text style={s.title}>Scan visitor pass</Text><Text style={s.sub}>Scan a resident QR pass or enter a delivery OTP manually.</Text>{permission?.granted ? <CameraView style={s.camera} facing="back" barcodeScannerSettings={{ barcodeTypes: ['qr'] }} onBarcodeScanned={({ data }) => verifyValue(data)}><View style={s.scanFrame}><Text style={s.scanHint}>Align QR code inside the frame</Text></View></CameraView> : <TouchableOpacity style={s.button} onPress={requestPermission}><Text style={s.buttonText}>Enable camera scanner</Text></TouchableOpacity>}<View style={s.scanner}><Text style={s.scannerText}>MANUAL QR CODE / OTP</Text><TextInput style={s.input} autoCapitalize="characters" placeholder="MANA-1234" value={code} onChangeText={setCode} /><TouchableOpacity style={s.button} onPress={verify}><Text style={s.buttonText}>Verify pass</Text></TouchableOpacity></View>{result && <View style={s.result}><Text style={s.name}>{result.visitorName}</Text><Text style={s.meta}>{result.passType} · {result.status}</Text><Text style={s.meta}>{result.flatNumber || 'Flat not provided'}{result.vehicleNumber ? ` · ${result.vehicleNumber}` : ''}</Text>{result.status === 'EXPECTED' || result.status === 'APPROVED' ? <TouchableOpacity style={s.check} onPress={checkIn}><Text style={s.buttonText}>Check in visitor</Text></TouchableOpacity> : null}</View>}</SafeAreaView>; }
-const s = StyleSheet.create({ container: { flex: 1, backgroundColor: COLORS.background, padding: SPACING.lg }, title: { fontSize: 24, fontWeight: '800', color: COLORS.text }, sub: { color: COLORS.textSecondary, marginTop: 6, lineHeight: 20 }, camera: { height: 230, borderRadius: RADIUS.lg, overflow: 'hidden', marginTop: 20 }, scanFrame: { flex: 1, borderWidth: 2, borderColor: '#fff', margin: 40, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 10 }, scanHint: { color: '#fff', fontWeight: '800', backgroundColor: 'rgba(0,0,0,.55)', padding: 6, borderRadius: 6 }, scanner: { marginTop: 18, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, alignItems: 'center' }, scannerText: { color: COLORS.primary, fontWeight: '900', letterSpacing: 2 }, input: { width: '100%', borderWidth: 1, borderColor: COLORS.borderSlate, borderRadius: RADIUS.md, padding: 12, marginTop: 12 }, button: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, padding: 14, alignItems: 'center', marginTop: 12, width: '100%' }, buttonText: { color: '#fff', fontWeight: '800' }, result: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, marginTop: 16 }, name: { fontSize: 20, fontWeight: '800', color: COLORS.text }, meta: { color: COLORS.textSecondary, marginTop: 5 }, check: { backgroundColor: COLORS.success, borderRadius: RADIUS.md, padding: 14, alignItems: 'center', marginTop: 18 } });
+import { visitorApprovalService, type PendingApproval } from '@/services/visitorApprovalService';
+import { staffService } from '@/services/staffService';
+import { useAuth } from '@/hooks/useAuth';
+
+type Mode = 'scanner' | 'manual' | 'walkin' | 'staffotp' | 'deliveryotp';
+
+interface ScanRecord {
+  code: string;
+  visitorName: string;
+  action: string;
+  time: Date;
+  ok: boolean;
+}
+
+const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  EXPECTED:    { label: 'Expected',    color: '#D97706', bg: '#FEF3C7', icon: 'time' },
+  APPROVED:    { label: 'Approved',    color: '#059669', bg: '#D1FAE5', icon: 'checkmark-circle' },
+  CHECKED_IN:  { label: 'Inside Gate', color: '#2563EB', bg: '#DBEAFE', icon: 'enter' },
+  CHECKED_OUT: { label: 'Departed',    color: '#6B7280', bg: '#F3F4F6', icon: 'exit-outline' },
+  DENIED:      { label: 'Denied',      color: '#DC2626', bg: '#FEE2E2', icon: 'close-circle' },
+  REJECTED:    { label: 'Rejected',    color: '#DC2626', bg: '#FEE2E2', icon: 'ban' },
+  EXPIRED:     { label: 'Expired',     color: '#9CA3AF', bg: '#F3F4F6', icon: 'hourglass' },
+};
+
+const TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  GUEST:    'person',
+  DELIVERY: 'cube',
+  CAB:      'car',
+  SERVICE:  'construct',
+  FAMILY:   'heart',
+  COURIER:  'mail',
+  VENDOR:   'storefront',
+};
+
+function fmt(d: Date) {
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export default function GuardScanScreen() {
+  const user = useAuth(s => s.user);
+  const guardName = user?.name ?? 'Guard';
+
+  const [mode, setMode] = useState<Mode>('scanner');
+  const [manualCode, setManualCode] = useState('');
+  const [result, setResult] = useState<VisitorDto | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [history, setHistory] = useState<ScanRecord[]>([]);
+  const [lookupError, setLookupError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [confirmDenyVisible, setConfirmDenyVisible] = useState(false);
+
+  // Walk-in approval flow
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
+  const [walkInPurpose, setWalkInPurpose] = useState('');
+  const [walkInVehicle, setWalkInVehicle] = useState('');
+  const [walkInFlat, setWalkInFlat] = useState('');
+  const [walkInSubmitting, setWalkInSubmitting] = useState(false);
+  const [walkInError, setWalkInError] = useState('');
+  const [walkInPending, setWalkInPending] = useState<PendingApproval | null>(null);
+
+  // Domestic staff OTP flow
+  const [staffIdInput, setStaffIdInput] = useState('');
+  const [staffOtpSent, setStaffOtpSent] = useState(false);
+  const [staffMaskedPhone, setStaffMaskedPhone] = useState('');
+  const [staffOtpInput, setStaffOtpInput] = useState('');
+  const [staffOtpLoading, setStaffOtpLoading] = useState(false);
+  const [staffOtpError, setStaffOtpError] = useState('');
+  const [staffOtpSuccess, setStaffOtpSuccess] = useState(false);
+
+  // Delivery OTP flow
+  const [deliveryFlat, setDeliveryFlat] = useState('');
+  const [deliveryCompany, setDeliveryCompany] = useState('');
+  const [deliveryOtpSent, setDeliveryOtpSent] = useState(false);
+  const [deliveryMaskedPhone, setDeliveryMaskedPhone] = useState('');
+  const [deliveryOtpInput, setDeliveryOtpInput] = useState('');
+  const [deliveryOtpLoading, setDeliveryOtpLoading] = useState(false);
+  const [deliveryOtpError, setDeliveryOtpError] = useState('');
+  const [deliveryOtpSuccess, setDeliveryOtpSuccess] = useState(false);
+
+  // Prevent double-scans: ignore same QR code for 3 seconds
+  const lastScanned = useRef<{ code: string; at: number } | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  const pushHistory = useCallback((rec: ScanRecord) => {
+    setHistory(prev => [rec, ...prev].slice(0, 6));
+  }, []);
+
+  // Poll approval status every 4s while a walk-in request is pending
+  useEffect(() => {
+    if (!walkInPending || walkInPending.approvalStatus !== 'PENDING') return;
+    const interval = setInterval(async () => {
+      const updated = await visitorApprovalService.pollApprovalStatus(walkInPending.id);
+      if (updated && updated.approvalStatus !== 'PENDING') {
+        setWalkInPending(updated);
+        clearInterval(interval);
+        if (updated.approvalStatus === 'APPROVED') Vibration.vibrate([80, 60, 80, 60, 120]);
+        else if (updated.approvalStatus === 'DENIED') Vibration.vibrate([200, 100, 200]);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [walkInPending]);
+
+  const handleWalkInSubmit = async () => {
+    if (!walkInName.trim()) { setWalkInError('Visitor name is required.'); return; }
+    if (!walkInFlat.trim()) { setWalkInError('Flat number is required to notify the resident.'); return; }
+    setWalkInError('');
+    setWalkInSubmitting(true);
+    try {
+      const pending = await visitorApprovalService.createWalkInRequest({
+        visitorName: walkInName.trim(),
+        visitorPhone: walkInPhone.trim() || undefined,
+        purpose: walkInPurpose.trim() || 'Walk-in visitor',
+        passType: 'GUEST',
+        vehicleNumber: walkInVehicle.trim() || undefined,
+        flatNumber: walkInFlat.trim(),
+        gate: 'Main Gate',
+        guardName,
+      });
+      setWalkInPending({ ...pending, approvalStatus: pending.approvalStatus ?? 'PENDING' });
+    } catch (err: any) {
+      setWalkInError(err?.message || 'Failed to send request. Try again.');
+    } finally {
+      setWalkInSubmitting(false);
+    }
+  };
+
+  const resetWalkIn = () => {
+    setWalkInPending(null);
+    setWalkInName(''); setWalkInPhone(''); setWalkInPurpose('');
+    setWalkInVehicle(''); setWalkInFlat(''); setWalkInError('');
+  };
+
+  const resetStaffOtp = () => {
+    setStaffIdInput(''); setStaffOtpSent(false); setStaffMaskedPhone('');
+    setStaffOtpInput(''); setStaffOtpError(''); setStaffOtpSuccess(false);
+  };
+
+  const resetDeliveryOtp = () => {
+    setDeliveryFlat(''); setDeliveryCompany(''); setDeliveryOtpSent(false);
+    setDeliveryMaskedPhone(''); setDeliveryOtpInput(''); setDeliveryOtpError(''); setDeliveryOtpSuccess(false);
+  };
+
+  const handleDeliverySendOtp = async () => {
+    if (!deliveryFlat.trim()) { setDeliveryOtpError('Enter the flat number.'); return; }
+    if (!deliveryCompany.trim()) { setDeliveryOtpError('Select a delivery company.'); return; }
+    setDeliveryOtpError('');
+    setDeliveryOtpLoading(true);
+    try {
+      const res = await visitorService.generateDeliveryOtp(deliveryFlat.trim(), deliveryCompany);
+      setDeliveryMaskedPhone(res.maskedPhone ?? '');
+      setDeliveryOtpSent(true);
+    } catch (err: any) {
+      setDeliveryOtpError(err?.message || 'Failed to send OTP.');
+    } finally {
+      setDeliveryOtpLoading(false);
+    }
+  };
+
+  const handleDeliveryVerifyOtp = async () => {
+    if (!deliveryOtpInput.trim()) { setDeliveryOtpError('Enter the OTP.'); return; }
+    setDeliveryOtpError('');
+    setDeliveryOtpLoading(true);
+    try {
+      await visitorService.verifyDeliveryOtp(deliveryFlat.trim(), deliveryOtpInput.trim());
+      setDeliveryOtpSuccess(true);
+      Vibration.vibrate([80, 60, 80, 60, 120]);
+      pushHistory({ code: `DLVRY-${deliveryFlat.trim()}`, visitorName: `${deliveryCompany} delivery`, action: 'OTP Entry', time: new Date(), ok: true });
+    } catch (err: any) {
+      setDeliveryOtpError(err?.message || 'OTP verification failed.');
+    } finally {
+      setDeliveryOtpLoading(false);
+    }
+  };
+
+  const handleStaffRequestOtp = async () => {
+    const staffId = parseInt(staffIdInput.trim(), 10);
+    if (!staffId || isNaN(staffId)) { setStaffOtpError('Enter a valid Staff ID.'); return; }
+    setStaffOtpError('');
+    setStaffOtpLoading(true);
+    try {
+      const res = await staffService.requestDomesticOtp(staffId);
+      setStaffMaskedPhone(res.maskedPhone ?? '');
+      setStaffOtpSent(true);
+    } catch (err: any) {
+      setStaffOtpError(err?.message || 'Failed to send OTP.');
+    } finally {
+      setStaffOtpLoading(false);
+    }
+  };
+
+  const handleStaffVerifyOtp = async () => {
+    const staffId = parseInt(staffIdInput.trim(), 10);
+    if (!staffOtpInput.trim()) { setStaffOtpError('Enter the OTP.'); return; }
+    setStaffOtpError('');
+    setStaffOtpLoading(true);
+    try {
+      await staffService.verifyDomesticOtp(staffId, staffOtpInput.trim());
+      setStaffOtpSuccess(true);
+      Vibration.vibrate([80, 60, 80, 60, 120]);
+      pushHistory({ code: `STAFF-${staffId}`, visitorName: `Staff #${staffId}`, action: 'OTP Entry', time: new Date(), ok: true });
+    } catch (err: any) {
+      setStaffOtpError(err?.message || 'OTP verification failed.');
+    } finally {
+      setStaffOtpLoading(false);
+    }
+  };
+
+  const lookup = useCallback(async (code: string) => {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) return;
+    setLookupError('');
+    setActionError('');
+
+    // Cooldown: same code within 3s → skip
+    const now = Date.now();
+    if (lastScanned.current?.code === trimmed && now - lastScanned.current.at < 3000) return;
+    lastScanned.current = { code: trimmed, at: now };
+
+    setLoading(true);
+    setResult(null);
+    try {
+      const data = await visitorService.verifyPass(trimmed);
+      setResult(data);
+      Vibration.vibrate(80);
+    } catch (err: any) {
+      Vibration.vibrate([80, 60, 80]);
+      setLookupError(err?.message || 'No visitor pass matches this code.');
+      pushHistory({ code: trimmed, visitorName: '—', action: 'Not found', time: new Date(), ok: false });
+    } finally {
+      setLoading(false);
+    }
+  }, [pushHistory]);
+
+  const handleManualVerify = () => lookup(manualCode);
+
+  const handleCheckIn = async () => {
+    if (!result) return;
+    setActionLoading(true);
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      let photo: string | undefined;
+      if (permission.granted) {
+        const captured = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.55, allowsEditing: false });
+        if (!captured.canceled && captured.assets[0]) {
+          const asset = captured.assets[0];
+          photo = asset.base64
+            ? `data:image/jpeg;base64,${asset.base64}`
+            : asset.uri;
+        }
+      }
+      const updated = await visitorService.checkIn(result.id, 'Main Gate', guardName, photo);
+      setResult(updated);
+      pushHistory({ code: result.passCode, visitorName: result.visitorName, action: 'Checked In', time: new Date(), ok: true });
+      Vibration.vibrate([80, 60, 80, 60, 120]);
+    } catch (err: any) {
+      setActionError(err?.message || 'Check-in failed. Try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (!result) return;
+    setActionLoading(true);
+    try {
+      const updated = await visitorService.checkOut(result.id, 'Main Gate', guardName);
+      setResult(updated);
+      pushHistory({ code: result.passCode, visitorName: result.visitorName, action: 'Checked Out', time: new Date(), ok: true });
+      Vibration.vibrate(120);
+    } catch (err: any) {
+      setActionError(err?.message || 'Check-out failed. Try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeny = () => { if (!result) return; setActionError(''); setConfirmDenyVisible(true); };
+
+  const doDeny = async () => {
+    if (!result) return;
+    setConfirmDenyVisible(false);
+    setActionLoading(true);
+    try {
+      const updated = await visitorService.denyEntry(result.id);
+      setResult(updated);
+      pushHistory({ code: result.passCode, visitorName: result.visitorName, action: 'Denied', time: new Date(), ok: false });
+    } catch (err: any) {
+      setActionError(err?.message || 'Deny failed. Try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const resetScan = () => {
+    setResult(null);
+    setManualCode('');
+    lastScanned.current = null;
+  };
+
+  const statusMeta = result ? (STATUS_META[result.status] ?? STATUS_META.EXPECTED) : null;
+  const typeIcon = result ? (TYPE_ICON[result.passType?.toUpperCase()] ?? 'person') : 'person';
+
+  // Derive allowed actions from status
+  const canCheckIn = result && (result.status === 'EXPECTED' || result.status === 'APPROVED');
+  const canCheckOut = result && result.status === 'CHECKED_IN';
+  const canDeny = result && (result.status === 'EXPECTED' || result.status === 'APPROVED');
+  const isTerminal = result && ['CHECKED_OUT', 'DENIED', 'REJECTED', 'EXPIRED', 'CANCELLED'].includes(result.status);
+
+  return (
+    <SafeAreaView style={s.container} edges={['top']}>
+      {/* Header */}
+      <View style={s.header}>
+        <View>
+          <Text style={s.headerTitle}>Gate Scanner</Text>
+          <Text style={s.headerSub}>Scan visitor QR pass or enter code manually</Text>
+        </View>
+        {result && (
+          <TouchableOpacity style={s.clearBtn} onPress={resetScan} hitSlop={8}>
+            <Ionicons name="refresh" size={18} color={GUARD_COLORS.accent} />
+            <Text style={s.clearBtnText}>New Scan</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Mode toggle — 3 on top, 2 on bottom */}
+      <View style={s.toggle}>
+        <View style={s.toggleRow}>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'scanner' && s.toggleBtnActive]}
+            onPress={() => setMode('scanner')}
+          >
+            <Ionicons name="qr-code" size={14} color={mode === 'scanner' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'scanner' && s.toggleTextActive]}>Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'manual' && s.toggleBtnActive]}
+            onPress={() => setMode('manual')}
+          >
+            <Ionicons name="keypad" size={14} color={mode === 'manual' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'manual' && s.toggleTextActive]}>Manual</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'walkin' && { backgroundColor: '#059669', ...SHADOWS.sm }]}
+            onPress={() => setMode('walkin')}
+          >
+            <Ionicons name="person-add" size={14} color={mode === 'walkin' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'walkin' && s.toggleTextActive]}>Walk-In</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={s.toggleRow}>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'staffotp' && { backgroundColor: '#7C3AED', ...SHADOWS.sm }]}
+            onPress={() => setMode('staffotp')}
+          >
+            <Ionicons name="shield-checkmark" size={14} color={mode === 'staffotp' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'staffotp' && s.toggleTextActive]}>Staff OTP</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'deliveryotp' && { backgroundColor: '#D97706', ...SHADOWS.sm }]}
+            onPress={() => setMode('deliveryotp')}
+          >
+            <Ionicons name="cube" size={14} color={mode === 'deliveryotp' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'deliveryotp' && s.toggleTextActive]}>Delivery OTP</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+          {/* Camera scanner */}
+          {mode === 'scanner' && !result && (
+            <View style={s.cameraBlock}>
+              {permission?.granted ? (
+                <View style={s.cameraWrap}>
+                  <CameraView
+                    style={s.camera}
+                    facing="back"
+                    barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                    onBarcodeScanned={({ data }) => !loading && lookup(data)}
+                  />
+                  {/* Frame overlay */}
+                  <View style={s.frameOverlay} pointerEvents="none">
+                    <View style={s.frameBorder}>
+                      <View style={[s.corner, s.cornerTL]} />
+                      <View style={[s.corner, s.cornerTR]} />
+                      <View style={[s.corner, s.cornerBL]} />
+                      <View style={[s.corner, s.cornerBR]} />
+                    </View>
+                    <Text style={s.frameHint}>Align QR code inside the frame</Text>
+                  </View>
+                  {loading && (
+                    <View style={s.cameraLoading}>
+                      <ActivityIndicator size="large" color="#fff" />
+                      <Text style={s.cameraLoadingText}>Looking up pass…</Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View style={s.permissionBlock}>
+                  <Ionicons name="camera-outline" size={48} color={COLORS.textMuted} />
+                  <Text style={s.permissionTitle}>Camera access needed</Text>
+                  <Text style={s.permissionSub}>Allow camera access to scan visitor QR passes</Text>
+                  <TouchableOpacity style={s.permissionBtn} onPress={requestPermission}>
+                    <Text style={s.permissionBtnText}>Allow Camera</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Manual entry */}
+          {mode === 'manual' && !result && (
+            <View style={s.manualBlock}>
+              <Text style={s.manualLabel}>Pass Code or OTP</Text>
+              <TextInput
+                style={s.manualInput}
+                placeholder="MANA-1234"
+                placeholderTextColor={COLORS.textMuted}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                value={manualCode}
+                onChangeText={setManualCode}
+                onSubmitEditing={handleManualVerify}
+                returnKeyType="search"
+              />
+              <TouchableOpacity
+                style={[s.verifyBtn, (!manualCode.trim() || loading) && { opacity: 0.5 }]}
+                onPress={handleManualVerify}
+                disabled={!manualCode.trim() || loading}
+              >
+                {loading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <>
+                      <Ionicons name="search" size={16} color="#fff" />
+                      <Text style={s.verifyBtnText}>Verify Pass</Text>
+                    </>
+                }
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Walk-In approval flow */}
+          {mode === 'walkin' && (
+            walkInPending ? (
+              /* Waiting state */
+              <View style={s.walkInWaitCard}>
+                {walkInPending.approvalStatus === 'APPROVED' && (
+                  <View style={s.walkInApprovedBanner}>
+                    <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                    <Text style={s.walkInApprovedText}>Resident approved entry!</Text>
+                  </View>
+                )}
+                {walkInPending.approvalStatus === 'DENIED' && (
+                  <View style={s.walkInDeniedBanner}>
+                    <Ionicons name="close-circle" size={18} color="#DC2626" />
+                    <Text style={s.walkInDeniedText}>
+                      Resident denied entry.{walkInPending.denialReason ? ` Reason: ${walkInPending.denialReason}` : ''}
+                    </Text>
+                  </View>
+                )}
+                {walkInPending.approvalStatus === 'PENDING' && (
+                  <View style={s.walkInPendingRow}>
+                    <ActivityIndicator size="small" color="#059669" />
+                    <Text style={s.walkInPendingText}>Waiting for resident decision…</Text>
+                  </View>
+                )}
+                <View style={s.walkInVisitorInfo}>
+                  <View style={[s.visitorAvatar, { backgroundColor: '#D1FAE5' }]}>
+                    <Ionicons name="person" size={26} color="#059669" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.visitorName}>{walkInPending.visitorName}</Text>
+                    <Text style={s.visitorType}>{walkInPending.purpose} · {walkInPending.passCode}</Text>
+                    {walkInPending.gate && <Text style={s.visitorType}>Gate: {walkInPending.gate}</Text>}
+                  </View>
+                </View>
+                {walkInPending.approvalStatus === 'APPROVED' && (
+                  <TouchableOpacity
+                    style={s.walkInCheckInBtn}
+                    onPress={async () => {
+                      setActionLoading(true);
+                      try {
+                        const permission = await ImagePicker.requestCameraPermissionsAsync();
+                        let photo: string | undefined;
+                        if (permission.granted) {
+                          const captured = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.55, allowsEditing: false });
+                          if (!captured.canceled && captured.assets[0]) {
+                            const asset = captured.assets[0];
+                            photo = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+                          }
+                        }
+                        await visitorService.checkIn(walkInPending.id, 'Main Gate', guardName, photo);
+                        pushHistory({ code: walkInPending.passCode, visitorName: walkInPending.visitorName, action: 'Walk-In Checked In', time: new Date(), ok: true });
+                        Vibration.vibrate([80, 60, 80, 60, 120]);
+                        resetWalkIn();
+                        setMode('scanner');
+                      } catch (err: any) {
+                        setWalkInError(err?.message || 'Check-in failed.');
+                      } finally {
+                        setActionLoading(false);
+                      }
+                    }}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <><Ionicons name="camera" size={18} color="#fff" /><Text style={s.walkInCheckInBtnText}>Check In + Photo</Text></>
+                    }
+                  </TouchableOpacity>
+                )}
+                {walkInError ? (
+                  <View style={s.errorBanner}>
+                    <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                    <Text style={s.errorBannerText}>{walkInError}</Text>
+                  </View>
+                ) : null}
+                <TouchableOpacity style={s.walkInCancelBtn} onPress={resetWalkIn}>
+                  <Text style={s.walkInCancelBtnText}>Cancel / New Request</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Walk-in form */
+              <View style={s.walkInForm}>
+                <Text style={s.walkInFormTitle}>Walk-In Visitor Approval</Text>
+                <Text style={s.walkInFormSub}>Enter visitor details to notify the resident for Allow/Deny.</Text>
+                {walkInError ? (
+                  <View style={s.errorBanner}>
+                    <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                    <Text style={s.errorBannerText}>{walkInError}</Text>
+                  </View>
+                ) : null}
+                <Text style={s.walkInLabel}>Visitor Name *</Text>
+                <TextInput style={s.walkInInput} placeholder="e.g. Ramesh Sharma" placeholderTextColor={COLORS.textMuted}
+                  value={walkInName} onChangeText={setWalkInName} />
+                <Text style={s.walkInLabel}>Flat Number *</Text>
+                <TextInput style={s.walkInInput} placeholder="e.g. A-1204" autoCapitalize="characters"
+                  placeholderTextColor={COLORS.textMuted} value={walkInFlat} onChangeText={setWalkInFlat} />
+                <Text style={s.walkInLabel}>Purpose</Text>
+                <TextInput style={s.walkInInput} placeholder="e.g. Guest, Delivery" placeholderTextColor={COLORS.textMuted}
+                  value={walkInPurpose} onChangeText={setWalkInPurpose} />
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.walkInLabel}>Phone (Optional)</Text>
+                    <TextInput style={s.walkInInput} placeholder="9876543210" keyboardType="phone-pad"
+                      placeholderTextColor={COLORS.textMuted} value={walkInPhone} onChangeText={setWalkInPhone} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.walkInLabel}>Vehicle (Optional)</Text>
+                    <TextInput style={s.walkInInput} placeholder="KA-01-AB-1234" autoCapitalize="characters"
+                      placeholderTextColor={COLORS.textMuted} value={walkInVehicle} onChangeText={setWalkInVehicle} />
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[s.walkInSubmitBtn, walkInSubmitting && { opacity: 0.7 }]}
+                  onPress={handleWalkInSubmit}
+                  disabled={walkInSubmitting}
+                >
+                  {walkInSubmitting
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <><Ionicons name="notifications" size={18} color="#fff" /><Text style={s.walkInSubmitBtnText}>Notify Resident</Text></>
+                  }
+                </TouchableOpacity>
+              </View>
+            )
+          )}
+
+          {/* Staff OTP flow */}
+          {mode === 'staffotp' && (
+            <View style={s.walkInForm}>
+              <Text style={s.walkInFormTitle}>Domestic Staff OTP Entry</Text>
+              <Text style={s.walkInFormSub}>
+                Send a one-time password to the resident to verify domestic staff arrival.
+              </Text>
+
+              {staffOtpSuccess ? (
+                <View style={s.walkInApprovedBanner}>
+                  <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                  <Text style={s.walkInApprovedText}>Entry confirmed! Attendance marked.</Text>
+                </View>
+              ) : null}
+
+              {staffOtpError ? (
+                <View style={s.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.errorBannerText}>{staffOtpError}</Text>
+                </View>
+              ) : null}
+
+              {!staffOtpSuccess && (
+                <>
+                  <Text style={s.walkInLabel}>Staff ID *</Text>
+                  <TextInput
+                    style={s.walkInInput}
+                    placeholder="Enter staff ID number"
+                    keyboardType="numeric"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={staffIdInput}
+                    onChangeText={setStaffIdInput}
+                    editable={!staffOtpSent}
+                  />
+
+                  {!staffOtpSent ? (
+                    <TouchableOpacity
+                      style={[s.walkInSubmitBtn, { backgroundColor: '#7C3AED' }, staffOtpLoading && { opacity: 0.7 }]}
+                      onPress={handleStaffRequestOtp}
+                      disabled={staffOtpLoading}
+                    >
+                      {staffOtpLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <><Ionicons name="send" size={16} color="#fff" /><Text style={s.walkInSubmitBtnText}>Send OTP to Resident</Text></>
+                      }
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <View style={[s.walkInPendingRow, { backgroundColor: '#EDE9FE' }]}>
+                        <Ionicons name="phone-portrait" size={16} color="#7C3AED" />
+                        <Text style={[s.walkInPendingText, { color: '#7C3AED' }]}>
+                          OTP sent{staffMaskedPhone ? ` to ${staffMaskedPhone}` : ''}. Ask resident for the code.
+                        </Text>
+                      </View>
+                      <Text style={s.walkInLabel}>Enter OTP from Resident</Text>
+                      <TextInput
+                        style={[s.walkInInput, { fontSize: 22, letterSpacing: 8, textAlign: 'center', fontWeight: '800' }]}
+                        placeholder="● ● ● ●"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        placeholderTextColor={COLORS.textMuted}
+                        value={staffOtpInput}
+                        onChangeText={setStaffOtpInput}
+                      />
+                      <TouchableOpacity
+                        style={[s.walkInSubmitBtn, { backgroundColor: '#059669' }, staffOtpLoading && { opacity: 0.7 }]}
+                        onPress={handleStaffVerifyOtp}
+                        disabled={staffOtpLoading}
+                      >
+                        {staffOtpLoading
+                          ? <ActivityIndicator size="small" color="#fff" />
+                          : <><Ionicons name="checkmark-done" size={16} color="#fff" /><Text style={s.walkInSubmitBtnText}>Verify & Allow Entry</Text></>
+                        }
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </>
+              )}
+
+              <TouchableOpacity style={s.walkInCancelBtn} onPress={resetStaffOtp}>
+                <Text style={s.walkInCancelBtnText}>{staffOtpSuccess ? 'New Request' : 'Cancel'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Delivery OTP flow */}
+          {mode === 'deliveryotp' && (
+            <View style={s.walkInForm}>
+              <Text style={s.walkInFormTitle}>Delivery Express Entry</Text>
+              <Text style={s.walkInFormSub}>
+                Send a one-time password to the resident to confirm delivery arrival.
+              </Text>
+
+              {deliveryOtpSuccess ? (
+                <View style={s.walkInApprovedBanner}>
+                  <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                  <Text style={s.walkInApprovedText}>Delivery confirmed! Entry logged.</Text>
+                </View>
+              ) : null}
+
+              {deliveryOtpError ? (
+                <View style={s.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.errorBannerText}>{deliveryOtpError}</Text>
+                </View>
+              ) : null}
+
+              {!deliveryOtpSuccess && (
+                <>
+                  <Text style={s.walkInLabel}>Flat Number *</Text>
+                  <TextInput
+                    style={s.walkInInput}
+                    placeholder="e.g. A-1204"
+                    autoCapitalize="characters"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={deliveryFlat}
+                    onChangeText={setDeliveryFlat}
+                    editable={!deliveryOtpSent}
+                  />
+
+                  <Text style={s.walkInLabel}>Delivery Company *</Text>
+                  <View style={s.companyChipRow}>
+                    {['Swiggy', 'Zomato', 'Amazon', 'Blinkit', 'Zepto', 'Other'].map(c => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[s.companyChip, deliveryCompany === c && s.companyChipActive, deliveryOtpSent && { opacity: 0.5 }]}
+                        onPress={() => !deliveryOtpSent && setDeliveryCompany(c)}
+                        disabled={deliveryOtpSent}
+                      >
+                        <Text style={[s.companyChipText, deliveryCompany === c && s.companyChipTextActive]}>{c}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {!deliveryOtpSent ? (
+                    <TouchableOpacity
+                      style={[s.walkInSubmitBtn, { backgroundColor: '#D97706' }, deliveryOtpLoading && { opacity: 0.7 }]}
+                      onPress={handleDeliverySendOtp}
+                      disabled={deliveryOtpLoading}
+                    >
+                      {deliveryOtpLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <><Ionicons name="send" size={16} color="#fff" /><Text style={s.walkInSubmitBtnText}>Send OTP to Resident</Text></>
+                      }
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <View style={[s.walkInPendingRow, { backgroundColor: '#FEF3C7' }]}>
+                        <Ionicons name="phone-portrait" size={16} color="#D97706" />
+                        <Text style={[s.walkInPendingText, { color: '#D97706' }]}>
+                          OTP sent{deliveryMaskedPhone ? ` to ${deliveryMaskedPhone}` : ''}. Ask resident for the code.
+                        </Text>
+                      </View>
+                      <Text style={s.walkInLabel}>Enter OTP from Resident</Text>
+                      <TextInput
+                        style={[s.walkInInput, { fontSize: 22, letterSpacing: 8, textAlign: 'center', fontWeight: '800' }]}
+                        placeholder="● ● ● ●"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        placeholderTextColor={COLORS.textMuted}
+                        value={deliveryOtpInput}
+                        onChangeText={setDeliveryOtpInput}
+                      />
+                      <TouchableOpacity
+                        style={[s.walkInSubmitBtn, { backgroundColor: '#059669' }, deliveryOtpLoading && { opacity: 0.7 }]}
+                        onPress={handleDeliveryVerifyOtp}
+                        disabled={deliveryOtpLoading}
+                      >
+                        {deliveryOtpLoading
+                          ? <ActivityIndicator size="small" color="#fff" />
+                          : <><Ionicons name="checkmark-done" size={16} color="#fff" /><Text style={s.walkInSubmitBtnText}>Verify & Allow Entry</Text></>
+                        }
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </>
+              )}
+
+              <TouchableOpacity style={s.walkInCancelBtn} onPress={resetDeliveryOtp}>
+                <Text style={s.walkInCancelBtnText}>{deliveryOtpSuccess ? 'New Delivery' : 'Cancel'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Lookup error */}
+          {lookupError ? (
+            <View style={s.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+              <Text style={s.errorBannerText}>{lookupError}</Text>
+            </View>
+          ) : null}
+
+          {/* Result card */}
+          {result && statusMeta && (
+            <View style={[s.resultCard, { borderColor: statusMeta.color + '40' }]}>
+              {/* Status banner */}
+              <View style={[s.statusBanner, { backgroundColor: statusMeta.bg }]}>
+                <Ionicons name={statusMeta.icon} size={16} color={statusMeta.color} />
+                <Text style={[s.statusBannerText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
+                <Text style={s.passCodeChip}>{result.passCode}</Text>
+              </View>
+
+              {/* Visitor identity */}
+              <View style={s.visitorRow}>
+                <View style={[s.visitorAvatar, { backgroundColor: statusMeta.bg }]}>
+                  <Ionicons name={typeIcon} size={26} color={statusMeta.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.visitorName}>{result.visitorName}</Text>
+                  <Text style={s.visitorType}>{result.passType} · {result.purpose}</Text>
+                </View>
+              </View>
+
+              {/* Details grid */}
+              <View style={s.detailGrid}>
+                {result.flatNumber && (
+                  <DetailCell icon="home-outline" label="Flat" value={result.flatNumber} />
+                )}
+                {result.vehicleNumber && (
+                  <DetailCell icon="car-outline" label="Vehicle" value={result.vehicleNumber} />
+                )}
+                {result.residentName && (
+                  <DetailCell icon="person-circle-outline" label="Resident" value={result.residentName} />
+                )}
+                {result.expectedAt && (
+                  <DetailCell icon="time-outline" label="Expected"
+                    value={new Date(result.expectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} />
+                )}
+                {result.checkedInAt && (
+                  <DetailCell icon="enter-outline" label="Entered"
+                    value={new Date(result.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} />
+                )}
+                {result.gateIn && (
+                  <DetailCell icon="location-outline" label="Gate" value={result.gateIn} />
+                )}
+              </View>
+
+              {/* Terminal states — info only */}
+              {isTerminal && (
+                <View style={s.terminalNote}>
+                  <Ionicons name="information-circle-outline" size={15} color={COLORS.textMuted} />
+                  <Text style={s.terminalNoteText}>
+                    {result.status === 'CHECKED_OUT' && 'Visitor has already departed.'}
+                    {(result.status === 'DENIED' || result.status === 'REJECTED') && 'This pass has been denied. No entry allowed.'}
+                    {result.status === 'EXPIRED' && 'Pass has expired.'}
+                  </Text>
+                </View>
+              )}
+
+              {/* Action error */}
+              {actionError ? (
+                <View style={s.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.errorBannerText}>{actionError}</Text>
+                </View>
+              ) : null}
+
+              {/* Actions */}
+              {(canCheckIn || canCheckOut || canDeny) && (
+                <View style={s.actionRow}>
+                  {canDeny && (
+                    <TouchableOpacity
+                      style={s.denyBtn}
+                      onPress={handleDeny}
+                      disabled={actionLoading}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="close-circle" size={18} color="#DC2626" />
+                      <Text style={s.denyBtnText}>Deny</Text>
+                    </TouchableOpacity>
+                  )}
+                  {canCheckIn && (
+                    <TouchableOpacity
+                      style={[s.checkInBtn, actionLoading && { opacity: 0.7 }]}
+                      onPress={handleCheckIn}
+                      disabled={actionLoading}
+                      activeOpacity={0.85}
+                    >
+                      {actionLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <>
+                            <Ionicons name="camera" size={18} color="#fff" />
+                            <Text style={s.checkInBtnText}>Check In + Photo</Text>
+                          </>
+                      }
+                    </TouchableOpacity>
+                  )}
+                  {canCheckOut && (
+                    <TouchableOpacity
+                      style={[s.checkOutBtn, actionLoading && { opacity: 0.7 }]}
+                      onPress={handleCheckOut}
+                      disabled={actionLoading}
+                      activeOpacity={0.85}
+                    >
+                      {actionLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <>
+                            <Ionicons name="exit-outline" size={18} color={GUARD_COLORS.accent} />
+                            <Text style={s.checkOutBtnText}>Check Out</Text>
+                          </>
+                      }
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Session scan history */}
+          {history.length > 0 && (
+            <View style={s.historyBlock}>
+              <Text style={s.historyTitle}>This Session</Text>
+              {history.map((rec, i) => (
+                <View key={i} style={s.historyRow}>
+                  <View style={[s.historyDot, { backgroundColor: rec.ok ? '#059669' : '#DC2626' }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.historyName} numberOfLines={1}>{rec.visitorName}</Text>
+                    <Text style={s.historyCode}>{rec.code}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[s.historyAction, { color: rec.ok ? '#059669' : '#DC2626' }]}>{rec.action}</Text>
+                    <Text style={s.historyTime}>{fmt(rec.time)}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={{ height: 32 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <Modal
+        visible={confirmDenyVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setConfirmDenyVisible(false)}
+      >
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setConfirmDenyVisible(false)} activeOpacity={1} />
+        <View style={s.confirmSheet}>
+          <View style={s.sheetHandle} />
+          <Text style={s.confirmTitle}>Deny Entry</Text>
+          <Text style={s.confirmMsg}>Turn away {result?.visitorName ?? 'this visitor'}?</Text>
+          <TouchableOpacity style={s.confirmDangerBtn} onPress={doDeny}>
+            <Text style={s.confirmDangerBtnText}>Deny Entry</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setConfirmDenyVisible(false)}>
+            <Text style={s.confirmCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+function DetailCell({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+  return (
+    <View style={s.detailCell}>
+      <Ionicons name={icon} size={13} color={COLORS.textMuted} />
+      <Text style={s.detailLabel}>{label}</Text>
+      <Text style={s.detailValue} numberOfLines={1}>{value}</Text>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
+    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 },
+  headerSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  clearBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: GUARD_COLORS.accentLight, borderRadius: RADIUS.full,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  clearBtnText: { fontSize: 13, fontWeight: '700', color: GUARD_COLORS.accent },
+
+  toggle: {
+    backgroundColor: COLORS.surfaceAlt, margin: SPACING.md,
+    borderRadius: RADIUS.lg, padding: 3,
+    borderWidth: 1, borderColor: COLORS.border, gap: 3,
+  },
+  toggleRow: { flexDirection: 'row', gap: 3 },
+  toggleBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    paddingVertical: 9, borderRadius: RADIUS.md,
+  },
+  toggleBtnActive: { backgroundColor: GUARD_COLORS.accent, ...SHADOWS.sm },
+  toggleText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  toggleTextActive: { color: '#fff', fontWeight: '700' },
+
+  scroll: { padding: SPACING.md, gap: SPACING.md },
+
+  // Camera
+  cameraBlock: { gap: SPACING.sm },
+  cameraWrap: { borderRadius: RADIUS.xl, overflow: 'hidden', height: 300, position: 'relative' },
+  camera: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  frameOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  frameBorder: {
+    width: 200, height: 200,
+    position: 'relative',
+  },
+  corner: {
+    position: 'absolute', width: 24, height: 24,
+    borderColor: '#fff', borderWidth: 3,
+  },
+  cornerTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 4 },
+  cornerTR: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 4 },
+  cornerBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 4 },
+  cornerBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 4 },
+  frameHint: {
+    color: '#fff', fontSize: 12, fontWeight: '700',
+    backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
+  },
+  cameraLoading: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.65)', alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  cameraLoadingText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  // Permission
+  permissionBlock: {
+    height: 260, backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
+  },
+  permissionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginTop: 4 },
+  permissionSub: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', paddingHorizontal: 24 },
+  permissionBtn: {
+    marginTop: 8, backgroundColor: GUARD_COLORS.accent,
+    borderRadius: RADIUS.lg, paddingVertical: 12, paddingHorizontal: 24, ...SHADOWS.sm,
+  },
+  permissionBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+
+  // Manual entry
+  manualBlock: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    padding: SPACING.lg, gap: 10,
+    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
+  },
+  manualLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
+  manualInput: {
+    borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md, paddingVertical: 13,
+    fontSize: 17, fontWeight: '700', color: COLORS.text,
+    fontFamily: 'monospace', letterSpacing: 2, textAlign: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  verifyBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    backgroundColor: GUARD_COLORS.accent, borderRadius: RADIUS.lg, paddingVertical: 13, ...SHADOWS.sm,
+  },
+  verifyBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+
+  // Result card
+  resultCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    overflow: 'hidden', borderWidth: 1.5,
+    ...SHADOWS.md,
+  },
+  statusBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: SPACING.lg, paddingVertical: 10,
+  },
+  statusBannerText: { flex: 1, fontSize: 13, fontWeight: '800' },
+  passCodeChip: {
+    fontSize: 11, fontWeight: '700', color: COLORS.textMuted,
+    fontFamily: 'monospace', letterSpacing: 1.5,
+  },
+  visitorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  visitorAvatar: {
+    width: 54, height: 54, borderRadius: 27,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  visitorName: { fontSize: 18, fontWeight: '800', color: COLORS.text, letterSpacing: -0.2 },
+  visitorType: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  detailGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    paddingHorizontal: SPACING.md, paddingBottom: SPACING.md, gap: 8,
+    borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.sm,
+  },
+  detailCell: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#F8FAFC', borderRadius: RADIUS.sm,
+    paddingHorizontal: 8, paddingVertical: 5,
+    borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  detailLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
+  detailValue: { fontSize: 11, fontWeight: '700', color: COLORS.text, maxWidth: 100 },
+  terminalNote: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: SPACING.lg, paddingBottom: SPACING.md,
+  },
+  terminalNoteText: { flex: 1, fontSize: 12, color: COLORS.textMuted, lineHeight: 17 },
+  actionRow: {
+    flexDirection: 'row', gap: SPACING.sm, padding: SPACING.md,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  denyBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    paddingVertical: 13, borderRadius: RADIUS.md,
+    backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FECACA',
+  },
+  denyBtnText: { fontSize: 14, fontWeight: '800', color: '#DC2626' },
+  checkInBtn: {
+    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 13, borderRadius: RADIUS.md, backgroundColor: '#059669', ...SHADOWS.sm,
+  },
+  checkInBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  checkOutBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 13, borderRadius: RADIUS.md,
+    borderWidth: 1.5, borderColor: GUARD_COLORS.accent,
+  },
+  checkOutBtnText: { fontSize: 14, fontWeight: '800', color: GUARD_COLORS.accent },
+
+  // History
+  historyBlock: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    padding: SPACING.lg, gap: 10,
+    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
+  },
+  historyTitle: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  historyDot: { width: 8, height: 8, borderRadius: 4 },
+  historyName: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  historyCode: { fontSize: 10, color: COLORS.textMuted, fontFamily: 'monospace', marginTop: 1 },
+  historyAction: { fontSize: 12, fontWeight: '700' },
+  historyTime: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: COLORS.errorLight, borderRadius: RADIUS.md,
+    padding: 10, borderWidth: 1, borderColor: COLORS.error + '40',
+  },
+  errorBannerText: { flex: 1, fontSize: 13, color: COLORS.error, lineHeight: 18 },
+
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  confirmSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: 32, gap: 12,
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+  confirmMsg: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
+  confirmDangerBtn: {
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center',
+  },
+  confirmDangerBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  confirmCancelBtn: {
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center', backgroundColor: '#F1F5F9',
+  },
+  confirmCancelBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
+
+  // Walk-in approval flow
+  walkInForm: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border, gap: 4, ...SHADOWS.sm,
+  },
+  walkInFormTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 2 },
+  walkInFormSub: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 8 },
+  walkInLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 4, marginTop: 6 },
+  walkInInput: {
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    padding: 11, fontSize: 14, color: COLORS.text, backgroundColor: COLORS.background,
+  },
+  walkInSubmitBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    backgroundColor: '#059669', borderRadius: RADIUS.lg, paddingVertical: 14, marginTop: 10,
+  },
+  walkInSubmitBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+
+  walkInWaitCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border, gap: 10, ...SHADOWS.sm,
+  },
+  walkInApprovedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 10,
+  },
+  walkInApprovedText: { fontSize: 14, fontWeight: '700', color: '#059669', flex: 1 },
+  walkInDeniedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: 10,
+  },
+  walkInDeniedText: { fontSize: 14, fontWeight: '700', color: '#DC2626', flex: 1 },
+  walkInPendingRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 10,
+  },
+  walkInPendingText: { fontSize: 13, fontWeight: '600', color: '#059669' },
+  walkInVisitorInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  walkInCheckInBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    backgroundColor: GUARD_COLORS.accent, borderRadius: RADIUS.lg, paddingVertical: 13,
+  },
+  walkInCheckInBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  walkInCancelBtn: { alignItems: 'center', paddingVertical: 10 },
+  walkInCancelBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+
+  companyChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 4 },
+  companyChip: {
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: RADIUS.full,
+    backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: COLORS.border,
+  },
+  companyChipActive: { backgroundColor: '#D97706', borderColor: '#D97706' },
+  companyChipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  companyChipTextActive: { color: '#fff', fontWeight: '700' },
+});

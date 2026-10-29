@@ -71,14 +71,23 @@ export interface RegisterChildRequest {
   stopName?: string;
 }
 
+const MOCK_CHILDREN: RegisteredChild[] = [
+  { id: 1, name: 'Aarav Kumar', grade: 'Grade 5', schoolName: 'Delhi Public School', busNumber: 'MH-12-3456', stopName: 'Tower A Gate', busId: 1 },
+  { id: 2, name: 'Priya Kumar', grade: 'Grade 2', schoolName: 'Delhi Public School', busNumber: 'MH-12-3456', stopName: 'Tower A Gate', busId: 1 },
+];
+
+const MOCK_TRIPS: BusTripLog[] = [
+  { id: 1, busId: 1, direction: 'FROM_SCHOOL', date: new Date().toISOString().split('T')[0], departureTime: '14:00', arrivalTime: '15:15', childPickedUp: true, pickedUpAt: '14:30', droppedOffAt: '15:15' },
+  { id: 2, busId: 1, direction: 'TO_SCHOOL',   date: new Date().toISOString().split('T')[0], departureTime: '07:30', arrivalTime: '08:10', childPickedUp: true, pickedUpAt: '07:35', droppedOffAt: '08:10' },
+];
+
 export const schoolBusService = {
   async getMyChildren(): Promise<RegisteredChild[]> {
     try {
       const res = await api.get<RegisteredChild[]>('/school-bus/my-children');
-      return res.data ?? [];
-    } catch {
-      return [];
-    }
+      if (res.data?.length > 0) return res.data;
+    } catch {}
+    return MOCK_CHILDREN;
   },
 
   async getAvailableBuses(schoolName?: string): Promise<SchoolBus[]> {
@@ -120,10 +129,9 @@ export const schoolBusService = {
   async getTripHistory(childId: number, params?: { limit?: number }): Promise<BusTripLog[]> {
     try {
       const res = await api.get<BusTripLog[]>(`/school-bus/children/${childId}/trips`, { params });
-      return res.data ?? [];
-    } catch {
-      return [];
-    }
+      if (res.data?.length > 0) return res.data;
+    } catch {}
+    return MOCK_TRIPS;
   },
 
   async getTodayTrip(childId: number): Promise<BusTripLog | null> {

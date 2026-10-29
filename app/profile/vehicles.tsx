@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, Switch, Modal, TextInput, ScrollView,
+  ActivityIndicator, Switch, Modal, TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,33 +27,6 @@ const VEHICLE_META: Record<VehicleType, { emoji: string; icon: keyof typeof Ioni
 
 const VEHICLE_TYPES: VehicleType[] = ['CAR', 'BIKE', 'SCOOTER', 'SUV', 'TRUCK', 'OTHER'];
 
-const MOCK_VEHICLES: VehicleRegistration[] = [
-  {
-    id: 1,
-    plateNumber: 'KA-04-MN-7788',
-    vehicleType: 'CAR',
-    make: 'Maruti',
-    model: 'Swift',
-    color: 'White',
-    isGateWhitelisted: true,
-    status: 'ACTIVE',
-    registeredAt: new Date().toISOString(),
-    flatNumber: 'Tower A-1204',
-  },
-  {
-    id: 2,
-    plateNumber: 'KA-04-AB-5566',
-    vehicleType: 'BIKE',
-    make: 'Honda',
-    model: 'Activa',
-    color: 'Black',
-    isGateWhitelisted: false,
-    status: 'ACTIVE',
-    registeredAt: new Date().toISOString(),
-    flatNumber: 'Tower A-1204',
-  },
-];
-
 const EMPTY_FORM: RegisterVehicleRequest = {
   plateNumber: '', vehicleType: 'CAR', make: '', model: '', color: '',
 };
@@ -64,29 +37,34 @@ export default function VehiclesScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<RegisterVehicleRequest>(EMPTY_FORM);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'remove' | 'toggle'; item: VehicleRegistration } | null>(null);
+  const [formErr, setFormErr] = useState('');
+  const [mutErr, setMutErr] = useState('');
+  const [regSuccess, setRegSuccess] = useState('');
 
   const { data: raw, isLoading } = useQuery<VehicleRegistration[]>({
     queryKey: ['vehicles', 'my-vehicles'],
     queryFn: () => vehicleRegistrationService.getMyVehicles(),
     staleTime: 30_000,
   });
-  const vehicles = raw && raw.length > 0 ? raw : MOCK_VEHICLES;
+  const vehicles = raw ?? [];
 
   const registerMutation = useMutation({
     mutationFn: (data: RegisterVehicleRequest) => vehicleRegistrationService.registerVehicle(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      setShowAdd(false);
       setForm(EMPTY_FORM);
-      Alert.alert('Vehicle Registered', 'Your vehicle has been added. Enable Gate Auto-Entry to allow ANPR-based access.');
+      setFormErr('');
+      setRegSuccess('Vehicle registered. Enable Gate Auto-Entry to allow ANPR-based access.');
+      setTimeout(() => { setShowAdd(false); setRegSuccess(''); }, 2000);
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setFormErr(err.message || 'Failed to register vehicle.'),
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: number) => vehicleRegistrationService.removeVehicle(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['vehicles'] }); setConfirmAction(null); },
+    onError: (err: any) => { setMutErr(err.message || 'Failed to remove vehicle.'); setConfirmAction(null); },
   });
 
   const toggleMutation = useMutation({
@@ -95,43 +73,28 @@ export default function VehiclesScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       setTogglingId(null);
+      setConfirmAction(null);
     },
-    onError: (err: any) => { Alert.alert('Error', err.message); setTogglingId(null); },
+    onError: (err: any) => { setMutErr(err.message || 'Failed to update gate whitelist.'); setTogglingId(null); setConfirmAction(null); },
   });
 
-  const handleToggle = (item: VehicleRegistration) => {
-    const enabling = !item.isGateWhitelisted;
-    Alert.alert(
-      enabling ? 'Enable Gate Auto-Entry?' : 'Disable Gate Auto-Entry?',
-      enabling
-        ? `${item.plateNumber} will be automatically allowed in via ANPR plate scan.`
-        : `${item.plateNumber} will no longer get automatic gate entry.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: enabling ? 'Enable' : 'Disable',
-          onPress: () => {
-            setTogglingId(item.id);
-            toggleMutation.mutate({ id: item.id, enabled: enabling });
-          },
-        },
-      ]
-    );
-  };
+  const handleToggle = (item: VehicleRegistration) => setConfirmAction({ type: 'toggle', item });
+  const handleRemove = (item: VehicleRegistration) => setConfirmAction({ type: 'remove', item });
 
-  const handleRemove = (item: VehicleRegistration) => {
-    Alert.alert(
-      'Remove Vehicle?',
-      `Remove ${item.plateNumber} from your registered vehicles?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => removeMutation.mutate(item.id) },
-      ]
-    );
+  const handleConfirm = () => {
+    if (!confirmAction) return;
+    if (confirmAction.type === 'remove') {
+      removeMutation.mutate(confirmAction.item.id);
+    } else {
+      const enabling = !confirmAction.item.isGateWhitelisted;
+      setTogglingId(confirmAction.item.id);
+      toggleMutation.mutate({ id: confirmAction.item.id, enabled: enabling });
+    }
   };
 
   const handleSubmit = () => {
-    if (!form.plateNumber.trim()) { Alert.alert('Required', 'Please enter the plate number.'); return; }
+    if (!form.plateNumber.trim()) { setFormErr('Please enter the plate number.'); return; }
+    setFormErr('');
     registerMutation.mutate({ ...form, plateNumber: form.plateNumber.toUpperCase().trim() });
   };
 
@@ -223,6 +186,58 @@ export default function VehiclesScreen() {
         />
       )}
 
+      {/* Mutation error banner */}
+      {!!mutErr && (
+        <Modal visible transparent animationType="fade">
+          <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setMutErr('')}>
+            <View style={s.errBanner}>
+              <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
+              <Text style={s.errBannerText}>{mutErr}</Text>
+              <TouchableOpacity onPress={() => setMutErr('')} hitSlop={8}>
+                <Ionicons name="close" size={16} color="#DC2626" />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
+      {/* Inline confirm modal */}
+      <Modal visible={!!confirmAction} transparent animationType="slide">
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setConfirmAction(null)}>
+          <View style={s.confirmSheet}>
+            <Text style={s.confirmTitle}>
+              {confirmAction?.type === 'remove'
+                ? 'Remove Vehicle?'
+                : confirmAction?.item.isGateWhitelisted ? 'Disable Gate Auto-Entry?' : 'Enable Gate Auto-Entry?'}
+            </Text>
+            <Text style={s.confirmMsg}>
+              {confirmAction?.type === 'remove'
+                ? `Remove ${confirmAction?.item.plateNumber} from your registered vehicles?`
+                : confirmAction?.item.isGateWhitelisted
+                  ? `${confirmAction?.item.plateNumber} will no longer get automatic gate entry.`
+                  : `${confirmAction?.item.plateNumber} will be automatically allowed in via ANPR plate scan.`}
+            </Text>
+            <View style={s.confirmBtns}>
+              <TouchableOpacity style={s.confirmCancel} onPress={() => setConfirmAction(null)}>
+                <Text style={s.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.confirmOk, confirmAction?.type === 'remove' && s.confirmOkRed]}
+                onPress={handleConfirm}
+                disabled={removeMutation.isPending || toggleMutation.isPending}
+              >
+                {(removeMutation.isPending || toggleMutation.isPending)
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={s.confirmOkText}>
+                      {confirmAction?.type === 'remove' ? 'Remove' : confirmAction?.item.isGateWhitelisted ? 'Disable' : 'Enable'}
+                    </Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Add vehicle modal */}
       <Modal visible={showAdd} transparent animationType="slide">
         <View style={s.overlay}>
@@ -233,6 +248,18 @@ export default function VehiclesScreen() {
                 <Ionicons name="close" size={22} color={COLORS.text} />
               </TouchableOpacity>
             </View>
+            {!!regSuccess && (
+              <View style={s.successBanner}>
+                <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                <Text style={s.successBannerText}>{regSuccess}</Text>
+              </View>
+            )}
+            {!!formErr && (
+              <View style={s.inlineErr}>
+                <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+                <Text style={s.inlineErrText}>{formErr}</Text>
+              </View>
+            )}
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={s.label}>Plate Number *</Text>
               <TextInput
@@ -340,6 +367,21 @@ const s = StyleSheet.create({
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modal: { backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.xl, maxHeight: '85%' },
+  confirmSheet: { backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.xl, gap: SPACING.md },
+  confirmTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  confirmMsg: { fontSize: 13, color: COLORS.textSecondary, fontFamily: 'DMSans-Regular', lineHeight: 18 },
+  confirmBtns: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  confirmCancel: { flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  confirmCancelText: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary, fontFamily: 'Outfit-Bold' },
+  confirmOk: { flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: '#2563EB' },
+  confirmOkRed: { backgroundColor: '#DC2626' },
+  confirmOkText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  errBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEE2E2', margin: SPACING.md, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: 'auto' as any },
+  errBannerText: { flex: 1, fontSize: 13, color: '#DC2626', fontFamily: 'DMSans-Regular' },
+  successBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md },
+  successBannerText: { flex: 1, fontSize: 13, color: '#065F46', fontFamily: 'DMSans-Medium', fontWeight: '600' },
+  inlineErr: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md },
+  inlineErrText: { flex: 1, fontSize: 12, color: '#DC2626', fontFamily: 'DMSans-Regular', lineHeight: 17 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
   modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   label: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 5, fontFamily: 'DMSans-Medium' },

@@ -87,14 +87,6 @@ export default function GuardTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="person-outline" iconFocused="person" label="Profile" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="sos"
         options={{
           tabBarIcon: ({ focused }) => (
@@ -102,6 +94,21 @@ export default function GuardTabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="person-outline" iconFocused="person" label="Profile" focused={focused} />
+          ),
+        }}
+      />
+      {/* Hidden screens — navigable from dashboard, not shown in tab bar */}
+      <Tabs.Screen name="attendance" options={{ href: null }} />
+      <Tabs.Screen name="daily-log" options={{ href: null }} />
+      <Tabs.Screen name="handover" options={{ href: null }} />
+      <Tabs.Screen name="scan" options={{ href: null }} />
+      <Tabs.Screen name="parcels" options={{ href: null }} />
+      <Tabs.Screen name="vehicles" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -131,7 +131,7 @@ export default function FindHelpScreen() {
           data={filtered}
           keyExtractor={item => String(item.id)}
           contentContainerStyle={styles.listContent}
-          onRefresh={refetch}
+          onRefresh={() => { refetch(); }}
           refreshing={isLoading}
           renderItem={({ item }) => (
             <View style={styles.card}>

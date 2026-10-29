@@ -17,7 +17,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       await authService.forgotPassword(email.trim().toLowerCase());
-      Alert.alert('Email Sent', 'Check your inbox for a password reset link.', [
+      Alert.alert('Email Sent', 'Check your inbox for a password reset link. It expires in 15 minutes.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch {
@@ -33,8 +33,8 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.backText}>‹ Back</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Forgot Password?</Text>
-      <Text style={styles.subtitle}>Enter your email and we'll send you a reset link.</Text>
+      <Text style={styles.title}>Reset Password</Text>
+      <Text style={styles.subtitle}>Enter the email linked to your resident account and we'll send a reset link within a minute.</Text>
 
       <View style={styles.field}>
         <Text style={styles.label}>Email address</Text>

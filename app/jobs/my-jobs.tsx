@@ -158,7 +158,7 @@ export default function MyJobsScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* Header */}
       <Header
@@ -234,7 +234,7 @@ export default function MyJobsScreen() {
             refreshControl={
               <RefreshControl
                 refreshing={refetchingPosted}
-                onRefresh={refetchPosted}
+                onRefresh={() => { refetchPosted(); }}
                 tintColor={COLORS.primary}
               />
             }
@@ -280,7 +280,7 @@ export default function MyJobsScreen() {
             refreshControl={
               <RefreshControl
                 refreshing={refetchingApplied}
-                onRefresh={refetchApplied}
+                onRefresh={() => { refetchApplied(); }}
                 tintColor={COLORS.primary}
               />
             }

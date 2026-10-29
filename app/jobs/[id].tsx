@@ -175,7 +175,7 @@ export default function JobDetailScreen() {
 
   return (
     <SafeAreaView style={scr.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* Header */}
       <Header
