@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, ScrollView,
+  TextInput, ActivityIndicator, ScrollView,
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -51,6 +51,8 @@ export default function ApproveVisitorScreen() {
   const [decision, setDecision] = useState<DecisionState>('idle');
   const [showDenySheet, setShowDenySheet] = useState(false);
   const [denyReason, setDenyReason] = useState('');
+  const [approveErr, setApproveErr] = useState('');
+  const [denyErr, setDenyErr] = useState('');
 
   const waitLabel = useWaitTimer(visitor?.arrivedAt ?? new Date().toISOString());
 
@@ -60,7 +62,7 @@ export default function ApproveVisitorScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       setDecision('approved');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setApproveErr(err?.message || 'Could not approve entry. Please try again.'),
   });
 
   const rejectMutation = useMutation({
@@ -72,7 +74,7 @@ export default function ApproveVisitorScreen() {
       setDenyReason('');
       setDecision('denied');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setDenyErr(err?.message || 'Could not deny entry. Please try again.'),
   });
 
   if (!visitor) {
@@ -218,9 +220,16 @@ export default function ApproveVisitorScreen() {
 
       {/* CTA bar */}
       <View style={s.ctaBar}>
+        {approveErr ? (
+          <View style={s.inlineErr}>
+            <Ionicons name="alert-circle-outline" size={14} color="#991B1B" />
+            <Text style={s.inlineErrText}>{approveErr}</Text>
+          </View>
+        ) : null}
+        <View style={s.ctaBtns}>
         <TouchableOpacity
           style={s.denyBtn}
-          onPress={() => setShowDenySheet(true)}
+          onPress={() => { setApproveErr(''); setShowDenySheet(true); }}
           disabled={approveMutation.isPending}
           activeOpacity={0.85}
         >
@@ -230,7 +239,7 @@ export default function ApproveVisitorScreen() {
 
         <TouchableOpacity
           style={[s.approveBtn, approveMutation.isPending && { opacity: 0.7 }]}
-          onPress={() => approveMutation.mutate(visitor.id)}
+          onPress={() => { setApproveErr(''); approveMutation.mutate(visitor.id); }}
           disabled={approveMutation.isPending}
           activeOpacity={0.85}
         >
@@ -243,6 +252,7 @@ export default function ApproveVisitorScreen() {
             </>
           )}
         </TouchableOpacity>
+        </View>
       </View>
 
       {/* Deny bottom sheet */}
@@ -268,10 +278,17 @@ export default function ApproveVisitorScreen() {
               autoFocus
             />
 
+            {denyErr ? (
+              <View style={s.inlineErr}>
+                <Ionicons name="alert-circle-outline" size={14} color="#991B1B" />
+                <Text style={s.inlineErrText}>{denyErr}</Text>
+              </View>
+            ) : null}
+
             <View style={s.sheetActions}>
               <TouchableOpacity
                 style={s.sheetCancel}
-                onPress={() => { setShowDenySheet(false); setDenyReason(''); }}
+                onPress={() => { setShowDenySheet(false); setDenyReason(''); setDenyErr(''); }}
               >
                 <Text style={s.sheetCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -386,12 +403,19 @@ const s = StyleSheet.create({
   // CTA bar
   ctaBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', gap: SPACING.md,
+    gap: 8,
     paddingHorizontal: SPACING.md, paddingBottom: 32, paddingTop: SPACING.md,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1, borderTopColor: COLORS.border,
     ...SHADOWS.lg,
   },
+  ctaBtns: { flexDirection: 'row', gap: SPACING.md },
+  inlineErr: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FEE2E2', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  inlineErrText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#991B1B' },
   denyBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: 14, borderRadius: RADIUS.lg,

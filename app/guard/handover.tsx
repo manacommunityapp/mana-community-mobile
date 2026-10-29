@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, Modal, TextInput, ScrollView, Switch,
+  ActivityIndicator, Modal, TextInput, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -90,6 +90,10 @@ export default function GuardHandoverScreen() {
   const [newShift, setNewShift] = useState<ShiftType>('AFTERNOON');
   const [newItems, setNewItems] = useState<NewItem[]>([{ ...BLANK_ITEM }]);
   const [newNotes, setNewNotes] = useState('');
+  const [createSuccess, setCreateSuccess] = useState(false);
+  const [createErr, setCreateErr] = useState('');
+  const [ackSuccessId, setAckSuccessId] = useState<number | null>(null);
+  const [ackErr, setAckErr] = useState('');
 
   const { data: rawToday, isLoading: loadingToday } = useQuery<ShiftHandover[]>({
     queryKey: ['guard', 'handovers', 'today'],
@@ -112,23 +116,28 @@ export default function GuardHandoverScreen() {
       setShowCreate(false);
       setNewItems([{ ...BLANK_ITEM }]);
       setNewNotes('');
-      Alert.alert('Handover Created', 'The incoming guard will be notified to acknowledge.');
+      setCreateErr('');
+      setCreateSuccess(true);
+      setTimeout(() => setCreateSuccess(false), 3500);
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setCreateErr(err?.message || 'Failed to create handover. Please try again.'),
   });
 
   const acknowledgeMutation = useMutation({
     mutationFn: (id: number) => shiftHandoverService.acknowledgeHandover(id),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['guard', 'handovers'] });
-      Alert.alert('Acknowledged', 'You have acknowledged the shift handover.');
+      setAckSuccessId(id);
+      setAckErr('');
+      setTimeout(() => setAckSuccessId(null), 3000);
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setAckErr(err?.message || 'Could not acknowledge handover.'),
   });
 
   const handleCreate = () => {
     const validItems = newItems.filter(i => i.description.trim());
-    if (validItems.length === 0) { Alert.alert('Required', 'Add at least one handover item.'); return; }
+    if (validItems.length === 0) { setCreateErr('Add at least one handover item with a description.'); return; }
+    setCreateErr('');
     createMutation.mutate({ shiftType: newShift, items: validItems, notes: newNotes.trim() || undefined });
   };
 
@@ -197,19 +206,26 @@ export default function GuardHandoverScreen() {
               </View>
             )}
             {pending && showAck && (
-              <TouchableOpacity
-                style={[s.ackBtn, acknowledgeMutation.isPending && { opacity: 0.7 }]}
-                onPress={() => acknowledgeMutation.mutate(item.id)}
-                disabled={acknowledgeMutation.isPending}
-              >
-                {acknowledgeMutation.isPending
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <>
-                      <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
-                      <Text style={s.ackBtnText}>Acknowledge Handover</Text>
-                    </>
-                }
-              </TouchableOpacity>
+              ackSuccessId === item.id ? (
+                <View style={s.ackSuccess}>
+                  <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                  <Text style={s.ackSuccessText}>Acknowledged — you have taken over the shift</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[s.ackBtn, acknowledgeMutation.isPending && { opacity: 0.7 }]}
+                  onPress={() => acknowledgeMutation.mutate(item.id)}
+                  disabled={acknowledgeMutation.isPending}
+                >
+                  {acknowledgeMutation.isPending
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <>
+                        <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
+                        <Text style={s.ackBtnText}>Acknowledge Handover</Text>
+                      </>
+                  }
+                </TouchableOpacity>
+              )
             )}
           </View>
         )}
@@ -239,6 +255,19 @@ export default function GuardHandoverScreen() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {createSuccess && (
+        <View style={s.successBanner}>
+          <Ionicons name="checkmark-circle" size={14} color="#065F46" />
+          <Text style={s.successBannerText}>Handover created — incoming guard will be notified</Text>
+        </View>
+      )}
+      {ackErr ? (
+        <View style={s.errBanner}>
+          <Ionicons name="alert-circle-outline" size={14} color="#991B1B" />
+          <Text style={s.errBannerText}>{ackErr}</Text>
+        </View>
+      ) : null}
 
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {activeTab === 'today' ? (
@@ -342,6 +371,13 @@ export default function GuardHandoverScreen() {
               />
             </ScrollView>
 
+            {createErr ? (
+              <View style={s.modalErrBanner}>
+                <Ionicons name="alert-circle-outline" size={14} color="#991B1B" />
+                <Text style={s.modalErrText}>{createErr}</Text>
+              </View>
+            ) : null}
+
             <TouchableOpacity
               style={[s.submitBtn, createMutation.isPending && { opacity: 0.7 }]}
               onPress={handleCreate}
@@ -427,4 +463,12 @@ const s = StyleSheet.create({
   addItemBtnText: { fontSize: 13, fontWeight: '700', color: ACCENT, fontFamily: 'Outfit-Bold' },
   submitBtn: { backgroundColor: ACCENT, paddingVertical: 14, borderRadius: RADIUS.md, alignItems: 'center', marginTop: SPACING.md, ...SHADOWS.sm },
   submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  successBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#D1FAE5', paddingHorizontal: SPACING.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#A7F3D0' },
+  successBannerText: { flex: 1, fontSize: 12, fontWeight: '700', color: '#065F46', fontFamily: 'DMSans-Medium' },
+  errBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEE2E2', paddingHorizontal: SPACING.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#FECACA' },
+  errBannerText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#991B1B', fontFamily: 'DMSans-Regular' },
+  ackSuccess: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.sm },
+  ackSuccessText: { fontSize: 12, fontWeight: '600', color: '#065F46', fontFamily: 'DMSans-Medium', flex: 1 },
+  modalErrBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.sm },
+  modalErrText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#991B1B', fontFamily: 'DMSans-Regular' },
 });
