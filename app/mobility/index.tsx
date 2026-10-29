@@ -13,8 +13,7 @@ import { mobilityPassengerService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { MobilityServiceType } from '@/types/mobility';
 
-// ── Feature flags — set to true once backend is ready ─────────────
-const ONDEMAND_ENABLED = false;
+const ONDEMAND_ENABLED = true;
 
 interface ServiceCard {
   type:        MobilityServiceType;

@@ -7,7 +7,7 @@
 import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, BackHandler, StatusBar,
+  TextInput, ActivityIndicator, BackHandler, StatusBar,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -68,7 +68,7 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     label:    'Bike',
     sublabel: 'Fastest & cheapest solo ride',
     maxPax:   1,
-    enabled:  false,
+    enabled:  true,
     color:    '#D97706',
     iconBg:   '#FFFBEB',
   },
@@ -78,7 +78,7 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     label:    'Auto',
     sublabel: 'Affordable & quick city ride',
     maxPax:   3,
-    enabled:  false,
+    enabled:  true,
     color:    '#0891B2',
     iconBg:   '#ECFEFF',
   },
@@ -88,7 +88,7 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     label:    'Cab',
     sublabel: 'Comfortable air-conditioned cab',
     maxPax:   4,
-    enabled:  false,
+    enabled:  true,
     color:    '#7C3AED',
     iconBg:   '#F5F3FF',
   },
@@ -136,12 +136,21 @@ export default function BookRideScreen() {
   const [pickupLng, setPickupLng] = useState(DEFAULT_LNG);
   const [gpsLoading, setGpsLoading] = useState(false);
 
+  // ── Inline feedback state ──────────────────────────────────────
+  const [gpsErr, setGpsErr] = useState('');
+  const [locationErr, setLocationErr] = useState('');
+  const [faresErr, setFaresErr] = useState('');
+  const [bookErr, setBookErr] = useState('');
+  const [savedNote, setSavedNote] = useState('');
+  const [promoMsg, setPromoMsg] = useState('');
+
   async function handleGps() {
     setGpsLoading(true);
+    setGpsErr('');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Allow location access to auto-detect your position.');
+        setGpsErr('Location permission denied. Please enter your pickup address manually.');
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
@@ -153,7 +162,7 @@ export default function BookRideScreen() {
         setPickupAddr(label);
       }
     } catch {
-      Alert.alert('GPS error', 'Could not get current location. Please enter it manually.');
+      setGpsErr('Could not get current location. Please enter your pickup address manually.');
     } finally {
       setGpsLoading(false);
     }
@@ -176,9 +185,11 @@ export default function BookRideScreen() {
   // Fetch all enabled vehicle quotes in parallel
   async function fetchAllQuotes() {
     if (!pickupAddr.trim() || !destAddr.trim()) {
-      Alert.alert('Required', 'Please enter both pickup and destination locations.');
+      setLocationErr('Please enter both pickup and destination locations.');
       return;
     }
+    setLocationErr('');
+    setFaresErr('');
     setLoadingQuotes(true);
     try {
       const enabled = VEHICLE_OPTIONS.filter(v => v.enabled);
@@ -194,11 +205,15 @@ export default function BookRideScreen() {
       const fetched = results
         .filter((r): r is PromiseFulfilledResult<QuotedService> => r.status === 'fulfilled')
         .map(r => r.value);
+      if (!fetched.length) {
+        setFaresErr('Could not load ride options. Please try again.');
+        return;
+      }
       setQuotes(fetched);
       setSelectedType(fetched[0]?.type ?? 'CARPOOL');
       setPhase('SELECT_RIDE');
     } catch {
-      Alert.alert('Error', 'Could not fetch fares. Please try again.');
+      setFaresErr('Could not fetch fares. Please try again.');
     } finally {
       setLoadingQuotes(false);
     }
@@ -207,7 +222,7 @@ export default function BookRideScreen() {
   const bookMutation = useMutation({
     mutationFn: (req: CreateRideRequest) => mobilityPassengerService.requestRide(req),
     onSuccess:  (trip) => router.replace(`/mobility/track/${trip.id}` as any),
-    onError:    () => Alert.alert('Error', 'Booking failed. Please try again.'),
+    onError:    (e: any) => setBookErr(e?.response?.data?.message || 'Booking failed. Please try again.'),
   });
 
   function handleConfirmBook() {
@@ -385,9 +400,22 @@ export default function BookRideScreen() {
               </View>
             </View>
 
+            {!!gpsErr && (
+              <View style={s.inlineError}>
+                <Ionicons name="location-outline" size={14} color="#991B1B" />
+                <Text style={s.inlineErrorText}>{gpsErr}</Text>
+              </View>
+            )}
+
             {/* Quick Saved Shortcuts */}
             <View style={s.savedPlacesSection}>
               <Text style={s.savedSectionTitle}>Saved Places</Text>
+              {!!savedNote && (
+                <View style={s.savedNoteRow}>
+                  <Ionicons name="information-circle-outline" size={14} color="#4F46E5" />
+                  <Text style={s.savedNoteText}>{savedNote}</Text>
+                </View>
+              )}
               <View style={s.savedGrid}>
                 {SAVED_PLACES.map((sp) => (
                   <TouchableOpacity
@@ -397,8 +425,10 @@ export default function BookRideScreen() {
                       if (sp.addr) {
                         if (activeInput === 'pickup') setPickupAddr(sp.addr);
                         else setDestAddr(sp.addr);
+                        setSavedNote('');
                       } else {
-                        Alert.alert(`Set ${sp.label}`, `Please enter your ${sp.label.toLowerCase()} address above to set it for quick booking.`);
+                        setSavedNote(`Enter your ${sp.label.toLowerCase()} address in the field above to save it for quick booking.`);
+                        setTimeout(() => setSavedNote(''), 3500);
                       }
                     }}
                     activeOpacity={0.8}
@@ -414,6 +444,17 @@ export default function BookRideScreen() {
                 ))}
               </View>
             </View>
+
+            {!!locationErr && (
+              <View style={s.inlineError}>
+                <Text style={s.inlineErrorText}>{locationErr}</Text>
+              </View>
+            )}
+            {!!faresErr && (
+              <View style={s.inlineError}>
+                <Text style={s.inlineErrorText}>{faresErr}</Text>
+              </View>
+            )}
 
             {/* Primary Action Button */}
             <TouchableOpacity
@@ -598,8 +639,8 @@ export default function BookRideScreen() {
                     return;
                   }
                   if (!promoCode.trim()) return;
-                  Alert.alert('Promo Applied', `Code "${promoCode}" active for this trip.`);
                   setPromoApplied(true);
+                  setPromoMsg(`Code "${promoCode}" applied for this trip.`);
                 }}
               >
                 <Text style={[s.promoActionBtnText, promoApplied && s.promoActionBtnTextApplied]}>
@@ -607,6 +648,13 @@ export default function BookRideScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {!!promoMsg && (
+              <View style={s.promoSuccessRow}>
+                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Text style={s.promoSuccessText}>{promoMsg}</Text>
+              </View>
+            )}
 
             {/* Payment Method Selector */}
             <View style={s.paymentSection}>
@@ -644,6 +692,12 @@ export default function BookRideScreen() {
                 Guaranteed upfront fare: ₹{selectedQuote.quote.total.toFixed(2)}. No hidden surge pricing within community bounds.
               </Text>
             </View>
+
+            {!!bookErr && (
+              <View style={s.inlineError}>
+                <Text style={s.inlineErrorText}>{bookErr}</Text>
+              </View>
+            )}
 
             {/* Confirm & Book CTA */}
             <TouchableOpacity
@@ -1349,5 +1403,50 @@ const s = StyleSheet.create({
     fontFamily: FONTS.regular,
     color: '#065F46',
     lineHeight: 16,
+  },
+
+  inlineError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEE2E2',
+    borderRadius: RADIUS.md,
+    padding: 10,
+  },
+  inlineErrorText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontFamily: FONTS.medium,
+    color: '#991B1B',
+  },
+  savedNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: '#EEF2FF',
+    borderRadius: RADIUS.md,
+    padding: 9,
+    marginBottom: 6,
+  },
+  savedNoteText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    color: '#3730A3',
+    lineHeight: 16,
+  },
+  promoSuccessRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderRadius: RADIUS.md,
+    padding: 9,
+  },
+  promoSuccessText: {
+    fontSize: 12.5,
+    fontFamily: FONTS.medium,
+    color: '#065F46',
+    flex: 1,
   },
 });
