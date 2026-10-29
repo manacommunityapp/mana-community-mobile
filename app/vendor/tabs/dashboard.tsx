@@ -123,6 +123,29 @@ export default function VendorDashboardScreen() {
           <Ionicons name="chevron-forward" size={18} color={VENDOR_COLORS.accent} />
         </TouchableOpacity>
 
+        {/* Sports Venues & Facility Management */}
+        <TouchableOpacity
+          style={[s.groupBuyBanner, { borderColor: '#10B981' }]}
+          onPress={() => router.push('/sports' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={[s.groupBuyIconWrap, { backgroundColor: '#10B981' }]}>
+            <Ionicons name="trophy" size={22} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={s.groupBuyTitleRow}>
+              <Text style={s.groupBuyTitle}>Sports & Arena Facilities</Text>
+              <View style={[s.groupBuyBadge, { backgroundColor: '#D1FAE5' }]}>
+                <Text style={[s.groupBuyBadgeText, { color: '#059669' }]}>FACILITIES</Text>
+              </View>
+            </View>
+            <Text style={s.groupBuySub}>
+              View court schedules, sports facilities, tournament bookings & matches
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#10B981" />
+        </TouchableOpacity>
+
         {/* Availability toggle */}
         <TouchableOpacity style={s.availCard} activeOpacity={0.8}>
           <View style={s.availLeft}>
