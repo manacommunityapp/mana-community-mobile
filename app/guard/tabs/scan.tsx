@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ActivityIndicator, ScrollView, Modal,
@@ -11,9 +11,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 import { visitorService, type VisitorDto } from '@/services/visitorService';
+import { visitorApprovalService, type PendingApproval } from '@/services/visitorApprovalService';
 import { useAuth } from '@/hooks/useAuth';
 
-type Mode = 'scanner' | 'manual';
+type Mode = 'scanner' | 'manual' | 'walkin';
 
 interface ScanRecord {
   code: string;
@@ -61,6 +62,16 @@ export default function GuardScanScreen() {
   const [actionError, setActionError] = useState('');
   const [confirmDenyVisible, setConfirmDenyVisible] = useState(false);
 
+  // Walk-in approval flow
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
+  const [walkInPurpose, setWalkInPurpose] = useState('');
+  const [walkInVehicle, setWalkInVehicle] = useState('');
+  const [walkInFlat, setWalkInFlat] = useState('');
+  const [walkInSubmitting, setWalkInSubmitting] = useState(false);
+  const [walkInError, setWalkInError] = useState('');
+  const [walkInPending, setWalkInPending] = useState<PendingApproval | null>(null);
+
   // Prevent double-scans: ignore same QR code for 3 seconds
   const lastScanned = useRef<{ code: string; at: number } | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -68,6 +79,51 @@ export default function GuardScanScreen() {
   const pushHistory = useCallback((rec: ScanRecord) => {
     setHistory(prev => [rec, ...prev].slice(0, 6));
   }, []);
+
+  // Poll approval status every 4s while a walk-in request is pending
+  useEffect(() => {
+    if (!walkInPending || walkInPending.approvalStatus !== 'PENDING') return;
+    const interval = setInterval(async () => {
+      const updated = await visitorApprovalService.pollApprovalStatus(walkInPending.id);
+      if (updated && updated.approvalStatus !== 'PENDING') {
+        setWalkInPending(updated);
+        clearInterval(interval);
+        if (updated.approvalStatus === 'APPROVED') Vibration.vibrate([80, 60, 80, 60, 120]);
+        else if (updated.approvalStatus === 'DENIED') Vibration.vibrate([200, 100, 200]);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [walkInPending]);
+
+  const handleWalkInSubmit = async () => {
+    if (!walkInName.trim()) { setWalkInError('Visitor name is required.'); return; }
+    if (!walkInFlat.trim()) { setWalkInError('Flat number is required to notify the resident.'); return; }
+    setWalkInError('');
+    setWalkInSubmitting(true);
+    try {
+      const pending = await visitorApprovalService.createWalkInRequest({
+        visitorName: walkInName.trim(),
+        visitorPhone: walkInPhone.trim() || undefined,
+        purpose: walkInPurpose.trim() || 'Walk-in visitor',
+        passType: 'GUEST',
+        vehicleNumber: walkInVehicle.trim() || undefined,
+        flatNumber: walkInFlat.trim(),
+        gate: 'Main Gate',
+        guardName,
+      });
+      setWalkInPending({ ...pending, approvalStatus: pending.approvalStatus ?? 'PENDING' });
+    } catch (err: any) {
+      setWalkInError(err?.message || 'Failed to send request. Try again.');
+    } finally {
+      setWalkInSubmitting(false);
+    }
+  };
+
+  const resetWalkIn = () => {
+    setWalkInPending(null);
+    setWalkInName(''); setWalkInPhone(''); setWalkInPurpose('');
+    setWalkInVehicle(''); setWalkInFlat(''); setWalkInError('');
+  };
 
   const lookup = useCallback(async (code: string) => {
     const trimmed = code.trim().toUpperCase();
@@ -200,7 +256,14 @@ export default function GuardScanScreen() {
           onPress={() => setMode('manual')}
         >
           <Ionicons name="keypad" size={15} color={mode === 'manual' ? '#fff' : COLORS.textMuted} />
-          <Text style={[s.toggleText, mode === 'manual' && s.toggleTextActive]}>Manual Entry</Text>
+          <Text style={[s.toggleText, mode === 'manual' && s.toggleTextActive]}>Manual</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.toggleBtn, mode === 'walkin' && { backgroundColor: '#059669', ...SHADOWS.sm }]}
+          onPress={() => setMode('walkin')}
+        >
+          <Ionicons name="person-add" size={15} color={mode === 'walkin' ? '#fff' : COLORS.textMuted} />
+          <Text style={[s.toggleText, mode === 'walkin' && s.toggleTextActive]}>Walk-In</Text>
         </TouchableOpacity>
       </View>
 
@@ -277,6 +340,131 @@ export default function GuardScanScreen() {
                 }
               </TouchableOpacity>
             </View>
+          )}
+
+          {/* Walk-In approval flow */}
+          {mode === 'walkin' && (
+            walkInPending ? (
+              /* Waiting state */
+              <View style={s.walkInWaitCard}>
+                {walkInPending.approvalStatus === 'APPROVED' && (
+                  <View style={s.walkInApprovedBanner}>
+                    <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                    <Text style={s.walkInApprovedText}>Resident approved entry!</Text>
+                  </View>
+                )}
+                {walkInPending.approvalStatus === 'DENIED' && (
+                  <View style={s.walkInDeniedBanner}>
+                    <Ionicons name="close-circle" size={18} color="#DC2626" />
+                    <Text style={s.walkInDeniedText}>
+                      Resident denied entry.{walkInPending.denialReason ? ` Reason: ${walkInPending.denialReason}` : ''}
+                    </Text>
+                  </View>
+                )}
+                {walkInPending.approvalStatus === 'PENDING' && (
+                  <View style={s.walkInPendingRow}>
+                    <ActivityIndicator size="small" color="#059669" />
+                    <Text style={s.walkInPendingText}>Waiting for resident decision…</Text>
+                  </View>
+                )}
+                <View style={s.walkInVisitorInfo}>
+                  <View style={[s.visitorAvatar, { backgroundColor: '#D1FAE5' }]}>
+                    <Ionicons name="person" size={26} color="#059669" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.visitorName}>{walkInPending.visitorName}</Text>
+                    <Text style={s.visitorType}>{walkInPending.purpose} · {walkInPending.passCode}</Text>
+                    {walkInPending.gate && <Text style={s.visitorType}>Gate: {walkInPending.gate}</Text>}
+                  </View>
+                </View>
+                {walkInPending.approvalStatus === 'APPROVED' && (
+                  <TouchableOpacity
+                    style={s.walkInCheckInBtn}
+                    onPress={async () => {
+                      setActionLoading(true);
+                      try {
+                        const permission = await ImagePicker.requestCameraPermissionsAsync();
+                        let photo: string | undefined;
+                        if (permission.granted) {
+                          const captured = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.55, allowsEditing: false });
+                          if (!captured.canceled && captured.assets[0]) {
+                            const asset = captured.assets[0];
+                            photo = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+                          }
+                        }
+                        await visitorService.checkIn(walkInPending.id, 'Main Gate', guardName, photo);
+                        pushHistory({ code: walkInPending.passCode, visitorName: walkInPending.visitorName, action: 'Walk-In Checked In', time: new Date(), ok: true });
+                        Vibration.vibrate([80, 60, 80, 60, 120]);
+                        resetWalkIn();
+                        setMode('scanner');
+                      } catch (err: any) {
+                        setWalkInError(err?.message || 'Check-in failed.');
+                      } finally {
+                        setActionLoading(false);
+                      }
+                    }}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <><Ionicons name="camera" size={18} color="#fff" /><Text style={s.walkInCheckInBtnText}>Check In + Photo</Text></>
+                    }
+                  </TouchableOpacity>
+                )}
+                {walkInError ? (
+                  <View style={s.errorBanner}>
+                    <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                    <Text style={s.errorBannerText}>{walkInError}</Text>
+                  </View>
+                ) : null}
+                <TouchableOpacity style={s.walkInCancelBtn} onPress={resetWalkIn}>
+                  <Text style={s.walkInCancelBtnText}>Cancel / New Request</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Walk-in form */
+              <View style={s.walkInForm}>
+                <Text style={s.walkInFormTitle}>Walk-In Visitor Approval</Text>
+                <Text style={s.walkInFormSub}>Enter visitor details to notify the resident for Allow/Deny.</Text>
+                {walkInError ? (
+                  <View style={s.errorBanner}>
+                    <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                    <Text style={s.errorBannerText}>{walkInError}</Text>
+                  </View>
+                ) : null}
+                <Text style={s.walkInLabel}>Visitor Name *</Text>
+                <TextInput style={s.walkInInput} placeholder="e.g. Ramesh Sharma" placeholderTextColor={COLORS.textMuted}
+                  value={walkInName} onChangeText={setWalkInName} />
+                <Text style={s.walkInLabel}>Flat Number *</Text>
+                <TextInput style={s.walkInInput} placeholder="e.g. A-1204" autoCapitalize="characters"
+                  placeholderTextColor={COLORS.textMuted} value={walkInFlat} onChangeText={setWalkInFlat} />
+                <Text style={s.walkInLabel}>Purpose</Text>
+                <TextInput style={s.walkInInput} placeholder="e.g. Guest, Delivery" placeholderTextColor={COLORS.textMuted}
+                  value={walkInPurpose} onChangeText={setWalkInPurpose} />
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.walkInLabel}>Phone (Optional)</Text>
+                    <TextInput style={s.walkInInput} placeholder="9876543210" keyboardType="phone-pad"
+                      placeholderTextColor={COLORS.textMuted} value={walkInPhone} onChangeText={setWalkInPhone} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.walkInLabel}>Vehicle (Optional)</Text>
+                    <TextInput style={s.walkInInput} placeholder="KA-01-AB-1234" autoCapitalize="characters"
+                      placeholderTextColor={COLORS.textMuted} value={walkInVehicle} onChangeText={setWalkInVehicle} />
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[s.walkInSubmitBtn, walkInSubmitting && { opacity: 0.7 }]}
+                  onPress={handleWalkInSubmit}
+                  disabled={walkInSubmitting}
+                >
+                  {walkInSubmitting
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <><Ionicons name="notifications" size={18} color="#fff" /><Text style={s.walkInSubmitBtnText}>Notify Resident</Text></>
+                  }
+                </TouchableOpacity>
+              </View>
+            )
           )}
 
           {/* Lookup error */}
@@ -670,4 +858,50 @@ const s = StyleSheet.create({
     alignItems: 'center', backgroundColor: '#F1F5F9',
   },
   confirmCancelBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
+
+  // Walk-in approval flow
+  walkInForm: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border, gap: 4, ...SHADOWS.sm,
+  },
+  walkInFormTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 2 },
+  walkInFormSub: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 8 },
+  walkInLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 4, marginTop: 6 },
+  walkInInput: {
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    padding: 11, fontSize: 14, color: COLORS.text, backgroundColor: COLORS.background,
+  },
+  walkInSubmitBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    backgroundColor: '#059669', borderRadius: RADIUS.lg, paddingVertical: 14, marginTop: 10,
+  },
+  walkInSubmitBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+
+  walkInWaitCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border, gap: 10, ...SHADOWS.sm,
+  },
+  walkInApprovedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 10,
+  },
+  walkInApprovedText: { fontSize: 14, fontWeight: '700', color: '#059669', flex: 1 },
+  walkInDeniedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: 10,
+  },
+  walkInDeniedText: { fontSize: 14, fontWeight: '700', color: '#DC2626', flex: 1 },
+  walkInPendingRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 10,
+  },
+  walkInPendingText: { fontSize: 13, fontWeight: '600', color: '#059669' },
+  walkInVisitorInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  walkInCheckInBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    backgroundColor: GUARD_COLORS.accent, borderRadius: RADIUS.lg, paddingVertical: 13,
+  },
+  walkInCheckInBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  walkInCancelBtn: { alignItems: 'center', paddingVertical: 10 },
+  walkInCancelBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
 });

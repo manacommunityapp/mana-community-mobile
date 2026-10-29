@@ -12,6 +12,7 @@ import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
+import { visitorApprovalService } from '@/services/visitorApprovalService';
 import GatePassQR from '@/components/common/GatePassQR';
 
 type VisitorStatus = 'EXPECTED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'DENIED';
@@ -109,6 +110,14 @@ export default function VisitorsScreen() {
   const [isPreApproveModal, setIsPreApproveModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<VisitorEntry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Walk-in approval count — polls every 10s to show urgent banner
+  const { data: pendingCount = 0 } = useQuery<number>({
+    queryKey: ['visitors', 'pending-count'],
+    queryFn: () => visitorApprovalService.getPendingCount(),
+    refetchInterval: 10_000,
+    staleTime: 5_000,
+  });
 
   // Form State
   const [guestName, setGuestName] = useState('');
@@ -436,6 +445,26 @@ export default function VisitorsScreen() {
           <Text style={[s.statLabel, { color: COLORS.primary }]}>Pre-Approve</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── Walk-In Approval Alert Banner ── */}
+      {pendingCount > 0 && (
+        <TouchableOpacity
+          style={s.walkInAlertBanner}
+          onPress={() => router.push('/visitors/pending-approvals')}
+          activeOpacity={0.85}
+        >
+          <View style={s.walkInAlertIconWrap}>
+            <Ionicons name="notifications" size={18} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.walkInAlertTitle}>
+              {pendingCount} visitor{pendingCount > 1 ? 's' : ''} waiting at gate!
+            </Text>
+            <Text style={s.walkInAlertSub}>Tap to Allow or Deny entry</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#fff" />
+        </TouchableOpacity>
+      )}
 
       {/* ── Quick Links: Approvals / Whitelist / Watchlist ── */}
       <View style={s.quickLinksRow}>
@@ -1054,5 +1083,18 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   passDoneBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: 'Outfit-Bold' },
+
+  // Walk-in approval alert banner
+  walkInAlertBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#DC2626', marginHorizontal: SPACING.md, marginBottom: SPACING.sm,
+    borderRadius: RADIUS.lg, padding: SPACING.md, ...SHADOWS.sm,
+  },
+  walkInAlertIconWrap: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  walkInAlertTitle: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  walkInAlertSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
 });
 

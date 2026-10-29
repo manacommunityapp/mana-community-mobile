@@ -33,6 +33,8 @@ export default function PendingApprovalsScreen() {
   const queryClient = useQueryClient();
   const [rejectModal, setRejectModal] = useState<PendingApproval | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [approveModal, setApproveModal] = useState<PendingApproval | null>(null);
+  const [approveError, setApproveError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   const [isFocused, setIsFocused] = useState(false);
@@ -69,11 +71,12 @@ export default function PendingApprovalsScreen() {
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => visitorApprovalService.approve(id),
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
-      Alert.alert('✅ Entry Approved', 'Security gate has been notified to allow entry.');
+      setApproveModal(null);
+      setApproveError('');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setApproveError(err?.message || 'Failed to approve. Try again.'),
   });
 
   const rejectMutation = useMutation({
@@ -83,20 +86,13 @@ export default function PendingApprovalsScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       setRejectModal(null);
       setRejectReason('');
-      Alert.alert('❌ Entry Denied', 'Security gate has been instructed to deny entry.');
     },
     onError: (err: any) => Alert.alert('Error', err.message),
   });
 
   const handleApprove = (item: PendingApproval) => {
-    Alert.alert(
-      'Allow Entry?',
-      `Allow ${item.visitorName} into the society?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Allow Entry', style: 'default', onPress: () => approveMutation.mutate(item.id) },
-      ]
-    );
+    setApproveError('');
+    setApproveModal(item);
   };
 
   const handleRejectSubmit = () => {
@@ -241,6 +237,39 @@ export default function PendingApprovalsScreen() {
           )
         }
       />
+
+      {/* Approve confirm modal */}
+      <Modal visible={!!approveModal} transparent animationType="slide" onRequestClose={() => setApproveModal(null)}>
+        <TouchableOpacity style={s.overlay} onPress={() => setApproveModal(null)} activeOpacity={1} />
+        <View style={s.rejectModal}>
+          <View style={s.sheetHandle} />
+          <Text style={s.rejectTitle}>Allow Entry?</Text>
+          <Text style={s.rejectSub}>
+            Allow <Text style={{ fontWeight: '800' }}>{approveModal?.visitorName}</Text> into the society?
+          </Text>
+          {approveError ? (
+            <View style={s.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+              <Text style={s.errorBannerText}>{approveError}</Text>
+            </View>
+          ) : null}
+          <View style={s.rejectActions}>
+            <TouchableOpacity style={s.cancelBtn} onPress={() => setApproveModal(null)}>
+              <Text style={s.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.approveBtn, approveMutation.isPending && { opacity: 0.7 }]}
+              onPress={() => approveModal && approveMutation.mutate(approveModal.id)}
+              disabled={approveMutation.isPending}
+            >
+              {approveMutation.isPending
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={s.approveBtnText}>Allow Entry</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Reject reason modal */}
       <Modal visible={!!rejectModal} transparent animationType="slide">
