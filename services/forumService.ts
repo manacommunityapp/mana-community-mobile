@@ -24,6 +24,7 @@ export interface ForumCommentDto {
   authorId: number;
   authorName: string;
   likeCount: number;
+  isOwn: boolean;
   createdAt?: string;
 }
 
