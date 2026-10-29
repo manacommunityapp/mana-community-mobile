@@ -90,22 +90,55 @@ export interface CommunityDto {
   inviteCode: string;
 }
 
-// ── Posts / Feed ───────────────────────────────────────────────
-export type PostType = 'post' | 'announcement' | 'poll' | 'event' | 'job' | 'marketplace';
+export type PostType =
+  | 'post'
+  | 'announcement'
+  | 'poll'
+  | 'event'
+  | 'job'
+  | 'marketplace'
+  | 'lost_found'
+  | 'question'
+  | 'maintenance'
+  | 'discussion'
+  | 'classified'
+  | 'emergency'
+  | string;
 
 export interface PostDto {
   id: number;
   authorId: number;
   authorName: string;
   authorPhoto?: string;
+  authorProfilePic?: string;
   authorFlat?: string;
+  authorRole?: string;
   communityId: number;
   content: string;
+  title?: string;
   type: PostType;
+  postType?: string;
   mediaUrls?: string[];
   likeCount: number;
+  likesCount?: number;
   commentCount: number;
+  commentsCount?: number;
+  sharesCount?: number;
+  bookmarksCount?: number;
   liked: boolean;
+  bookmarked?: boolean;
+  official?: boolean;
+  pinned?: boolean;
+  linkUrl?: string;
+  linkTitle?: string;
+  linkDescription?: string;
+  linkImage?: string;
+  hashtags?: string;
+  mentions?: string;
+  price?: number;
+  location?: string;
+  eventDate?: string;
+  eventVenue?: string;
   createdAt: string;
   poll?: PollDto;
 }
@@ -147,8 +180,16 @@ export interface CommentDto {
 
 export interface CreatePostRequest {
   content: string;
-  type: PostType;
+  title?: string;
+  type?: PostType;
+  imageUrl?: string;
   mediaUrls?: string[];
+  visibility?: 'COMMUNITY' | 'GROUP' | 'PRIVATE' | string;
+  hashtags?: string;
+  price?: number;
+  location?: string;
+  linkUrl?: string;
+  linkTitle?: string;
 }
 
 // ── Events ─────────────────────────────────────────────────────

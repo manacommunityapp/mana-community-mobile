@@ -153,7 +153,7 @@ export default function TournamentsScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={() => { refetch(); }}
               tintColor={COLORS.primary}
             />
           }
@@ -162,7 +162,7 @@ export default function TournamentsScreen() {
           ListFooterComponent={
             isFetchingNextPage
               ? <ActivityIndicator style={{ padding: 16 }} color={COLORS.primary} />
-              : null
+              : undefined
           }
           ListEmptyComponent={
             <View style={s.emptyContainer}>

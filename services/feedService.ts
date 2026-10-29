@@ -55,4 +55,37 @@ export const feedService = {
       throw new Error(err?.response?.data?.message || 'Failed to delete post.');
     }
   },
+
+  async toggleBookmark(postId: number): Promise<void> {
+    try {
+      await api.post(`/posts/${postId}/bookmark`);
+    } catch {
+      // Non-critical
+    }
+  },
+
+  async toggleCommentLike(commentId: number): Promise<void> {
+    try {
+      await api.post(`/posts/comments/${commentId}/like`);
+    } catch {
+      // Non-critical
+    }
+  },
+
+  async reactToPost(postId: number, reactionType: string): Promise<void> {
+    try {
+      await api.post(`/posts/${postId}/react`, { reactionType });
+    } catch {
+      // Non-critical
+    }
+  },
+
+  async searchPosts(q: string, page = 0, size = 20): Promise<PageResponse<PostDto>> {
+    try {
+      const res = await api.get<PageResponse<PostDto>>('/posts/search', { params: { q, page, size } });
+      return res.data;
+    } catch {
+      return EMPTY_PAGE;
+    }
+  },
 };

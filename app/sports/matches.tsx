@@ -197,7 +197,7 @@ export default function MatchScheduleScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={() => { refetch(); }}
               tintColor={COLORS.primary}
             />
           }

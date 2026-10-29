@@ -6,9 +6,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { sportsService } from '@/services/sportsService';
 import { BadgeCard } from '@/components/sports/BadgeCard';
-import { COLORS, getInitials } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, getInitials } from '@/constants/config';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import type { LeaderboardCategory, SportType } from '@/types/api';
 
@@ -53,10 +54,21 @@ export default function LeaderboardScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={s.back}>‹</Text>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={s.title}>Leaderboard</Text>
+        <View style={s.headerCenter}>
+          <Text style={s.title}>Leaderboard</Text>
+          <Text style={s.subTitle}>Community Rankings</Text>
+        </View>
+        <TouchableOpacity
+          style={s.headerActionBtn}
+          onPress={() => router.push('/sports/matches')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="calendar-outline" size={16} color={COLORS.primary} />
+          <Text style={s.headerActionBtnText}>Fixtures</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Period */}
@@ -109,12 +121,25 @@ export default function LeaderboardScreen() {
         <FlatList
           data={entries}
           keyExtractor={(e) => String(e.userId)}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
           contentContainerStyle={{ paddingBottom: 24 }}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Text style={s.emptyEmoji}>🏆</Text>
-              <Text style={s.emptyText}>No data yet. Play more matches!</Text>
+              <View style={s.emptyIconCircle}>
+                <Ionicons name="trophy-outline" size={40} color={COLORS.primary} />
+              </View>
+              <Text style={s.emptyTitle}>No Rankings Recorded Yet</Text>
+              <Text style={s.emptySub}>
+                Tournament scores and match victories will automatically populate rankings here.
+              </Text>
+              <TouchableOpacity
+                style={s.emptyActionBtn}
+                onPress={() => router.push('/sports/matches')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="calendar-outline" size={15} color="#fff" />
+                <Text style={s.emptyActionBtnText}>Browse Matches</Text>
+              </TouchableOpacity>
             </View>
           }
           renderItem={({ item: entry }) => {
@@ -169,9 +194,13 @@ export default function LeaderboardScreen() {
 
 const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: COLORS.background },
-  header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
-  back:            { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:           { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
+  header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 12, ...SHADOWS.sm },
+  backBtn:         { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+  headerCenter:    { flex: 1 },
+  title:           { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '800', color: COLORS.text, letterSpacing: -0.2 },
+  subTitle:        { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  headerActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.full, backgroundColor: '#EEF2FF' },
+  headerActionBtnText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
   periodRow:       { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   periodChip:      { flex: 1, paddingVertical: 10, alignItems: 'center' },
   periodChipActive:{ borderBottomWidth: 2.5, borderBottomColor: COLORS.primary },
@@ -205,7 +234,10 @@ const s = StyleSheet.create({
   flat:            { fontSize: 11, color: COLORS.textMuted },
   value:           { fontSize: 16, fontWeight: '800', color: COLORS.text },
   valueFirst:      { color: '#D97706', fontSize: 18 },
-  empty:           { alignItems: 'center', paddingTop: 80, gap: 10 },
-  emptyEmoji:      { fontSize: 48 },
-  emptyText:       { fontSize: 15, color: COLORS.textMuted },
+  empty:           { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24, gap: 10 },
+  emptyIconCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  emptyTitle:      { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  emptySub:        { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', lineHeight: 18 },
+  emptyActionBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: RADIUS.full, marginTop: 8 },
+  emptyActionBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });
