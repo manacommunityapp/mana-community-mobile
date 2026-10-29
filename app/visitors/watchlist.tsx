@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Modal, TextInput, Alert, ActivityIndicator, ScrollView,
+  Modal, TextInput, ActivityIndicator, ScrollView,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,8 @@ export default function WatchlistScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [addModal, setAddModal] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [resolveConfirmEntry, setResolveConfirmEntry] = useState<WatchlistEntry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [form, setForm] = useState<AddWatchlistRequest>({
     name: '', vehicleNumber: '', phone: '', reason: '', severity: 'MEDIUM', notes: '',
@@ -53,29 +55,26 @@ export default function WatchlistScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security', 'watchlist'] });
       setAddModal(false);
+      setAddError('');
       setForm({ name: '', vehicleNumber: '', phone: '', reason: '', severity: 'MEDIUM', notes: '' });
-      Alert.alert('⚠️ Reported', 'This person has been added to the community watchlist. Guards will be alerted.');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setAddError(err?.message || 'Failed to report. Try again.'),
   });
 
   const resolveMutation = useMutation({
     mutationFn: (id: number) => watchlistService.resolveWatchlistEntry(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['security', 'watchlist'] }),
-    onError: (err: any) => Alert.alert('Error', err.message),
   });
 
   const handleAdd = () => {
-    if (!form.name.trim()) { Alert.alert('Required', 'Please enter a name or description.'); return; }
-    if (!form.reason.trim()) { Alert.alert('Required', 'Please describe the reason for reporting.'); return; }
+    if (!form.name.trim()) { setAddError('Please enter a name or description.'); return; }
+    if (!form.reason.trim()) { setAddError('Please describe the reason for reporting.'); return; }
+    setAddError('');
     addMutation.mutate({ ...form, name: form.name.trim(), reason: form.reason.trim() });
   };
 
   const confirmResolve = (entry: WatchlistEntry) => {
-    Alert.alert('Mark Resolved', `Mark ${entry.name} as resolved?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Resolve', style: 'default', onPress: () => resolveMutation.mutate(entry.id) },
-    ]);
+    setResolveConfirmEntry(entry);
   };
 
   const renderItem = ({ item }: { item: WatchlistEntry }) => {
@@ -234,8 +233,14 @@ export default function WatchlistScreen() {
                 </View>
               </View>
 
+              {addError ? (
+                <View style={s.inlineError}>
+                  <Ionicons name="alert-circle-outline" size={14} color="#B91C1C" />
+                  <Text style={s.inlineErrorText}>{addError}</Text>
+                </View>
+              ) : null}
               <View style={s.modalActions}>
-                <TouchableOpacity style={s.cancelBtn} onPress={() => setAddModal(false)}>
+                <TouchableOpacity style={s.cancelBtn} onPress={() => { setAddModal(false); setAddError(''); }}>
                   <Text style={s.cancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -253,6 +258,28 @@ export default function WatchlistScreen() {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Resolve confirm bottom sheet */}
+      <Modal visible={!!resolveConfirmEntry} transparent animationType="slide" onRequestClose={() => setResolveConfirmEntry(null)}>
+        <TouchableOpacity style={s.resolveOverlay} onPress={() => setResolveConfirmEntry(null)} activeOpacity={1} />
+        <View style={s.resolveSheet}>
+          <View style={s.resolveHandle} />
+          <Text style={s.resolveTitle}>Mark Resolved?</Text>
+          <Text style={s.resolveSub}>
+            Mark <Text style={{ fontWeight: '800' }}>{resolveConfirmEntry?.name}</Text> as resolved? This removes the active alert.
+          </Text>
+          <TouchableOpacity
+            style={[s.resolveConfirmBtn, resolveMutation.isPending && { opacity: 0.7 }]}
+            onPress={() => { if (resolveConfirmEntry) { resolveMutation.mutate(resolveConfirmEntry.id); setResolveConfirmEntry(null); } }}
+            disabled={resolveMutation.isPending}
+          >
+            {resolveMutation.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.resolveConfirmText}>Mark Resolved</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity style={s.resolveCancelBtn} onPress={() => setResolveConfirmEntry(null)}>
+            <Text style={s.resolveCancelText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </SafeAreaView>
@@ -305,4 +332,15 @@ const s = StyleSheet.create({
   cancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
   reportBtn: { flex: 2, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5, paddingVertical: SPACING.md, borderRadius: RADIUS.md, backgroundColor: '#DC2626', ...SHADOWS.sm },
   reportBtnText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  inlineError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  inlineErrorText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
+  resolveOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
+  resolveSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.lg, paddingBottom: 36, gap: 12 },
+  resolveHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 8 },
+  resolveTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center', fontFamily: 'Outfit-Bold' },
+  resolveSub: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20, fontFamily: 'DMSans-Regular' },
+  resolveConfirmBtn: { backgroundColor: '#059669', borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
+  resolveConfirmText: { fontSize: 15, fontWeight: '800', color: '#fff', fontFamily: 'Outfit-Bold' },
+  resolveCancelBtn: { backgroundColor: '#F1F5F9', borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
+  resolveCancelText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
 });

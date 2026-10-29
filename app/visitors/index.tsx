@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, BackHandler, Modal, TextInput, Alert, Share,
+  FlatList, BackHandler, Modal, TextInput, Share,
   RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -115,6 +115,7 @@ export default function VisitorsScreen() {
   const [cabEtaNotes, setCabEtaNotes] = useState<Record<number, string>>({});
   const [etaEditId, setEtaEditId] = useState<number | null>(null);
   const [etaInput, setEtaInput] = useState('');
+  const [createError, setCreateError] = useState('');
 
   // Walk-in approval count — polls every 10s to show urgent banner
   const { data: pendingCount = 0 } = useQuery<number>({
@@ -236,7 +237,6 @@ export default function VisitorsScreen() {
       setGuestName(''); setGuestPhone(''); setGuestVehicle(''); setGuestPurpose('');
       setGuestValidFrom(''); setGuestValidUntil('');
       setSelectedPass(newEntry);
-      Alert.alert('✅ Pass Generated', `Digital Gate Pass ${newEntry.passCode} has been created.`);
     },
     onError: () => {
       // Offline fallback — create a local pass so the guard can scan it immediately
@@ -262,9 +262,10 @@ export default function VisitorsScreen() {
 
   const handleCreatePass = () => {
     if (!guestName.trim()) {
-      Alert.alert('Name Required', 'Please enter visitor or company name.');
+      setCreateError('Please enter visitor or company name.');
       return;
     }
+    setCreateError('');
     const flatStr = `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`;
     preApproveMutation.mutate({
       visitorName: guestName.trim(),
@@ -292,7 +293,6 @@ export default function VisitorsScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
     } catch {}
     setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'CHECKED_IN' as VisitorStatus } : v));
-    Alert.alert('Access Granted', 'Security Gate has been notified to allow entry.');
   };
 
   const handleDenyEntry = async (id: number) => {
@@ -301,7 +301,6 @@ export default function VisitorsScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
     } catch {}
     setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'DENIED' as VisitorStatus } : v));
-    Alert.alert('Access Denied', 'Security Gate has been instructed to decline entry.');
   };
 
   const handleCheckOut = async (id: number) => {
@@ -310,7 +309,6 @@ export default function VisitorsScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
     } catch {}
     setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'CHECKED_OUT' as VisitorStatus } : v));
-    Alert.alert('Departure Recorded', 'Visitor departure has been logged.');
   };
 
   const filtered = useMemo(() => {
@@ -714,10 +712,16 @@ export default function VisitorsScreen() {
             </View>
 
             {/* Modal Actions */}
+            {createError ? (
+              <View style={s.inlineError}>
+                <Ionicons name="alert-circle-outline" size={14} color="#B91C1C" />
+                <Text style={s.inlineErrorText}>{createError}</Text>
+              </View>
+            ) : null}
             <View style={s.modalActionRow}>
               <TouchableOpacity
                 style={s.cancelBtn}
-                onPress={() => setIsPreApproveModal(false)}
+                onPress={() => { setIsPreApproveModal(false); setCreateError(''); }}
               >
                 <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
@@ -1070,6 +1074,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
+  inlineError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: RADIUS.sm, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  inlineErrorText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
   confirmBtn: {
     flex: 1,
     paddingVertical: SPACING.md,

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, RefreshControl, TextInput, Modal, Vibration,
+  ActivityIndicator, RefreshControl, TextInput, Modal, Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -33,6 +33,7 @@ export default function PendingApprovalsScreen() {
   const queryClient = useQueryClient();
   const [rejectModal, setRejectModal] = useState<PendingApproval | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
   const [approveModal, setApproveModal] = useState<PendingApproval | null>(null);
   const [approveError, setApproveError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -87,7 +88,7 @@ export default function PendingApprovalsScreen() {
       setRejectModal(null);
       setRejectReason('');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setRejectError(err?.message || 'Failed to reject. Try again.'),
   });
 
   const handleApprove = (item: PendingApproval) => {
@@ -292,10 +293,16 @@ export default function PendingApprovalsScreen() {
               onChangeText={setRejectReason}
             />
 
+            {rejectError ? (
+              <View style={s.inlineError}>
+                <Ionicons name="alert-circle-outline" size={14} color="#B91C1C" />
+                <Text style={s.inlineErrorText}>{rejectError}</Text>
+              </View>
+            ) : null}
             <View style={s.rejectActions}>
               <TouchableOpacity
                 style={s.cancelBtn}
-                onPress={() => { setRejectModal(null); setRejectReason(''); }}
+                onPress={() => { setRejectModal(null); setRejectReason(''); setRejectError(''); }}
               >
                 <Text style={s.cancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -366,6 +373,9 @@ const s = StyleSheet.create({
     paddingVertical: 12, borderRadius: RADIUS.md, backgroundColor: '#059669', ...SHADOWS.sm,
   },
   approveBtnText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 8 },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  errorBannerText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
 
   empty: { alignItems: 'center', paddingTop: 80, gap: SPACING.sm },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
@@ -382,4 +392,6 @@ const s = StyleSheet.create({
   cancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
   confirmDenyBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, backgroundColor: '#DC2626', alignItems: 'center', ...SHADOWS.sm },
   confirmDenyText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  inlineError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  inlineErrorText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
 });
