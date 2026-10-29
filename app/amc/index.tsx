@@ -37,53 +37,6 @@ const BLANK: Omit<CreateAmcRequest, 'scope'> = {
   amcAmount: undefined, notes: '',
 };
 
-const MOCK_PERSONAL: AmcRecord[] = [
-  {
-    id: -1, scope: 'PERSONAL', category: 'AC', itemName: 'Bedroom AC',
-    brand: 'Daikin', model: 'FTKF35TV16U', serialNumber: 'DK-2021-38472',
-    purchaseDate: '2021-06-15', warrantyExpiry: '2024-06-15',
-    amcStartDate: '2024-07-01', amcExpiry: '2025-11-15',
-    amcVendor: 'Cool Air Services', amcPhone: '9876543210', amcAmount: 4500,
-    notes: 'Annual service due every June.',
-  },
-  {
-    id: -2, scope: 'PERSONAL', category: 'REFRIGERATOR', itemName: 'Kitchen Fridge',
-    brand: 'LG', model: 'GL-T292RPZY', serialNumber: 'LG-RF-2022-91043',
-    purchaseDate: '2022-01-10', warrantyExpiry: '2027-01-10',
-    amcVendor: 'LG Care', amcPhone: '1800-180-9999', amcAmount: 1800,
-  },
-  {
-    id: -3, scope: 'PERSONAL', category: 'WASHING_MACHINE', itemName: 'Front Load Washer',
-    brand: 'Samsung', model: 'WW70T552DAX', serialNumber: 'SAM-WM-2023-55671',
-    purchaseDate: '2023-03-22', warrantyExpiry: '2026-03-22',
-    amcExpiry: '2025-12-31',
-    amcVendor: 'Samsung Service', amcPhone: '1800-5-7267864', amcAmount: 2200,
-  },
-];
-
-const MOCK_SOCIETY: AmcRecord[] = [
-  {
-    id: -4, scope: 'SOCIETY', category: 'ELEVATOR', itemName: 'Tower A Elevator',
-    brand: 'Otis', model: 'Gen2-L',
-    purchaseDate: '2018-04-01', warrantyExpiry: '2023-04-01',
-    amcStartDate: '2023-05-01', amcExpiry: '2025-11-20',
-    amcVendor: 'Otis India Pvt Ltd', amcPhone: '9980001234', amcAmount: 85000,
-    notes: 'Quarterly maintenance includes oil change and brake check.',
-  },
-  {
-    id: -5, scope: 'SOCIETY', category: 'GENERATOR', itemName: 'DG Set 500 KVA',
-    brand: 'Cummins', model: 'C500D5',
-    purchaseDate: '2017-09-12',
-    amcStartDate: '2024-01-01', amcExpiry: '2026-12-31',
-    amcVendor: 'PowerGen Services', amcPhone: '9811223344', amcAmount: 120000,
-  },
-  {
-    id: -6, scope: 'SOCIETY', category: 'PEST_CONTROL', itemName: 'Society Pest Control',
-    amcStartDate: '2025-01-01', amcExpiry: '2025-10-31',
-    amcVendor: 'HiCare Services', amcPhone: '1800-102-9222', amcAmount: 18000,
-    notes: 'Quarterly spraying. Next: common areas + parking.',
-  },
-];
 
 export default function AmcScreen() {
   const router = useRouter();
@@ -112,8 +65,7 @@ export default function AmcScreen() {
     queryKey: ['amc', tab],
     queryFn: () => amcService.getRecords(tab as AmcScope),
   });
-  const mockFallback = tab === 'PERSONAL' ? MOCK_PERSONAL : MOCK_SOCIETY;
-  const records = rawRecords.length > 0 ? rawRecords : mockFallback;
+  const records = rawRecords;
 
   const saveMutation = useMutation({
     mutationFn: (data: CreateAmcRequest) =>

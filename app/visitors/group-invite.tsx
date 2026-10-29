@@ -19,30 +19,6 @@ import {
 
 const ACCENT = '#7C3AED';
 
-const MOCK_INVITES: GroupInvite[] = [
-  {
-    id: 1,
-    title: 'Diwali Gathering',
-    eventDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split('T')[0],
-    startTime: '18:00',
-    endTime: '23:00',
-    passCode: 'MANA-DIWALI22',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-    totalGuests: 8,
-    checkedIn: 3,
-    guests: [
-      { name: 'Rohan Sharma', phone: '9876500001', checkedIn: true },
-      { name: 'Priya Mehta', phone: '9876500002', checkedIn: true },
-      { name: 'Arjun Gupta', phone: '9876500003', vehicleNumber: 'KA-01-AB-1234', checkedIn: true },
-      { name: 'Sneha Joshi', phone: '9876500004', checkedIn: false },
-      { name: 'Vikram Nair', vehicleNumber: 'MH-04-CD-5678', checkedIn: false },
-      { name: 'Anita Desai', phone: '9876500006', checkedIn: false },
-      { name: 'Kiran Rao', checkedIn: false },
-      { name: 'Suresh Pillai', phone: '9876500008', checkedIn: false },
-    ],
-  },
-];
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -72,7 +48,7 @@ export default function GroupInviteScreen() {
     queryFn: () => groupInviteService.getMyGroupInvites(),
     staleTime: 30_000,
   });
-  const invites = (raw && raw.length > 0) ? raw : MOCK_INVITES;
+  const invites = raw ?? [];
 
   const activeInvites = invites.filter(i => i.status === 'ACTIVE');
   const pastInvites   = invites.filter(i => i.status !== 'ACTIVE');

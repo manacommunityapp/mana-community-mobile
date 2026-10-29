@@ -21,10 +21,6 @@ const SEVERITY_META: Record<WatchlistSeverity, { label: string; color: string; b
 
 const SEVERITIES: WatchlistSeverity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
-const MOCK_WATCHLIST: WatchlistEntry[] = [
-  { id: 1, name: 'Unknown Salesperson', reason: 'Aggressive cold-calling, refused to leave', severity: 'MEDIUM', status: 'ACTIVE', reportedBy: 'Tower A, Flat 802', createdAt: new Date(Date.now() - 7 * 86400000).toISOString(), alertCount: 3 },
-  { id: 2, name: 'Suspicious Vehicle KA-05-XY-9999', vehicleNumber: 'KA-05-XY-9999', reason: 'Loitering near children\'s park multiple times', severity: 'HIGH', status: 'ACTIVE', reportedBy: 'Security Guard', createdAt: new Date(Date.now() - 2 * 86400000).toISOString(), alertCount: 1 },
-];
 
 export default function WatchlistScreen() {
   const router = useRouter();
@@ -43,7 +39,7 @@ export default function WatchlistScreen() {
     staleTime: 60_000,
   });
 
-  const list = (rawList && rawList.length > 0) ? rawList : MOCK_WATCHLIST;
+  const list = rawList ?? [];
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

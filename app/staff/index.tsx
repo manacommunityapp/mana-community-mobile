@@ -32,17 +32,6 @@ const ROLES: StaffRole[] = ['MAID', 'COOK', 'DRIVER', 'NANNY', 'GARDENER', 'SECU
 
 type TabKey = 'staff' | 'attendance';
 
-const MOCK_TODAY_ATTENDANCE: StaffAttendanceLog[] = [
-  { id: 1, staffId: 1, staffName: 'Lakshmi Devi', action: 'ENTRY', timestamp: new Date().toISOString(), gate: 'Gate 1' },
-  { id: 2, staffId: 2, staffName: 'Ramu (Cook)', action: 'ENTRY', timestamp: new Date(Date.now() - 3600000).toISOString(), gate: 'Gate 1' },
-  { id: 3, staffId: 3, staffName: 'Suresh (Driver)', action: 'EXIT', timestamp: new Date(Date.now() - 1800000).toISOString(), gate: 'Gate 2' },
-];
-
-const MOCK_STAFF: StaffMember[] = [
-  { id: 1, name: 'Lakshmi Devi', role: 'MAID', phone: '9876543210', status: 'ACTIVE', policeVerified: true, bgVerified: true, flatNumber: 'Tower A-1204' },
-  { id: 2, name: 'Ramu', role: 'COOK', phone: '9123456789', status: 'ACTIVE', policeVerified: false, bgVerified: false, flatNumber: 'Tower A-1204' },
-  { id: 3, name: 'Suresh Kumar', role: 'DRIVER', phone: '9988776655', status: 'ACTIVE', policeVerified: true, bgVerified: undefined, flatNumber: 'Tower A-1204' },
-];
 
 function timeAgo(isoStr: string): string {
   const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
@@ -100,8 +89,8 @@ export default function StaffScreen() {
     finally { setRefreshing(false); }
   }, [refetchStaff, refetchLogs]);
 
-  const staff = (staffList && staffList.length > 0) ? staffList : MOCK_STAFF;
-  const logs = (todayLogs && todayLogs.length > 0) ? todayLogs : MOCK_TODAY_ATTENDANCE;
+  const staff = staffList ?? [];
+  const logs = todayLogs ?? [];
 
   const registerMutation = useMutation({
     mutationFn: (req: RegisterStaffRequest) => staffService.registerStaff(req),

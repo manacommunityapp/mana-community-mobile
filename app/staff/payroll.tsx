@@ -13,34 +13,6 @@ import { staffService, StaffAttendanceSummary } from '@/services/staffService';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-const MOCK_SUMMARIES: StaffAttendanceSummary[] = [
-  {
-    staffId: 1,
-    staffName: 'Sunita Devi',
-    role: 'MAID',
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear(),
-    totalDays: 26,
-    presentDays: 22,
-    absentDays: 4,
-    leaveDays: 0,
-    halfDays: 0,
-    attendancePercent: 84.6,
-  },
-  {
-    staffId: 2,
-    staffName: 'Raju Singh',
-    role: 'COOK',
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear(),
-    totalDays: 26,
-    presentDays: 25,
-    absentDays: 0,
-    leaveDays: 1,
-    halfDays: 0,
-    attendancePercent: 96.2,
-  },
-];
 
 const ROLE_COLORS: Record<string, string> = {
   MAID: '#7C3AED', COOK: '#D97706', DRIVER: '#2563EB',
@@ -63,7 +35,7 @@ export default function PayrollScreen() {
     queryFn: () => staffService.getMonthlyPayrollSummaries(selectedMonth + 1, selectedYear),
     staleTime: 60_000,
   });
-  const summaries = (rawSummaries && rawSummaries.length > 0) ? rawSummaries : MOCK_SUMMARIES;
+  const summaries = rawSummaries ?? [];
 
   const DAILY_WAGE = 400;
   const totalPayroll = summaries.reduce((acc, s) => acc + calcPayroll(s, DAILY_WAGE), 0);

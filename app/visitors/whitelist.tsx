@@ -23,11 +23,6 @@ const CATEGORY_META: Record<WhitelistCategory, { label: string; icon: keyof type
 
 const CATEGORIES: WhitelistCategory[] = ['FAMILY', 'FRIEND', 'DRIVER', 'DOMESTIC_HELP', 'DELIVERY_AGENT', 'OTHER'];
 
-const MOCK_WHITELIST: WhitelistEntry[] = [
-  { id: 1, visitorName: 'Priya (Sister)', visitorPhone: '9876500001', category: 'FAMILY', isActive: true, visitCount: 14, lastVisit: new Date(Date.now() - 86400000).toISOString() },
-  { id: 2, visitorName: 'Rajan (Driver)', vehicleNumber: 'KA-01-AB-1234', category: 'DRIVER', isActive: true, visitCount: 42, lastVisit: new Date(Date.now() - 3600000).toISOString() },
-  { id: 3, visitorName: 'Amazon Delivery', category: 'DELIVERY_AGENT', isActive: true, visitCount: 7, lastVisit: new Date(Date.now() - 259200000).toISOString() },
-];
 
 function formatLastVisit(iso?: string): string {
   if (!iso) return 'Never';
@@ -53,7 +48,7 @@ export default function WhitelistScreen() {
     staleTime: 30_000,
   });
 
-  const list = (rawList && rawList.length > 0) ? rawList : MOCK_WHITELIST;
+  const list = rawList ?? [];
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

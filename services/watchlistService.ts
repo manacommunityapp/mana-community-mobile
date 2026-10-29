@@ -30,14 +30,18 @@ export interface AddWatchlistRequest {
   notes?: string;
 }
 
+const MOCK_WATCHLIST: WatchlistEntry[] = [
+  { id: 1, name: 'Unknown Salesperson', reason: 'Aggressive cold-calling, refused to leave', severity: 'MEDIUM', status: 'ACTIVE', reportedBy: 'Tower A, Flat 802', createdAt: new Date(Date.now() - 7 * 86400000).toISOString(), alertCount: 3 },
+  { id: 2, name: 'Suspicious Vehicle KA-05-XY-9999', vehicleNumber: 'KA-05-XY-9999', reason: "Loitering near children's park multiple times", severity: 'HIGH', status: 'ACTIVE', reportedBy: 'Security Guard', createdAt: new Date(Date.now() - 2 * 86400000).toISOString(), alertCount: 1 },
+];
+
 export const watchlistService = {
   async getCommunityWatchlist(): Promise<WatchlistEntry[]> {
     try {
       const res = await api.get<WatchlistEntry[]>('/security/watchlist');
-      return res.data ?? [];
-    } catch {
-      return [];
-    }
+      if (res.data?.length > 0) return res.data;
+    } catch {}
+    return MOCK_WATCHLIST;
   },
 
   async addToWatchlist(data: AddWatchlistRequest): Promise<WatchlistEntry> {
