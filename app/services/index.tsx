@@ -446,6 +446,34 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 </TouchableOpacity>
               </View>
 
+              {/* AMC & Warranty quick-link */}
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 12,
+                  backgroundColor: '#EFF6FF', borderRadius: RADIUS.lg,
+                  padding: 12, marginBottom: 14,
+                  borderWidth: 1, borderColor: '#BFDBFE', ...SHADOWS.sm,
+                }}
+                onPress={() => router.push('/amc')}
+                activeOpacity={0.85}
+              >
+                <View style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Text style={{ fontSize: 22 }}>🛡️</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E3A8A', letterSpacing: -0.2 }}>
+                    AMC & Warranty Tracker
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#3B82F6', marginTop: 2 }}>
+                    Appliances · Service contracts · Expiry alerts
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
+              </TouchableOpacity>
+
               {/* Category Icon Grid */}
               <View style={s.catSection}>
                 <View style={s.sectionHeaderRow}>
