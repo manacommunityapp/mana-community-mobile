@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 import { useAuth } from '@/hooks/useAuth';
 import {

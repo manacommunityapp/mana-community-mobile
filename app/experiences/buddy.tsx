@@ -242,7 +242,7 @@ export default function BuddyScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
-  const chatScrollRef = useRef<ScrollView>(null);
+  const chatScrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
 
   const [selectedInterests, setSelectedInterests] = useState<InterestTag[]>([]);
   const [onboardingDone, setOnboardingDone] = useState(false);
@@ -465,7 +465,7 @@ export default function BuddyScreen() {
 
       {/* ── For You Tab ── */}
       {activeTab === 'home' && (
-        <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+        <ScrollView ref={scrollRef as any} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
           {/* Your Interests chips */}
           <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 }}>
             <Text style={{ fontFamily: FONTS.semiBold, fontSize: 14, color: '#374151', marginBottom: 10 }}>
@@ -689,7 +689,7 @@ export default function BuddyScreen() {
       {activeTab === 'chat' && (
         <>
           <ScrollView
-            ref={chatScrollRef}
+            ref={chatScrollRef as any}
             style={{ flex: 1 }}
             contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
             onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: false })}
