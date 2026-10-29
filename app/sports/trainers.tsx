@@ -163,7 +163,7 @@ export default function TrainersScreen() {
           contentContainerStyle={s.list}
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />
           }
           ListEmptyComponent={
             <View style={s.empty}>
