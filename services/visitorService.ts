@@ -92,7 +92,7 @@ export const visitorService = {
 
   async getMyVisitors(): Promise<VisitorDto[]> {
     try {
-      const res = await api.get<VisitorDto[]>('/visitors/my-visitors');
+      const res = await api.get<VisitorDto[]>('/visitors/mobile/my-visitors');
       return res.data ?? [];
     } catch {
       return [];
@@ -101,7 +101,7 @@ export const visitorService = {
 
   async getPendingApprovals(): Promise<VisitorDto[]> {
     try {
-      const res = await api.get<VisitorDto[]>('/visitors/pending');
+      const res = await api.get<VisitorDto[]>('/visitors/mobile/pending');
       return res.data ?? [];
     } catch {
       return [];
@@ -120,7 +120,7 @@ export const visitorService = {
 
   async preApprove(data: PreApproveVisitorRequest): Promise<VisitorDto> {
     try {
-      const res = await api.post<VisitorDto>('/visitors/pre-approve', data);
+      const res = await api.post<VisitorDto>('/visitors/mobile/pre-approve', data);
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to pre-approve visitor. Please try again.');
@@ -138,7 +138,7 @@ export const visitorService = {
 
   async approve(id: number): Promise<VisitorDto> {
     try {
-      const res = await api.put<VisitorDto>(`/visitors/${id}/approve`);
+      const res = await api.put<VisitorDto>(`/visitors/mobile/${id}/approve`);
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to approve visitor.');
@@ -147,7 +147,7 @@ export const visitorService = {
 
   async checkIn(id: number, gate?: string, guard?: string, visitorPhoto?: string): Promise<VisitorDto> {
     try {
-      const res = await api.put<VisitorDto>(`/visitors/${id}/check-in`, { visitorPhoto }, {
+      const res = await api.put<VisitorDto>(`/visitors/mobile/${id}/check-in`, { visitorPhoto }, {
         params: { gate, guard },
       });
       return res.data;
@@ -167,7 +167,7 @@ export const visitorService = {
 
   async checkOut(id: number, gate?: string, guard?: string): Promise<VisitorDto> {
     try {
-      const res = await api.put<VisitorDto>(`/visitors/${id}/check-out`, null, {
+      const res = await api.put<VisitorDto>(`/visitors/mobile/${id}/check-out`, null, {
         params: { gate, guard },
       });
       return res.data;
@@ -178,7 +178,7 @@ export const visitorService = {
 
   async denyEntry(id: number): Promise<VisitorDto> {
     try {
-      const res = await api.put<VisitorDto>(`/visitors/${id}/reject`);
+      const res = await api.put<VisitorDto>(`/visitors/mobile/${id}/reject`);
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to deny entry.');

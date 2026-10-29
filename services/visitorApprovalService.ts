@@ -39,7 +39,7 @@ export interface ApprovalDecision {
 export const visitorApprovalService = {
   async getPendingApprovals(): Promise<PendingApproval[]> {
     try {
-      const res = await api.get<PendingApproval[]>('/visitors/pending');
+      const res = await api.get<PendingApproval[]>('/visitors/mobile/pending');
       return res.data ?? [];
     } catch {
       return [];
@@ -48,7 +48,7 @@ export const visitorApprovalService = {
 
   async approve(id: number): Promise<VisitorDto> {
     try {
-      const res = await api.put<VisitorDto>(`/visitors/${id}/approve`);
+      const res = await api.put<VisitorDto>(`/visitors/mobile/${id}/approve`);
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to approve visitor.');
@@ -57,7 +57,7 @@ export const visitorApprovalService = {
 
   async reject(id: number, reason?: string): Promise<VisitorDto> {
     try {
-      const res = await api.put<VisitorDto>(`/visitors/${id}/reject`, { reason });
+      const res = await api.put<VisitorDto>(`/visitors/mobile/${id}/reject`, { reason });
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to reject visitor.');
@@ -66,7 +66,7 @@ export const visitorApprovalService = {
 
   async getPendingCount(): Promise<number> {
     try {
-      const res = await api.get<PendingApproval[]>('/visitors/pending');
+      const res = await api.get<PendingApproval[]>('/visitors/mobile/pending');
       return res.data?.length ?? 0;
     } catch {
       return 0;
