@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, RefreshControl, Modal, TextInput,
+  ActivityIndicator, RefreshControl, Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -46,6 +46,8 @@ export default function PackagesScreen() {
   const [otpInput, setOtpInput] = useState('');
   const [collectModal, setCollectModal] = useState(false);
   const [otpModal, setOtpModal] = useState(false);
+  const [collectMsg, setCollectMsg] = useState('');
+  const [collectErr, setCollectErr] = useState('');
 
   const { data: packages = [], isLoading, refetch } = useQuery({
     queryKey: ['my-packages'],
@@ -71,13 +73,19 @@ export default function PackagesScreen() {
   const collectMut = useMutation({
     mutationFn: () => packageRoomService.collectPackage({ packageId: selectedPkg!.id, otp: otpInput }),
     onSuccess: () => {
-      Alert.alert('Package Collected', 'Your package has been marked as collected.');
-      setCollectModal(false);
-      setOtpInput('');
-      setSelectedPkg(null);
+      setCollectMsg('Package collected!');
+      setCollectErr('');
       qc.invalidateQueries({ queryKey: ['my-packages'] });
+      setTimeout(() => {
+        setCollectModal(false);
+        setCollectMsg('');
+        setOtpInput('');
+        setSelectedPkg(null);
+      }, 1500);
     },
-    onError: () => Alert.alert('Error', 'Invalid OTP. Please try again.'),
+    onError: () => {
+      setCollectErr('Invalid OTP. Please try again.');
+    },
   });
 
   const pending = packages.filter(p => p.status !== 'COLLECTED' && p.status !== 'RETURNED');
@@ -215,6 +223,16 @@ export default function PackagesScreen() {
                     </View>
                   </View>
 
+                  {!!collectMsg && (
+                    <View style={styles.successBanner}>
+                      <Text style={styles.successBannerText}>{collectMsg}</Text>
+                    </View>
+                  )}
+                  {!!collectErr && (
+                    <View style={styles.errorBanner}>
+                      <Text style={styles.errorBannerText}>{collectErr}</Text>
+                    </View>
+                  )}
                   {selectedPkg.status !== 'COLLECTED' && selectedPkg.status !== 'RETURNED' && (
                     <View style={styles.collectSection}>
                       {selectedPkg.collectionOtp ? (
@@ -239,7 +257,7 @@ export default function PackagesScreen() {
                         style={styles.otpInput}
                         placeholder="Enter OTP to confirm collection"
                         value={otpInput}
-                        onChangeText={setOtpInput}
+                        onChangeText={v => { setOtpInput(v); setCollectErr(''); }}
                         keyboardType="number-pad"
                         maxLength={6}
                       />
@@ -317,5 +335,9 @@ const styles = StyleSheet.create({
   otpInput: { backgroundColor: THEME.background, borderWidth: 1, borderColor: THEME.border, borderRadius: RADIUS.lg, padding: 14, fontSize: 18, textAlign: 'center', letterSpacing: 6, color: THEME.text, fontWeight: '700' },
   confirmBtn: { backgroundColor: '#22C55E', borderRadius: RADIUS.lg, padding: 14, alignItems: 'center' },
   confirmBtnDisabled: { opacity: 0.5 },
+  successBanner: { width: '100%', backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 12 },
+  successBannerText: { color: '#065F46', fontWeight: '600', textAlign: 'center', fontSize: 14 },
+  errorBanner: { width: '100%', backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: 12 },
+  errorBannerText: { color: '#991B1B', fontWeight: '600', textAlign: 'center', fontSize: 14 },
   confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: 'DMSans-Bold' },
 });

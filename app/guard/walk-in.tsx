@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, ActivityIndicator, Alert, Vibration,
+  ScrollView, ActivityIndicator, Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -40,6 +40,8 @@ export default function GuardWalkInScreen() {
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [approvalResult, setApprovalResult] = useState<PendingApproval | null>(null);
   const [countdown, setCountdown] = useState(TIMEOUT_SECS);
+  const [formError, setFormError] = useState('');
+  const [showCallNote, setShowCallNote] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -83,8 +85,9 @@ export default function GuardWalkInScreen() {
   }, [stopPolling]);
 
   const handleSubmit = async () => {
-    if (!visitorName.trim()) { Alert.alert('Name required', 'Enter the visitor\'s name.'); return; }
-    if (!flatNumber.trim()) { Alert.alert('Flat required', 'Enter the resident\'s flat number.'); return; }
+    if (!visitorName.trim()) { setFormError("Enter the visitor's name."); return; }
+    if (!flatNumber.trim()) { setFormError("Enter the resident's flat number."); return; }
+    setFormError('');
 
     const req: WalkInRequest = {
       visitorName: visitorName.trim(),
@@ -103,7 +106,7 @@ export default function GuardWalkInScreen() {
       setPhase('waiting');
       startPolling(pending.id);
     } catch (err: any) {
-      Alert.alert('Could not send request', err.message);
+      setFormError(err.message || 'Could not send request. Try again.');
     } finally {
       setSubmitting(false);
     }
@@ -113,10 +116,9 @@ export default function GuardWalkInScreen() {
     if (!pendingId) return;
     try {
       await visitorApprovalService.approve(pendingId);
-      Alert.alert('Visitor Checked In', `${visitorName} has been checked in.`, [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
     } catch {
+      // best-effort
+    } finally {
       router.back();
     }
   };
@@ -211,11 +213,16 @@ export default function GuardWalkInScreen() {
             <Text style={s.timeoutOptionsLabel}>What would you like to do?</Text>
             <TouchableOpacity
               style={[s.primaryBtn, { backgroundColor: '#D97706' }]}
-              onPress={() => Alert.alert('Call Resident', `Call the resident at flat ${flatNumber} to confirm entry manually.`)}
+              onPress={() => setShowCallNote(v => !v)}
             >
               <Ionicons name="call-outline" size={18} color="#fff" />
               <Text style={s.primaryBtnText}>Call Resident</Text>
             </TouchableOpacity>
+            {showCallNote && (
+              <View style={s.callNote}>
+                <Text style={s.callNoteText}>Contact flat <Text style={{ fontWeight: '800' }}>{flatNumber}</Text> directly to confirm entry.</Text>
+              </View>
+            )}
             <TouchableOpacity style={[s.primaryBtn, { backgroundColor: COLORS.textMuted }]} onPress={resetForm}>
               <Ionicons name="refresh" size={18} color="#fff" />
               <Text style={s.primaryBtnText}>Send Again</Text>
@@ -279,14 +286,7 @@ export default function GuardWalkInScreen() {
 
           <TouchableOpacity
             style={s.cancelWait}
-            onPress={() => Alert.alert(
-              'Cancel Request?',
-              'This will cancel the approval request. The visitor will not be allowed in.',
-              [
-                { text: 'Keep Waiting', style: 'cancel' },
-                { text: 'Cancel Request', style: 'destructive', onPress: () => { stopPolling(); router.back(); } },
-              ]
-            )}
+            onPress={() => { stopPolling(); router.back(); }}
           >
             <Text style={s.cancelWaitText}>Cancel request</Text>
           </TouchableOpacity>
@@ -391,6 +391,13 @@ export default function GuardWalkInScreen() {
             The resident at flat <Text style={{ fontWeight: '700' }}>{flatNumber || '—'}</Text> will receive a push notification to Allow or Deny this visitor.
           </Text>
         </View>
+
+        {!!formError && (
+          <View style={s.formErrorBox}>
+            <Ionicons name="alert-circle-outline" size={15} color="#DC2626" />
+            <Text style={s.formErrorText}>{formError}</Text>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[s.submitBtn, (!visitorName.trim() || !flatNumber.trim()) && s.submitBtnDisabled]}
@@ -502,4 +509,13 @@ const s = StyleSheet.create({
   primaryBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
   secondaryBtn: { alignItems: 'center', padding: 12, width: '100%' },
   secondaryBtnText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
+  callNote: {
+    backgroundColor: '#FEF3C7', borderRadius: RADIUS.md, padding: 12, width: '100%',
+  },
+  callNoteText: { fontSize: 13, color: '#92400E', textAlign: 'center' },
+  formErrorBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: 12,
+  },
+  formErrorText: { flex: 1, fontSize: 13, color: '#DC2626', fontWeight: '600' },
 });

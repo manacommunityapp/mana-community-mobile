@@ -8,7 +8,6 @@ import {
   ScrollView,
   BackHandler,
   Modal,
-  Alert,
   ActivityIndicator,
   RefreshControl,
   Share,
@@ -67,6 +66,8 @@ export default function FacilitiesScreen() {
 
   // Digital Pass Modal State
   const [bookingPass, setBookingPass] = useState<FacilityBookingDto | null>(null);
+  const [bookError, setBookError] = useState('');
+  const [slotError, setSlotError] = useState('');
 
   const goHome = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -182,19 +183,21 @@ export default function FacilitiesScreen() {
 
       setSelectedFacility(null);
       setSelectedSlot(null);
+      setBookError('');
+      setSlotError('');
       setBookingPass(confirmedPass);
-      Alert.alert('🎉 Reservation Confirmed', 'Your amenity booking pass is ready.');
     },
     onError: (err: any) => {
-      Alert.alert('Booking Error', err?.message || 'Could not complete slot reservation.');
+      setBookError(err?.message || 'Could not complete slot reservation.');
     },
   });
 
   const handleConfirmBooking = () => {
     if (!selectedFacility || !selectedSlot) {
-      Alert.alert('Slot Required', 'Please select an available time slot.');
+      setSlotError('Please select an available time slot.');
       return;
     }
+    setSlotError('');
     const [start, end] = selectedSlot.split(' - ');
     bookMutation.mutate({
       facilityId: selectedFacility.id,
@@ -624,6 +627,16 @@ export default function FacilitiesScreen() {
                 )}
               </TouchableOpacity>
             </View>
+            {!!slotError && (
+              <View style={s.inlineError}>
+                <Text style={s.inlineErrorText}>{slotError}</Text>
+              </View>
+            )}
+            {!!bookError && (
+              <View style={s.inlineError}>
+                <Text style={s.inlineErrorText}>{bookError}</Text>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -1051,6 +1064,8 @@ const s = StyleSheet.create({
     ...SHADOWS.sm,
   },
   confirmBtnText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF', fontFamily: 'Outfit-Bold' },
+  inlineError: { backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: 12, marginTop: 10, marginHorizontal: SPACING.lg, marginBottom: 4 },
+  inlineErrorText: { color: '#991B1B', fontWeight: '600', fontSize: 13 },
 
   passCard: {
     width: '100%',

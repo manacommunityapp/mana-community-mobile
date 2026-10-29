@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, SectionList,
-  ActivityIndicator, TextInput, ScrollView, Alert,
+  ActivityIndicator, TextInput, ScrollView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -82,7 +82,7 @@ export default function DirectoryScreen() {
 
   const handlePhonePress = (item: ResidentEntry) => {
     if (!item.phone) return;
-    Alert.alert(item.name, `Phone: ${item.phone}`, [{ text: 'OK' }]);
+    Linking.openURL('tel:' + item.phone);
   };
 
   const renderResidentCard = (item: ResidentEntry) => {

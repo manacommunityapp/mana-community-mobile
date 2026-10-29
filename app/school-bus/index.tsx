@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView,
+  ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -47,6 +47,9 @@ export default function SchoolBusScreen() {
   const [showRegister, setShowRegister] = useState(false);
   const [form, setForm] = useState<RegisterChildRequest>({ name: '', grade: '', schoolName: '', stopName: '' });
   const [refreshing, setRefreshing] = useState(false);
+  const [regSuccess, setRegSuccess] = useState('');
+  const [regErr, setRegErr] = useState('');
+  const [formErr, setFormErr] = useState('');
 
   const { data: rawChildren, isLoading: loadingChildren, refetch: refetchChildren } = useQuery<RegisteredChild[]>({
     queryKey: ['school-bus', 'my-children'],
@@ -72,18 +75,26 @@ export default function SchoolBusScreen() {
     mutationFn: (data: RegisterChildRequest) => schoolBusService.registerChild(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['school-bus'] });
-      setShowRegister(false);
       setForm({ name: '', grade: '', schoolName: '', stopName: '' });
-      Alert.alert('Child Registered', 'Your child has been registered for school bus tracking.');
+      setFormErr('');
+      setRegErr('');
+      setRegSuccess('Child registered for school bus tracking!');
+      setTimeout(() => {
+        setShowRegister(false);
+        setRegSuccess('');
+      }, 1800);
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => {
+      setRegErr(err.message || 'Failed to register. Please try again.');
+    },
   });
 
   const handleRegister = () => {
     if (!form.name.trim() || !form.grade.trim() || !form.schoolName.trim()) {
-      Alert.alert('Missing Info', 'Please fill in name, grade, and school name.');
+      setFormErr('Please fill in name, grade, and school name.');
       return;
     }
+    setFormErr('');
     registerMutation.mutate(form);
   };
 
@@ -238,6 +249,22 @@ export default function SchoolBusScreen() {
               </TouchableOpacity>
             </View>
 
+            {!!regSuccess && (
+              <View style={s.successBanner}>
+                <Text style={s.successBannerText}>{regSuccess}</Text>
+              </View>
+            )}
+            {!!regErr && (
+              <View style={s.errorBanner}>
+                <Text style={s.errorBannerText}>{regErr}</Text>
+              </View>
+            )}
+            {!!formErr && (
+              <View style={s.errorBanner}>
+                <Text style={s.errorBannerText}>{formErr}</Text>
+              </View>
+            )}
+
             <ScrollView showsVerticalScrollIndicator={false}>
               {[
                 { key: 'name',       label: "Child's Name",   placeholder: 'e.g. Aarav Kumar' },
@@ -252,7 +279,7 @@ export default function SchoolBusScreen() {
                     placeholder={field.placeholder}
                     placeholderTextColor={COLORS.textMuted}
                     value={(form as any)[field.key]}
-                    onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                    onChangeText={v => { setForm(f => ({ ...f, [field.key]: v })); setFormErr(''); }}
                   />
                 </View>
               ))}
@@ -343,4 +370,8 @@ const s = StyleSheet.create({
   input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: 13, color: COLORS.text, fontFamily: 'DMSans-Regular' },
   submitBtn: { backgroundColor: '#D97706', paddingVertical: 14, borderRadius: RADIUS.md, alignItems: 'center', marginTop: SPACING.md, ...SHADOWS.sm },
   submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  successBanner: { backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 12, marginBottom: SPACING.md },
+  successBannerText: { color: '#065F46', fontWeight: '700', fontSize: 13 },
+  errorBanner: { backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: 12, marginBottom: SPACING.md },
+  errorBannerText: { color: '#991B1B', fontWeight: '600', fontSize: 13 },
 });
