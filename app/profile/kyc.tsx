@@ -18,20 +18,6 @@ import {
   SubmitKycRequest,
 } from '@/services/kycService';
 
-const MOCK_KYC: KycSummary = {
-  overallStatus: 'PENDING_REVIEW',
-  submittedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-  documents: [
-    {
-      id: 1,
-      documentType: 'AADHAAR',
-      documentNumber: 'XXXX XXXX 4521',
-      status: 'PENDING_REVIEW',
-      submittedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    },
-  ],
-};
-
 const DOC_TYPES: { type: KycDocumentType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { type: 'AADHAAR',          label: 'Aadhaar Card',       icon: 'card-outline' },
   { type: 'PAN',              label: 'PAN Card',            icon: 'document-text-outline' },
@@ -68,12 +54,11 @@ export default function KycScreen() {
   const [formError, setFormError] = useState('');
   const [modalSuccess, setModalSuccess] = useState('');
 
-  const { data: rawKyc, isLoading } = useQuery<KycSummary | null>({
+  const { data: kyc, isLoading } = useQuery<KycSummary>({
     queryKey: ['kyc', 'status'],
     queryFn: () => kycService.getKycStatus(),
     staleTime: 60_000,
   });
-  const kyc = rawKyc ?? MOCK_KYC;
 
   const submitMutation = useMutation({
     mutationFn: (data: SubmitKycRequest) => kycService.submitDocument(data),

@@ -24,15 +24,6 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ic
   IDLE:             { label: 'Idle',              color: '#6B7280', bg: '#F3F4F6', icon: 'time-outline' },
 };
 
-const MOCK_CHILDREN: RegisteredChild[] = [
-  { id: 1, name: 'Aarav Kumar',  grade: 'Grade 5', schoolName: 'Delhi Public School', busNumber: 'MH-12-3456', stopName: 'Tower A Gate', busId: 1 },
-  { id: 2, name: 'Priya Kumar',  grade: 'Grade 2', schoolName: 'Delhi Public School', busNumber: 'MH-12-3456', stopName: 'Tower A Gate', busId: 1 },
-];
-
-const MOCK_TRIPS: BusTripLog[] = [
-  { id: 1, busId: 1, direction: 'FROM_SCHOOL', date: new Date().toISOString().split('T')[0], departureTime: '14:00', arrivalTime: '15:15', childPickedUp: true, pickedUpAt: '14:30', droppedOffAt: '15:15' },
-  { id: 2, busId: 1, direction: 'TO_SCHOOL',   date: new Date().toISOString().split('T')[0], departureTime: '07:30', arrivalTime: '08:10', childPickedUp: true, pickedUpAt: '07:35', droppedOffAt: '08:10' },
-];
 
 function formatTime(iso?: string) {
   if (!iso) return '--';
@@ -56,7 +47,7 @@ export default function SchoolBusScreen() {
     queryFn: () => schoolBusService.getMyChildren(),
     staleTime: 30_000,
   });
-  const children = (rawChildren && rawChildren.length > 0) ? rawChildren : MOCK_CHILDREN;
+  const children = rawChildren ?? [];
 
   const { data: rawTrips, isLoading: loadingTrips, refetch: refetchTrips } = useQuery<BusTripLog[]>({
     queryKey: ['school-bus', 'trips', children[0]?.id],
@@ -64,7 +55,7 @@ export default function SchoolBusScreen() {
     enabled: !!children[0],
     staleTime: 60_000,
   });
-  const trips = (rawTrips && rawTrips.length > 0) ? rawTrips : MOCK_TRIPS;
+  const trips = rawTrips ?? [];
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

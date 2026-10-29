@@ -11,17 +11,6 @@ import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import { directoryService, ResidentEntry } from '@/services/directoryService';
 
-const MOCK_RESIDENTS: ResidentEntry[] = [
-  { id: 1,  name: 'Rajesh Sharma',   flatNumber: 'A-101', block: 'Tower A', residentType: 'OWNER',  isVerified: true,  familySize: 4, phone: '9876500001' },
-  { id: 2,  name: 'Meena Iyer',      flatNumber: 'A-204', block: 'Tower A', residentType: 'TENANT', isVerified: true,  familySize: 2, phone: '9876500002' },
-  { id: 3,  name: 'Arjun Mehta',     flatNumber: 'A-305', block: 'Tower A', residentType: 'OWNER',  isVerified: false, familySize: 3 },
-  { id: 4,  name: 'Sonal Verma',     flatNumber: 'B-102', block: 'Tower B', residentType: 'OWNER',  isVerified: true,  familySize: 5, phone: '9876500004' },
-  { id: 5,  name: 'Deepak Nair',     flatNumber: 'B-201', block: 'Tower B', residentType: 'TENANT', isVerified: true,  familySize: 2 },
-  { id: 6,  name: 'Kavita Reddy',    flatNumber: 'B-403', block: 'Tower B', residentType: 'OWNER',  isVerified: true,  familySize: 3, phone: '9876500006' },
-  { id: 7,  name: 'Suresh Pillai',   flatNumber: 'C-101', block: 'Tower C', residentType: 'OWNER',  isVerified: false, familySize: 4 },
-  { id: 8,  name: 'Anita Desai',     flatNumber: 'C-302', block: 'Tower C', residentType: 'TENANT', isVerified: true,  familySize: 2, phone: '9876500008' },
-];
-
 const BLOCK_COLORS: Record<string, string> = {
   'Tower A': '#7C3AED',
   'Tower B': '#2563EB',
@@ -57,7 +46,7 @@ export default function DirectoryScreen() {
     staleTime: 60_000,
   });
 
-  const allResidents = (raw && raw.length > 0) ? raw : MOCK_RESIDENTS;
+  const allResidents = raw ?? [];
 
   const filtered = allResidents.filter(r => {
     const matchSearch = !debouncedSearch ||
