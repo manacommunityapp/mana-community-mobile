@@ -62,6 +62,10 @@ export default function AdminDashboard() {
       emoji: '⚙️', label: 'Community',     sub: 'Settings & invite',
       route: '/admin/community-settings',  color: COLORS.success,
     },
+    {
+      emoji: '🛡️', label: 'Roles & Access', sub: 'Manage roles & assign',
+      route: '/admin/roles',               color: '#7C3AED',
+    },
   ];
 
   return (
