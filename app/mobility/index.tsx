@@ -152,7 +152,7 @@ export default function MobilityHubScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+      <StatusBar barStyle="light-content" />
 
       {/* ── Hero Header ────────────────────────────────────────── */}
       <LinearGradient

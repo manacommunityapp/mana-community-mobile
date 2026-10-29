@@ -251,7 +251,7 @@ export default function BookRideScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* ── Modern Navigation Header ──────────────────────────── */}
       <View style={s.header}>

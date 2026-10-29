@@ -90,7 +90,7 @@ export default function AdminDashboard() {
       <ScrollView
         contentContainerStyle={s.scroll}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />
         }
         showsVerticalScrollIndicator={false}
       >

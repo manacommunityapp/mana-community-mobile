@@ -153,7 +153,7 @@ export default function GovernanceOverviewScreen() {
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       <ScrollView
         contentContainerStyle={s.scrollContent}

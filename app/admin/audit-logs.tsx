@@ -112,7 +112,7 @@ export default function AuditLogsScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
       >
         {/* ── Hash Chain Integrity Banner ──────────────────────────────── */}
         <View style={styles.integrityCard}>

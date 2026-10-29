@@ -116,7 +116,7 @@ export default function BiometricTurnstileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
       <Header
         title="Smart Gates"
         subtitle="Biometric & Pedestrian Access"
