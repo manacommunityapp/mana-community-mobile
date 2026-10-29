@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, Modal, TextInput, Alert,
-  RefreshControl, ActivityIndicator, ScrollView,
+  RefreshControl, ActivityIndicator, ScrollView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -152,11 +152,27 @@ export default function StaffScreen() {
           <View style={{ flex: 1, marginLeft: SPACING.md }}>
             <View style={s.cardTitleRow}>
               <Text style={s.staffName}>{item.name}</Text>
-              {item.policeVerified && (
+              {item.policeVerified ? (
                 <View style={s.verifiedBadge}>
                   <Ionicons name="shield-checkmark" size={11} color="#059669" />
-                  <Text style={s.verifiedText}>Verified</Text>
+                  <Text style={s.verifiedText}>Police Verified</Text>
                 </View>
+              ) : (
+                <TouchableOpacity
+                  style={s.requestVerifyBtn}
+                  onPress={() => Alert.alert(
+                    'Request Police Verification',
+                    `To get ${item.name} police-verified, submit their details at your local police station or use the Tenant Verification Portal.\n\nDocs needed:\n• Aadhaar copy\n• Employer letter\n• Passport photo`,
+                    [
+                      { text: 'Open Portal', onPress: () => Linking.openURL('https://tenantverification.gov.in') },
+                      { text: 'OK' },
+                    ]
+                  )}
+                  hitSlop={8}
+                >
+                  <Ionicons name="shield-outline" size={11} color="#D97706" />
+                  <Text style={s.requestVerifyText}>Request Verification</Text>
+                </TouchableOpacity>
               )}
             </View>
             <Text style={[s.rolePill, { color: meta.color }]}>{meta.label}</Text>
@@ -452,6 +468,8 @@ const s = StyleSheet.create({
   staffName: { fontSize: 15, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#D1FAE5', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
   verifiedText: { fontSize: 9, fontWeight: '700', color: '#059669', fontFamily: 'Outfit-Bold' },
+  requestVerifyBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
+  requestVerifyText: { fontSize: 9, fontWeight: '700', color: '#D97706', fontFamily: 'Outfit-Bold' },
   bgBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
   bgBadgeText: { fontSize: 10, fontWeight: '600', fontFamily: 'DMSans-Medium' },
   rolePill: { fontSize: 12, fontWeight: '600', fontFamily: 'DMSans-Medium', marginTop: 2 },

@@ -37,6 +37,8 @@ export interface PreApproveVisitorRequest {
   passType: VisitorType | string;
   expectedAt?: string;
   flatNumber?: string;
+  validFrom?: string;
+  validUntil?: string;
 }
 
 export interface VisitorAuditLogDto {

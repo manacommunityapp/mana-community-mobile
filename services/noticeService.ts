@@ -25,6 +25,8 @@ export interface NoticeDto {
   pinned?: boolean;
   attachmentUrl?: string;
   expiresOn?: string;
+  acknowledgedAt?: string;
+  isAcknowledged?: boolean;
 }
 
 function normalizeNotice(item: any): NoticeDto {
@@ -43,6 +45,8 @@ function normalizeNotice(item: any): NoticeDto {
     pinned: Boolean(item.pinned ?? item.isPinned ?? false),
     attachmentUrl: item.attachmentUrl,
     expiresOn: item.expiresOn,
+    acknowledgedAt: item.acknowledgedAt,
+    isAcknowledged: Boolean(item.isAcknowledged ?? item.acknowledgedAt ?? false),
   };
 }
 
@@ -66,6 +70,17 @@ export const noticeService = {
     } catch (err) {
       secureLog.warn('[noticeService] Backend notices unavailable', err);
       return [];
+    }
+  },
+
+  /**
+   * POST /notices/{id}/acknowledge
+   */
+  async acknowledge(id: string | number): Promise<void> {
+    try {
+      await api.post(`/notices/${id}/acknowledge`);
+    } catch (err) {
+      secureLog.warn(`[noticeService] Acknowledge ${id} failed`, err);
     }
   },
 

@@ -116,6 +116,8 @@ export default function VisitorsScreen() {
   const [guestVehicle, setGuestVehicle] = useState('');
   const [guestType, setGuestType] = useState<VisitorType>('GUEST');
   const [guestPurpose, setGuestPurpose] = useState('');
+  const [guestValidFrom, setGuestValidFrom] = useState('');
+  const [guestValidUntil, setGuestValidUntil] = useState('');
 
   const goHome = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -217,10 +219,8 @@ export default function VisitorsScreen() {
       const newEntry = mapDtoToEntry(res);
       setLocalVisitors(prev => [newEntry, ...prev]);
       setIsPreApproveModal(false);
-      setGuestName('');
-      setGuestPhone('');
-      setGuestVehicle('');
-      setGuestPurpose('');
+      setGuestName(''); setGuestPhone(''); setGuestVehicle(''); setGuestPurpose('');
+      setGuestValidFrom(''); setGuestValidUntil('');
       setSelectedPass(newEntry);
       Alert.alert('✅ Pass Generated', `Digital Gate Pass ${newEntry.passCode} has been created.`);
     },
@@ -240,10 +240,8 @@ export default function VisitorsScreen() {
       };
       setLocalVisitors(prev => [newEntry, ...prev]);
       setIsPreApproveModal(false);
-      setGuestName('');
-      setGuestPhone('');
-      setGuestVehicle('');
-      setGuestPurpose('');
+      setGuestName(''); setGuestPhone(''); setGuestVehicle(''); setGuestPurpose('');
+      setGuestValidFrom(''); setGuestValidUntil('');
       setSelectedPass(newEntry);
     },
   });
@@ -261,6 +259,8 @@ export default function VisitorsScreen() {
       passType: guestType,
       purpose: guestPurpose.trim() || `${VISITOR_TYPE_CONFIG[guestType].label} Entry`,
       flatNumber: flatStr,
+      validFrom: guestValidFrom.trim() || undefined,
+      validUntil: guestValidUntil.trim() || undefined,
     });
   };
 
@@ -630,6 +630,30 @@ export default function VisitorsScreen() {
                   placeholderTextColor={COLORS.textMuted}
                   value={guestVehicle}
                   onChangeText={setGuestVehicle}
+                />
+              </View>
+            </View>
+
+            {/* Time Window */}
+            <View style={{ flexDirection: 'row', gap: SPACING.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.inputLabel}>Valid From (Optional)</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="e.g. 10:00 AM"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={guestValidFrom}
+                  onChangeText={setGuestValidFrom}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.inputLabel}>Valid Until (Optional)</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="e.g. 08:00 PM"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={guestValidUntil}
+                  onChangeText={setGuestValidUntil}
                 />
               </View>
             </View>
