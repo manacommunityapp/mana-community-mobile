@@ -57,7 +57,7 @@ function resolvePrimaryPersona(roles: string[]): UserPersona {
   if (roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD') || roleSet.has('STAFF') || roleSet.has('CASHIER')) {
     return 'STAFF';
   }
-  if (roleSet.has('VENDOR')) {
+  if (roleSet.has('VENDOR') || roleSet.has('SPORTS_VENDOR')) {
     return 'VENDOR';
   }
   return 'RESIDENT';

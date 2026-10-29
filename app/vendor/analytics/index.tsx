@@ -10,13 +10,17 @@ import {
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { vendorService } from '@/services/vendorService';
 
 export default function VendorCommerceAnalyticsScreen() {
+  const { user } = useAuth();
+  const vendorId = (user as any)?.vendorId || (user?.id ? String(user.id) : 'v1');
+
   const { data: analytics, isLoading } = useQuery({
-    queryKey: ['vendor-commerce-analytics'],
-    queryFn: () => vendorService.getCommerceAnalytics('v1'),
+    queryKey: ['vendor-commerce-analytics', vendorId],
+    queryFn: () => vendorService.getCommerceAnalytics(vendorId),
   });
 
   if (isLoading || !analytics) {
