@@ -9,9 +9,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { sportsService } from '@/services/sportsService';
 import { useAuth } from '@/hooks/useAuth';
-import { COLORS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import {
   validateImageFile,
   showFileValidationError,
@@ -85,12 +86,13 @@ export default function MatchPhotoGalleryScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={s.back}>‹</Text>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={s.title}>Match Photos</Text>
-        <TouchableOpacity style={s.uploadBtn} onPress={pickAndUpload}>
-          <Text style={s.uploadBtnText}>📷 Add</Text>
+        <TouchableOpacity style={s.uploadBtn} onPress={pickAndUpload} activeOpacity={0.8}>
+          <Ionicons name="camera-outline" size={16} color="#fff" />
+          <Text style={s.uploadBtnText}>Add Photo</Text>
         </TouchableOpacity>
       </View>
 
@@ -103,7 +105,7 @@ export default function MatchPhotoGalleryScreen() {
           numColumns={3}
           columnWrapperStyle={{ gap: 2 }}
           contentContainerStyle={{ gap: 2 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => setFullscreen(item)} activeOpacity={0.85}>
               <Image source={{ uri: item.imageUrl || item.url }} style={{ width: THUMB, height: THUMB }} resizeMode="cover" />
@@ -207,10 +209,10 @@ export default function MatchPhotoGalleryScreen() {
 
 const s = StyleSheet.create({
   container:         { flex: 1, backgroundColor: '#000' },
-  header:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
-  back:              { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:             { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
-  uploadBtn:         { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  header:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 12, ...SHADOWS.sm },
+  backBtn:           { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+  title:             { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '800', color: COLORS.text, flex: 1, letterSpacing: -0.2 },
+  uploadBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.primary, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 7 },
   uploadBtnText:     { color: '#fff', fontWeight: '700', fontSize: 13 },
   thumbLike:         { position: 'absolute', bottom: 4, left: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, paddingHorizontal: 5, paddingVertical: 2 },
   thumbLikeText:     { fontSize: 10, color: '#fff', fontWeight: '600' },

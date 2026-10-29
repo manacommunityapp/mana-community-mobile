@@ -188,7 +188,7 @@ export default function CarpoolScreen() {
         </View>
         <TouchableOpacity
           style={s.offerBtn}
-          onPress={() => Alert.alert('Offer a Carpool', 'Create carpool route: Set departure time and price per seat.')}
+          onPress={() => router.push('/mobility/journeys/offer?journeyType=OFFICE' as any)}
           activeOpacity={0.88}
         >
           <Ionicons name="add" size={16} color="#fff" />
@@ -271,7 +271,7 @@ export default function CarpoolScreen() {
           </Text>
           <TouchableOpacity
             style={s.offerRideCta}
-            onPress={() => Alert.alert('Offer Ride', 'Create carpool offer flow')}
+            onPress={() => router.push('/mobility/journeys/offer?journeyType=OFFICE' as any)}
             activeOpacity={0.88}
           >
             <Ionicons name="car-outline" size={16} color="#fff" />

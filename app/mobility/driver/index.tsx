@@ -9,6 +9,7 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { mobilityDriverService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { DriverRideOfferDto } from '@/types/mobility';
@@ -102,6 +103,36 @@ export default function DriverDashboardScreen() {
     queryKey: ['mobility-driver-earnings'],
     queryFn:  mobilityDriverService.getEarnings,
   });
+
+  // Publish live GPS only while an approved driver is online. The backend
+  // stores the last location and exposes it to the passenger tracking screen.
+  useEffect(() => {
+    if (profile?.status !== 'APPROVED' || profile.availability !== 'ONLINE') return;
+    let disposed = false;
+    let subscription: Location.LocationSubscription | undefined;
+
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted' || disposed) return;
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 10_000,
+          distanceInterval: 50,
+        },
+        ({ coords }) => {
+          if (!disposed) {
+            mobilityDriverService.updateLocation(coords.latitude, coords.longitude).catch(() => undefined);
+          }
+        },
+      );
+    })();
+
+    return () => {
+      disposed = true;
+      subscription?.remove();
+    };
+  }, [profile?.status, profile?.availability]);
 
   const countdown = useOfferCountdown(pendingOffer);
 

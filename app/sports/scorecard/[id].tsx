@@ -2,9 +2,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { sportsService } from '@/services/sportsService';
 import { InningsCard } from '@/components/sports/ScorecardTable';
-import { COLORS } from '@/constants/config';
+import { COLORS, RADIUS } from '@/constants/config';
 
 export default function CricketScorecardScreen() {
   const { id }  = useLocalSearchParams<{ id: string }>();
@@ -53,12 +54,12 @@ export default function CricketScorecardScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={s.back}>‹</Text>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
         <Text style={s.title} numberOfLines={1}>{card.matchTitle || 'Scorecard'}</Text>
-        <TouchableOpacity onPress={handleShare} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={s.share}>Share</Text>
+        <TouchableOpacity onPress={handleShare} hitSlop={8} style={s.shareBtn}>
+          <Ionicons name="share-social-outline" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -100,10 +101,10 @@ export default function CricketScorecardScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: COLORS.background },
-  header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#1E1B4B', gap: 10 },
-  back:         { fontSize: 30, color: '#fff', lineHeight: 34, fontWeight: '300' },
-  title:        { fontSize: 16, fontFamily: 'Outfit-Bold', fontWeight: '700', color: '#fff', flex: 1 },
-  share:        { fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
+  header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#1E1B4B', gap: 12 },
+  backBtn:      { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  title:        { fontSize: 16, fontFamily: 'Outfit-Bold', fontWeight: '800', color: '#fff', flex: 1 },
+  shareBtn:     { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   scroll:       { padding: 12, gap: 0 },
   resultBanner: { backgroundColor: '#1E1B4B', borderRadius: 14, padding: 16, alignItems: 'center', gap: 6, marginBottom: 10 },
   resultEmoji:  { fontSize: 32 },

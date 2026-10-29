@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity,
-  ActivityIndicator, Alert, BackHandler, RefreshControl,
+  ActivityIndicator, Alert, BackHandler, RefreshControl, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -9,7 +9,7 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mobilityOpsService } from '@/services/mobilityService';
-import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, FONTS, CONFIG } from '@/constants/config';
 
 type Tab = 'DOCUMENTS' | 'TRIPS';
 
@@ -49,9 +49,9 @@ export default function OpsScreen() {
   });
 
   const reviewMutation = useMutation({
-    mutationFn: ({ driverId, documentId, status, reason }: {
-      driverId: number; documentId: number; status: 'APPROVED' | 'REJECTED'; reason?: string;
-    }) => mobilityOpsService.reviewDocument(driverId, documentId, { status, rejectedReason: reason }),
+    mutationFn: ({ driverId, documentId, approved, reason }: {
+      driverId: number; documentId: number; approved: boolean; reason?: string;
+    }) => mobilityOpsService.reviewDocument(driverId, documentId, { approved, rejectReason: reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ops-pending-docs'] });
     },
@@ -69,13 +69,13 @@ export default function OpsScreen() {
           style: 'destructive',
           onPress: () => {
             Alert.prompt('Rejection reason', 'Enter a reason for the driver', (reason) => {
-              reviewMutation.mutate({ driverId, documentId, status: 'REJECTED', reason: reason ?? '' });
+              reviewMutation.mutate({ driverId, documentId, approved: false, reason: reason ?? '' });
             });
           },
         },
         {
           text: 'Approve',
-          onPress: () => reviewMutation.mutate({ driverId, documentId, status: 'APPROVED' }),
+          onPress: () => reviewMutation.mutate({ driverId, documentId, approved: true }),
         },
       ],
     );
@@ -149,7 +149,7 @@ export default function OpsScreen() {
                   </View>
                 </View>
                 <View style={s.docActions}>
-                  <TouchableOpacity style={s.viewBtn} onPress={() => Alert.alert('Document', 'Open document viewer — connect to file viewer')}>
+                  <TouchableOpacity style={s.viewBtn} onPress={() => { if (!item.fileUrl) { Alert.alert('Document unavailable', 'No file is attached to this review.'); return; } const url = /^https?:\/\//i.test(item.fileUrl) ? item.fileUrl : `${CONFIG.API_BASE_URL}${item.fileUrl.startsWith('/api') ? '' : '/api'}${item.fileUrl}`; Linking.openURL(url).catch(() => Alert.alert('Unable to open document', 'The stored document could not be opened.')); }}>
                     <Ionicons name="eye-outline" size={14} color={COLORS.primary} />
                     <Text style={s.viewBtnText}>View</Text>
                   </TouchableOpacity>

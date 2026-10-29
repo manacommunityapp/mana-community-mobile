@@ -68,6 +68,13 @@ export default function TrackScreen() {
     },
   });
 
+  const { data: driverLocation } = useQuery({
+    queryKey: ['mobility-trip-location', tripId],
+    queryFn: () => mobilityPassengerService.getDriverLocation(tripId),
+    enabled: !!trip?.driver && ACTIVE_STATUSES.includes(trip.status),
+    refetchInterval: 8_000,
+  });
+
   useFocusEffect(
     useCallback(() => {
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -258,7 +265,11 @@ export default function TrackScreen() {
 
             <View style={s.mapInfoPill}>
               <Ionicons name="navigate-circle" size={14} color={COLORS.primary} />
-              <Text style={s.mapInfoText}>Live GPS Tracking Active</Text>
+              <Text style={s.mapInfoText}>
+                {driverLocation?.driverLat != null && driverLocation?.driverLng != null
+                  ? `Driver GPS ${driverLocation.driverLat.toFixed(5)}, ${driverLocation.driverLng.toFixed(5)}`
+                  : 'Waiting for driver GPS…'}
+              </Text>
             </View>
           </LinearGradient>
         </View>

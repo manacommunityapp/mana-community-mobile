@@ -6,8 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { sportsService } from '@/services/sportsService';
-import { COLORS, getInitials } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, getInitials } from '@/constants/config';
 import type { PlayerReaction, MatchRatingPlayerDto } from '@/types/api';
 
 const REACTIONS: { key: PlayerReaction; emoji: string; label: string }[] = [
@@ -128,8 +129,8 @@ export default function PeerRatingScreen() {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={s.back}>‹</Text>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={s.title}>Match Ratings</Text>
         </View>
@@ -178,7 +179,9 @@ export default function PeerRatingScreen() {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()}><Text style={s.back}>‹</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+          </TouchableOpacity>
           <Text style={s.title}>Match Ratings</Text>
         </View>
         <View style={s.cantRate}>
@@ -195,8 +198,8 @@ export default function PeerRatingScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={s.back}>‹</Text>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={s.title}>Rate Your Players</Text>
         <TouchableOpacity
@@ -285,10 +288,10 @@ export default function PeerRatingScreen() {
 
 const s = StyleSheet.create({
   container:          { flex: 1, backgroundColor: COLORS.background },
-  header:             { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10 },
-  back:               { fontSize: 30, color: COLORS.primary, lineHeight: 34, fontWeight: '300' },
-  title:              { fontSize: 18, fontFamily: 'Outfit-Bold', fontWeight: '700', color: COLORS.text, flex: 1 },
-  submitBtn:          { fontSize: 16, fontWeight: '700', color: COLORS.primary },
+  header:             { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 12, ...SHADOWS.sm },
+  backBtn:            { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+  title:              { fontSize: 17, fontFamily: 'Outfit-Bold', fontWeight: '800', color: COLORS.text, flex: 1, letterSpacing: -0.2 },
+  submitBtn:          { fontSize: 15, fontWeight: '700', color: COLORS.primary },
   submitBtnDisabled:  { color: COLORS.textMuted },
   scroll:             { padding: 16, gap: 14 },
   intro:              { fontSize: 14, color: COLORS.textMuted, lineHeight: 20 },

@@ -141,6 +141,10 @@ export const mobilityDriverService = {
     await api.patch('/mobility/driver/availability', { availability });
   },
 
+  async updateLocation(latitude: number, longitude: number): Promise<void> {
+    await api.patch('/mobility/driver/location', { latitude, longitude });
+  },
+
   async getDocuments(): Promise<MobilityDriverDocumentDto[]> {
     const res = await api.get<MobilityDriverDocumentDto[]>('/mobility/driver/documents');
     return res.data;

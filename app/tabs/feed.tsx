@@ -19,7 +19,7 @@ import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { PollCard } from '@/components/polls/PollCard';
 import { QuickActions } from '@/components/common/QuickActions';
 import { FlatGateActivityCard } from '@/components/common/FlatGateActivityCard';
-import { PostDto, EventDto } from '@/types/api';
+import { PostDto, EventDto, PostType } from '@/types/api';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getAvatarColor, getInitials } from '@/constants/config';
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,22 +29,33 @@ import { ResidentPassCard } from '@/components/common/ResidentPassCard';
 import { TodayAtAGlance, KpiChip } from '@/components/common/TodayAtAGlance';
 import { CommunityHighlightBanner } from '@/components/common/CommunityHighlightBanner';
 
+import { PostCommentSheet } from '@/components/feed/PostCommentSheet';
+import { CreatePostModal } from '@/components/feed/CreatePostModal';
+import { RichPostContent } from '@/components/feed/RichPostContent';
+
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.62;
 
-type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL';
+type FeedFilter = 'ALL' | 'ANNOUNCEMENT' | 'POLL' | 'GENERAL' | 'LOST_FOUND' | 'QUESTIONS';
 
 const FEED_FILTERS: { key: FeedFilter; label: string; emoji: string }[] = [
-  { key: 'ALL',          label: 'All',       emoji: '✨' },
-  { key: 'ANNOUNCEMENT', label: 'Notices',   emoji: '📢' },
-  { key: 'POLL',         label: 'Polls',     emoji: '📊' },
-  { key: 'GENERAL',      label: 'Community', emoji: '💬' },
+  { key: 'ALL',          label: 'All',          emoji: '✨' },
+  { key: 'ANNOUNCEMENT', label: 'Notices',      emoji: '📢' },
+  { key: 'POLL',         label: 'Polls',        emoji: '📊' },
+  { key: 'GENERAL',      label: 'Community',    emoji: '💬' },
+  { key: 'LOST_FOUND',   label: 'Lost & Found', emoji: '🔍' },
+  { key: 'QUESTIONS',    label: 'Questions',    emoji: '❓' },
 ];
 
 const POST_TYPE_META: Record<string, { label: string; emoji: string; color: string; bg: string; accent: string }> = {
-  poll:         { label: 'POLL',      emoji: '📊', color: '#7C3AED', bg: '#EDE9FE', accent: '#7C3AED' },
-  announcement: { label: 'NOTICE',    emoji: '📢', color: '#4F46E5', bg: '#EEF2FF', accent: '#4F46E5' },
-  post:         { label: 'POST',      emoji: '💬', color: '#2563EB', bg: '#DBEAFE', accent: '#2563EB' },
+  poll:         { label: 'POLL',         emoji: '📊', color: '#7C3AED', bg: '#EDE9FE', accent: '#7C3AED' },
+  announcement: { label: 'NOTICE',       emoji: '📢', color: '#4F46E5', bg: '#EEF2FF', accent: '#4F46E5' },
+  post:         { label: 'POST',         emoji: '💬', color: '#2563EB', bg: '#DBEAFE', accent: '#2563EB' },
+  lost_found:   { label: 'LOST & FOUND', emoji: '🔍', color: '#D97706', bg: '#FEF3C7', accent: '#D97706' },
+  question:     { label: 'QUESTION',     emoji: '❓', color: '#059669', bg: '#D1FAE5', accent: '#059669' },
+  classified:   { label: 'BUY & SELL',   emoji: '🛍️', color: '#7C3AED', bg: '#F5F3FF', accent: '#7C3AED' },
+  event:        { label: 'EVENT',        emoji: '📅', color: '#4F46E5', bg: '#EEF2FF', accent: '#4F46E5' },
+  maintenance:  { label: 'MAINTENANCE',  emoji: '⚙️', color: '#DC2626', bg: '#FEE2E2', accent: '#DC2626' },
 };
 
 // ── Upcoming Event Card ───────────────────────────────────────
@@ -199,11 +210,20 @@ const es = StyleSheet.create({
 });
 
 // ── Post Card ──────────────────────────────────────────────────────
-function PostCard({ post }: { post: PostDto }) {
+function PostCard({
+  post,
+  onCommentPress,
+  onHashtagPress,
+}: {
+  post: PostDto;
+  onCommentPress: (post: PostDto) => void;
+  onHashtagPress?: (tag: string) => void;
+}) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   const [authorPhotoError, setAuthorPhotoError] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(post.bookmarked ?? false);
 
   const authorPhotoUri =
     post.authorPhoto ||
@@ -229,6 +249,12 @@ function PostCard({ post }: { post: PostDto }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['feed'] }),
   });
 
+  const bookmarkMutation = useMutation({
+    mutationFn: () => feedService.toggleBookmark(post.id),
+    onMutate: () => setIsBookmarked((prev) => !prev),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['feed'] }),
+  });
+
   const handleShare = async () => {
     try {
       await Share.share({
@@ -238,7 +264,7 @@ function PostCard({ post }: { post: PostDto }) {
   };
 
   const avatarColor = getAvatarColor(post.authorName || 'Neighbor');
-  const typeMeta = POST_TYPE_META[post.type] || POST_TYPE_META.post;
+  const typeMeta = POST_TYPE_META[post.type] || POST_TYPE_META[String(post.type).toLowerCase()] || POST_TYPE_META.post;
   const timeAgo = (() => {
     if (!post.createdAt) return 'recently';
     try { return formatDistanceToNow(new Date(post.createdAt), { addSuffix: false }); }
@@ -250,6 +276,14 @@ function PostCard({ post }: { post: PostDto }) {
       <View style={[styles.cardAccent, { backgroundColor: typeMeta.accent }]} />
 
       <View style={styles.cardInner}>
+        {/* Pinned Notice Indicator */}
+        {post.pinned && (
+          <View style={styles.pinnedBanner}>
+            <Ionicons name="pin" size={12} color="#4F46E5" />
+            <Text style={styles.pinnedBannerText}>Pinned Announcement</Text>
+          </View>
+        )}
+
         {/* Author Row */}
         <View style={styles.authorRow}>
           <TouchableOpacity
@@ -275,13 +309,21 @@ function PostCard({ post }: { post: PostDto }) {
               <Text style={styles.authorName} numberOfLines={1}>
                 {post.authorName || 'Community Member'}
               </Text>
+              {post.official && (
+                <View style={styles.officialChip}>
+                  <Ionicons name="checkmark-circle" size={11} color="#059669" />
+                  <Text style={styles.officialChipText}>OFFICIAL</Text>
+                </View>
+              )}
               {post.authorFlat && (
                 <View style={styles.flatChip}>
                   <Text style={styles.flatChipText}>{post.authorFlat}</Text>
                 </View>
               )}
             </View>
-            <Text style={styles.authorMeta}>{timeAgo} ago</Text>
+            <Text style={styles.authorMeta}>
+              {timeAgo} ago {post.authorRole ? `· ${post.authorRole}` : ''}
+            </Text>
           </View>
 
           <View style={[styles.typeBadge, { backgroundColor: typeMeta.bg }]}>
@@ -292,8 +334,8 @@ function PostCard({ post }: { post: PostDto }) {
           </View>
         </View>
 
-        {/* Content */}
-        <Text style={styles.content}>{post.content}</Text>
+        {/* Rich Content (Titles, Auto-detected URLs, Link Previews, Hashtags) */}
+        <RichPostContent post={post} onHashtagPress={onHashtagPress} />
 
         {/* Embedded Poll */}
         {post.type === 'poll' && post.poll && (
@@ -323,17 +365,34 @@ function PostCard({ post }: { post: PostDto }) {
           >
             <Text style={styles.actionEmoji}>{post.liked ? '❤️' : '🤍'}</Text>
             <Text style={[styles.actionText, post.liked && styles.likedText]}>
-              {post.likeCount || 0}
+              {post.likeCount || post.likesCount || 0}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            activeOpacity={0.7}
+            onPress={() => onCommentPress(post)}
+          >
             <Text style={styles.actionEmoji}>💬</Text>
-            <Text style={styles.actionText}>{post.commentCount || 0}</Text>
+            <Text style={styles.actionText}>{post.commentCount || post.commentsCount || 0}</Text>
           </TouchableOpacity>
 
           <View style={styles.actionsRight}>
-            <TouchableOpacity style={styles.actionBtnIcon} onPress={handleShare} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.actionBtnIcon}
+              onPress={() => bookmarkMutation.mutate()}
+              activeOpacity={0.7}
+              hitSlop={6}
+            >
+              <Ionicons
+                name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                size={16}
+                color={isBookmarked ? COLORS.primary : COLORS.textMuted}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtnIcon} onPress={handleShare} activeOpacity={0.7} hitSlop={6}>
               <Text style={styles.actionEmoji}>🔗</Text>
             </TouchableOpacity>
           </View>
@@ -360,6 +419,10 @@ export default function FeedScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showUserPhotoModal, setShowUserPhotoModal] = useState(false);
+  const [selectedCommentPost, setSelectedCommentPost] = useState<PostDto | null>(null);
+  const [showCommentSheet, setShowCommentSheet] = useState(false);
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+  const [createPostDefaultType, setCreatePostDefaultType] = useState<PostType>('post');
 
   useAppBack({
     isRootScreen: true,
@@ -410,24 +473,44 @@ export default function FeedScreen() {
 
   const filteredPosts = useMemo(() => {
     let list = allPosts;
-    if (filter === 'ANNOUNCEMENT') list = list.filter(p => p.type === 'announcement');
+    if (filter === 'ANNOUNCEMENT') list = list.filter(p => p.type === 'announcement' || (p as any).official);
     if (filter === 'POLL') list = list.filter(p => p.type === 'poll');
-    if (filter === 'GENERAL') list = list.filter(p => p.type === 'post');
+    if (filter === 'GENERAL') list = list.filter(p => p.type === 'post' || p.type === 'discussion');
+    if (filter === 'LOST_FOUND') list = list.filter(p => p.type === 'lost_found' || String(p.type).toLowerCase() === 'lost_found');
+    if (filter === 'QUESTIONS') list = list.filter(p => p.type === 'question' || String(p.type).toLowerCase() === 'question');
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(p =>
         p.content?.toLowerCase().includes(q) ||
         p.authorName?.toLowerCase().includes(q) ||
-        p.authorFlat?.toLowerCase().includes(q)
+        p.authorFlat?.toLowerCase().includes(q) ||
+        p.title?.toLowerCase().includes(q) ||
+        p.hashtags?.toLowerCase().includes(q)
       );
     }
     return list;
   }, [allPosts, filter, searchQuery]);
 
+  const handleOpenComments = useCallback((post: PostDto) => {
+    setSelectedCommentPost(post);
+    setShowCommentSheet(true);
+  }, []);
+
+  const handleHashtagPress = useCallback((tag: string) => {
+    setIsSearchOpen(true);
+    setSearchQuery(tag);
+  }, []);
+
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<PostDto>) => <PostCard post={item} />,
-    []
+    ({ item }: ListRenderItemInfo<PostDto>) => (
+      <PostCard
+        post={item}
+        onCommentPress={handleOpenComments}
+        onHashtagPress={handleHashtagPress}
+      />
+    ),
+    [handleOpenComments, handleHashtagPress]
   );
 
   const greeting = useMemo(() => {
@@ -633,7 +716,10 @@ export default function FeedScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.composerInput}
-            onPress={() => router.push('/polls/create')}
+            onPress={() => {
+              setCreatePostDefaultType('post');
+              setShowCreatePostModal(true);
+            }}
             activeOpacity={0.8}
           >
             <Text style={styles.composerPlaceholder} numberOfLines={1}>
@@ -651,7 +737,10 @@ export default function FeedScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.composerIconChip, { backgroundColor: '#DBEAFE' }]}
-              onPress={() => router.push('/polls/create')}
+              onPress={() => {
+                setCreatePostDefaultType('post');
+                setShowCreatePostModal(true);
+              }}
               activeOpacity={0.7}
               hitSlop={4}
             >
@@ -667,7 +756,10 @@ export default function FeedScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.composerIconChip, { backgroundColor: '#FEF3C7' }]}
-              onPress={() => router.push('/polls/create')}
+              onPress={() => {
+                setCreatePostDefaultType('post');
+                setShowCreatePostModal(true);
+              }}
               activeOpacity={0.7}
               hitSlop={4}
             >
@@ -821,14 +913,14 @@ export default function FeedScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />
           }
           onEndReached={() => hasNextPage && fetchNextPage()}
           onEndReachedThreshold={0.4}
           ListFooterComponent={
             isFetchingNextPage ? (
               <ActivityIndicator style={{ padding: 20 }} color={COLORS.primary} />
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -839,7 +931,10 @@ export default function FeedScreen() {
               <Text style={styles.emptyText}>Be the first to share an update with your neighbors!</Text>
               <TouchableOpacity
                 style={styles.emptyBtn}
-                onPress={() => router.push('/polls/create')}
+                onPress={() => {
+                  setCreatePostDefaultType('post');
+                  setShowCreatePostModal(true);
+                }}
                 activeOpacity={0.8}
               >
                 <LinearGradient
@@ -864,6 +959,23 @@ export default function FeedScreen() {
         imageUrl={hasUserPhoto ? userPhotoUri : null}
         name={userDisplayName}
         subtitle={communityName || 'Resident'}
+      />
+
+      {/* Interactive Comment Bottom Sheet */}
+      <PostCommentSheet
+        visible={showCommentSheet}
+        onClose={() => {
+          setShowCommentSheet(false);
+          setSelectedCommentPost(null);
+        }}
+        post={selectedCommentPost}
+      />
+
+      {/* Dedicated Native Post Creation Modal */}
+      <CreatePostModal
+        visible={showCreatePostModal}
+        onClose={() => setShowCreatePostModal(false)}
+        defaultType={createPostDefaultType}
       />
     </SafeAreaView>
   );
@@ -1384,6 +1496,23 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.displayBold,
   },
   authorInfo: { flex: 1 },
+  pinnedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  pinnedBannerText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#4F46E5',
+    fontFamily: FONTS.bold,
+  },
   authorNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1393,6 +1522,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
+    fontFamily: FONTS.bold,
+  },
+  officialChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#ECFDF5',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  officialChipText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#059669',
+    letterSpacing: 0.3,
     fontFamily: FONTS.bold,
   },
   flatChip: {

@@ -34,6 +34,22 @@ import {
   VIEW_POLLS,
   VIEW_MARKETPLACE,
   VIEW_ADMIN,
+  // Wealth & investments
+  VIEW_PERSONAL_FINANCE,
+  VIEW_FIXED_DEPOSITS,
+  VIEW_DIGITAL_GOLD,
+  VIEW_MUTUAL_FUNDS,
+  VIEW_LOANS,
+  // Payments & transfers
+  VIEW_SPLIT_BILL,
+  VIEW_SCAN_PAY,
+  VIEW_SEND_MONEY,
+  VIEW_UPI_HISTORY,
+  // Lifestyle
+  VIEW_MOVIES,
+  VIEW_VEHICLE_CARE,
+  VIEW_CALENDAR,
+  VIEW_HEALTH_GUARD,
 } from '@/constants/permissions';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
@@ -264,6 +280,25 @@ export default function ProfileScreen() {
   const showSports = hasPerm(VIEW_SPORTS_MENU);
   const showPolls = hasPerm(VIEW_POLLS);
   const showMarketplace = hasPerm(VIEW_MARKETPLACE);
+
+  // Wealth & investment permissions
+  const showPersonalFinance = hasPerm(VIEW_PERSONAL_FINANCE) || hasPerm('Manage Personal Finance');
+  const showFixedDeposits   = hasPerm(VIEW_FIXED_DEPOSITS)   || showPersonalFinance;
+  const showDigitalGold     = hasPerm(VIEW_DIGITAL_GOLD)     || showPersonalFinance;
+  const showMutualFunds     = hasPerm(VIEW_MUTUAL_FUNDS)     || showPersonalFinance;
+  const showLoans           = hasPerm(VIEW_LOANS)            || showPersonalFinance;
+
+  // Payment & transfer permissions
+  const showSplitBill  = hasPerm(VIEW_SPLIT_BILL);
+  const showScanPay    = hasPerm(VIEW_SCAN_PAY);
+  const showSendMoney  = hasPerm(VIEW_SEND_MONEY);
+  const showUpiHistory = hasPerm(VIEW_UPI_HISTORY);
+
+  // Lifestyle permissions
+  const showMovies      = hasPerm(VIEW_MOVIES);
+  const showVehicleCare = hasPerm(VIEW_VEHICLE_CARE);
+  const showCalendar    = hasPerm(VIEW_CALENDAR);
+  const showHealthGuard = hasPerm(VIEW_HEALTH_GUARD);
 
   const flatNumber = user.flatNumber || user.flatNo;
   const tower = user.tower || user.block;
@@ -655,6 +690,19 @@ export default function ProfileScreen() {
             iconColor="#6366F1"
             iconBg="#EEF2FF"
           />
+          {showCalendar && (
+          <MenuItem
+            icon="calendar-outline"
+            label="Master Calendar"
+            sublabel="Poojas, sports, events, maintenance & dues"
+            onPress={() => router.push('/calendar')}
+            iconColor="#4F46E5"
+            iconBg="#EEF2FF"
+            badge="NEW"
+            badgeBg="#EEF2FF"
+            badgeColor="#4F46E5"
+          />
+          )}
           <MenuItem
             icon="fitness-outline"
             label="Facility Bookings"
@@ -706,6 +754,19 @@ export default function ProfileScreen() {
             iconColor="#2563EB"
             iconBg="#DBEAFE"
           />
+          {showVehicleCare && (
+          <MenuItem
+            icon="car-sport-outline"
+            label="Vehicle Care & Wash"
+            sublabel="Doorstep wash, detailing & monthly plans"
+            onPress={() => router.push('/vehicle-care')}
+            iconColor="#2563EB"
+            iconBg="#EFF6FF"
+            badge="WASH"
+            badgeBg="#DBEAFE"
+            badgeColor="#2563EB"
+          />
+          )}
           <MenuItem
             icon="people-circle-outline"
             label="Trusted Visitors"
@@ -818,6 +879,71 @@ export default function ProfileScreen() {
             badgeBg="#D1FAE5"
             badgeColor="#059669"
           />
+          {showFixedDeposits && (
+          <MenuItem
+            icon="business-outline"
+            label="Fixed Deposits & Wealth"
+            sublabel="Compare bank & NBFC rates up to 8.5% p.a."
+            onPress={() => router.push('/fd')}
+            iconColor="#1D4ED8"
+            iconBg="#EFF6FF"
+            badge="8.5%"
+            badgeBg="#EFF6FF"
+            badgeColor="#1D4ED8"
+          />
+          )}
+          {showDigitalGold && (
+          <MenuItem
+            icon="sparkles-outline"
+            label="Digital Gold & Vault"
+            sublabel="Live 24K gold rates, buy & sell instantly"
+            onPress={() => router.push('/gold')}
+            iconColor="#D97706"
+            iconBg="#FFFBEB"
+            badge="24K"
+            badgeBg="#FEF3C7"
+            badgeColor="#D97706"
+          />
+          )}
+          {showMutualFunds && (
+          <MenuItem
+            icon="trending-up-outline"
+            label="Mutual Funds & SIPs"
+            sublabel="ELSS tax saving, index & equity funds"
+            onPress={() => router.push('/mutual-funds')}
+            iconColor="#16A34A"
+            iconBg="#F0FDF4"
+            badge="SIP"
+            badgeBg="#DCFCE7"
+            badgeColor="#16A34A"
+          />
+          )}
+          {showLoans && (
+          <MenuItem
+            icon="cash-outline"
+            label="Quick Personal Loans"
+            sublabel="Pre-approved offers with instant EMI check"
+            onPress={() => router.push('/loans')}
+            iconColor="#DC2626"
+            iconBg="#FEF2F2"
+            badge="Pre-Appr"
+            badgeBg="#FEE2E2"
+            badgeColor="#DC2626"
+          />
+          )}
+          {showSplitBill && (
+          <MenuItem
+            icon="pie-chart-outline"
+            label="Mana Split (Group Bills)"
+            sublabel="Split shared flat & event expenses with neighbors"
+            onPress={() => router.push('/split-bill')}
+            iconColor="#7C3AED"
+            iconBg="#F5F3FF"
+            badge="NEW"
+            badgeBg="#EDE9FE"
+            badgeColor="#7C3AED"
+          />
+          )}
           <MenuItem
             icon="newspaper-outline"
             label="Notices & Circulars"
@@ -939,6 +1065,19 @@ export default function ProfileScreen() {
             iconColor="#D97706"
             iconBg="#FEF3C7"
           />
+          {showMovies && (
+          <MenuItem
+            icon="film-outline"
+            label="Community Movie Night"
+            sublabel="Weekend theater screenings & seat reservations"
+            onPress={() => router.push('/movies')}
+            iconColor="#E11D48"
+            iconBg="#FFE4E6"
+            badge="CINEMA"
+            badgeBg="#FFE4E6"
+            badgeColor="#E11D48"
+          />
+          )}
           <MenuItem
             icon="gift-outline"
             label="Offers & Deals"
