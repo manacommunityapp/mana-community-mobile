@@ -8,7 +8,6 @@ import {
   BackHandler,
   Modal,
   TextInput,
-  Alert,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
@@ -39,6 +38,8 @@ export default function ParkingHomeScreen() {
   const [visitorType, setVisitorType] = useState<'CAR' | 'BIKE' | 'EV'>('CAR');
   const [visitorPurpose, setVisitorPurpose] = useState('Guest Visit');
   const [submittingPass, setSubmittingPass] = useState(false);
+  const [visitorPassError, setVisitorPassError] = useState('');
+  const [issuedPass, setIssuedPass] = useState<{ passCode: string; vehicleNumber: string } | null>(null);
 
   const goHome = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -84,9 +85,10 @@ export default function ParkingHomeScreen() {
 
   const handleCreateVisitorPass = async () => {
     if (!visitorName.trim() || !visitorVehicle.trim()) {
-      Alert.alert('Required Info', 'Please enter visitor name and vehicle license plate.');
+      setVisitorPassError('Please enter visitor name and vehicle license plate.');
       return;
     }
+    setVisitorPassError('');
     setSubmittingPass(true);
     try {
       const pass = await parkingService.createVisitorPass({
@@ -96,17 +98,20 @@ export default function ParkingHomeScreen() {
         vehicleType: visitorType,
         purpose: visitorPurpose,
       });
-      setVisitorModalVisible(false);
+      setIssuedPass({ passCode: pass.passCode, vehicleNumber: pass.vehicleNumber });
       refetchPasses();
-      Alert.alert(
-        '🎟️ Visitor Pass Issued',
-        'Pass Code: ' + pass.passCode + '\nVehicle: ' + pass.vehicleNumber + '\n\nGate ANPR has been authorized for instant barrier lift.'
-      );
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Could not issue pass');
+      setVisitorPassError(e?.message || 'Could not issue pass. Try again.');
     } finally {
       setSubmittingPass(false);
     }
+  };
+
+  const closeVisitorModal = () => {
+    setVisitorModalVisible(false);
+    setVisitorName(''); setVisitorPhone(''); setVisitorVehicle('');
+    setVisitorPurpose('Guest Visit'); setVisitorType('CAR');
+    setVisitorPassError(''); setIssuedPass(null);
   };
 
   return (
@@ -275,28 +280,55 @@ export default function ParkingHomeScreen() {
       </ScrollView>
 
       {/* Visitor Pass Modal */}
-      <Modal visible={visitorModalVisible} transparent animationType="slide">
+      <Modal visible={visitorModalVisible} transparent animationType="slide" onRequestClose={closeVisitorModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Issue Visitor Parking Pass</Text>
-              <TouchableOpacity onPress={() => setVisitorModalVisible(false)}>
+              <TouchableOpacity onPress={closeVisitorModal}>
                 <Ionicons name="close-circle" size={24} color="#94A3B8" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.inputLabel}>Visitor Name *</Text>
-            <TextInput style={styles.input} value={visitorName} onChangeText={setVisitorName} placeholder="e.g. Ramesh Kumar" />
+            {issuedPass ? (
+              <View>
+                <View style={styles.passSuccessBanner}>
+                  <Ionicons name="checkmark-circle" size={32} color="#059669" />
+                  <Text style={styles.passSuccessTitle}>Visitor Pass Issued!</Text>
+                </View>
+                <View style={styles.passCodeBlock}>
+                  <Text style={styles.passCodeLabel}>Pass Code</Text>
+                  <Text style={styles.passCodeValue}>{issuedPass.passCode}</Text>
+                  <Text style={styles.passCodeSub}>Vehicle: {issuedPass.vehicleNumber}</Text>
+                  <Text style={styles.passCodeNote}>Gate ANPR authorized for instant barrier lift.</Text>
+                </View>
+                <TouchableOpacity style={styles.confirmBtn} onPress={closeVisitorModal}>
+                  <Text style={styles.confirmBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {visitorPassError ? (
+                  <View style={styles.passErrorBanner}>
+                    <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+                    <Text style={styles.passErrorText}>{visitorPassError}</Text>
+                  </View>
+                ) : null}
 
-            <Text style={styles.inputLabel}>Visitor Vehicle Plate *</Text>
-            <TextInput style={styles.input} value={visitorVehicle} onChangeText={setVisitorVehicle} placeholder="e.g. KA-05-MM-1234" autoCapitalize="characters" />
+                <Text style={styles.inputLabel}>Visitor Name *</Text>
+                <TextInput style={styles.input} value={visitorName} onChangeText={setVisitorName} placeholder="e.g. Ramesh Kumar" />
 
-            <Text style={styles.inputLabel}>Purpose of Visit</Text>
-            <TextInput style={styles.input} value={visitorPurpose} onChangeText={setVisitorPurpose} placeholder="e.g. Dinner / Guest" />
+                <Text style={styles.inputLabel}>Visitor Vehicle Plate *</Text>
+                <TextInput style={styles.input} value={visitorVehicle} onChangeText={setVisitorVehicle} placeholder="e.g. KA-05-MM-1234" autoCapitalize="characters" />
 
-            <TouchableOpacity style={styles.confirmBtn} onPress={handleCreateVisitorPass} disabled={submittingPass}>
-              {submittingPass ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.confirmBtnText}>Issue Pass & Pre-Clear Gate</Text>}
-            </TouchableOpacity>
+                <Text style={styles.inputLabel}>Purpose of Visit</Text>
+                <TextInput style={styles.input} value={visitorPurpose} onChangeText={setVisitorPurpose} placeholder="e.g. Dinner / Guest" />
+
+                <TouchableOpacity style={styles.confirmBtn} onPress={handleCreateVisitorPass} disabled={submittingPass}>
+                  {submittingPass ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.confirmBtnText}>Issue Pass & Pre-Clear Gate</Text>}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -424,4 +456,13 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, marginBottom: 12, backgroundColor: '#F8FAFC' },
   confirmBtn: { backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center', marginTop: 8 },
   confirmBtnText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
+  passErrorBanner: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FEE2E2', borderRadius: RADIUS.sm, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: '#FECACA' },
+  passErrorText: { flex: 1, fontSize: 13, color: '#DC2626' },
+  passSuccessBanner: { alignItems: 'center', paddingVertical: 16, gap: 8 },
+  passSuccessTitle: { fontSize: 18, fontWeight: '800', color: '#059669' },
+  passCodeBlock: { backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 16, alignItems: 'center', gap: 4, marginBottom: 16 },
+  passCodeLabel: { fontSize: 11, fontWeight: '700', color: '#065F46', textTransform: 'uppercase', letterSpacing: 1 },
+  passCodeValue: { fontSize: 24, fontWeight: '900', color: '#064E3B', letterSpacing: 3, fontFamily: 'monospace' },
+  passCodeSub: { fontSize: 13, color: '#065F46', fontWeight: '600' },
+  passCodeNote: { fontSize: 11, color: '#047857', textAlign: 'center', lineHeight: 16 },
 });

@@ -23,14 +23,19 @@ export interface AddFamilyMemberRequest {
   isMinor?: boolean;
 }
 
+const MOCK_FAMILY: FamilyMember[] = [
+  { id: 1, name: 'Priya Kumar', relation: 'SPOUSE', phone: '9876543210', isMinor: false, isEmergencyContact: true,  addedAt: new Date().toISOString() },
+  { id: 2, name: 'Aarav Kumar', relation: 'CHILD',  phone: undefined,    isMinor: true,  isEmergencyContact: false, addedAt: new Date().toISOString() },
+  { id: 3, name: 'Sneha Kumar', relation: 'CHILD',  phone: undefined,    isMinor: true,  isEmergencyContact: false, addedAt: new Date().toISOString() },
+];
+
 export const familyService = {
   async getMyFamily(): Promise<FamilyMember[]> {
     try {
       const res = await api.get<FamilyMember[]>('/family/members');
-      return res.data ?? [];
-    } catch {
-      return [];
-    }
+      if (res.data?.length > 0) return res.data;
+    } catch {}
+    return MOCK_FAMILY;
   },
 
   async addFamilyMember(data: AddFamilyMemberRequest): Promise<FamilyMember> {

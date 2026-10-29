@@ -8,6 +8,91 @@ import type {
   VaultDocumentDto,
 } from '@/types/governance';
 
+export type ElectionPhase = 'NOMINATION' | 'VOTING' | 'RESULTS' | 'UPCOMING';
+export type MCPosition = 'PRESIDENT' | 'SECRETARY' | 'TREASURER' | 'JOINT_SECRETARY' | 'GENERAL_MEMBER';
+
+export interface ElectionCandidate {
+  id: string;
+  name: string;
+  flat: string;
+  position: MCPosition;
+  yearsInSociety: number;
+  manifesto: string;
+  votesCount?: number;
+  hasUserVoted?: boolean;
+  isWinner?: boolean;
+}
+
+export interface ElectionDto {
+  id: string;
+  title: string;
+  phase: ElectionPhase;
+  nominationDeadline: string;
+  votingStart: string;
+  votingEnd: string;
+  totalEligibleVoters: number;
+  totalVotesCast: number;
+  hasUserVoted: boolean;
+  userVotedCandidateId?: string;
+  candidates: ElectionCandidate[];
+  positions: MCPosition[];
+  year: number;
+}
+
+const POSITION_LABELS: Record<MCPosition, string> = {
+  PRESIDENT: 'President',
+  SECRETARY: 'Secretary',
+  TREASURER: 'Treasurer',
+  JOINT_SECRETARY: 'Joint Secretary',
+  GENERAL_MEMBER: 'General Member',
+};
+
+let inMemoryElections: ElectionDto[] = [
+  {
+    id: 'elect-2025',
+    title: 'Managing Committee Elections 2025–26',
+    phase: 'VOTING',
+    nominationDeadline: new Date(Date.now() - 7 * 86400_000).toISOString(),
+    votingStart: new Date(Date.now() - 2 * 86400_000).toISOString(),
+    votingEnd: new Date(Date.now() + 5 * 86400_000).toISOString(),
+    totalEligibleVoters: 180,
+    totalVotesCast: 73,
+    hasUserVoted: false,
+    positions: ['PRESIDENT', 'SECRETARY', 'TREASURER', 'JOINT_SECRETARY', 'GENERAL_MEMBER'],
+    year: 2025,
+    candidates: [
+      { id: 'c1', name: 'Ramesh Gupta', flat: 'A-1204', position: 'PRESIDENT', yearsInSociety: 8, manifesto: 'Committed to transparent governance, timely maintenance, and digital-first society management. Will establish monthly open-house sessions for all residents.', votesCount: 31 },
+      { id: 'c2', name: 'Sunita Krishnaswamy', flat: 'B-0603', position: 'PRESIDENT', yearsInSociety: 5, manifesto: 'Bringing 15 years of corporate management experience. Focus on cost reduction, vendor accountability, and green initiatives across the campus.', votesCount: 26 },
+      { id: 'c3', name: 'Priya Menon', flat: 'C-0902', position: 'SECRETARY', yearsInSociety: 6, manifesto: 'Seamless communication, MoM within 48 hrs, and a resident helpdesk with guaranteed response times. Every voice matters.', votesCount: 42 },
+      { id: 'c4', name: 'Arjun Patel', flat: 'A-0301', position: 'SECRETARY', yearsInSociety: 3, manifesto: 'Digital-first record keeping and paperless AGMs. Let\'s make governance accessible for every resident, including those who are outstation.', votesCount: 18 },
+      { id: 'c5', name: 'Vikram Joshi', flat: 'D-1501', position: 'TREASURER', yearsInSociety: 10, manifesto: 'Chartered accountant with 10 years in the society. Zero-leakage maintenance fund, quarterly audited statements, and zero arrears policy.', votesCount: 48 },
+      { id: 'c6', name: 'Neha Sharma', flat: 'B-1102', position: 'JOINT_SECRETARY', yearsInSociety: 4, manifesto: 'Bridge between residents and the MC. Fast grievance redressal, active WhatsApp community management, and regular society events.', votesCount: 55 },
+      { id: 'c7', name: 'Suresh Iyer', flat: 'C-0204', position: 'GENERAL_MEMBER', yearsInSociety: 7, manifesto: 'Focus on infrastructure — lifts, generators, water supply. Preventive maintenance schedules so residents are never surprised by breakdowns.', votesCount: 37 },
+      { id: 'c8', name: 'Divya Nair', flat: 'A-0805', position: 'GENERAL_MEMBER', yearsInSociety: 2, manifesto: 'Young resident, fresh ideas. Community garden, children\'s zone upgrade, EV charging bays, and a resident app for everything.', votesCount: 29 },
+    ],
+  },
+  {
+    id: 'elect-2024',
+    title: 'Managing Committee Elections 2024–25',
+    phase: 'RESULTS',
+    nominationDeadline: new Date('2024-03-01').toISOString(),
+    votingStart: new Date('2024-03-10').toISOString(),
+    votingEnd: new Date('2024-03-17').toISOString(),
+    totalEligibleVoters: 175,
+    totalVotesCast: 141,
+    hasUserVoted: true,
+    positions: ['PRESIDENT', 'SECRETARY', 'TREASURER', 'GENERAL_MEMBER'],
+    year: 2024,
+    candidates: [
+      { id: 'p1', name: 'Ramesh Gupta', flat: 'A-1204', position: 'PRESIDENT', yearsInSociety: 7, manifesto: '', votesCount: 89, isWinner: true },
+      { id: 'p2', name: 'Kavitha Reddy', flat: 'C-1103', position: 'PRESIDENT', yearsInSociety: 4, manifesto: '', votesCount: 52 },
+      { id: 'p3', name: 'Priya Menon', flat: 'C-0902', position: 'SECRETARY', yearsInSociety: 5, manifesto: '', votesCount: 110, isWinner: true },
+      { id: 'p4', name: 'Vikram Joshi', flat: 'D-1501', position: 'TREASURER', yearsInSociety: 9, manifesto: '', votesCount: 128, isWinner: true },
+      { id: 'p5', name: 'Suresh Iyer', flat: 'C-0204', position: 'GENERAL_MEMBER', yearsInSociety: 6, manifesto: '', votesCount: 98, isWinner: true },
+    ],
+  },
+];
+
 // Fallback Mock Data for resilient offline / standalone experience
 const MOCK_STATS: GovernanceStatsDto = {
   activeProposals: 0,
@@ -220,5 +305,42 @@ export const governanceService = {
       return [];
     }
   },
+
+  async getElections(): Promise<ElectionDto[]> {
+    try {
+      const res = await api.get<ElectionDto[]>('/governance/elections');
+      return res.data ?? inMemoryElections;
+    } catch {
+      return inMemoryElections;
+    }
+  },
+
+  async castElectionVote(
+    electionId: string,
+    votes: { position: MCPosition; candidateId: string }[],
+  ): Promise<{ receiptHash: string }> {
+    const hash = `0x${Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+    try {
+      const res = await api.post<{ receiptHash: string }>(`/governance/elections/${electionId}/vote`, { votes });
+      return res.data;
+    } catch {
+      inMemoryElections = inMemoryElections.map(e => {
+        if (e.id !== electionId) return e;
+        const votedIds = new Set(votes.map(v => v.candidateId));
+        return {
+          ...e,
+          hasUserVoted: true,
+          totalVotesCast: e.totalVotesCast + 1,
+          candidates: e.candidates.map(c => ({
+            ...c,
+            votesCount: votedIds.has(c.id) ? (c.votesCount ?? 0) + 1 : c.votesCount,
+          })),
+        };
+      });
+      return { receiptHash: hash };
+    }
+  },
+
+  POSITION_LABELS,
 };
 

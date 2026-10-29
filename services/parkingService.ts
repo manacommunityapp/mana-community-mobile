@@ -21,6 +21,8 @@ import type {
   ParkingWaitlistEntryDto,
   ParkingSlotSwapRequestDto,
   ParkingAnalyticsSummaryDto,
+  ResidentVehicleDto,
+  ResidentVehicleRequest,
 } from '@/types/parking';
 
 export * from '@/types/parking';
@@ -603,10 +605,21 @@ export const parkingService = {
   // ── 5. ANPR & Gate Whitelist ──────────────────────────────────────
   async getANPRLogs(search?: string, direction?: string): Promise<ANPRLogDto[]> {
     try {
-      const res = await api.get<ANPRLogDto[]>('/parking/anpr/logs');
-      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
-    return inMemoryANPRLogs;
+      const res = await api.get<{ content?: any[] } | any[]>('/parking/anpr/events', { params: { page: 0, size: 50 } });
+      const rows = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      return rows.map((row: any) => ({
+        id: String(row.id), plateNumber: row.plateNumber, ocrConfidence: Math.round((row.confidence || 0) * 100),
+        timestamp: row.createdAt, gateName: row.gateId, direction: row.direction === 'EXIT' ? 'EXIT' : 'ENTRY',
+        category: row.matchedVehicleId ? 'RESIDENT' : row.matchedVisitorPassId ? 'VISITOR' : 'UNREGISTERED',
+        ownerName: row.matchedResidentName, barrierLatencyMs: row.processingMs || 0,
+        status: row.barrierAction === 'OPEN' ? 'CLEARED' : row.barrierAction === 'DENY' ? 'MANUAL_INTERVENTION' : 'FLAGGED',
+      })) as ANPRLogDto[];
+    } catch { return []; }
+  },
+
+  async overrideANPRAction(eventId: string | number, action: 'OPEN' | 'HOLD' | 'DENY'): Promise<unknown> {
+    const res = await api.put(`/parking/anpr/events/${eventId}/override`, null, { params: { action } });
+    return res.data;
   },
 
   async overrideANPRAction(eventId: string | number, action: 'OPEN' | 'HOLD' | 'DENY'): Promise<unknown> {
@@ -619,28 +632,34 @@ export const parkingService = {
       const res = await api.get<VehicleWhitelistDto[]>('/parking/whitelist');
       if (Array.isArray(res.data)) return res.data;
     } catch {}
-    return inMemoryWhitelist;
+    return [];
   },
 
   async addVehicleToWhitelist(data: Partial<VehicleWhitelistDto>): Promise<VehicleWhitelistDto> {
     try {
       const res = await api.post<VehicleWhitelistDto>('/parking/whitelist', data);
       return res.data;
-    } catch {
-      const newV: VehicleWhitelistDto = {
-        id: 'wl-' + Date.now().toString().slice(-4),
-        plateNumber: data.plateNumber || 'KA-01-NEW-0000',
-        vehicleModel: data.vehicleModel || 'Resident Vehicle',
-        vehicleType: data.vehicleType || 'CAR',
-        ownerName: 'You',
-        ownerFlat: 'Tower A - 302',
-        fastagRfidId: 'TAG-' + Math.floor(1000 + Math.random() * 9000) + '-RFID',
-        isAutoGateEnabled: true,
-        registeredDate: 'Today',
-      };
-      inMemoryWhitelist = [...inMemoryWhitelist, newV];
-      return newV;
-    }
+    } catch (err) { throw err; }
+  },
+
+  // ── Resident vehicle registry (live API; no demo fallback) ───────
+  async getMyVehicles(): Promise<ResidentVehicleDto[]> {
+    const res = await api.get<ResidentVehicleDto[]>('/parking/vehicles/mine');
+    return Array.isArray(res.data) ? res.data : [];
+  },
+
+  async registerVehicle(data: ResidentVehicleRequest): Promise<ResidentVehicleDto> {
+    const res = await api.post<ResidentVehicleDto>('/parking/vehicles', data);
+    return res.data;
+  },
+
+  async updateVehicle(id: number, data: ResidentVehicleRequest): Promise<ResidentVehicleDto> {
+    const res = await api.put<ResidentVehicleDto>(`/parking/vehicles/${id}`, data);
+    return res.data;
+  },
+
+  async deleteVehicle(id: number): Promise<void> {
+    await api.delete(`/parking/vehicles/${id}`);
   },
 
   // ── 6. EV Charging & Metering ─────────────────────────────────────

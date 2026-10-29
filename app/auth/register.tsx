@@ -90,7 +90,7 @@ export default function RegisterScreen() {
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join your community today</Text>
+            <Text style={styles.subtitle}>Enter your invite code or register your flat to get started</Text>
           </View>
         </View>
 

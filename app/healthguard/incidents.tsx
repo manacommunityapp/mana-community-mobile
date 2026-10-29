@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 64 },
   emptyText: { fontSize: 17, fontWeight: '600', color: COLORS.text, marginTop: SPACING.sm },
   emptySubText: { fontSize: 13, color: COLORS.textSecondary, marginTop: 4 },
-  card: { backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.sm },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.sm },
   cardActive: { borderWidth: 1.5, borderColor: '#ef4444' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },

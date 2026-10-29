@@ -50,7 +50,7 @@ export default function HealthGuardDashboard() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.PRIMARY} />
+        <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading HealthGuard...</Text>
       </View>
     );
@@ -60,7 +60,7 @@ export default function HealthGuardDashboard() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={COLORS.PRIMARY} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={COLORS.primary} />}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -111,7 +111,7 @@ export default function HealthGuardDashboard() {
       {/* Quick stats */}
       <View style={styles.statsRow}>
         <TouchableOpacity style={styles.statCard} onPress={() => router.push("/healthguard/contacts")}>
-          <Ionicons name="people" size={20} color={COLORS.PRIMARY} />
+          <Ionicons name="people" size={20} color={COLORS.primary} />
           <Text style={styles.statNum}>{contacts.length}</Text>
           <Text style={styles.statLabel}>Contacts</Text>
         </TouchableOpacity>
@@ -156,7 +156,7 @@ export default function HealthGuardDashboard() {
             <Text style={styles.wearableBannerSub}>Fall detection · Heart rate alerts · SpO₂ monitoring</Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={COLORS.TEXT_SECONDARY} />
+        <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
       </TouchableOpacity>
 
       {/* Blood group */}
@@ -200,47 +200,47 @@ export default function HealthGuardDashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
-  content: { padding: SPACING.MD, paddingBottom: 32 },
+  content: { padding: SPACING.md, paddingBottom: 32 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  loadingText: { color: COLORS.TEXT_SECONDARY, fontSize: 13 },
+  loadingText: { color: COLORS.textMuted, fontSize: 13 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   iconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#fef2f2", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#fecaca" },
-  title: { fontSize: 18, fontWeight: "700", color: COLORS.TEXT_PRIMARY },
-  subtitle: { fontSize: 11, color: COLORS.TEXT_SECONDARY, marginTop: 1 },
-  activeBanner: { flexDirection: "row", alignItems: "center", backgroundColor: "#fef2f2", borderWidth: 1.5, borderColor: "#fca5a5", borderRadius: RADIUS.MD, padding: 12, marginBottom: 14 },
+  title: { fontSize: 18, fontWeight: "700", color: COLORS.text },
+  subtitle: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  activeBanner: { flexDirection: "row", alignItems: "center", backgroundColor: "#fef2f2", borderWidth: 1.5, borderColor: "#fca5a5", borderRadius: RADIUS.md, padding: 12, marginBottom: 14 },
   bannerTitle: { fontSize: 13, fontWeight: "700", color: "#dc2626" },
   bannerSub: { fontSize: 11, color: "#ef4444", marginTop: 1 },
   bannerBtn: { backgroundColor: "#dc2626", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   bannerBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  sosBtn: { backgroundColor: "#dc2626", borderRadius: 20, padding: 24, alignItems: "center", marginBottom: 20, ...SHADOWS.MD },
+  sosBtn: { backgroundColor: "#dc2626", borderRadius: 20, padding: 24, alignItems: "center", marginBottom: 20, ...SHADOWS.md },
   sosBtnText: { fontSize: 32, fontWeight: "900", color: "#fff", marginTop: 6, letterSpacing: 4 },
   sosBtnSub: { fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 4 },
-  sectionTitle: { fontSize: 14, fontWeight: "700", color: COLORS.TEXT_PRIMARY, marginBottom: 10, marginTop: 4 },
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: COLORS.text, marginBottom: 10, marginTop: 4 },
   sectionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8, marginTop: 4 },
-  seeAll: { fontSize: 12, color: COLORS.PRIMARY, fontWeight: "600" },
+  seeAll: { fontSize: 12, color: COLORS.primary, fontWeight: "600" },
   numGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  numCard: { flex: 1, minWidth: "22%", backgroundColor: "#fff", borderRadius: RADIUS.MD, borderWidth: 1, padding: 10, alignItems: "center", gap: 3, ...SHADOWS.SM },
+  numCard: { flex: 1, minWidth: "22%", backgroundColor: "#fff", borderRadius: RADIUS.md, borderWidth: 1, padding: 10, alignItems: "center", gap: 3, ...SHADOWS.sm },
   numText: { fontSize: 16, fontWeight: "800" },
-  numLabel: { fontSize: 9, color: COLORS.TEXT_SECONDARY, textAlign: "center" },
+  numLabel: { fontSize: 9, color: COLORS.textMuted, textAlign: "center" },
   statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
-  statCard: { flex: 1, backgroundColor: "#fff", borderRadius: RADIUS.MD, padding: 14, alignItems: "center", gap: 4, ...SHADOWS.SM },
-  statNum: { fontSize: 20, fontWeight: "800", color: COLORS.TEXT_PRIMARY },
-  statLabel: { fontSize: 10, color: COLORS.TEXT_SECONDARY },
-  profileCard: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", borderRadius: RADIUS.MD, padding: 12, marginBottom: 14, ...SHADOWS.SM },
-  profileText: { fontSize: 13, color: COLORS.TEXT_SECONDARY },
-  profileBold: { fontWeight: "700", color: COLORS.TEXT_PRIMARY },
-  contactRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: RADIUS.MD, padding: 12, marginBottom: 8, ...SHADOWS.SM },
+  statCard: { flex: 1, backgroundColor: "#fff", borderRadius: RADIUS.md, padding: 14, alignItems: "center", gap: 4, ...SHADOWS.sm },
+  statNum: { fontSize: 20, fontWeight: "800", color: COLORS.text },
+  statLabel: { fontSize: 10, color: COLORS.textMuted },
+  profileCard: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", borderRadius: RADIUS.md, padding: 12, marginBottom: 14, ...SHADOWS.sm },
+  profileText: { fontSize: 13, color: COLORS.textMuted },
+  profileBold: { fontWeight: "700", color: COLORS.text },
+  contactRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: RADIUS.md, padding: 12, marginBottom: 8, ...SHADOWS.sm },
   contactAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#dbeafe", alignItems: "center", justifyContent: "center", marginRight: 10 },
   contactInitial: { fontSize: 16, fontWeight: "700", color: "#1d4ed8" },
-  contactName: { fontSize: 13, fontWeight: "600", color: COLORS.TEXT_PRIMARY },
-  contactPhone: { fontSize: 11, color: COLORS.TEXT_SECONDARY, marginTop: 1 },
+  contactName: { fontSize: 13, fontWeight: "600", color: COLORS.text },
+  contactPhone: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   sosBadge: { backgroundColor: "#fef2f2", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: "#fca5a5" },
   sosBadgeText: { fontSize: 10, fontWeight: "700", color: "#dc2626" },
   wearableBanner: {
-    backgroundColor: "#eff6ff", borderRadius: RADIUS.MD, padding: SPACING.MD,
+    backgroundColor: "#eff6ff", borderRadius: RADIUS.md, padding: SPACING.md,
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    borderWidth: 1, borderColor: "#bfdbfe", marginBottom: 14, ...SHADOWS.SM,
+    borderWidth: 1, borderColor: "#bfdbfe", marginBottom: 14, ...SHADOWS.sm,
   },
   wearableBannerLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   wearableBannerIcon: { fontSize: 32 },
@@ -248,10 +248,10 @@ const styles = StyleSheet.create({
   wearableBannerSub: { fontSize: 12, color: "#3b82f6", marginTop: 2 },
   serviceRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
   serviceCard: {
-    flex: 1, backgroundColor: "#fff", borderRadius: RADIUS.MD,
-    borderWidth: 1, padding: 12, alignItems: "center", gap: 6, ...SHADOWS.SM,
+    flex: 1, backgroundColor: "#fff", borderRadius: RADIUS.md,
+    borderWidth: 1, padding: 12, alignItems: "center", gap: 6, ...SHADOWS.sm,
   },
   serviceIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  serviceName: { fontSize: 12, fontWeight: "700", color: COLORS.TEXT_PRIMARY, textAlign: "center" },
-  serviceDesc: { fontSize: 10, color: COLORS.TEXT_SECONDARY, textAlign: "center" },
+  serviceName: { fontSize: 12, fontWeight: "700", color: COLORS.text, textAlign: "center" },
+  serviceDesc: { fontSize: 10, color: COLORS.textMuted, textAlign: "center" },
 });

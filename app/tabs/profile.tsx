@@ -640,6 +640,14 @@ export default function ProfileScreen() {
             iconBg="#CFFAFE"
           />
           <MenuItem
+            icon="document-text-outline"
+            label="Entry / Exit Log"
+            sublabel="View all gate entry and exit records"
+            onPress={() => router.push('/profile/entry-log')}
+            iconColor="#059669"
+            iconBg="#D1FAE5"
+          />
+          <MenuItem
             icon="people-circle-outline"
             label="Resident Directory"
             sublabel="Browse flat-wise residents in your society"
@@ -689,6 +697,14 @@ export default function ProfileScreen() {
             onPress={() => router.push('/parking')}
             iconColor="#4338CA"
             iconBg="#E0E7FF"
+          />
+          <MenuItem
+            icon="car-sport-outline"
+            label="My Vehicles"
+            sublabel="Register plates for resident gate access"
+            onPress={() => router.push('/profile/vehicles')}
+            iconColor="#2563EB"
+            iconBg="#DBEAFE"
           />
           <MenuItem
             icon="people-circle-outline"

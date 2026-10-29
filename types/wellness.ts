@@ -190,6 +190,26 @@ export interface WellnessProviderDto {
   nextAvailableSlot?: string;
 }
 
+export interface ProviderSlotDto {
+  time: string;
+  label: string;
+  available: boolean;
+}
+
+export type SessionMode = 'ONLINE' | 'IN_PERSON';
+
+export interface AppointmentBookingDto {
+  id: string;
+  providerId: string;
+  providerName: string;
+  date: string;
+  timeSlot: string;
+  sessionMode: SessionMode;
+  fee: number;
+  status: 'CONFIRMED' | 'PENDING' | 'CANCELLED';
+  bookingRef: string;
+}
+
 export interface AiMealAnalysisRequest {
   imageBase64?: string;
   textDescription?: string;

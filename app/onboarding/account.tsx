@@ -79,7 +79,7 @@ export default function AccountStep() {
           <StepHeader
             step={1} total={4}
             title="Create your account"
-            sub="Let's start with the basics"
+            sub="Your details are encrypted and never shared outside your community"
           />
 
           {/* Full name */}

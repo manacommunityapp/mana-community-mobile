@@ -143,7 +143,7 @@ export default function DriverDashboardScreen() {
   if (!profile) {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StatusBar barStyle="dark-content" />
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={s.backBtn}>
             <Ionicons name="arrow-back" size={20} color={COLORS.text} />
@@ -200,7 +200,7 @@ export default function DriverDashboardScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* ── Modern Header ───────────────────────────────────── */}
       <View style={s.header}>

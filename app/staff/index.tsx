@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, Modal, TextInput, Alert,
-  RefreshControl, ActivityIndicator, ScrollView,
+  FlatList, Modal, TextInput,
+  RefreshControl, ActivityIndicator, ScrollView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -32,17 +32,6 @@ const ROLES: StaffRole[] = ['MAID', 'COOK', 'DRIVER', 'NANNY', 'GARDENER', 'SECU
 
 type TabKey = 'staff' | 'attendance';
 
-const MOCK_TODAY_ATTENDANCE: StaffAttendanceLog[] = [
-  { id: 1, staffId: 1, staffName: 'Lakshmi Devi', action: 'ENTRY', timestamp: new Date().toISOString(), gate: 'Gate 1' },
-  { id: 2, staffId: 2, staffName: 'Ramu (Cook)', action: 'ENTRY', timestamp: new Date(Date.now() - 3600000).toISOString(), gate: 'Gate 1' },
-  { id: 3, staffId: 3, staffName: 'Suresh (Driver)', action: 'EXIT', timestamp: new Date(Date.now() - 1800000).toISOString(), gate: 'Gate 2' },
-];
-
-const MOCK_STAFF: StaffMember[] = [
-  { id: 1, name: 'Lakshmi Devi', role: 'MAID', phone: '9876543210', status: 'ACTIVE', policeVerified: true, bgVerified: true, flatNumber: 'Tower A-1204' },
-  { id: 2, name: 'Ramu', role: 'COOK', phone: '9123456789', status: 'ACTIVE', policeVerified: false, bgVerified: false, flatNumber: 'Tower A-1204' },
-  { id: 3, name: 'Suresh Kumar', role: 'DRIVER', phone: '9988776655', status: 'ACTIVE', policeVerified: true, bgVerified: undefined, flatNumber: 'Tower A-1204' },
-];
 
 function timeAgo(isoStr: string): string {
   const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
@@ -64,6 +53,10 @@ export default function StaffScreen() {
   const [form, setForm] = useState<RegisterStaffRequest>({
     name: '', role: 'MAID', phone: '', aadhaarLast4: '', agencyName: '', notes: '',
   });
+  const [regSuccess, setRegSuccess] = useState('');
+  const [regErr, setRegErr] = useState('');
+  const [formErr, setFormErr] = useState('');
+  const [confirmMember, setConfirmMember] = useState<StaffMember | null>(null);
 
   const goHome = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -96,45 +89,44 @@ export default function StaffScreen() {
     finally { setRefreshing(false); }
   }, [refetchStaff, refetchLogs]);
 
-  const staff = (staffList && staffList.length > 0) ? staffList : MOCK_STAFF;
-  const logs = (todayLogs && todayLogs.length > 0) ? todayLogs : MOCK_TODAY_ATTENDANCE;
+  const staff = staffList ?? [];
+  const logs = todayLogs ?? [];
 
   const registerMutation = useMutation({
     mutationFn: (req: RegisterStaffRequest) => staffService.registerStaff(req),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
-      setAddModal(false);
       setForm({ name: '', role: 'MAID', phone: '', aadhaarLast4: '', agencyName: '', notes: '' });
-      Alert.alert('✅ Staff Registered', 'Staff member has been added to your household.');
+      setFormErr('');
+      setRegErr('');
+      setRegSuccess('Staff member added to your household.');
+      setTimeout(() => {
+        setAddModal(false);
+        setRegSuccess('');
+      }, 1800);
     },
     onError: (err: any) => {
-      Alert.alert('Error', err.message || 'Failed to register staff.');
+      setRegErr(err.message || 'Failed to register staff.');
     },
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: number) => staffService.removeStaff(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['staff'] }); },
-    onError: (err: any) => { Alert.alert('Error', err.message); },
+    onError: () => {},
   });
 
   const handleRegister = () => {
     if (!form.name.trim()) {
-      Alert.alert('Name Required', 'Please enter the staff member\'s name.');
+      setFormErr("Please enter the staff member's name.");
       return;
     }
+    setFormErr('');
     registerMutation.mutate({ ...form, name: form.name.trim() });
   };
 
   const confirmRemove = (member: StaffMember) => {
-    Alert.alert(
-      'Remove Staff',
-      `Remove ${member.name} from your household?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => removeMutation.mutate(member.id) },
-      ]
-    );
+    setConfirmMember(member);
   };
 
   const activeCount = staff.filter(s => s.status === 'ACTIVE').length;
@@ -152,11 +144,20 @@ export default function StaffScreen() {
           <View style={{ flex: 1, marginLeft: SPACING.md }}>
             <View style={s.cardTitleRow}>
               <Text style={s.staffName}>{item.name}</Text>
-              {item.policeVerified && (
+              {item.policeVerified ? (
                 <View style={s.verifiedBadge}>
                   <Ionicons name="shield-checkmark" size={11} color="#059669" />
-                  <Text style={s.verifiedText}>Verified</Text>
+                  <Text style={s.verifiedText}>Police Verified</Text>
                 </View>
+              ) : (
+                <TouchableOpacity
+                  style={s.requestVerifyBtn}
+                  onPress={() => Linking.openURL('https://tenantverification.gov.in')}
+                  hitSlop={8}
+                >
+                  <Ionicons name="shield-outline" size={11} color="#D97706" />
+                  <Text style={s.requestVerifyText}>Request Verification</Text>
+                </TouchableOpacity>
               )}
             </View>
             <Text style={[s.rolePill, { color: meta.color }]}>{meta.label}</Text>
@@ -173,10 +174,24 @@ export default function StaffScreen() {
               </Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => confirmRemove(item)} style={s.removeBtn} hitSlop={8}>
-            <Ionicons name="trash-outline" size={16} color="#EF4444" />
-          </TouchableOpacity>
+          {confirmMember?.id !== item.id && (
+            <TouchableOpacity onPress={() => confirmRemove(item)} style={s.removeBtn} hitSlop={8}>
+              <Ionicons name="trash-outline" size={16} color="#EF4444" />
+            </TouchableOpacity>
+          )}
         </View>
+
+        {confirmMember?.id === item.id && (
+          <View style={s.confirmRow}>
+            <Text style={s.confirmRowText}>Remove {item.name}?</Text>
+            <TouchableOpacity style={s.confirmYes} onPress={() => { setConfirmMember(null); removeMutation.mutate(item.id); }}>
+              <Text style={s.confirmYesText}>Remove</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.confirmNo} onPress={() => setConfirmMember(null)}>
+              <Text style={s.confirmNoText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={s.cardMeta}>
           {item.phone && (
@@ -320,6 +335,22 @@ export default function StaffScreen() {
                 </TouchableOpacity>
               </View>
 
+              {!!regSuccess && (
+                <View style={s.successBanner}>
+                  <Text style={s.successBannerText}>{regSuccess}</Text>
+                </View>
+              )}
+              {!!regErr && (
+                <View style={s.errorBanner}>
+                  <Text style={s.errorBannerText}>{regErr}</Text>
+                </View>
+              )}
+              {!!formErr && (
+                <View style={s.errorBanner}>
+                  <Text style={s.errorBannerText}>{formErr}</Text>
+                </View>
+              )}
+
               {/* Role selector */}
               <Text style={s.label}>Role</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.sm }}>
@@ -452,6 +483,8 @@ const s = StyleSheet.create({
   staffName: { fontSize: 15, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#D1FAE5', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
   verifiedText: { fontSize: 9, fontWeight: '700', color: '#059669', fontFamily: 'Outfit-Bold' },
+  requestVerifyBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
+  requestVerifyText: { fontSize: 9, fontWeight: '700', color: '#D97706', fontFamily: 'Outfit-Bold' },
   bgBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
   bgBadgeText: { fontSize: 10, fontWeight: '600', fontFamily: 'DMSans-Medium' },
   rolePill: { fontSize: 12, fontWeight: '600', fontFamily: 'DMSans-Medium', marginTop: 2 },
@@ -488,4 +521,16 @@ const s = StyleSheet.create({
   cancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
   confirmBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, backgroundColor: '#7C3AED', alignItems: 'center', ...SHADOWS.sm },
   confirmText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  successBanner: { backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 12, marginBottom: SPACING.md },
+  successBannerText: { color: '#065F46', fontWeight: '700', fontSize: 13 },
+  errorBanner: { backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: 12, marginBottom: SPACING.md },
+  errorBannerText: { color: '#991B1B', fontWeight: '600', fontSize: 13 },
+  confirmRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, flexWrap: 'wrap',
+  },
+  confirmRowText: { fontSize: 12, color: COLORS.textSecondary, flex: 1 },
+  confirmYes: { backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 },
+  confirmYesText: { color: '#DC2626', fontWeight: '700', fontSize: 12 },
+  confirmNo: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 },
+  confirmNoText: { color: COLORS.textMuted, fontSize: 12 },
 });

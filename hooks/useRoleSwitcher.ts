@@ -26,6 +26,8 @@ const ROLE_PORTAL_MAP: Record<string, PortalInfo> = {
   FOOD_ADMIN:       { role: 'FOOD_ADMIN',         label: 'Food Admin',      route: '/admin-role/tabs/dashboard',   icon: 'restaurant' },
   HELPDESK_AGENT:   { role: 'HELPDESK_AGENT',     label: 'Helpdesk',        route: '/admin-role/tabs/dashboard',   icon: 'headset' },
   COMMITTEE_MEMBER: { role: 'COMMITTEE_MEMBER',   label: 'Committee',       route: '/admin-role/tabs/dashboard',   icon: 'people' },
+  ACCOUNTANT:       { role: 'ACCOUNTANT',         label: 'Accountant',      route: '/admin-role/tabs/dashboard',   icon: 'calculator' },
+  READONLY_ADMIN:   { role: 'READONLY_ADMIN',     label: 'View-Only Admin', route: '/admin-role/tabs/dashboard',   icon: 'eye' },
   MEMBER:           { role: 'MEMBER',             label: 'Resident Home',   route: '/tabs/feed',                   icon: 'home' },
   USER:             { role: 'USER',               label: 'Home',            route: '/tabs/feed',                   icon: 'home' },
 };

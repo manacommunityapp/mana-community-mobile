@@ -106,7 +106,7 @@ export default function BookingsScreen() {
         data={bookings}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); }} colors={['#4F46E5']} />}
         renderItem={({ item }) => {
           const isCompleted = item.status === 'COMPLETED';
           const isCancelled = item.status === 'CANCELLED';

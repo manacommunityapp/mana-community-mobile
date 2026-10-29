@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, BackHandler, Modal, TextInput, Alert, Share,
+  FlatList, BackHandler, Modal, TextInput, Share,
   RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,8 @@ import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
+import { visitorApprovalService } from '@/services/visitorApprovalService';
+import GatePassQR from '@/components/common/GatePassQR';
 
 type VisitorStatus = 'EXPECTED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'DENIED';
 type VisitorType = 'GUEST' | 'DELIVERY' | 'CAB' | 'SERVICE';
@@ -109,12 +111,28 @@ export default function VisitorsScreen() {
   const [selectedPass, setSelectedPass] = useState<VisitorEntry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Cab ETA notes (resident-written notes per cab visitor id)
+  const [cabEtaNotes, setCabEtaNotes] = useState<Record<number, string>>({});
+  const [etaEditId, setEtaEditId] = useState<number | null>(null);
+  const [etaInput, setEtaInput] = useState('');
+  const [createError, setCreateError] = useState('');
+
+  // Walk-in approval count — polls every 10s to show urgent banner
+  const { data: pendingCount = 0 } = useQuery<number>({
+    queryKey: ['visitors', 'pending-count'],
+    queryFn: () => visitorApprovalService.getPendingCount(),
+    refetchInterval: 10_000,
+    staleTime: 5_000,
+  });
+
   // Form State
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestVehicle, setGuestVehicle] = useState('');
   const [guestType, setGuestType] = useState<VisitorType>('GUEST');
   const [guestPurpose, setGuestPurpose] = useState('');
+  const [guestValidFrom, setGuestValidFrom] = useState('');
+  const [guestValidUntil, setGuestValidUntil] = useState('');
 
   const goHome = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -194,7 +212,7 @@ export default function VisitorsScreen() {
     }
   }, [refetch]);
 
-  // Merge Live API Visitors with Local/Sample
+  // Merge live API visitors with passes created during this session.
   const visitors: VisitorEntry[] = useMemo(() => {
     if (rawVisitors && rawVisitors.length > 0) {
       const live = rawVisitors.map(mapDtoToEntry);
@@ -216,15 +234,12 @@ export default function VisitorsScreen() {
       const newEntry = mapDtoToEntry(res);
       setLocalVisitors(prev => [newEntry, ...prev]);
       setIsPreApproveModal(false);
-      setGuestName('');
-      setGuestPhone('');
-      setGuestVehicle('');
-      setGuestPurpose('');
+      setGuestName(''); setGuestPhone(''); setGuestVehicle(''); setGuestPurpose('');
+      setGuestValidFrom(''); setGuestValidUntil('');
       setSelectedPass(newEntry);
-      Alert.alert('✅ Pass Generated', `Digital Gate Pass ${newEntry.passCode} has been created.`);
     },
     onError: () => {
-      // Offline fallback pass
+      // Offline fallback — create a local pass so the guard can scan it immediately
       const newCode = `MANA-${Math.floor(1000 + Math.random() * 9000)}`;
       const newEntry: VisitorEntry = {
         id: Date.now(),
@@ -239,19 +254,18 @@ export default function VisitorsScreen() {
       };
       setLocalVisitors(prev => [newEntry, ...prev]);
       setIsPreApproveModal(false);
-      setGuestName('');
-      setGuestPhone('');
-      setGuestVehicle('');
-      setGuestPurpose('');
+      setGuestName(''); setGuestPhone(''); setGuestVehicle(''); setGuestPurpose('');
+      setGuestValidFrom(''); setGuestValidUntil('');
       setSelectedPass(newEntry);
     },
   });
 
   const handleCreatePass = () => {
     if (!guestName.trim()) {
-      Alert.alert('Name Required', 'Please enter visitor or company name.');
+      setCreateError('Please enter visitor or company name.');
       return;
     }
+    setCreateError('');
     const flatStr = `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`;
     preApproveMutation.mutate({
       visitorName: guestName.trim(),
@@ -260,6 +274,8 @@ export default function VisitorsScreen() {
       passType: guestType,
       purpose: guestPurpose.trim() || `${VISITOR_TYPE_CONFIG[guestType].label} Entry`,
       flatNumber: flatStr,
+      validFrom: guestValidFrom.trim() || undefined,
+      validUntil: guestValidUntil.trim() || undefined,
     });
   };
 
@@ -277,7 +293,6 @@ export default function VisitorsScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
     } catch {}
     setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'CHECKED_IN' as VisitorStatus } : v));
-    Alert.alert('Access Granted', 'Security Gate has been notified to allow entry.');
   };
 
   const handleDenyEntry = async (id: number) => {
@@ -286,7 +301,6 @@ export default function VisitorsScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
     } catch {}
     setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'DENIED' as VisitorStatus } : v));
-    Alert.alert('Access Denied', 'Security Gate has been instructed to decline entry.');
   };
 
   const handleCheckOut = async (id: number) => {
@@ -295,7 +309,6 @@ export default function VisitorsScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
     } catch {}
     setLocalVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'CHECKED_OUT' as VisitorStatus } : v));
-    Alert.alert('Departure Recorded', 'Visitor departure has been logged.');
   };
 
   const filtered = useMemo(() => {
@@ -389,6 +402,27 @@ export default function VisitorsScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Cab ETA tracker — only for expected cab visitors */}
+        {item.type === 'CAB' && item.status === 'EXPECTED' && (
+          <View style={s.cabEtaRow}>
+            <View style={s.cabEtaLeft}>
+              <Ionicons name="navigate-circle-outline" size={15} color="#2563EB" />
+              <Text style={s.cabEtaLabel}>ETA: {item.expectedAt}</Text>
+              {cabEtaNotes[item.id] ? (
+                <View style={s.cabEtaNoteChip}>
+                  <Text style={s.cabEtaNoteText} numberOfLines={1}>{cabEtaNotes[item.id]}</Text>
+                </View>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              onPress={() => { setEtaEditId(item.id); setEtaInput(cabEtaNotes[item.id] || ''); }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Text style={s.cabEtaEditBtn}>{cabEtaNotes[item.id] ? 'Edit Note' : '+ Note'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   };
@@ -436,6 +470,26 @@ export default function VisitorsScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ── Walk-In Approval Alert Banner ── */}
+      {pendingCount > 0 && (
+        <TouchableOpacity
+          style={s.walkInAlertBanner}
+          onPress={() => router.push('/visitors/pending-approvals')}
+          activeOpacity={0.85}
+        >
+          <View style={s.walkInAlertIconWrap}>
+            <Ionicons name="notifications" size={18} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.walkInAlertTitle}>
+              {pendingCount} visitor{pendingCount > 1 ? 's' : ''} waiting at gate!
+            </Text>
+            <Text style={s.walkInAlertSub}>Tap to Allow or Deny entry</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#fff" />
+        </TouchableOpacity>
+      )}
+
       {/* ── Quick Links: Approvals / Whitelist / Watchlist ── */}
       <View style={s.quickLinksRow}>
         <TouchableOpacity
@@ -475,6 +529,26 @@ export default function VisitorsScreen() {
         >
           <Ionicons name="people-outline" size={16} color="#7C3AED" />
           <Text style={[s.quickLinkText, { color: '#7C3AED' }]}>Group Invite</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/intercom')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="videocam-outline" size={16} color="#0891B2" />
+          <Text style={[s.quickLinkText, { color: '#0891B2' }]}>Intercom</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => router.push('/visitors/packages')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="cube-outline" size={16} color="#D97706" />
+          <Text style={[s.quickLinkText, { color: '#D97706' }]}>Packages</Text>
           <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
         </TouchableOpacity>
       </View>
@@ -613,11 +687,41 @@ export default function VisitorsScreen() {
               </View>
             </View>
 
+            {/* Time Window */}
+            <View style={{ flexDirection: 'row', gap: SPACING.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.inputLabel}>Valid From (Optional)</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="e.g. 10:00 AM"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={guestValidFrom}
+                  onChangeText={setGuestValidFrom}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.inputLabel}>Valid Until (Optional)</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="e.g. 08:00 PM"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={guestValidUntil}
+                  onChangeText={setGuestValidUntil}
+                />
+              </View>
+            </View>
+
             {/* Modal Actions */}
+            {createError ? (
+              <View style={s.inlineError}>
+                <Ionicons name="alert-circle-outline" size={14} color="#B91C1C" />
+                <Text style={s.inlineErrorText}>{createError}</Text>
+              </View>
+            ) : null}
             <View style={s.modalActionRow}>
               <TouchableOpacity
                 style={s.cancelBtn}
-                onPress={() => setIsPreApproveModal(false)}
+                onPress={() => { setIsPreApproveModal(false); setCreateError(''); }}
               >
                 <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
@@ -637,69 +741,59 @@ export default function VisitorsScreen() {
         </View>
       </Modal>
 
-      {/* ── Gate Pass QR / Share Modal ── */}
+      {/* ── Cab ETA Note Modal ── */}
+      <Modal visible={etaEditId !== null} transparent animationType="slide" onRequestClose={() => setEtaEditId(null)}>
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setEtaEditId(null)} activeOpacity={1} />
+        <View style={s.etaSheet}>
+          <View style={s.etaSheetHandle} />
+          <Text style={s.etaSheetTitle}>Cab ETA Note</Text>
+          <Text style={s.etaSheetSub}>Add a note visible to the guard — e.g. "Running 15 min late" or cab number</Text>
+          <TextInput
+            style={s.etaInput}
+            value={etaInput}
+            onChangeText={setEtaInput}
+            placeholder="e.g. Running late, new ETA 10:30 PM"
+            placeholderTextColor={COLORS.textMuted}
+            maxLength={80}
+            autoFocus
+          />
+          <View style={s.etaActions}>
+            <TouchableOpacity style={s.etaCancelBtn} onPress={() => setEtaEditId(null)}>
+              <Text style={s.etaCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.etaSaveBtn}
+              onPress={() => {
+                if (etaEditId !== null) {
+                  const note = etaInput.trim();
+                  setCabEtaNotes(prev => note ? { ...prev, [etaEditId]: note } : Object.fromEntries(Object.entries(prev).filter(([k]) => Number(k) !== etaEditId)));
+                }
+                setEtaEditId(null);
+              }}
+            >
+              <Text style={s.etaSaveText}>Save Note</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Gate Pass QR Modal ── */}
       <Modal visible={!!selectedPass} transparent animationType="fade">
         <View style={s.modalOverlay}>
           <View style={s.passModalCard}>
-            <View style={s.passHeaderRow}>
-              <View style={s.passBadge}>
-                <Ionicons name="shield-checkmark" size={16} color={COLORS.primary} />
-                <Text style={s.passBadgeText}>Verified Gate Entry Pass</Text>
-              </View>
-              <TouchableOpacity onPress={() => setSelectedPass(null)}>
-                <Ionicons name="close" size={22} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            </View>
-
             {selectedPass && (
-              <View style={s.passModalBody}>
-                <Text style={s.passGuestName}>{selectedPass.name}</Text>
-                <Text style={s.passFlat}>{selectedPass.flat}</Text>
-
-                {/* Gate Pass Code Box */}
-                <View style={s.passCodeBox}>
-                  <Text style={s.passCodeLabel}>Security Entry Passcode</Text>
-                  <Text style={s.passCodeVal}>{selectedPass.passCode}</Text>
-                  <Ionicons name="qr-code-outline" size={54} color={COLORS.primary} style={{ marginTop: 8 }} />
-                  <Text style={s.passCodeSub}>Show code or scan QR at Mana security checkpoint</Text>
-                </View>
-
-                <View style={s.passMetaList}>
-                  <View style={s.passMetaItem}>
-                    <Text style={s.passMetaKey}>Purpose:</Text>
-                    <Text style={s.passMetaVal}>{selectedPass.purpose}</Text>
-                  </View>
-                  {selectedPass.vehicleNumber && (
-                    <View style={s.passMetaItem}>
-                      <Text style={s.passMetaKey}>Vehicle:</Text>
-                      <Text style={s.passMetaVal}>{selectedPass.vehicleNumber}</Text>
-                    </View>
-                  )}
-                  <View style={s.passMetaItem}>
-                    <Text style={s.passMetaKey}>Status:</Text>
-                    <Text style={[s.passMetaVal, { color: STATUS_META[selectedPass.status].color, fontWeight: '800' }]}>
-                      {STATUS_META[selectedPass.status].label}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* WhatsApp & Done Actions */}
-                <View style={s.passModalActions}>
-                  <TouchableOpacity
-                    style={s.whatsappShareBtn}
-                    onPress={() => handleSharePass(selectedPass)}
-                  >
-                    <Ionicons name="share-social-outline" size={16} color="#FFFFFF" />
-                    <Text style={s.whatsappShareBtnText}>Share Pass</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={s.passDoneBtn}
-                    onPress={() => setSelectedPass(null)}
-                  >
-                    <Text style={s.passDoneBtnText}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <GatePassQR
+                pass={{
+                  passCode: selectedPass.passCode,
+                  visitorName: selectedPass.name,
+                  flat: selectedPass.flat,
+                  purpose: selectedPass.purpose,
+                  vehicleNumber: selectedPass.vehicleNumber,
+                  status: selectedPass.status,
+                  expectedAt: selectedPass.expectedAt,
+                }}
+                onClose={() => setSelectedPass(null)}
+              />
             )}
           </View>
         </View>
@@ -980,6 +1074,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
+  inlineError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: RADIUS.sm, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  inlineErrorText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
   confirmBtn: {
     flex: 1,
     paddingVertical: SPACING.md,
@@ -1055,5 +1151,77 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   passDoneBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: 'Outfit-Bold' },
+
+  // Walk-in approval alert banner
+  walkInAlertBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#DC2626', marginHorizontal: SPACING.md, marginBottom: SPACING.sm,
+    borderRadius: RADIUS.lg, padding: SPACING.md, ...SHADOWS.sm,
+  },
+  walkInAlertIconWrap: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  walkInAlertTitle: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  walkInAlertSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
+
+  // Cab ETA row
+  cabEtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#DBEAFE',
+    backgroundColor: '#EFF6FF',
+    marginHorizontal: -SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
+    borderBottomLeftRadius: RADIUS.xl,
+    borderBottomRightRadius: RADIUS.xl,
+  },
+  cabEtaLeft: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, flexWrap: 'wrap' },
+  cabEtaLabel: { fontSize: 11, color: '#1D4ED8', fontWeight: '600', fontFamily: 'DMSans-Medium' },
+  cabEtaNoteChip: {
+    backgroundColor: '#BFDBFE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    maxWidth: 160,
+  },
+  cabEtaNoteText: { fontSize: 10, color: '#1E40AF', fontWeight: '600', fontFamily: 'DMSans-Medium' },
+  cabEtaEditBtn: { fontSize: 11, color: '#2563EB', fontWeight: '700', fontFamily: 'Outfit-Bold' },
+
+  // Cab ETA note edit bottom sheet
+  etaSheet: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    paddingBottom: 36,
+    gap: 12,
+  },
+  etaSheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 4 },
+  etaSheetTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  etaSheetSub: { fontSize: 13, color: COLORS.textMuted, lineHeight: 18, fontFamily: 'DMSans-Regular' },
+  etaInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.text,
+    fontFamily: 'DMSans-Regular',
+  },
+  etaActions: { flexDirection: 'row', gap: 10 },
+  etaCancelBtn: { flex: 1, paddingVertical: 13, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  etaCancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
+  etaSaveBtn: { flex: 2, paddingVertical: 13, borderRadius: RADIUS.md, backgroundColor: '#2563EB', alignItems: 'center' },
+  etaSaveText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Outfit-Bold' },
 });
 

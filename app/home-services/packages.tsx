@@ -64,7 +64,7 @@ export default function PackagesScreen() {
         data={packages}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); }} colors={['#4F46E5']} />}
         renderItem={({ item }) => {
           const pCfg = PAYMENT_STATUS[item.paymentStatus] || PAYMENT_STATUS.DUE;
 
