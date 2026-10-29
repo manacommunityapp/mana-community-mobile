@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView,
+  ScrollView, ActivityIndicator, KeyboardAvoidingView,
   Platform, RefreshControl, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -112,6 +112,7 @@ export default function GuardDailyLogScreen() {
   const [formNotes, setFormNotes] = useState('');
   const [formPriority, setFormPriority] = useState<Priority>('LOW');
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const loadLogs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -160,14 +161,16 @@ export default function GuardDailyLogScreen() {
     setFormCustomLoc('');
     setFormNotes('');
     setFormPriority('LOW');
+    setFormError('');
     setSheetOpen(true);
   };
 
   const handleSave = async () => {
     if (!formNotes.trim()) {
-      Alert.alert('Notes required', 'Please describe what you observed or encountered.');
+      setFormError('Please describe what you observed or encountered.');
       return;
     }
+    setFormError('');
     const loc = formLoc === '__custom__' ? formCustomLoc.trim() : formLoc;
     setSaving(true);
     const optimistic: SecurityRecord = {
@@ -193,7 +196,7 @@ export default function GuardDailyLogScreen() {
       });
     } catch {
       setAllLogs(prev => prev.filter(l => l.id !== optimistic.id));
-      Alert.alert('Could not save', 'Entry could not be saved. Please try again.');
+      setFormError('Entry could not be saved. Please try again.');
       setSheetOpen(true);
     } finally {
       setSaving(false);
@@ -503,6 +506,14 @@ export default function GuardDailyLogScreen() {
                 </Text>
               </View>
 
+              {/* Inline error */}
+              {formError ? (
+                <View style={s.formErrorBanner}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.formErrorText}>{formError}</Text>
+                </View>
+              ) : null}
+
               {/* Actions */}
               <View style={s.formActions}>
                 <TouchableOpacity style={s.cancelBtn} onPress={() => setSheetOpen(false)}>
@@ -738,4 +749,12 @@ const s = StyleSheet.create({
     backgroundColor: GUARD_COLORS.accent, ...SHADOWS.sm,
   },
   saveBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+
+  formErrorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: COLORS.errorLight, borderRadius: RADIUS.md,
+    padding: 10, borderWidth: 1, borderColor: COLORS.error + '40',
+    marginBottom: 4,
+  },
+  formErrorText: { flex: 1, fontSize: 13, color: COLORS.error, lineHeight: 18 },
 });

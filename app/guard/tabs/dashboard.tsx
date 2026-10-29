@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, RefreshControl, Alert, Animated,
+  ScrollView, RefreshControl, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SHADOWS, RADIUS, SPACING, getAvatarColor, getInitials } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
@@ -156,10 +156,11 @@ export default function GuardDashboard() {
   const [stats, setStats] = useState<{ visitorsToday: number; pendingEntry: number; vehiclesIn: number; openIncidents: number; pendingApprovals: number } | null>(null);
   const [recentVisitors, setRecentVisitors] = useState<GuardVisitor[]>([]);
   const [openIncidents, setOpenIncidents] = useState<GuardIncident[]>([]);
+  const [sosRaised, setSosRaised] = useState(false);
 
   const elapsed = useLiveElapsed(todayShift?.status === 'IN_PROGRESS' ? todayShift.checkInTime : null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const [shiftRes, statsRes, visitorsRes, incidentsRes, pendingRes] = await Promise.allSettled([
       safetyService.getGuardShifts(isoToday()),
       guardService.getDashboardStats(),
@@ -198,23 +199,20 @@ export default function GuardDashboard() {
           .slice(0, 3),
       );
     }
-  };
+  }, [user?.id]);
 
-  useEffect(() => { loadData(); }, []);
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  };
+  }, [loadData]);
 
   const handleSosConfirm = () => {
-    Alert.alert(
-      'Alert Raised',
-      'Emergency alert has been sent to the control room and community admin.',
-      [{ text: 'OK' }],
-    );
     guardService.raiseAlert('Emergency alert raised by guard via dashboard');
+    setSosRaised(true);
+    setTimeout(() => setSosRaised(false), 4000);
   };
 
   const dutyStatus = todayShift?.status === 'IN_PROGRESS'
@@ -317,6 +315,14 @@ export default function GuardDashboard() {
             </View>
             <Ionicons name="chevron-forward" size={16} color="#D97706" />
           </TouchableOpacity>
+        )}
+
+        {/* ── SOS raised banner ── */}
+        {sosRaised && (
+          <View style={s.sosRaisedBanner}>
+            <Ionicons name="checkmark-circle" size={16} color="#fff" />
+            <Text style={s.sosRaisedText}>Emergency alert raised. Control room notified.</Text>
+          </View>
         )}
 
         {/* ── Stats grid ── */}
@@ -622,4 +628,12 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   sosBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 1 },
+
+  sosRaisedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.error, borderRadius: RADIUS.lg,
+    marginHorizontal: SPACING.md, marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: 12, ...SHADOWS.sm,
+  },
+  sosRaisedText: { flex: 1, fontSize: 14, fontWeight: '700', color: '#fff' },
 });

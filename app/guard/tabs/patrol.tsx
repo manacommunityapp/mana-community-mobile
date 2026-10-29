@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, RefreshControl, Alert, ActivityIndicator,
+  ScrollView, RefreshControl, ActivityIndicator, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,9 +80,10 @@ interface CheckpointRowProps {
   scanningId: number | null;
   onScan: (cp: PatrolCheckpoint) => void;
   onSkip: (cp: PatrolCheckpoint) => void;
+  scanError?: string;
 }
 
-function CheckpointRow({ cp, isNext, isLast, scanningId, onScan, onSkip }: CheckpointRowProps) {
+function CheckpointRow({ cp, isNext, isLast, scanningId, onScan, onSkip, scanError }: CheckpointRowProps) {
   const meta = CP_META[cp.status];
   const loading = scanningId === cp.id;
   const canAct = cp.status === 'PENDING';
@@ -127,6 +128,7 @@ function CheckpointRow({ cp, isNext, isLast, scanningId, onScan, onSkip }: Check
               {new Date(cp.scannedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
             </Text>
           )}
+          {scanError ? <Text style={s.cpScanError}>{scanError}</Text> : null}
         </View>
 
         {canAct ? (
@@ -168,6 +170,11 @@ export default function GuardPatrolScreen() {
   const [ending, setEnding] = useState(false);
   const [scanningId, setScanningId] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState('00:00:00');
+  const [startError, setStartError] = useState('');
+  const [confirmEndVisible, setConfirmEndVisible] = useState(false);
+  const [endError, setEndError] = useState('');
+  const [confirmSkip, setConfirmSkip] = useState<PatrolCheckpoint | null>(null);
+  const [scanErrors, setScanErrors] = useState<Map<number, string>>(new Map());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadPatrol = useCallback(async () => {
@@ -196,12 +203,13 @@ export default function GuardPatrolScreen() {
   };
 
   const handleStart = async () => {
+    setStartError('');
     setStarting(true);
     try {
       const data = await guardService.startPatrolSession();
       setSession(data);
     } catch {
-      Alert.alert('Error', 'Could not start patrol session. Try again.');
+      setStartError('Could not start patrol session. Try again.');
     } finally {
       setStarting(false);
     }
@@ -209,33 +217,27 @@ export default function GuardPatrolScreen() {
 
   const handleEnd = () => {
     if (!session) return;
-    const pending = session.checkpoints.filter(c => c.status === 'PENDING').length;
-    const message = pending > 0
-      ? `${pending} checkpoint${pending > 1 ? 's' : ''} still pending. End patrol anyway?`
-      : 'Mark this patrol round as complete?';
-    Alert.alert('End Patrol', message, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'End Patrol',
-        style: 'destructive',
-        onPress: async () => {
-          setEnding(true);
-          try {
-            await guardService.endPatrolSession(session.id);
-            setSession(null);
-          } catch {
-            Alert.alert('Error', 'Could not end patrol session.');
-          } finally {
-            setEnding(false);
-          }
-        },
-      },
-    ]);
+    setEndError('');
+    setConfirmEndVisible(true);
+  };
+
+  const doEndPatrol = async () => {
+    if (!session) return;
+    setConfirmEndVisible(false);
+    setEnding(true);
+    try {
+      await guardService.endPatrolSession(session.id);
+      setSession(null);
+    } catch {
+      setEndError('Could not end patrol session. Try again.');
+    } finally {
+      setEnding(false);
+    }
   };
 
   const handleScan = async (cp: PatrolCheckpoint) => {
+    setScanErrors(prev => { const m = new Map(prev); m.delete(cp.id); return m; });
     setScanningId(cp.id);
-    // Optimistic update
     setSession(prev => prev ? {
       ...prev,
       checkpoints: prev.checkpoints.map(c =>
@@ -245,49 +247,45 @@ export default function GuardPatrolScreen() {
     try {
       await guardService.scanCheckpoint(cp.id);
     } catch {
-      // Roll back on error
       setSession(prev => prev ? {
         ...prev,
         checkpoints: prev.checkpoints.map(c =>
           c.id === cp.id ? { ...c, status: 'PENDING', scannedAt: undefined } : c
         ),
       } : prev);
-      Alert.alert('Scan Failed', 'Could not record checkpoint. Try again.');
+      setScanErrors(prev => new Map(prev).set(cp.id, 'Scan failed. Try again.'));
     } finally {
       setScanningId(null);
     }
   };
 
-  const handleSkip = (cp: PatrolCheckpoint) => {
-    Alert.alert('Skip Checkpoint', `Skip "${cp.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Skip',
-        style: 'destructive',
-        onPress: async () => {
-          setScanningId(cp.id);
-          setSession(prev => prev ? {
-            ...prev,
-            checkpoints: prev.checkpoints.map(c =>
-              c.id === cp.id ? { ...c, status: 'SKIPPED', scannedAt: new Date().toISOString() } : c
-            ),
-          } : prev);
-          try {
-            await guardService.skipCheckpoint(cp.id);
-          } catch {
-            setSession(prev => prev ? {
-              ...prev,
-              checkpoints: prev.checkpoints.map(c =>
-                c.id === cp.id ? { ...c, status: 'PENDING', scannedAt: undefined } : c
-              ),
-            } : prev);
-            Alert.alert('Error', 'Could not skip checkpoint.');
-          } finally {
-            setScanningId(null);
-          }
-        },
-      },
-    ]);
+  const handleSkip = (cp: PatrolCheckpoint) => { setConfirmSkip(cp); };
+
+  const doSkip = async () => {
+    const cp = confirmSkip;
+    if (!cp) return;
+    setConfirmSkip(null);
+    setScanErrors(prev => { const m = new Map(prev); m.delete(cp.id); return m; });
+    setScanningId(cp.id);
+    setSession(prev => prev ? {
+      ...prev,
+      checkpoints: prev.checkpoints.map(c =>
+        c.id === cp.id ? { ...c, status: 'SKIPPED', scannedAt: new Date().toISOString() } : c
+      ),
+    } : prev);
+    try {
+      await guardService.skipCheckpoint(cp.id);
+    } catch {
+      setSession(prev => prev ? {
+        ...prev,
+        checkpoints: prev.checkpoints.map(c =>
+          c.id === cp.id ? { ...c, status: 'PENDING', scannedAt: undefined } : c
+        ),
+      } : prev);
+      setScanErrors(prev => new Map(prev).set(cp.id, 'Could not skip checkpoint.'));
+    } finally {
+      setScanningId(null);
+    }
   };
 
   if (loading) {
@@ -309,6 +307,12 @@ export default function GuardPatrolScreen() {
         <View style={s.header}>
           <Text style={s.headerTitle}>Patrol</Text>
         </View>
+        {startError ? (
+          <View style={s.errorBanner}>
+            <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+            <Text style={s.errorBannerText}>{startError}</Text>
+          </View>
+        ) : null}
         <EmptyPatrol starting={starting} onStart={handleStart} />
       </SafeAreaView>
     );
@@ -349,6 +353,13 @@ export default function GuardPatrolScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GUARD_COLORS.accent} />
         }
       >
+        {endError ? (
+          <View style={s.errorBanner}>
+            <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+            <Text style={s.errorBannerText}>{endError}</Text>
+          </View>
+        ) : null}
+
         {/* Timer + progress card */}
         <View style={s.timerCard}>
           <View style={s.timerRow}>
@@ -441,12 +452,59 @@ export default function GuardPatrolScreen() {
                 scanningId={scanningId}
                 onScan={handleScan}
                 onSkip={handleSkip}
+                scanError={scanErrors.get(cp.id)}
               />
             ))}
         </View>
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* End patrol confirm */}
+      <Modal
+        visible={confirmEndVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setConfirmEndVisible(false)}
+      >
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setConfirmEndVisible(false)} activeOpacity={1} />
+        <View style={s.confirmSheet}>
+          <View style={s.sheetHandle} />
+          <Text style={s.confirmTitle}>End Patrol</Text>
+          <Text style={s.confirmMsg}>
+            {session && session.checkpoints.filter(c => c.status === 'PENDING').length > 0
+              ? `${session.checkpoints.filter(c => c.status === 'PENDING').length} checkpoint(s) still pending. End patrol anyway?`
+              : 'Mark this patrol round as complete?'}
+          </Text>
+          <TouchableOpacity style={s.confirmDangerBtn} onPress={doEndPatrol}>
+            <Text style={s.confirmDangerBtnText}>End Patrol</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setConfirmEndVisible(false)}>
+            <Text style={s.confirmCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Skip checkpoint confirm */}
+      <Modal
+        visible={confirmSkip !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setConfirmSkip(null)}
+      >
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setConfirmSkip(null)} activeOpacity={1} />
+        <View style={s.confirmSheet}>
+          <View style={s.sheetHandle} />
+          <Text style={s.confirmTitle}>Skip Checkpoint</Text>
+          <Text style={s.confirmMsg}>Skip "{confirmSkip?.name}"?</Text>
+          <TouchableOpacity style={s.confirmDangerBtn} onPress={doSkip}>
+            <Text style={s.confirmDangerBtnText}>Skip</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setConfirmSkip(null)}>
+            <Text style={s.confirmCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -601,4 +659,41 @@ const s = StyleSheet.create({
 
   statusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.xs },
   statusChipText: { fontSize: 10, fontWeight: '700' },
+
+  cpScanError: { fontSize: 11, color: COLORS.error, marginTop: 3, fontWeight: '600' },
+
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: COLORS.errorLight, borderRadius: RADIUS.md,
+    margin: SPACING.md, marginBottom: 0,
+    padding: 10, borderWidth: 1, borderColor: COLORS.error + '40',
+  },
+  errorBannerText: { flex: 1, fontSize: 13, color: COLORS.error, lineHeight: 18 },
+
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  confirmSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: 32, gap: 12,
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+  confirmMsg: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
+  confirmDangerBtn: {
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center',
+  },
+  confirmDangerBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  confirmCancelBtn: {
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center', backgroundColor: '#F1F5F9',
+  },
+  confirmCancelBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
 });

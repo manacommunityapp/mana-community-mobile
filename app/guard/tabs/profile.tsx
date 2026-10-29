@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator,
+  ScrollView, ActivityIndicator, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SHADOWS, RADIUS, SPACING, getAvatarColor, getInitials } from '@/constants/config';
@@ -112,30 +112,31 @@ export default function GuardProfileScreen() {
   const [todayShift, setTodayShift] = useState<GuardShift | null>(null);
   const [weekShifts, setWeekShifts] = useState<GuardShift[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const elapsed = useLiveElapsed(todayShift?.status === 'IN_PROGRESS' ? todayShift.checkInTime : null);
 
-  useEffect(() => {
-    (async () => {
-      setStatsLoading(true);
-      try {
-        const dates = [0, 1, 2, 3, 4, 5, 6].map(n => isoDate(n));
-        const results = await Promise.allSettled(dates.map(d => safetyService.getGuardShifts(d)));
-        const all: GuardShift[] = [];
-        results.forEach(r => { if (r.status === 'fulfilled') all.push(...r.value); });
-        setWeekShifts(all);
+  const loadStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const dates = [0, 1, 2, 3, 4, 5, 6].map(n => isoDate(n));
+      const results = await Promise.allSettled(dates.map(d => safetyService.getGuardShifts(d)));
+      const all: GuardShift[] = [];
+      results.forEach(r => { if (r.status === 'fulfilled') all.push(...r.value); });
+      setWeekShifts(all);
 
-        const todayRows = results[0].status === 'fulfilled' ? results[0].value : [];
-        const mine = todayRows.find(s => s.guardId === user?.id) || todayRows[0] || null;
-        setTodayShift(mine);
-      } catch {
-        setTodayShift(null);
-        setWeekShifts([]);
-      } finally {
-        setStatsLoading(false);
-      }
-    })();
+      const todayRows = results[0].status === 'fulfilled' ? results[0].value : [];
+      const mine = todayRows.find(s => s.guardId === user?.id) || todayRows[0] || null;
+      setTodayShift(mine);
+    } catch {
+      setTodayShift(null);
+      setWeekShifts([]);
+    } finally {
+      setStatsLoading(false);
+    }
   }, [user?.id]);
+
+  useFocusEffect(useCallback(() => { loadStats(); }, [loadStats]));
 
   // Duty status
   const dutyStatus: 'ON DUTY' | 'OFF DUTY' | 'SCHEDULED' =
@@ -147,12 +148,7 @@ export default function GuardProfileScreen() {
   const completedShifts = weekShifts.filter(s => s.status === 'COMPLETED' || s.status === 'IN_PROGRESS');
   const totalMinsWorked = completedShifts.reduce((acc, s) => acc + shiftDurationMins(s), 0);
 
-  const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: async () => { await logout(); } },
-    ]);
-  };
+  const handleLogout = () => { setConfirmLogout(true); };
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -382,6 +378,29 @@ export default function GuardProfileScreen() {
         <Text style={s.version}>Mana Community · Guard v1.0</Text>
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      <Modal
+        visible={confirmLogout}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setConfirmLogout(false)}
+      >
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setConfirmLogout(false)} activeOpacity={1} />
+        <View style={s.confirmSheet}>
+          <View style={s.sheetHandle} />
+          <Text style={s.confirmTitle}>Sign Out</Text>
+          <Text style={s.confirmMsg}>Are you sure you want to sign out?</Text>
+          <TouchableOpacity
+            style={s.confirmDangerBtn}
+            onPress={async () => { setConfirmLogout(false); await logout(); }}
+          >
+            <Text style={s.confirmDangerBtnText}>Sign Out</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setConfirmLogout(false)}>
+            <Text style={s.confirmCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -550,4 +569,31 @@ const s = StyleSheet.create({
     textAlign: 'center', color: COLORS.textMuted,
     fontSize: 12, paddingTop: 24,
   },
+
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  confirmSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: 32, gap: 12,
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+  confirmMsg: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
+  confirmDangerBtn: {
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center',
+  },
+  confirmDangerBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  confirmCancelBtn: {
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center', backgroundColor: '#F1F5F9',
+  },
+  confirmCancelBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
 });

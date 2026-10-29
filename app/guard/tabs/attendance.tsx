@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, ActivityIndicator, Alert, RefreshControl,
+  ScrollView, ActivityIndicator, RefreshControl, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { safetyService, type GuardShift } from '@/services/safetyService';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
@@ -94,6 +95,9 @@ export default function GuardAttendanceScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionWorking, setActionWorking] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [confirmAction, setConfirmAction] = useState<'checkIn' | 'checkOut' | null>(null);
+  const [actionError, setActionError] = useState('');
 
   const elapsed = useLiveElapsed(
     todayShift?.status === 'IN_PROGRESS' ? todayShift.checkInTime : undefined
@@ -101,6 +105,7 @@ export default function GuardAttendanceScreen() {
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
+    setLoadError('');
     try {
       const today = isoDate();
       const results = await Promise.allSettled([
@@ -131,53 +136,35 @@ export default function GuardAttendanceScreen() {
       }
       setHistory(past);
     } catch (e: any) {
-      Alert.alert('Could not load shifts', e?.message || 'Try again.');
+      setLoadError(e?.message || 'Could not load shifts. Pull to refresh.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [user?.id]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const onRefresh = () => { setRefreshing(true); load(true); };
+  const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, [load]);
 
-  const handleCheckIn = async () => {
-    if (!todayShift) return;
-    Alert.alert('Check In', 'Start your shift now?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Check In', onPress: async () => {
-          setActionWorking(true);
-          try {
-            setTodayShift(await safetyService.checkInShift(todayShift.id));
-          } catch (e: any) {
-            Alert.alert('Check-in failed', e?.message || 'Try again.');
-          } finally {
-            setActionWorking(false);
-          }
-        },
-      },
-    ]);
-  };
+  const handleCheckIn = () => { if (!todayShift) return; setActionError(''); setConfirmAction('checkIn'); };
+  const handleCheckOut = () => { if (!todayShift) return; setActionError(''); setConfirmAction('checkOut'); };
 
-  const handleCheckOut = async () => {
-    if (!todayShift) return;
-    Alert.alert('Check Out', 'End your shift now?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Check Out', style: 'destructive', onPress: async () => {
-          setActionWorking(true);
-          try {
-            setTodayShift(await safetyService.checkOutShift(todayShift.id));
-          } catch (e: any) {
-            Alert.alert('Check-out failed', e?.message || 'Try again.');
-          } finally {
-            setActionWorking(false);
-          }
-        },
-      },
-    ]);
+  const doConfirmedAction = async () => {
+    if (!confirmAction || !todayShift) return;
+    const action = confirmAction;
+    setConfirmAction(null);
+    setActionWorking(true);
+    try {
+      const updated = action === 'checkIn'
+        ? await safetyService.checkInShift(todayShift.id)
+        : await safetyService.checkOutShift(todayShift.id);
+      setTodayShift(updated);
+    } catch (e: any) {
+      setActionError(e?.message || (action === 'checkIn' ? 'Check-in failed.' : 'Check-out failed.'));
+    } finally {
+      setActionWorking(false);
+    }
   };
 
   // Weekly summary from history + today
@@ -204,6 +191,13 @@ export default function GuardAttendanceScreen() {
           <Text style={s.guardBadgeName} numberOfLines={1}>{user?.name ?? 'Guard'}</Text>
         </View>
       </View>
+
+      {loadError ? (
+        <View style={s.errorBanner}>
+          <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+          <Text style={s.errorBannerText}>{loadError}</Text>
+        </View>
+      ) : null}
 
       {loading ? (
         <View style={s.loaderWrap}>
@@ -315,6 +309,13 @@ export default function GuardAttendanceScreen() {
                 </View>
               )}
 
+              {actionError ? (
+                <View style={s.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.errorBannerText}>{actionError}</Text>
+                </View>
+              ) : null}
+
               {todayShift.notes && (
                 <View style={s.notesRow}>
                   <Ionicons name="document-text-outline" size={13} color={COLORS.textMuted} />
@@ -368,6 +369,29 @@ export default function GuardAttendanceScreen() {
           <View style={{ height: 32 }} />
         </ScrollView>
       )}
+
+      <Modal
+        visible={confirmAction !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setConfirmAction(null)}
+      >
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setConfirmAction(null)} activeOpacity={1} />
+        <View style={s.confirmSheet}>
+          <View style={s.sheetHandle} />
+          <Text style={s.confirmTitle}>{confirmAction === 'checkIn' ? 'Check In' : 'Check Out'}</Text>
+          <Text style={s.confirmMsg}>{confirmAction === 'checkIn' ? 'Start your shift now?' : 'End your shift now?'}</Text>
+          <TouchableOpacity
+            style={[s.confirmBtn, confirmAction === 'checkOut' && s.confirmBtnDanger]}
+            onPress={doConfirmedAction}
+          >
+            <Text style={s.confirmBtnText}>{confirmAction === 'checkIn' ? 'Check In' : 'Check Out'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setConfirmAction(null)}>
+            <Text style={s.confirmCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -534,4 +558,40 @@ const s = StyleSheet.create({
   historyStatusPill: { borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 2 },
   historyStatusText: { fontSize: 10, fontWeight: '700' },
   historyDur: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
+
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: COLORS.errorLight, borderRadius: RADIUS.md,
+    padding: 10, borderWidth: 1, borderColor: COLORS.error + '40',
+    marginHorizontal: SPACING.md, marginBottom: 4,
+  },
+  errorBannerText: { flex: 1, fontSize: 13, color: COLORS.error, lineHeight: 18 },
+
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  confirmSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: 32, gap: 12,
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+  confirmMsg: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
+  confirmBtn: {
+    backgroundColor: GUARD_COLORS.accent,
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center',
+  },
+  confirmBtnDanger: { backgroundColor: COLORS.error },
+  confirmBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  confirmCancelBtn: {
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center', backgroundColor: '#F1F5F9',
+  },
+  confirmCancelBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
 });

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, Alert, Vibration, ActivityIndicator, Animated,
+  ScrollView, Modal, Vibration, ActivityIndicator, Animated,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -183,6 +183,8 @@ export default function GuardSosScreen() {
   const [loadingAlerts, setLoadingAlerts] = useState(false);
   const [triggering, setTriggering] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const [confirmResolveVisible, setConfirmResolveVisible] = useState(false);
+  const [resolveSuccess, setResolveSuccess] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAlerts = useCallback(async () => {
@@ -247,31 +249,24 @@ export default function GuardSosScreen() {
   };
 
   const handleResolve = () => {
-    Alert.alert(
-      'Resolve Alert?',
-      'Only resolve if the situation is fully under control.',
-      [
-        { text: 'Keep Active', style: 'cancel' },
-        {
-          text: 'Resolve',
-          style: 'destructive',
-          onPress: async () => {
-            setResolving(true);
-            try {
-              if (incident?.id) {
-                await safetyService.resolveAlert(incident.id, 'Resolved by guard on scene');
-              }
-            } catch {}
-            setResolving(false);
-            setPhase('idle');
-            setCountdown(COUNTDOWN_SECS);
-            setIncident(null);
-            loadAlerts();
-            Alert.alert('Resolved', 'Alert marked as resolved. Team has been notified.');
-          },
-        },
-      ]
-    );
+    setConfirmResolveVisible(true);
+  };
+
+  const doResolve = async () => {
+    setConfirmResolveVisible(false);
+    setResolving(true);
+    try {
+      if (incident?.id) {
+        await safetyService.resolveAlert(incident.id, 'Resolved by guard on scene');
+      }
+    } catch {}
+    setResolving(false);
+    setPhase('idle');
+    setCountdown(COUNTDOWN_SECS);
+    setIncident(null);
+    setResolveSuccess(true);
+    setTimeout(() => setResolveSuccess(false), 3000);
+    loadAlerts();
   };
 
   if (phase === 'countdown') {
@@ -280,14 +275,30 @@ export default function GuardSosScreen() {
 
   if (phase === 'active') {
     return (
-      <ActiveSosScreen
-        incident={incident}
-        panicType={panicType}
-        location={location}
-        notes={notes}
-        resolving={resolving}
-        onResolve={handleResolve}
-      />
+      <>
+        <ActiveSosScreen
+          incident={incident}
+          panicType={panicType}
+          location={location}
+          notes={notes}
+          resolving={resolving}
+          onResolve={handleResolve}
+        />
+        <Modal visible={confirmResolveVisible} transparent animationType="slide" onRequestClose={() => setConfirmResolveVisible(false)}>
+          <TouchableOpacity style={s.overlay} onPress={() => setConfirmResolveVisible(false)} activeOpacity={1} />
+          <View style={s.confirmSheet}>
+            <View style={s.sheetHandle} />
+            <Text style={s.confirmTitle}>Resolve Alert?</Text>
+            <Text style={s.confirmMsg}>Only resolve if the situation is fully under control.</Text>
+            <TouchableOpacity style={s.confirmResolveBtn} onPress={doResolve}>
+              <Text style={s.confirmResolveBtnText}>Resolve Alert</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setConfirmResolveVisible(false)}>
+              <Text style={s.confirmCancelBtnText}>Keep Active</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      </>
     );
   }
 
@@ -308,6 +319,14 @@ export default function GuardSosScreen() {
               <Text style={s.sub}>For genuine emergencies only — alerts the response team immediately.</Text>
             </View>
           </View>
+
+          {/* Resolve success banner */}
+          {resolveSuccess && (
+            <View style={s.successBanner}>
+              <Ionicons name="checkmark-circle" size={16} color="#059669" />
+              <Text style={s.successBannerText}>Alert marked as resolved. Team has been notified.</Text>
+            </View>
+          )}
 
           {/* Active alerts banner */}
           {activeAlerts.length > 0 && (
@@ -571,4 +590,36 @@ const s = StyleSheet.create({
     padding: 12, borderWidth: 1, borderColor: DARK_BORDER,
   },
   disclaimerText: { flex: 1, fontSize: 12, color: DARK_MUTED, lineHeight: 17 },
+
+  successBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#D1FAE5', borderRadius: RADIUS.md,
+    padding: 12, borderWidth: 1, borderColor: '#6EE7B7',
+  },
+  successBannerText: { flex: 1, fontSize: 13, fontWeight: '600', color: '#065F46' },
+
+  overlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  confirmSheet: {
+    backgroundColor: DARK_CARD, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 24, paddingBottom: 40, gap: 12,
+  },
+  sheetHandle: {
+    width: 36, height: 4, borderRadius: 2, backgroundColor: DARK_BORDER,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  confirmTitle: { fontSize: 18, fontWeight: '800', color: DARK_TEXT, textAlign: 'center' },
+  confirmMsg: { fontSize: 14, color: DARK_MUTED, textAlign: 'center', lineHeight: 20 },
+  confirmResolveBtn: {
+    backgroundColor: '#16A34A', borderRadius: RADIUS.lg,
+    paddingVertical: 14, alignItems: 'center', marginTop: 4,
+  },
+  confirmResolveBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  confirmCancelBtn: {
+    borderRadius: RADIUS.lg, paddingVertical: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: DARK_BORDER,
+  },
+  confirmCancelBtnText: { fontSize: 14, fontWeight: '600', color: DARK_TEXT },
 });

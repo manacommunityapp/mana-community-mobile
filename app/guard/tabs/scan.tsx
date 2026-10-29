@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, ScrollView,
+  TextInput, ActivityIndicator, ScrollView, Modal,
   KeyboardAvoidingView, Platform, Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,6 +57,9 @@ export default function GuardScanScreen() {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [history, setHistory] = useState<ScanRecord[]>([]);
+  const [lookupError, setLookupError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [confirmDenyVisible, setConfirmDenyVisible] = useState(false);
 
   // Prevent double-scans: ignore same QR code for 3 seconds
   const lastScanned = useRef<{ code: string; at: number } | null>(null);
@@ -69,6 +72,8 @@ export default function GuardScanScreen() {
   const lookup = useCallback(async (code: string) => {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) return;
+    setLookupError('');
+    setActionError('');
 
     // Cooldown: same code within 3s → skip
     const now = Date.now();
@@ -83,7 +88,7 @@ export default function GuardScanScreen() {
       Vibration.vibrate(80);
     } catch (err: any) {
       Vibration.vibrate([80, 60, 80]);
-      Alert.alert('Pass not found', err?.message || 'No visitor pass matches this code.');
+      setLookupError(err?.message || 'No visitor pass matches this code.');
       pushHistory({ code: trimmed, visitorName: '—', action: 'Not found', time: new Date(), ok: false });
     } finally {
       setLoading(false);
@@ -112,7 +117,7 @@ export default function GuardScanScreen() {
       pushHistory({ code: result.passCode, visitorName: result.visitorName, action: 'Checked In', time: new Date(), ok: true });
       Vibration.vibrate([80, 60, 80, 60, 120]);
     } catch (err: any) {
-      Alert.alert('Check-in failed', err?.message || 'Try again.');
+      setActionError(err?.message || 'Check-in failed. Try again.');
     } finally {
       setActionLoading(false);
     }
@@ -127,32 +132,27 @@ export default function GuardScanScreen() {
       pushHistory({ code: result.passCode, visitorName: result.visitorName, action: 'Checked Out', time: new Date(), ok: true });
       Vibration.vibrate(120);
     } catch (err: any) {
-      Alert.alert('Check-out failed', err?.message || 'Try again.');
+      setActionError(err?.message || 'Check-out failed. Try again.');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleDeny = async () => {
+  const handleDeny = () => { if (!result) return; setActionError(''); setConfirmDenyVisible(true); };
+
+  const doDeny = async () => {
     if (!result) return;
-    Alert.alert('Deny Entry', `Turn away ${result.visitorName}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Deny', style: 'destructive',
-        onPress: async () => {
-          setActionLoading(true);
-          try {
-            const updated = await visitorService.denyEntry(result.id);
-            setResult(updated);
-            pushHistory({ code: result.passCode, visitorName: result.visitorName, action: 'Denied', time: new Date(), ok: false });
-          } catch (err: any) {
-            Alert.alert('Failed', err?.message || 'Try again.');
-          } finally {
-            setActionLoading(false);
-          }
-        },
-      },
-    ]);
+    setConfirmDenyVisible(false);
+    setActionLoading(true);
+    try {
+      const updated = await visitorService.denyEntry(result.id);
+      setResult(updated);
+      pushHistory({ code: result.passCode, visitorName: result.visitorName, action: 'Denied', time: new Date(), ok: false });
+    } catch (err: any) {
+      setActionError(err?.message || 'Deny failed. Try again.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const resetScan = () => {
@@ -279,6 +279,14 @@ export default function GuardScanScreen() {
             </View>
           )}
 
+          {/* Lookup error */}
+          {lookupError ? (
+            <View style={s.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+              <Text style={s.errorBannerText}>{lookupError}</Text>
+            </View>
+          ) : null}
+
           {/* Result card */}
           {result && statusMeta && (
             <View style={[s.resultCard, { borderColor: statusMeta.color + '40' }]}>
@@ -335,6 +343,14 @@ export default function GuardScanScreen() {
                   </Text>
                 </View>
               )}
+
+              {/* Action error */}
+              {actionError ? (
+                <View style={s.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.errorBannerText}>{actionError}</Text>
+                </View>
+              ) : null}
 
               {/* Actions */}
               {(canCheckIn || canCheckOut || canDeny) && (
@@ -410,6 +426,26 @@ export default function GuardScanScreen() {
           <View style={{ height: 32 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={confirmDenyVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setConfirmDenyVisible(false)}
+      >
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setConfirmDenyVisible(false)} activeOpacity={1} />
+        <View style={s.confirmSheet}>
+          <View style={s.sheetHandle} />
+          <Text style={s.confirmTitle}>Deny Entry</Text>
+          <Text style={s.confirmMsg}>Turn away {result?.visitorName ?? 'this visitor'}?</Text>
+          <TouchableOpacity style={s.confirmDangerBtn} onPress={doDeny}>
+            <Text style={s.confirmDangerBtnText}>Deny Entry</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setConfirmDenyVisible(false)}>
+            <Text style={s.confirmCancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -600,4 +636,38 @@ const s = StyleSheet.create({
   historyCode: { fontSize: 10, color: COLORS.textMuted, fontFamily: 'monospace', marginTop: 1 },
   historyAction: { fontSize: 12, fontWeight: '700' },
   historyTime: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: COLORS.errorLight, borderRadius: RADIUS.md,
+    padding: 10, borderWidth: 1, borderColor: COLORS.error + '40',
+  },
+  errorBannerText: { flex: 1, fontSize: 13, color: COLORS.error, lineHeight: 18 },
+
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  confirmSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: 32, gap: 12,
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+  confirmMsg: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
+  confirmDangerBtn: {
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center',
+  },
+  confirmDangerBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  confirmCancelBtn: {
+    borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center', backgroundColor: '#F1F5F9',
+  },
+  confirmCancelBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
 });
