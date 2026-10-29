@@ -750,7 +750,7 @@ export default function ProfileScreen() {
             icon="car-sport-outline"
             label="My Vehicles"
             sublabel="Register plates for resident gate access"
-            onPress={() => router.push('/vehicles')}
+            onPress={() => router.push('/profile/vehicles')}
             iconColor="#2563EB"
             iconBg="#DBEAFE"
           />
@@ -1191,11 +1191,7 @@ export default function ProfileScreen() {
             icon="car-outline"
             label="My Vehicles"
             sublabel="Register vehicles for ANPR auto gate entry"
-
             onPress={() => router.push('/vehicles')}
-
-            //onPress={() => router.push('/profile/vehicles')}
-
             iconColor="#2563EB"
             iconBg="#DBEAFE"
           />

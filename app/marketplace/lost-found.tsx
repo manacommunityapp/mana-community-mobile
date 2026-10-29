@@ -1,76 +1,20 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, RefreshControl, TextInput, Modal, Alert
+  FlatList, RefreshControl, TextInput, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SHADOWS } from '@/constants/config';
-
-interface LostFoundItem {
-  id: string;
-  type: 'LOST' | 'FOUND';
-  title: string;
-  location: string;
-  date: string;
-  description: string;
-  reportedBy: string;
-  contact: string;
-  status: 'OPEN' | 'RESOLVED';
-}
-
-const INITIAL_ITEMS: LostFoundItem[] = [
-  {
-    id: 'LF-101',
-    type: 'LOST',
-    title: 'Blue Car Key Fob (Hyundai)',
-    location: 'Basement Parking B2, near Pillar 14',
-    date: 'Today, 2:30 PM',
-    description: 'Black and silver key fob with blue silicone cover and small teddy bear keychain.',
-    reportedBy: 'Kavita Roy (A-804)',
-    contact: '+91 98451 00234',
-    status: 'OPEN',
-  },
-  {
-    id: 'LF-102',
-    type: 'FOUND',
-    title: 'Kids Titan Watch (Pink)',
-    location: 'Children Play Area Bench',
-    date: 'Yesterday, 6:00 PM',
-    description: 'Pink strap digital sports watch found on the wooden bench next to swings. Handed to Tower B Security.',
-    reportedBy: 'Security Guard Ram',
-    contact: 'Tower B Main Desk',
-    status: 'OPEN',
-  },
-  {
-    id: 'LF-103',
-    type: 'FOUND',
-    title: 'Reading Glasses with Brown Leather Case',
-    location: 'Clubhouse Library Room',
-    date: '02 Oct, 11:00 AM',
-    description: 'Rectangular gold-rimmed glasses in brown case. Deposited with clubhouse manager.',
-    reportedBy: 'Clubhouse Reception',
-    contact: 'Clubhouse Desk',
-    status: 'RESOLVED',
-  },
-  {
-    id: 'LF-104',
-    type: 'LOST',
-    title: 'Gym Water Bottle (Black Hydroflask)',
-    location: 'Clubhouse Gymnasium / Treadmill area',
-    date: '01 Oct, 8:00 AM',
-    description: 'Matte black 1-litre bottle with red sticker.',
-    reportedBy: 'Rahul Verma (C-302)',
-    contact: '+91 98765 43210',
-    status: 'OPEN',
-  },
-];
+import { lostFoundService, type LostFoundItem } from '@/services/lostFoundService';
 
 export default function LostFoundScreen() {
   const router = useRouter();
+  const qc = useQueryClient();
+
   const [filter, setFilter] = useState<'ALL' | 'LOST' | 'FOUND'>('ALL');
-  const [items, setItems] = useState<LostFoundItem[]>(INITIAL_ITEMS);
   const [modalVisible, setModalVisible] = useState(false);
 
   const [type, setType] = useState<'LOST' | 'FOUND'>('LOST');
@@ -78,36 +22,57 @@ export default function LostFoundScreen() {
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [contact, setContact] = useState('');
+  const [formErr, setFormErr] = useState('');
+  const [postSuccess, setPostSuccess] = useState('');
 
-  const filtered = items.filter(item => {
-    if (filter === 'ALL') return true;
-    return item.type === filter;
+  // per-item claim state: itemId -> 'confirming' | 'success' | 'error'
+  const [claimState, setClaimState] = useState<Record<string, 'confirming' | 'success' | 'error'>>({});
+
+  const { data: items = [], isFetching, refetch } = useQuery({
+    queryKey: ['lostFound'],
+    queryFn: () => lostFoundService.getItems(),
+  });
+
+  const createMut = useMutation({
+    mutationFn: lostFoundService.createItem,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lostFound'] });
+      setModalVisible(false);
+      setTitle('');
+      setLocation('');
+      setDescription('');
+      setContact('');
+      setFormErr('');
+      setPostSuccess(`Your ${type.toLowerCase()} item report has been published to all residents.`);
+      setTimeout(() => setPostSuccess(''), 3000);
+    },
+    onError: (e: any) => {
+      setFormErr(e?.response?.data?.message || 'Could not post report. Try again.');
+    },
+  });
+
+  const claimMut = useMutation({
+    mutationFn: (itemId: string) => lostFoundService.claimItem(itemId),
+    onSuccess: (_data, itemId) => {
+      setClaimState(s => ({ ...s, [itemId]: 'success' }));
+      setTimeout(() => setClaimState(s => { const n = { ...s }; delete n[itemId]; return n; }), 3000);
+    },
+    onError: (_err, itemId) => {
+      setClaimState(s => ({ ...s, [itemId]: 'error' }));
+      setTimeout(() => setClaimState(s => { const n = { ...s }; delete n[itemId]; return n; }), 2500);
+    },
   });
 
   const handleCreate = () => {
     if (!title.trim() || !location.trim()) {
-      Alert.alert('Incomplete', 'Please provide title and location.');
+      setFormErr('Please provide a title and location.');
       return;
     }
-    const newItem: LostFoundItem = {
-      id: `LF-${Math.floor(100 + Math.random() * 900)}`,
-      type,
-      title: title.trim(),
-      location: location.trim(),
-      date: 'Just now',
-      description: description.trim() || 'No additional details provided.',
-      reportedBy: 'You (Current Resident)',
-      contact: contact.trim() || 'Via in-app chat',
-      status: 'OPEN',
-    };
-    setItems([newItem, ...items]);
-    setModalVisible(false);
-    setTitle('');
-    setLocation('');
-    setDescription('');
-    setContact('');
-    Alert.alert('Posted', `Your ${type.toLowerCase()} item report has been published to all residents.`);
+    setFormErr('');
+    createMut.mutate({ type, title: title.trim(), location: location.trim(), description: description.trim(), contact: contact.trim() });
   };
+
+  const filtered = items.filter(item => filter === 'ALL' || item.type === filter);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -116,10 +81,17 @@ export default function LostFoundScreen() {
           <Ionicons name="arrow-back" size={20} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.title}>Lost & Found</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity style={styles.addBtn} onPress={() => { setModalVisible(true); setFormErr(''); setPostSuccess(''); }}>
           <Ionicons name="add" size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
+
+      {!!postSuccess && (
+        <View style={styles.successBanner}>
+          <Ionicons name="checkmark-circle" size={16} color="#059669" />
+          <Text style={styles.successBannerText}>{postSuccess}</Text>
+        </View>
+      )}
 
       <View style={styles.filterRow}>
         {(['ALL', 'LOST', 'FOUND'] as const).map(f => (
@@ -139,9 +111,11 @@ export default function LostFoundScreen() {
         data={filtered}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
         renderItem={({ item }) => {
           const isLost = item.type === 'LOST';
           const isResolved = item.status === 'RESOLVED';
+          const cs = claimState[item.id];
 
           return (
             <View style={[styles.card, isResolved && { opacity: 0.65 }]}>
@@ -175,18 +149,48 @@ export default function LostFoundScreen() {
                   <Text style={styles.contact}>Contact: {item.contact}</Text>
                 </View>
 
-                {!isResolved && (
+                {!isResolved && cs === undefined && (
                   <TouchableOpacity
                     style={styles.claimBtn}
-                    onPress={() => Alert.alert('Claim / Verify', `Contact ${item.contact} or security desk to verify ownership?`, [
-                      { text: 'Cancel' },
-                      { text: 'Contact / Claim', onPress: () => Alert.alert('Request Sent', 'The reporter has been notified of your claim!') }
-                    ])}
+                    onPress={() => setClaimState(s => ({ ...s, [item.id]: 'confirming' }))}
                   >
                     <Text style={styles.claimBtnText}>{isLost ? 'Found This?' : 'Claim Item'}</Text>
                   </TouchableOpacity>
                 )}
               </View>
+
+              {/* inline confirm row */}
+              {!isResolved && cs === 'confirming' && (
+                <View style={styles.claimConfirmRow}>
+                  <Text style={styles.claimConfirmText}>Notify {item.reportedBy.split(' ')[0]}?</Text>
+                  <TouchableOpacity
+                    style={styles.claimConfirmYes}
+                    onPress={() => claimMut.mutate(item.id)}
+                    disabled={claimMut.isPending}
+                  >
+                    <Text style={styles.claimConfirmYesText}>Send Claim</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.claimConfirmNo}
+                    onPress={() => setClaimState(s => { const n = { ...s }; delete n[item.id]; return n; })}
+                  >
+                    <Text style={styles.claimConfirmNoText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {cs === 'success' && (
+                <View style={styles.claimSuccessRow}>
+                  <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                  <Text style={styles.claimSuccessText}>Reporter notified of your claim!</Text>
+                </View>
+              )}
+
+              {cs === 'error' && (
+                <View style={styles.claimErrorRow}>
+                  <Text style={styles.claimErrorText}>Could not send claim. Try again.</Text>
+                </View>
+              )}
             </View>
           );
         }}
@@ -198,7 +202,7 @@ export default function LostFoundScreen() {
         }
       />
 
-      <Modal visible={modalVisible} transparent animationType="slide">
+      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -207,6 +211,12 @@ export default function LostFoundScreen() {
                 <Ionicons name="close" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
+
+            {!!formErr && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{formErr}</Text>
+              </View>
+            )}
 
             <View style={styles.typeSelector}>
               <TouchableOpacity
@@ -229,7 +239,7 @@ export default function LostFoundScreen() {
               placeholder="e.g. Set of keys with blue lanyard"
               placeholderTextColor="#94A3B8"
               value={title}
-              onChangeText={setTitle}
+              onChangeText={v => { setTitle(v); setFormErr(''); }}
             />
 
             <Text style={styles.inputLabel}>Last Seen Location / Found Location</Text>
@@ -238,7 +248,7 @@ export default function LostFoundScreen() {
               placeholder="e.g. Near Tower A swimming pool area"
               placeholderTextColor="#94A3B8"
               value={location}
-              onChangeText={setLocation}
+              onChangeText={v => { setLocation(v); setFormErr(''); }}
             />
 
             <Text style={styles.inputLabel}>Item Details & Color</Text>
@@ -261,8 +271,12 @@ export default function LostFoundScreen() {
               onChangeText={setContact}
             />
 
-            <TouchableOpacity style={styles.submitBtn} onPress={handleCreate}>
-              <Text style={styles.submitBtnText}>Post Notice</Text>
+            <TouchableOpacity
+              style={[styles.submitBtn, createMut.isPending && { opacity: 0.6 }]}
+              onPress={handleCreate}
+              disabled={createMut.isPending}
+            >
+              <Text style={styles.submitBtnText}>{createMut.isPending ? 'Posting…' : 'Post Notice'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -277,6 +291,8 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
   title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
   addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#4F46E5', justifyContent: 'center', alignItems: 'center' },
+  successBanner: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 8, backgroundColor: '#ECFDF5', borderRadius: 10, padding: 10, gap: 8 },
+  successBannerText: { color: '#065F46', fontSize: 13, fontWeight: '600', flex: 1 },
   filterRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', marginRight: 8 },
   filterChipActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
@@ -303,6 +319,16 @@ const styles = StyleSheet.create({
   contact: { fontSize: 11, color: '#64748B', marginTop: 2 },
   claimBtn: { backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 },
   claimBtnText: { color: '#4F46E5', fontSize: 12, fontWeight: '700' },
+  claimConfirmRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  claimConfirmText: { fontSize: 12, color: '#475569', flex: 1 },
+  claimConfirmYes: { backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  claimConfirmYesText: { color: '#4F46E5', fontSize: 12, fontWeight: '700' },
+  claimConfirmNo: { paddingHorizontal: 8, paddingVertical: 5 },
+  claimConfirmNoText: { color: '#94A3B8', fontSize: 12 },
+  claimSuccessRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, backgroundColor: '#ECFDF5', borderRadius: 8, padding: 8 },
+  claimSuccessText: { fontSize: 12, color: '#065F46', fontWeight: '600' },
+  claimErrorRow: { marginTop: 8, backgroundColor: '#FEE2E2', borderRadius: 8, padding: 8 },
+  claimErrorText: { fontSize: 12, color: '#991B1B', fontWeight: '600' },
   emptyBox: { padding: 40, alignItems: 'center' },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
   emptySub: { fontSize: 12, color: '#64748B', marginTop: 4 },
@@ -310,6 +336,8 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   modalTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
+  errorBanner: { backgroundColor: '#FEE2E2', borderRadius: 10, padding: 10, marginBottom: 12 },
+  errorBannerText: { color: '#991B1B', fontSize: 13, fontWeight: '600' },
   typeSelector: { flexDirection: 'row', marginBottom: 14 },
   typeBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10, backgroundColor: '#F1F5F9', marginHorizontal: 4 },
   typeBtnLostActive: { backgroundColor: '#FEE2E2' },

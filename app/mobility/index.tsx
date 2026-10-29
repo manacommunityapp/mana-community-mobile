@@ -12,7 +12,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { mobilityPassengerService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { MobilityServiceType } from '@/types/mobility';
-
 // On-demand fare quote, dispatch, tracking and cancellation APIs are live.
 // Payment checkout remains optional; cash trips continue to work while gateway
 // checkout is completed.

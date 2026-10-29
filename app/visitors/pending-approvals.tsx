@@ -1,10 +1,10 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, RefreshControl, TextInput, Modal,
+  ActivityIndicator, RefreshControl, TextInput, Modal, Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
@@ -20,32 +20,6 @@ const TYPE_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: s
   COURIER:  { icon: 'mail-outline',      color: '#0891B2',      bg: '#CFFAFE' },
 };
 
-const MOCK_PENDING: PendingApproval[] = [
-  {
-    id: 101,
-    visitorName: 'Swiggy Delivery',
-    purpose: 'Food Delivery',
-    passType: 'DELIVERY',
-    passCode: 'MANA-4471',
-    arrivedAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-    gate: 'Gate 1',
-    guardName: 'Ramesh',
-    flatNumber: 'Tower A-1204',
-  },
-  {
-    id: 102,
-    visitorName: 'Arjun Sharma',
-    visitorPhone: '9876543210',
-    purpose: 'Guest Visit',
-    passType: 'GUEST',
-    passCode: 'MANA-8823',
-    arrivedAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-    gate: 'Gate 1',
-    guardName: 'Ramesh',
-    flatNumber: 'Tower A-1204',
-    vehicleNumber: 'KA-04-MN-7788',
-  },
-];
 
 function waitingTime(iso: string): string {
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -59,16 +33,37 @@ export default function PendingApprovalsScreen() {
   const queryClient = useQueryClient();
   const [rejectModal, setRejectModal] = useState<PendingApproval | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
+  const [approveModal, setApproveModal] = useState<PendingApproval | null>(null);
+  const [approveError, setApproveError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  const [isFocused, setIsFocused] = useState(false);
+
+  useFocusEffect(useCallback(() => {
+    setIsFocused(true);
+    return () => setIsFocused(false);
+  }, []));
 
   const { data: raw, isLoading, refetch } = useQuery<PendingApproval[]>({
     queryKey: ['visitors', 'pending-approvals'],
     queryFn: () => visitorApprovalService.getPendingApprovals(),
-    refetchInterval: 15_000,
-    staleTime: 10_000,
+    // Poll every 5s when screen is open, 20s in background
+    refetchInterval: isFocused ? 5_000 : 20_000,
+    staleTime: 3_000,
   });
 
-  const pending = (raw && raw.length > 0) ? raw : MOCK_PENDING;
+  const pending = raw ?? [];
+
+  // Vibrate when a new visitor arrives while screen is open
+  const prevCountRef = React.useRef(0);
+  React.useEffect(() => {
+    const count = raw?.length ?? 0;
+    if (isFocused && count > prevCountRef.current) {
+      Vibration.vibrate([100, 60, 100]);
+    }
+    prevCountRef.current = count;
+  }, [raw?.length, isFocused]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -77,11 +72,12 @@ export default function PendingApprovalsScreen() {
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => visitorApprovalService.approve(id),
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
-      Alert.alert('✅ Entry Approved', 'Security gate has been notified to allow entry.');
+      setApproveModal(null);
+      setApproveError('');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setApproveError(err?.message || 'Failed to approve. Try again.'),
   });
 
   const rejectMutation = useMutation({
@@ -91,20 +87,13 @@ export default function PendingApprovalsScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       setRejectModal(null);
       setRejectReason('');
-      Alert.alert('❌ Entry Denied', 'Security gate has been instructed to deny entry.');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setRejectError(err?.message || 'Failed to reject. Try again.'),
   });
 
   const handleApprove = (item: PendingApproval) => {
-    Alert.alert(
-      'Allow Entry?',
-      `Allow ${item.visitorName} into the society?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Allow Entry', style: 'default', onPress: () => approveMutation.mutate(item.id) },
-      ]
-    );
+    setApproveError('');
+    setApproveModal(item);
   };
 
   const handleRejectSubmit = () => {
@@ -118,7 +107,11 @@ export default function PendingApprovalsScreen() {
     const isUrgent = waitMins >= 5;
 
     return (
-      <View style={[s.card, isUrgent && s.cardUrgent]}>
+      <TouchableOpacity
+        style={[s.card, isUrgent && s.cardUrgent]}
+        onPress={() => router.push({ pathname: '/visitors/approve-visitor', params: { data: JSON.stringify(item) } })}
+        activeOpacity={0.92}
+      >
         {isUrgent && (
           <View style={s.urgentBanner}>
             <Ionicons name="time-outline" size={12} color="#B45309" />
@@ -194,7 +187,7 @@ export default function PendingApprovalsScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -246,6 +239,39 @@ export default function PendingApprovalsScreen() {
         }
       />
 
+      {/* Approve confirm modal */}
+      <Modal visible={!!approveModal} transparent animationType="slide" onRequestClose={() => setApproveModal(null)}>
+        <TouchableOpacity style={s.overlay} onPress={() => setApproveModal(null)} activeOpacity={1} />
+        <View style={s.rejectModal}>
+          <View style={s.sheetHandle} />
+          <Text style={s.rejectTitle}>Allow Entry?</Text>
+          <Text style={s.rejectSub}>
+            Allow <Text style={{ fontWeight: '800' }}>{approveModal?.visitorName}</Text> into the society?
+          </Text>
+          {approveError ? (
+            <View style={s.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+              <Text style={s.errorBannerText}>{approveError}</Text>
+            </View>
+          ) : null}
+          <View style={s.rejectActions}>
+            <TouchableOpacity style={s.cancelBtn} onPress={() => setApproveModal(null)}>
+              <Text style={s.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.approveBtn, approveMutation.isPending && { opacity: 0.7 }]}
+              onPress={() => approveModal && approveMutation.mutate(approveModal.id)}
+              disabled={approveMutation.isPending}
+            >
+              {approveMutation.isPending
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={s.approveBtnText}>Allow Entry</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Reject reason modal */}
       <Modal visible={!!rejectModal} transparent animationType="slide">
         <View style={s.overlay}>
@@ -267,10 +293,16 @@ export default function PendingApprovalsScreen() {
               onChangeText={setRejectReason}
             />
 
+            {rejectError ? (
+              <View style={s.inlineError}>
+                <Ionicons name="alert-circle-outline" size={14} color="#B91C1C" />
+                <Text style={s.inlineErrorText}>{rejectError}</Text>
+              </View>
+            ) : null}
             <View style={s.rejectActions}>
               <TouchableOpacity
                 style={s.cancelBtn}
-                onPress={() => { setRejectModal(null); setRejectReason(''); }}
+                onPress={() => { setRejectModal(null); setRejectReason(''); setRejectError(''); }}
               >
                 <Text style={s.cancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -341,6 +373,9 @@ const s = StyleSheet.create({
     paddingVertical: 12, borderRadius: RADIUS.md, backgroundColor: '#059669', ...SHADOWS.sm,
   },
   approveBtnText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 8 },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  errorBannerText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
 
   empty: { alignItems: 'center', paddingTop: 80, gap: SPACING.sm },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
@@ -357,4 +392,6 @@ const s = StyleSheet.create({
   cancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
   confirmDenyBtn: { flex: 1, paddingVertical: SPACING.md, borderRadius: RADIUS.md, backgroundColor: '#DC2626', alignItems: 'center', ...SHADOWS.sm },
   confirmDenyText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  inlineError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  inlineErrorText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
 });

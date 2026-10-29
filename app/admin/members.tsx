@@ -276,14 +276,14 @@ export default function MembersScreen() {
           renderItem={renderItem}
           contentContainerStyle={{ paddingVertical: 8 }}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />
           }
           onEndReached={() => hasNextPage && fetchNextPage()}
           onEndReachedThreshold={0.4}
           ListFooterComponent={
             isFetchingNextPage
               ? <ActivityIndicator style={{ padding: 16 }} color={COLORS.primary} />
-              : null
+              : undefined
           }
           ListEmptyComponent={
             <View style={s.empty}>

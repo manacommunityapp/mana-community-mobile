@@ -187,7 +187,6 @@ export default function HealthProfileScreen() {
             <Text style={styles.switchSub}>Shared with responders in an emergency</Text>
           </View>
           <Switch
-            value={profile.organDonorConsent ?? false}
             onValueChange={v => {
               if (editing) set('organDonorConsent', v);
             }}

@@ -153,7 +153,7 @@ export default function GovernanceOverviewScreen() {
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       <ScrollView
         contentContainerStyle={s.scrollContent}
@@ -501,6 +501,29 @@ export default function GovernanceOverviewScreen() {
                 General body enacted laws, society bylaws, audited balance sheets, and Fire/KSPCB NOCs.
               </Text>
               <Text style={s.hubActionText}>Access Certified Vault →</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Card 5: Elections */}
+          <TouchableOpacity
+            style={s.hubCard}
+            onPress={() => router.push('/governance/elections' as any)}
+            activeOpacity={0.85}
+          >
+            <View style={[s.hubIconCircle, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="ribbon" size={24} color="#D97706" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={s.hubTopLine}>
+                <Text style={s.hubTitle}>Society MC Elections</Text>
+                <View style={[s.hubBadge, { backgroundColor: '#FEF3C7' }]}>
+                  <Text style={[s.hubBadgeText, { color: '#D97706' }]}>VOTING OPEN</Text>
+                </View>
+              </View>
+              <Text style={s.hubDesc}>
+                Nominate & vote for President, Secretary, Treasurer and General Members of the Managing Committee.
+              </Text>
+              <Text style={s.hubActionText}>View Candidates & Vote →</Text>
             </View>
           </TouchableOpacity>
         </View>

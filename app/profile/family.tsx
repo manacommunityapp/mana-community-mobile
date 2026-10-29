@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, Modal, TextInput, ScrollView, Switch,
+  ActivityIndicator, Modal, TextInput, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,12 +24,6 @@ const RELATION_META: Record<FamilyMemberType, { label: string; color: string; bg
   OTHER:   { label: 'Other',   color: '#6B7280', bg: '#F3F4F6', icon: 'person-outline' },
 };
 
-const MOCK_FAMILY: FamilyMember[] = [
-  { id: 1, name: 'Priya Kumar',  relation: 'SPOUSE',  phone: '9876543210', isMinor: false, isEmergencyContact: true,  addedAt: new Date().toISOString() },
-  { id: 2, name: 'Aarav Kumar',  relation: 'CHILD',   phone: undefined,    isMinor: true,  isEmergencyContact: false, addedAt: new Date().toISOString() },
-  { id: 3, name: 'Sneha Kumar',  relation: 'CHILD',   phone: undefined,    isMinor: true,  isEmergencyContact: false, addedAt: new Date().toISOString() },
-];
-
 const BLANK: AddFamilyMemberRequest = {
   name: '', relation: 'SPOUSE', phone: '', isEmergencyContact: false, isMinor: false,
 };
@@ -39,13 +33,16 @@ export default function FamilyScreen() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<AddFamilyMemberRequest>({ ...BLANK });
+  const [confirmRemove, setConfirmRemove] = useState<FamilyMember | null>(null);
+  const [formErr, setFormErr] = useState('');
+  const [mutErr, setMutErr] = useState('');
 
   const { data: raw, isLoading } = useQuery<FamilyMember[]>({
     queryKey: ['family', 'members'],
     queryFn: () => familyService.getMyFamily(),
     staleTime: 30_000,
   });
-  const members = (raw && raw.length > 0) ? raw : MOCK_FAMILY;
+  const members = raw ?? [];
 
   const addMutation = useMutation({
     mutationFn: (data: AddFamilyMemberRequest) => familyService.addFamilyMember(data),
@@ -53,29 +50,22 @@ export default function FamilyScreen() {
       queryClient.invalidateQueries({ queryKey: ['family'] });
       setShowModal(false);
       setForm({ ...BLANK });
+      setFormErr('');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setFormErr(err.message || 'Failed to add family member.'),
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: number) => familyService.removeFamilyMember(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['family'] }),
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['family'] }); setConfirmRemove(null); },
+    onError: (err: any) => { setMutErr(err.message || 'Failed to remove member.'); setConfirmRemove(null); },
   });
 
-  const handleLongPress = (item: FamilyMember) => {
-    Alert.alert(
-      'Remove Member',
-      `Remove ${item.name} from your family list?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => removeMutation.mutate(item.id) },
-      ]
-    );
-  };
+  const handleLongPress = (item: FamilyMember) => setConfirmRemove(item);
 
   const handleAdd = () => {
-    if (!form.name.trim()) { Alert.alert('Missing Info', 'Please enter a name.'); return; }
+    if (!form.name.trim()) { setFormErr('Please enter a name.'); return; }
+    setFormErr('');
     addMutation.mutate(form);
   };
 
@@ -159,6 +149,46 @@ export default function FamilyScreen() {
         />
       )}
 
+      {/* Mutation error banner */}
+      {!!mutErr && (
+        <Modal visible transparent animationType="fade">
+          <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setMutErr('')}>
+            <View style={s.errBanner}>
+              <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
+              <Text style={s.errBannerText}>{mutErr}</Text>
+              <TouchableOpacity onPress={() => setMutErr('')} hitSlop={8}>
+                <Ionicons name="close" size={16} color="#DC2626" />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
+      {/* Remove confirm */}
+      <Modal visible={!!confirmRemove} transparent animationType="slide">
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setConfirmRemove(null)}>
+          <View style={s.confirmSheet}>
+            <Text style={s.confirmTitle}>Remove Member</Text>
+            <Text style={s.confirmMsg}>Remove {confirmRemove?.name} from your family list?</Text>
+            <View style={s.confirmBtns}>
+              <TouchableOpacity style={s.confirmCancel} onPress={() => setConfirmRemove(null)}>
+                <Text style={s.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.confirmOkRed}
+                onPress={() => confirmRemove && removeMutation.mutate(confirmRemove.id)}
+                disabled={removeMutation.isPending}
+              >
+                {removeMutation.isPending
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={s.confirmOkText}>Remove</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Modal visible={showModal} transparent animationType="slide">
         <View style={s.overlay}>
           <View style={s.modal}>
@@ -169,6 +199,12 @@ export default function FamilyScreen() {
               </TouchableOpacity>
             </View>
 
+            {!!formErr && (
+              <View style={s.inlineErr}>
+                <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+                <Text style={s.inlineErrText}>{formErr}</Text>
+              </View>
+            )}
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={s.label}>Name *</Text>
               <TextInput
@@ -292,6 +328,18 @@ const s = StyleSheet.create({
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
   modal: { backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.xl, maxHeight: '85%' },
+  confirmSheet: { backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.xl, gap: SPACING.md },
+  confirmTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  confirmMsg: { fontSize: 13, color: COLORS.textSecondary, fontFamily: 'DMSans-Regular', lineHeight: 18 },
+  confirmBtns: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  confirmCancel: { flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  confirmCancelText: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary, fontFamily: 'Outfit-Bold' },
+  confirmOkRed: { flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: '#DC2626' },
+  confirmOkText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  errBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEE2E2', margin: SPACING.md, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: 'auto' as any },
+  errBannerText: { flex: 1, fontSize: 13, color: '#DC2626', fontFamily: 'DMSans-Regular' },
+  inlineErr: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md },
+  inlineErrText: { flex: 1, fontSize: 12, color: '#DC2626', fontFamily: 'DMSans-Regular', lineHeight: 17 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
   modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   label: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 5, fontFamily: 'DMSans-Medium' },

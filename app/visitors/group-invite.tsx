@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList, Alert,
+  View, Text, StyleSheet, TouchableOpacity, FlatList,
   ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView,
 } from 'react-native';
+import { Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,30 +19,6 @@ import {
 
 const ACCENT = '#7C3AED';
 
-const MOCK_INVITES: GroupInvite[] = [
-  {
-    id: 1,
-    title: 'Diwali Gathering',
-    eventDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split('T')[0],
-    startTime: '18:00',
-    endTime: '23:00',
-    passCode: 'MANA-DIWALI22',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-    totalGuests: 8,
-    checkedIn: 3,
-    guests: [
-      { name: 'Rohan Sharma', phone: '9876500001', checkedIn: true },
-      { name: 'Priya Mehta', phone: '9876500002', checkedIn: true },
-      { name: 'Arjun Gupta', phone: '9876500003', vehicleNumber: 'KA-01-AB-1234', checkedIn: true },
-      { name: 'Sneha Joshi', phone: '9876500004', checkedIn: false },
-      { name: 'Vikram Nair', vehicleNumber: 'MH-04-CD-5678', checkedIn: false },
-      { name: 'Anita Desai', phone: '9876500006', checkedIn: false },
-      { name: 'Kiran Rao', checkedIn: false },
-      { name: 'Suresh Pillai', phone: '9876500008', checkedIn: false },
-    ],
-  },
-];
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -55,6 +32,8 @@ export default function GroupInviteScreen() {
   const [tab, setTab] = useState<'active' | 'past'>('active');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [cancelConfirmId, setCancelConfirmId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [form, setForm] = useState<CreateGroupInviteRequest>({
     title: '',
@@ -69,7 +48,7 @@ export default function GroupInviteScreen() {
     queryFn: () => groupInviteService.getMyGroupInvites(),
     staleTime: 30_000,
   });
-  const invites = (raw && raw.length > 0) ? raw : MOCK_INVITES;
+  const invites = raw ?? [];
 
   const activeInvites = invites.filter(i => i.status === 'ACTIVE');
   const pastInvites   = invites.filter(i => i.status !== 'ACTIVE');
@@ -84,27 +63,27 @@ export default function GroupInviteScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visitors', 'group-invites'] });
       setShowCreate(false);
+      setCreateError('');
       setForm({ title: '', eventDate: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString().split('T')[0], startTime: '18:00', endTime: '22:00', guests: [EMPTY_GUEST()] });
-      Alert.alert('🎉 Invite Created', 'Share the pass code with your guests at the gate.');
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setCreateError(err?.message || 'Failed to create invite. Try again.'),
   });
 
   const cancelMutation = useMutation({
     mutationFn: (id: number) => groupInviteService.cancelGroupInvite(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visitors', 'group-invites'] }),
-    onError: (err: any) => Alert.alert('Error', err.message),
   });
 
   const handleCreate = () => {
     const validGuests = form.guests.filter(g => g.name.trim());
-    if (!form.title.trim()) { Alert.alert('Title required', 'Please enter an event title.'); return; }
-    if (validGuests.length === 0) { Alert.alert('Add guests', 'Please add at least one guest.'); return; }
+    if (!form.title.trim()) { setCreateError('Please enter an event title.'); return; }
+    if (validGuests.length === 0) { setCreateError('Please add at least one guest.'); return; }
+    setCreateError('');
     createMutation.mutate({ ...form, guests: validGuests });
   };
 
   const addGuest = () => {
-    if (form.guests.length >= 50) { Alert.alert('Limit reached', 'Maximum 50 guests per invite.'); return; }
+    if (form.guests.length >= 50) return;
     setForm(f => ({ ...f, guests: [...f.guests, EMPTY_GUEST()] }));
   };
 
@@ -174,7 +153,7 @@ export default function GroupInviteScreen() {
           {item.status === 'ACTIVE' && (
             <TouchableOpacity
               style={s.shareBtn}
-              onPress={() => Alert.alert('Pass Code', `Share this code with your guests:\n\n${item.passCode}\n\nGuards will use this to verify guests at the gate.`)}
+              onPress={() => Share.share({ message: `Mana Community Group Invite\nEvent: ${item.title}\nPass Code: ${item.passCode}\nDate: ${fmtDate(item.eventDate)}\n\nShare this code with your guests at the gate.` })}
             >
               <Ionicons name="share-outline" size={14} color={ACCENT} />
               <Text style={s.shareBtnText}>Share</Text>
@@ -207,10 +186,7 @@ export default function GroupInviteScreen() {
         {item.status === 'ACTIVE' && (
           <TouchableOpacity
             style={s.cancelBtn}
-            onPress={() => Alert.alert('Cancel Invite', `Cancel "${item.title}"? Guests won't be able to enter with this pass code.`, [
-              { text: 'Keep', style: 'cancel' },
-              { text: 'Cancel Invite', style: 'destructive', onPress: () => cancelMutation.mutate(item.id) },
-            ])}
+            onPress={() => setCancelConfirmId(item.id)}
           >
             <Text style={s.cancelBtnText}>Cancel Invite</Text>
           </TouchableOpacity>
@@ -298,14 +274,11 @@ export default function GroupInviteScreen() {
               />
 
               <Text style={s.label}>Event Date</Text>
-              <TouchableOpacity
-                style={[s.input, { justifyContent: 'center' }]}
-                onPress={() => Alert.alert('Date Picker', 'A native date picker will appear here. Default set to 3 days from now.')}
-              >
+              <View style={[s.input, { justifyContent: 'center' }]}>
                 <Text style={{ color: COLORS.text, fontFamily: 'DMSans-Regular', fontSize: 13 }}>
                   {fmtDate(form.eventDate)}
                 </Text>
-              </TouchableOpacity>
+              </View>
 
               <View style={{ flexDirection: 'row', gap: SPACING.md }}>
                 <View style={{ flex: 1 }}>
@@ -380,13 +353,16 @@ export default function GroupInviteScreen() {
                 <Text style={s.addGuestText}>Add Guest</Text>
               </TouchableOpacity>
 
+              {createError ? (
+                <View style={s.inlineError}>
+                  <Ionicons name="alert-circle-outline" size={14} color="#B91C1C" />
+                  <Text style={s.inlineErrorText}>{createError}</Text>
+                </View>
+              ) : null}
               <TouchableOpacity
-                style={[
-                  s.createBtn,
-                  (!form.title.trim() || form.guests.filter(g => g.name.trim()).length === 0 || createMutation.isPending) && { opacity: 0.5 },
-                ]}
+                style={[s.createBtn, createMutation.isPending && { opacity: 0.7 }]}
                 onPress={handleCreate}
-                disabled={!form.title.trim() || form.guests.filter(g => g.name.trim()).length === 0 || createMutation.isPending}
+                disabled={createMutation.isPending}
               >
                 {createMutation.isPending
                   ? <ActivityIndicator size="small" color="#fff" />
@@ -396,6 +372,33 @@ export default function GroupInviteScreen() {
               <View style={{ height: 20 }} />
             </ScrollView>
           </View>
+        </View>
+      </Modal>
+
+      {/* Cancel invite confirm bottom sheet */}
+      <Modal
+        visible={cancelConfirmId !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCancelConfirmId(null)}
+      >
+        <TouchableOpacity style={s.cancelOverlay} onPress={() => setCancelConfirmId(null)} activeOpacity={1} />
+        <View style={s.cancelSheet}>
+          <View style={s.cancelSheetHandle} />
+          <Text style={s.cancelSheetTitle}>Cancel Invite?</Text>
+          <Text style={s.cancelSheetSub}>
+            Guests won't be able to enter with this pass code once cancelled.
+          </Text>
+          <TouchableOpacity
+            style={[s.cancelConfirmBtn, cancelMutation.isPending && { opacity: 0.7 }]}
+            onPress={() => { if (cancelConfirmId !== null) { cancelMutation.mutate(cancelConfirmId); setCancelConfirmId(null); } }}
+            disabled={cancelMutation.isPending}
+          >
+            {cancelMutation.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.cancelConfirmText}>Cancel Invite</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity style={s.keepBtn} onPress={() => setCancelConfirmId(null)}>
+            <Text style={s.keepBtnText}>Keep</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </SafeAreaView>
@@ -481,4 +484,15 @@ const s = StyleSheet.create({
 
   createBtn: { backgroundColor: ACCENT, paddingVertical: 14, borderRadius: RADIUS.md, alignItems: 'center', ...SHADOWS.sm },
   createBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  inlineError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  inlineErrorText: { flex: 1, fontSize: 12, color: '#B91C1C', fontFamily: 'DMSans-Regular' },
+  cancelOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
+  cancelSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.lg, paddingBottom: 36, gap: 12 },
+  cancelSheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 8 },
+  cancelSheetTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center', fontFamily: 'Outfit-Bold' },
+  cancelSheetSub: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20, fontFamily: 'DMSans-Regular' },
+  cancelConfirmBtn: { backgroundColor: '#EF4444', borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
+  cancelConfirmText: { fontSize: 15, fontWeight: '800', color: '#fff', fontFamily: 'Outfit-Bold' },
+  keepBtn: { backgroundColor: '#F1F5F9', borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center' },
+  keepBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
 });

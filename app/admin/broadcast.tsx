@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Alert, ActivityIndicator, TextInput, FlatList,
+  ActivityIndicator, TextInput, FlatList, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -47,45 +47,6 @@ const TARGET_REACH: Record<BroadcastTarget, number> = {
   ALL: 240, BLOCK_A: 80, BLOCK_B: 80, BLOCK_C: 80, OWNERS_ONLY: 140, TENANTS_ONLY: 100,
 };
 
-const MOCK_HISTORY: Broadcast[] = [
-  {
-    id: 1,
-    title: 'Water Supply Interruption',
-    message: 'Water supply will be interrupted from 10 AM to 2 PM today due to tank cleaning. Please store water in advance.',
-    category: 'WATER',
-    priority: 'HIGH',
-    target: 'ALL',
-    sentAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    status: 'SENT',
-    sentBy: 'Society Admin',
-    reachCount: 240,
-  },
-  {
-    id: 2,
-    title: 'Security Alert — Suspicious Vehicle',
-    message: 'A suspicious vehicle (MH-12-AB-1234, white sedan) has been spotted near Gate 2. Please be alert and report to security.',
-    category: 'SECURITY',
-    priority: 'CRITICAL',
-    target: 'ALL',
-    sentAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
-    status: 'SENT',
-    sentBy: 'Security Officer',
-    reachCount: 240,
-  },
-  {
-    id: 3,
-    title: 'Elevator Maintenance — Tower B',
-    message: 'Tower B elevator will be under maintenance tomorrow (Saturday) from 9 AM to 12 PM. Please use the staircase during this time.',
-    category: 'MAINTENANCE',
-    priority: 'MEDIUM',
-    target: 'BLOCK_B',
-    sentAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-    status: 'SENT',
-    sentBy: 'Maintenance Team',
-    reachCount: 80,
-  },
-];
-
 function timeAgo(iso: string) {
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (mins < 60) return `${mins}m ago`;
@@ -104,37 +65,35 @@ export default function BroadcastScreen() {
     priority: 'MEDIUM',
     target: 'ALL',
   });
+  const [confirmSend, setConfirmSend] = useState(false);
+  const [formErr, setFormErr] = useState('');
+  const [sendSuccess, setSendSuccess] = useState('');
 
   const { data: rawHistory, isLoading } = useQuery<Broadcast[]>({
     queryKey: ['admin', 'broadcasts'],
     queryFn: () => broadcastService.getBroadcastHistory(),
     staleTime: 30_000,
   });
-  const history = (rawHistory && rawHistory.length > 0) ? rawHistory : MOCK_HISTORY;
+  const history = rawHistory ?? [];
 
   const sendMutation = useMutation({
     mutationFn: (data: SendBroadcastRequest) => broadcastService.sendBroadcast(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'broadcasts'] });
+      const reach = TARGET_REACH[form.target];
       setForm({ title: '', message: '', category: 'GENERAL', priority: 'MEDIUM', target: 'ALL' });
-      Alert.alert('📣 Broadcast Sent', `Message delivered to ${TARGET_REACH[form.target]} residents.`);
+      setConfirmSend(false);
+      setSendSuccess(`Broadcast sent to ${reach} residents.`);
+      setTimeout(() => setSendSuccess(''), 3000);
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => { setFormErr(err.message || 'Failed to send broadcast.'); setConfirmSend(false); },
   });
 
   const handleSend = () => {
-    if (!form.title.trim()) { Alert.alert('Title required', 'Please enter a broadcast title.'); return; }
-    if (!form.message.trim()) { Alert.alert('Message required', 'Please enter a message to broadcast.'); return; }
-    const reach = TARGET_REACH[form.target];
-    const priorityLabel = PRIORITY_META[form.priority].label;
-    Alert.alert(
-      `Send ${priorityLabel} Broadcast?`,
-      `"${form.title}"\n\nThis will be sent to ${reach} residents immediately.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Send Now', style: form.priority === 'CRITICAL' ? 'destructive' : 'default', onPress: () => sendMutation.mutate(form) },
-      ]
-    );
+    if (!form.title.trim()) { setFormErr('Please enter a broadcast title.'); return; }
+    if (!form.message.trim()) { setFormErr('Please enter a message to broadcast.'); return; }
+    setFormErr('');
+    setConfirmSend(true);
   };
 
   const isHighPriority = form.priority === 'CRITICAL' || form.priority === 'HIGH';
@@ -276,6 +235,20 @@ export default function BroadcastScreen() {
             <Text style={s.reachLabel}>Will reach ~{TARGET_REACH[form.target]} residents</Text>
           </View>
 
+          {/* Status banners */}
+          {!!sendSuccess && (
+            <View style={s.successBanner}>
+              <Ionicons name="checkmark-circle" size={16} color="#059669" />
+              <Text style={s.successBannerText}>{sendSuccess}</Text>
+            </View>
+          )}
+          {!!formErr && (
+            <View style={s.inlineErr}>
+              <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+              <Text style={s.inlineErrText}>{formErr}</Text>
+            </View>
+          )}
+
           {/* Send button */}
           <TouchableOpacity
             style={[
@@ -315,6 +288,31 @@ export default function BroadcastScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* Confirm send modal */}
+      <Modal visible={confirmSend} transparent animationType="slide">
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setConfirmSend(false)}>
+          <View style={s.confirmSheet}>
+            <Text style={s.confirmTitle}>Send {PRIORITY_META[form.priority].label} Broadcast?</Text>
+            <Text style={s.confirmMsg}>"{form.title}"{'\n\n'}This will be sent to {TARGET_REACH[form.target]} residents immediately.</Text>
+            <View style={s.confirmBtns}>
+              <TouchableOpacity style={s.confirmCancel} onPress={() => setConfirmSend(false)}>
+                <Text style={s.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.confirmOk, form.priority === 'CRITICAL' && s.confirmOkRed]}
+                onPress={() => sendMutation.mutate(form)}
+                disabled={sendMutation.isPending}
+              >
+                {sendMutation.isPending
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={s.confirmOkText}>Send Now</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -373,4 +371,18 @@ const s = StyleSheet.create({
   targetChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5 },
   targetChipText: { fontSize: 10, fontWeight: '600', color: COLORS.primary, fontFamily: 'DMSans-Medium' },
   reachText: { fontSize: 11, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  confirmSheet: { backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.xl, gap: SPACING.md },
+  confirmTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  confirmMsg: { fontSize: 13, color: COLORS.textSecondary, fontFamily: 'DMSans-Regular', lineHeight: 18 },
+  confirmBtns: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  confirmCancel: { flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  confirmCancelText: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary, fontFamily: 'Outfit-Bold' },
+  confirmOk: { flex: 1, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: '#059669' },
+  confirmOkRed: { backgroundColor: '#DC2626' },
+  confirmOkText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  successBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md },
+  successBannerText: { flex: 1, fontSize: 13, color: '#065F46', fontFamily: 'DMSans-Medium', fontWeight: '600' },
+  inlineErr: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md },
+  inlineErrText: { flex: 1, fontSize: 12, color: '#DC2626', fontFamily: 'DMSans-Regular', lineHeight: 17 },
 });

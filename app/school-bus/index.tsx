@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView,
+  ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,15 +24,6 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ic
   IDLE:             { label: 'Idle',              color: '#6B7280', bg: '#F3F4F6', icon: 'time-outline' },
 };
 
-const MOCK_CHILDREN: RegisteredChild[] = [
-  { id: 1, name: 'Aarav Kumar',  grade: 'Grade 5', schoolName: 'Delhi Public School', busNumber: 'MH-12-3456', stopName: 'Tower A Gate', busId: 1 },
-  { id: 2, name: 'Priya Kumar',  grade: 'Grade 2', schoolName: 'Delhi Public School', busNumber: 'MH-12-3456', stopName: 'Tower A Gate', busId: 1 },
-];
-
-const MOCK_TRIPS: BusTripLog[] = [
-  { id: 1, busId: 1, direction: 'FROM_SCHOOL', date: new Date().toISOString().split('T')[0], departureTime: '14:00', arrivalTime: '15:15', childPickedUp: true, pickedUpAt: '14:30', droppedOffAt: '15:15' },
-  { id: 2, busId: 1, direction: 'TO_SCHOOL',   date: new Date().toISOString().split('T')[0], departureTime: '07:30', arrivalTime: '08:10', childPickedUp: true, pickedUpAt: '07:35', droppedOffAt: '08:10' },
-];
 
 function formatTime(iso?: string) {
   if (!iso) return '--';
@@ -47,13 +38,16 @@ export default function SchoolBusScreen() {
   const [showRegister, setShowRegister] = useState(false);
   const [form, setForm] = useState<RegisterChildRequest>({ name: '', grade: '', schoolName: '', stopName: '' });
   const [refreshing, setRefreshing] = useState(false);
+  const [regSuccess, setRegSuccess] = useState('');
+  const [regErr, setRegErr] = useState('');
+  const [formErr, setFormErr] = useState('');
 
   const { data: rawChildren, isLoading: loadingChildren, refetch: refetchChildren } = useQuery<RegisteredChild[]>({
     queryKey: ['school-bus', 'my-children'],
     queryFn: () => schoolBusService.getMyChildren(),
     staleTime: 30_000,
   });
-  const children = (rawChildren && rawChildren.length > 0) ? rawChildren : MOCK_CHILDREN;
+  const children = rawChildren ?? [];
 
   const { data: rawTrips, isLoading: loadingTrips, refetch: refetchTrips } = useQuery<BusTripLog[]>({
     queryKey: ['school-bus', 'trips', children[0]?.id],
@@ -61,7 +55,7 @@ export default function SchoolBusScreen() {
     enabled: !!children[0],
     staleTime: 60_000,
   });
-  const trips = (rawTrips && rawTrips.length > 0) ? rawTrips : MOCK_TRIPS;
+  const trips = rawTrips ?? [];
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -72,18 +66,26 @@ export default function SchoolBusScreen() {
     mutationFn: (data: RegisterChildRequest) => schoolBusService.registerChild(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['school-bus'] });
-      setShowRegister(false);
       setForm({ name: '', grade: '', schoolName: '', stopName: '' });
-      Alert.alert('Child Registered', 'Your child has been registered for school bus tracking.');
+      setFormErr('');
+      setRegErr('');
+      setRegSuccess('Child registered for school bus tracking!');
+      setTimeout(() => {
+        setShowRegister(false);
+        setRegSuccess('');
+      }, 1800);
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => {
+      setRegErr(err.message || 'Failed to register. Please try again.');
+    },
   });
 
   const handleRegister = () => {
     if (!form.name.trim() || !form.grade.trim() || !form.schoolName.trim()) {
-      Alert.alert('Missing Info', 'Please fill in name, grade, and school name.');
+      setFormErr('Please fill in name, grade, and school name.');
       return;
     }
+    setFormErr('');
     registerMutation.mutate(form);
   };
 
@@ -238,6 +240,22 @@ export default function SchoolBusScreen() {
               </TouchableOpacity>
             </View>
 
+            {!!regSuccess && (
+              <View style={s.successBanner}>
+                <Text style={s.successBannerText}>{regSuccess}</Text>
+              </View>
+            )}
+            {!!regErr && (
+              <View style={s.errorBanner}>
+                <Text style={s.errorBannerText}>{regErr}</Text>
+              </View>
+            )}
+            {!!formErr && (
+              <View style={s.errorBanner}>
+                <Text style={s.errorBannerText}>{formErr}</Text>
+              </View>
+            )}
+
             <ScrollView showsVerticalScrollIndicator={false}>
               {[
                 { key: 'name',       label: "Child's Name",   placeholder: 'e.g. Aarav Kumar' },
@@ -252,7 +270,7 @@ export default function SchoolBusScreen() {
                     placeholder={field.placeholder}
                     placeholderTextColor={COLORS.textMuted}
                     value={(form as any)[field.key]}
-                    onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                    onChangeText={v => { setForm(f => ({ ...f, [field.key]: v })); setFormErr(''); }}
                   />
                 </View>
               ))}
@@ -343,4 +361,8 @@ const s = StyleSheet.create({
   input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: 13, color: COLORS.text, fontFamily: 'DMSans-Regular' },
   submitBtn: { backgroundColor: '#D97706', paddingVertical: 14, borderRadius: RADIUS.md, alignItems: 'center', marginTop: SPACING.md, ...SHADOWS.sm },
   submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  successBanner: { backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: 12, marginBottom: SPACING.md },
+  successBannerText: { color: '#065F46', fontWeight: '700', fontSize: 13 },
+  errorBanner: { backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: 12, marginBottom: SPACING.md },
+  errorBannerText: { color: '#991B1B', fontWeight: '600', fontSize: 13 },
 });

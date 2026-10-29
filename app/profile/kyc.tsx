@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Alert, ActivityIndicator, Modal, TextInput,
+  ActivityIndicator, Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,20 +17,6 @@ import {
   KycStatus,
   SubmitKycRequest,
 } from '@/services/kycService';
-
-const MOCK_KYC: KycSummary = {
-  overallStatus: 'PENDING_REVIEW',
-  submittedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-  documents: [
-    {
-      id: 1,
-      documentType: 'AADHAAR',
-      documentNumber: 'XXXX XXXX 4521',
-      status: 'PENDING_REVIEW',
-      submittedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    },
-  ],
-};
 
 const DOC_TYPES: { type: KycDocumentType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { type: 'AADHAAR',          label: 'Aadhaar Card',       icon: 'card-outline' },
@@ -65,23 +51,25 @@ export default function KycScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [resubmitDoc, setResubmitDoc] = useState<KycDocument | null>(null);
   const [form, setForm] = useState<SubmitKycRequest>({ documentType: 'AADHAAR', documentNumber: '' });
+  const [formError, setFormError] = useState('');
+  const [modalSuccess, setModalSuccess] = useState('');
 
-  const { data: rawKyc, isLoading } = useQuery<KycSummary | null>({
+  const { data: kyc, isLoading } = useQuery<KycSummary>({
     queryKey: ['kyc', 'status'],
     queryFn: () => kycService.getKycStatus(),
     staleTime: 60_000,
   });
-  const kyc = rawKyc ?? MOCK_KYC;
 
   const submitMutation = useMutation({
     mutationFn: (data: SubmitKycRequest) => kycService.submitDocument(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kyc'] });
-      setShowAdd(false);
       setForm({ documentType: 'AADHAAR', documentNumber: '' });
-      Alert.alert('Document Submitted', 'Your document is now under review. You will be notified once verified.');
+      setFormError('');
+      setModalSuccess('Document submitted! You will be notified once verified.');
+      setTimeout(() => { setShowAdd(false); setModalSuccess(''); }, 2200);
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setFormError(err.message || 'Submission failed. Please try again.'),
   });
 
   const resubmitMutation = useMutation({
@@ -90,13 +78,16 @@ export default function KycScreen() {
       queryClient.invalidateQueries({ queryKey: ['kyc'] });
       setResubmitDoc(null);
       setForm({ documentType: 'AADHAAR', documentNumber: '' });
-      Alert.alert('Resubmitted', 'Your document has been resubmitted for review.');
+      setFormError('');
+      setModalSuccess('Document resubmitted for review.');
+      setTimeout(() => { setShowAdd(false); setModalSuccess(''); }, 2200);
     },
-    onError: (err: any) => Alert.alert('Error', err.message),
+    onError: (err: any) => setFormError(err.message || 'Resubmission failed. Please try again.'),
   });
 
   const handleSubmit = () => {
-    if (!form.documentNumber.trim()) { Alert.alert('Required', 'Please enter the document number.'); return; }
+    if (!form.documentNumber.trim()) { setFormError('Please enter the document number.'); return; }
+    setFormError('');
     if (resubmitDoc) {
       resubmitMutation.mutate({ id: resubmitDoc.id, data: form });
     } else {
@@ -215,7 +206,7 @@ export default function KycScreen() {
           <View style={s.modal}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>{resubmitDoc ? 'Resubmit Document' : 'Add Document'}</Text>
-              <TouchableOpacity onPress={() => { setShowAdd(false); setResubmitDoc(null); }} hitSlop={8}>
+              <TouchableOpacity onPress={() => { setShowAdd(false); setResubmitDoc(null); setFormError(''); setModalSuccess(''); }} hitSlop={8}>
                 <Ionicons name="close" size={22} color={COLORS.text} />
               </TouchableOpacity>
             </View>
@@ -246,25 +237,23 @@ export default function KycScreen() {
               autoCapitalize="characters"
             />
 
-            <Text style={s.label}>Front Side</Text>
-            <TouchableOpacity
-              style={s.uploadBox}
-              onPress={() => Alert.alert('Camera Integration', 'Camera and gallery integration will be available in the next update.')}
-            >
-              <Ionicons name="camera-outline" size={28} color={COLORS.textMuted} />
-              <Text style={s.uploadText}>Tap to upload front side</Text>
-              <Text style={s.uploadSub}>JPG, PNG • Max 5MB</Text>
-            </TouchableOpacity>
+            <Text style={s.label}>Document Photos</Text>
+            <View style={s.uploadNote}>
+              <Ionicons name="information-circle-outline" size={15} color="#2563EB" />
+              <Text style={s.uploadNoteText}>Photo upload will be available in the next update. Submit your document number to proceed — society staff will verify in person.</Text>
+            </View>
 
-            <Text style={s.label}>Back Side (if applicable)</Text>
-            <TouchableOpacity
-              style={[s.uploadBox, { marginBottom: SPACING.lg }]}
-              onPress={() => Alert.alert('Camera Integration', 'Camera and gallery integration will be available in the next update.')}
-            >
-              <Ionicons name="camera-outline" size={28} color={COLORS.textMuted} />
-              <Text style={s.uploadText}>Tap to upload back side</Text>
-              <Text style={s.uploadSub}>Optional for some documents</Text>
-            </TouchableOpacity>
+            {modalSuccess ? (
+              <View style={s.successBanner}>
+                <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                <Text style={s.successBannerText}>{modalSuccess}</Text>
+              </View>
+            ) : formError ? (
+              <View style={s.errorInline}>
+                <Ionicons name="alert-circle-outline" size={15} color="#DC2626" />
+                <Text style={s.errorInlineText}>{formError}</Text>
+              </View>
+            ) : null}
 
             <TouchableOpacity
               style={[s.submitBtn, (submitMutation.isPending || resubmitMutation.isPending) && { opacity: 0.7 }]}
@@ -339,4 +328,10 @@ const s = StyleSheet.create({
   uploadSub: { fontSize: 11, color: COLORS.textMuted, fontFamily: 'DMSans-Regular' },
   submitBtn: { backgroundColor: '#059669', paddingVertical: 14, borderRadius: RADIUS.md, alignItems: 'center', ...SHADOWS.sm },
   submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', fontFamily: 'Outfit-Bold' },
+  uploadNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#EFF6FF', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: '#BFDBFE' },
+  uploadNoteText: { flex: 1, fontSize: 12, color: '#1E40AF', fontFamily: 'DMSans-Regular', lineHeight: 17 },
+  errorInline: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#FEE2E2', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md },
+  errorInlineText: { flex: 1, fontSize: 12, color: '#DC2626', fontFamily: 'DMSans-Regular', lineHeight: 17 },
+  successBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#D1FAE5', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md },
+  successBannerText: { flex: 1, fontSize: 13, color: '#065F46', fontFamily: 'DMSans-Medium', fontWeight: '600' },
 });

@@ -83,7 +83,7 @@ export default function MyHelpScreen() {
         data={staffList}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); }} colors={['#4F46E5']} />}
         renderItem={({ item }) => {
           const rcfg = ROLE_CONFIG[item.role] || ROLE_CONFIG.HELPER;
           const todayAtt = attendance.find(a => a.staffId === item.id);

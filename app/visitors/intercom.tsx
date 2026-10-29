@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, ActivityIndicator, RefreshControl, Modal, Vibration,
+  ActivityIndicator, RefreshControl, Modal, Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -48,6 +48,9 @@ export default function IntercomScreen() {
   const [activeCall, setActiveCall] = useState<IntercomCall | null>(null);
   const [callModalVisible, setCallModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'log' | 'devices'>('log');
+  const [gateUnlockNote, setGateUnlockNote] = useState(false);
+  const [confirmUnlockId, setConfirmUnlockId] = useState<number | null>(null);
+  const [unlockedDeviceId, setUnlockedDeviceId] = useState<number | null>(null);
 
   const { data: calls = [], isLoading, refetch } = useQuery({
     queryKey: ['intercom-calls'],
@@ -92,7 +95,8 @@ export default function IntercomScreen() {
       intercomService.performCallAction({ callId: activeCall!.id, action }),
     onSuccess: (_, action) => {
       if (action === 'UNLOCK_GATE') {
-        Alert.alert('Gate Unlocked', 'The gate has been unlocked for the visitor.');
+        setGateUnlockNote(true);
+        setTimeout(() => setGateUnlockNote(false), 3000);
       }
       if (action === 'END_CALL' || action === 'DENY_ENTRY') {
         setCallModalVisible(false);
@@ -104,7 +108,10 @@ export default function IntercomScreen() {
 
   const unlockMut = useMutation({
     mutationFn: (deviceId: number) => intercomService.unlockGateRemote(deviceId),
-    onSuccess: () => Alert.alert('Gate Unlocked', 'Remote unlock sent successfully.'),
+    onSuccess: (_, deviceId) => {
+      setUnlockedDeviceId(deviceId);
+      setTimeout(() => setUnlockedDeviceId(null), 3000);
+    },
   });
 
   const renderCall = ({ item }: { item: IntercomCall }) => {
@@ -149,20 +156,39 @@ export default function IntercomScreen() {
       <View style={styles.deviceRight}>
         <View style={[styles.statusDot, { backgroundColor: item.status === 'ONLINE' ? '#22C55E' : '#EF4444' }]} />
         {item.status === 'ONLINE' && (
-          <TouchableOpacity
-            style={styles.unlockBtn}
-            onPress={() => Alert.alert(
-              'Remote Unlock',
-              `Unlock ${item.deviceName}?`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Unlock', onPress: () => unlockMut.mutate(item.id) },
-              ],
-            )}
-          >
-            <Ionicons name="lock-open-outline" size={14} color="#fff" />
-            <Text style={styles.unlockText}>Unlock</Text>
-          </TouchableOpacity>
+          unlockedDeviceId === item.id ? (
+            <View style={styles.unlockSuccess}>
+              <Ionicons name="checkmark-circle" size={14} color="#059669" />
+              <Text style={styles.unlockSuccessText}>Unlocked</Text>
+            </View>
+          ) : confirmUnlockId === item.id ? (
+            <View style={styles.confirmRow}>
+              <TouchableOpacity
+                style={styles.confirmNo}
+                onPress={() => setConfirmUnlockId(null)}
+              >
+                <Text style={styles.confirmNoText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmYes}
+                onPress={() => { unlockMut.mutate(item.id); setConfirmUnlockId(null); }}
+                disabled={unlockMut.isPending}
+              >
+                {unlockMut.isPending
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.confirmYesText}>Unlock</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.unlockBtn}
+              onPress={() => setConfirmUnlockId(item.id)}
+            >
+              <Ionicons name="lock-open-outline" size={14} color="#fff" />
+              <Text style={styles.unlockText}>Unlock</Text>
+            </TouchableOpacity>
+          )
         )}
       </View>
     </View>
@@ -239,6 +265,13 @@ export default function IntercomScreen() {
             <Text style={styles.incomingLabel}>Incoming Video Call</Text>
             <Text style={styles.incomingName}>{activeCall?.callerName || 'Visitor at Gate'}</Text>
             <Text style={styles.incomingDevice}>{activeCall?.deviceName}</Text>
+
+            {gateUnlockNote && (
+              <View style={styles.gateUnlockBanner}>
+                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Text style={styles.gateUnlockText}>Gate unlocked for visitor</Text>
+              </View>
+            )}
 
             {activeCall?.status === 'RINGING' ? (
               <View style={styles.callActions}>
@@ -337,4 +370,13 @@ const styles = StyleSheet.create({
   inCallActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
   inCallBtn: { borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', gap: 4 },
   inCallBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  gateUnlockBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#D1FAE5', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignSelf: 'stretch' },
+  gateUnlockText: { fontSize: 12, fontWeight: '600', color: '#065F46' },
+  confirmRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  confirmNo: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 7, borderWidth: 1, borderColor: '#CBD5E1' },
+  confirmNoText: { fontSize: 11, color: '#64748B', fontWeight: '600' },
+  confirmYes: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 7, backgroundColor: COLORS.primary },
+  confirmYesText: { fontSize: 11, color: '#fff', fontWeight: '600' },
+  unlockSuccess: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#D1FAE5', borderRadius: 7, paddingHorizontal: 10, paddingVertical: 5 },
+  unlockSuccessText: { fontSize: 11, color: '#059669', fontWeight: '600' },
 });

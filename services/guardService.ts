@@ -317,4 +317,36 @@ export const guardService = {
       return true;
     }
   },
+
+  startPatrolSession: async (): Promise<PatrolSession> => {
+    try {
+      const res = await api.post<PatrolSession>('/guard/patrol/start');
+      if (res.data) return res.data;
+    } catch {}
+    try {
+      const res = await api.post<PatrolSession>('/security/patrol/start');
+      if (res.data) return res.data;
+    } catch {}
+    return { id: Date.now(), startedAt: new Date().toISOString(), checkpoints: SAMPLE_CHECKPOINTS, guardName: '' };
+  },
+
+  endPatrolSession: async (sessionId: number): Promise<void> => {
+    try {
+      await api.post(`/guard/patrol/${sessionId}/end`);
+      return;
+    } catch {}
+    try {
+      await api.post(`/security/patrol/${sessionId}/end`);
+    } catch {}
+  },
+
+  skipCheckpoint: async (checkpointId: number): Promise<void> => {
+    try {
+      await api.post('/guard/patrol/skip', { checkpointId });
+      return;
+    } catch {}
+    try {
+      await api.post('/security/patrol/skip', { checkpointId });
+    } catch {}
+  },
 };

@@ -97,7 +97,7 @@ export default function JobsScreen() {
         data={jobPosts}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); }} colors={['#4F46E5']} />}
         renderItem={({ item }) => {
           const roleCfg = ROLES.find(r => r.role === item.role);
           return (

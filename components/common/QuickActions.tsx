@@ -138,6 +138,7 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
   { id: "jobs",             emoji: "📢", icon: "megaphone-outline",         label: "Job Board",     route: "/jobs",                     bg: "#F3E8FF", color: "#7C3AED", category: "Social & Sports",      badge: "NEW" },
   { id: "cpn",              emoji: "💼", icon: "briefcase-outline",         label: "Pro Network",   route: "/cpn",                      bg: "#EFF6FF", color: "#2563EB", category: "Social & Sports",      badge: "CPN" },
   { id: "trips",            emoji: "🧭", icon: "compass-outline",          label: "Community Trips",route: "/trips",                   bg: "#CCFBF1", color: "#0D9488", category: "Social & Sports" },
+  { id: "forum",            emoji: "💬", icon: "chatbubbles-outline",       label: "Community Forum", route: "/forum",                  bg: "#E0F2FE", color: "#0891B2", category: "Social & Sports", badge: "NEW" },
   { id: "polls",            emoji: "📊", icon: "bar-chart-outline",        label: "Polls & Votes", route: "/polls",                    bg: "#EDE9FE", color: "#7C3AED", category: "Social & Sports" },
   { id: "pets",             emoji: "🐾", icon: "paw-outline",              label: "Pet Care",      route: "/pets",                     bg: "#F3E8FF", color: "#9333EA", category: "Social & Sports" },
 

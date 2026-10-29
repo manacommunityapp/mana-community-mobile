@@ -128,7 +128,7 @@ export default function VehicleCareHubScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E1B4B" />
+      <StatusBar barStyle="light-content" />
 
       {/* Header */}
       <LinearGradient colors={['#1E1B4B', '#312E81', '#4F46E5']} style={styles.header}>

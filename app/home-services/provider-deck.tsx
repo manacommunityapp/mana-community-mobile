@@ -100,7 +100,7 @@ export default function ProviderDeckScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         refreshing={isLoading}
-        onRefresh={refetch}
+        onRefresh={() => { refetch(); }}
         renderItem={({ item }) => {
           const isDone = item.status === 'COMPLETED';
 
