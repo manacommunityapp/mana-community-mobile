@@ -168,4 +168,27 @@ export const staffService = {
       throw new Error(err?.response?.data?.message || 'Failed to mark attendance.');
     }
   },
+
+  async requestDomesticOtp(staffId: number): Promise<{ message: string; maskedPhone?: string }> {
+    try {
+      const res = await api.post<{ message: string; maskedPhone?: string }>(
+        `/v1/home-services/staff/${staffId}/request-otp`
+      );
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to send OTP. Check staff registration.');
+    }
+  },
+
+  async verifyDomesticOtp(staffId: number, otp: string): Promise<StaffAttendanceLog> {
+    try {
+      const res = await api.post<StaffAttendanceLog>(
+        `/v1/home-services/staff/${staffId}/verify-otp`,
+        { otp }
+      );
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Invalid OTP. Please check and try again.');
+    }
+  },
 };

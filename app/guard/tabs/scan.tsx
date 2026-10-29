@@ -12,9 +12,10 @@ import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { GUARD_COLORS } from '@/constants/guardTheme';
 import { visitorService, type VisitorDto } from '@/services/visitorService';
 import { visitorApprovalService, type PendingApproval } from '@/services/visitorApprovalService';
+import { staffService } from '@/services/staffService';
 import { useAuth } from '@/hooks/useAuth';
 
-type Mode = 'scanner' | 'manual' | 'walkin';
+type Mode = 'scanner' | 'manual' | 'walkin' | 'staffotp';
 
 interface ScanRecord {
   code: string;
@@ -72,6 +73,15 @@ export default function GuardScanScreen() {
   const [walkInError, setWalkInError] = useState('');
   const [walkInPending, setWalkInPending] = useState<PendingApproval | null>(null);
 
+  // Domestic staff OTP flow
+  const [staffIdInput, setStaffIdInput] = useState('');
+  const [staffOtpSent, setStaffOtpSent] = useState(false);
+  const [staffMaskedPhone, setStaffMaskedPhone] = useState('');
+  const [staffOtpInput, setStaffOtpInput] = useState('');
+  const [staffOtpLoading, setStaffOtpLoading] = useState(false);
+  const [staffOtpError, setStaffOtpError] = useState('');
+  const [staffOtpSuccess, setStaffOtpSuccess] = useState(false);
+
   // Prevent double-scans: ignore same QR code for 3 seconds
   const lastScanned = useRef<{ code: string; at: number } | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -123,6 +133,44 @@ export default function GuardScanScreen() {
     setWalkInPending(null);
     setWalkInName(''); setWalkInPhone(''); setWalkInPurpose('');
     setWalkInVehicle(''); setWalkInFlat(''); setWalkInError('');
+  };
+
+  const resetStaffOtp = () => {
+    setStaffIdInput(''); setStaffOtpSent(false); setStaffMaskedPhone('');
+    setStaffOtpInput(''); setStaffOtpError(''); setStaffOtpSuccess(false);
+  };
+
+  const handleStaffRequestOtp = async () => {
+    const staffId = parseInt(staffIdInput.trim(), 10);
+    if (!staffId || isNaN(staffId)) { setStaffOtpError('Enter a valid Staff ID.'); return; }
+    setStaffOtpError('');
+    setStaffOtpLoading(true);
+    try {
+      const res = await staffService.requestDomesticOtp(staffId);
+      setStaffMaskedPhone(res.maskedPhone ?? '');
+      setStaffOtpSent(true);
+    } catch (err: any) {
+      setStaffOtpError(err?.message || 'Failed to send OTP.');
+    } finally {
+      setStaffOtpLoading(false);
+    }
+  };
+
+  const handleStaffVerifyOtp = async () => {
+    const staffId = parseInt(staffIdInput.trim(), 10);
+    if (!staffOtpInput.trim()) { setStaffOtpError('Enter the OTP.'); return; }
+    setStaffOtpError('');
+    setStaffOtpLoading(true);
+    try {
+      await staffService.verifyDomesticOtp(staffId, staffOtpInput.trim());
+      setStaffOtpSuccess(true);
+      Vibration.vibrate([80, 60, 80, 60, 120]);
+      pushHistory({ code: `STAFF-${staffId}`, visitorName: `Staff #${staffId}`, action: 'OTP Entry', time: new Date(), ok: true });
+    } catch (err: any) {
+      setStaffOtpError(err?.message || 'OTP verification failed.');
+    } finally {
+      setStaffOtpLoading(false);
+    }
   };
 
   const lookup = useCallback(async (code: string) => {
@@ -242,29 +290,40 @@ export default function GuardScanScreen() {
         )}
       </View>
 
-      {/* Mode toggle */}
+      {/* Mode toggle — 2×2 grid */}
       <View style={s.toggle}>
-        <TouchableOpacity
-          style={[s.toggleBtn, mode === 'scanner' && s.toggleBtnActive]}
-          onPress={() => setMode('scanner')}
-        >
-          <Ionicons name="qr-code" size={15} color={mode === 'scanner' ? '#fff' : COLORS.textMuted} />
-          <Text style={[s.toggleText, mode === 'scanner' && s.toggleTextActive]}>Camera Scan</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.toggleBtn, mode === 'manual' && s.toggleBtnActive]}
-          onPress={() => setMode('manual')}
-        >
-          <Ionicons name="keypad" size={15} color={mode === 'manual' ? '#fff' : COLORS.textMuted} />
-          <Text style={[s.toggleText, mode === 'manual' && s.toggleTextActive]}>Manual</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.toggleBtn, mode === 'walkin' && { backgroundColor: '#059669', ...SHADOWS.sm }]}
-          onPress={() => setMode('walkin')}
-        >
-          <Ionicons name="person-add" size={15} color={mode === 'walkin' ? '#fff' : COLORS.textMuted} />
-          <Text style={[s.toggleText, mode === 'walkin' && s.toggleTextActive]}>Walk-In</Text>
-        </TouchableOpacity>
+        <View style={s.toggleRow}>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'scanner' && s.toggleBtnActive]}
+            onPress={() => setMode('scanner')}
+          >
+            <Ionicons name="qr-code" size={14} color={mode === 'scanner' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'scanner' && s.toggleTextActive]}>Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'manual' && s.toggleBtnActive]}
+            onPress={() => setMode('manual')}
+          >
+            <Ionicons name="keypad" size={14} color={mode === 'manual' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'manual' && s.toggleTextActive]}>Manual</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={s.toggleRow}>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'walkin' && { backgroundColor: '#059669', ...SHADOWS.sm }]}
+            onPress={() => setMode('walkin')}
+          >
+            <Ionicons name="person-add" size={14} color={mode === 'walkin' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'walkin' && s.toggleTextActive]}>Walk-In</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'staffotp' && { backgroundColor: '#7C3AED', ...SHADOWS.sm }]}
+            onPress={() => setMode('staffotp')}
+          >
+            <Ionicons name="shield-checkmark" size={14} color={mode === 'staffotp' ? '#fff' : COLORS.textMuted} />
+            <Text style={[s.toggleText, mode === 'staffotp' && s.toggleTextActive]}>Staff OTP</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -467,6 +526,91 @@ export default function GuardScanScreen() {
             )
           )}
 
+          {/* Staff OTP flow */}
+          {mode === 'staffotp' && (
+            <View style={s.walkInForm}>
+              <Text style={s.walkInFormTitle}>Domestic Staff OTP Entry</Text>
+              <Text style={s.walkInFormSub}>
+                Send a one-time password to the resident to verify domestic staff arrival.
+              </Text>
+
+              {staffOtpSuccess ? (
+                <View style={s.walkInApprovedBanner}>
+                  <Ionicons name="checkmark-circle" size={18} color="#059669" />
+                  <Text style={s.walkInApprovedText}>Entry confirmed! Attendance marked.</Text>
+                </View>
+              ) : null}
+
+              {staffOtpError ? (
+                <View style={s.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+                  <Text style={s.errorBannerText}>{staffOtpError}</Text>
+                </View>
+              ) : null}
+
+              {!staffOtpSuccess && (
+                <>
+                  <Text style={s.walkInLabel}>Staff ID *</Text>
+                  <TextInput
+                    style={s.walkInInput}
+                    placeholder="Enter staff ID number"
+                    keyboardType="numeric"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={staffIdInput}
+                    onChangeText={setStaffIdInput}
+                    editable={!staffOtpSent}
+                  />
+
+                  {!staffOtpSent ? (
+                    <TouchableOpacity
+                      style={[s.walkInSubmitBtn, { backgroundColor: '#7C3AED' }, staffOtpLoading && { opacity: 0.7 }]}
+                      onPress={handleStaffRequestOtp}
+                      disabled={staffOtpLoading}
+                    >
+                      {staffOtpLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <><Ionicons name="send" size={16} color="#fff" /><Text style={s.walkInSubmitBtnText}>Send OTP to Resident</Text></>
+                      }
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <View style={[s.walkInPendingRow, { backgroundColor: '#EDE9FE' }]}>
+                        <Ionicons name="phone-portrait" size={16} color="#7C3AED" />
+                        <Text style={[s.walkInPendingText, { color: '#7C3AED' }]}>
+                          OTP sent{staffMaskedPhone ? ` to ${staffMaskedPhone}` : ''}. Ask resident for the code.
+                        </Text>
+                      </View>
+                      <Text style={s.walkInLabel}>Enter OTP from Resident</Text>
+                      <TextInput
+                        style={[s.walkInInput, { fontSize: 22, letterSpacing: 8, textAlign: 'center', fontWeight: '800' }]}
+                        placeholder="● ● ● ●"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        placeholderTextColor={COLORS.textMuted}
+                        value={staffOtpInput}
+                        onChangeText={setStaffOtpInput}
+                      />
+                      <TouchableOpacity
+                        style={[s.walkInSubmitBtn, { backgroundColor: '#059669' }, staffOtpLoading && { opacity: 0.7 }]}
+                        onPress={handleStaffVerifyOtp}
+                        disabled={staffOtpLoading}
+                      >
+                        {staffOtpLoading
+                          ? <ActivityIndicator size="small" color="#fff" />
+                          : <><Ionicons name="checkmark-done" size={16} color="#fff" /><Text style={s.walkInSubmitBtnText}>Verify & Allow Entry</Text></>
+                        }
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </>
+              )}
+
+              <TouchableOpacity style={s.walkInCancelBtn} onPress={resetStaffOtp}>
+                <Text style={s.walkInCancelBtnText}>{staffOtpSuccess ? 'New Request' : 'Cancel'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Lookup error */}
           {lookupError ? (
             <View style={s.errorBanner}>
@@ -666,17 +810,17 @@ const s = StyleSheet.create({
   clearBtnText: { fontSize: 13, fontWeight: '700', color: GUARD_COLORS.accent },
 
   toggle: {
-    flexDirection: 'row', gap: 0,
     backgroundColor: COLORS.surfaceAlt, margin: SPACING.md,
     borderRadius: RADIUS.lg, padding: 3,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1, borderColor: COLORS.border, gap: 3,
   },
+  toggleRow: { flexDirection: 'row', gap: 3 },
   toggleBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
     paddingVertical: 9, borderRadius: RADIUS.md,
   },
   toggleBtnActive: { backgroundColor: GUARD_COLORS.accent, ...SHADOWS.sm },
-  toggleText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+  toggleText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
   toggleTextActive: { color: '#fff', fontWeight: '700' },
 
   scroll: { padding: SPACING.md, gap: SPACING.md },

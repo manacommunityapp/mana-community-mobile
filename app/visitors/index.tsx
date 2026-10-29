@@ -111,6 +111,11 @@ export default function VisitorsScreen() {
   const [selectedPass, setSelectedPass] = useState<VisitorEntry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Cab ETA notes (resident-written notes per cab visitor id)
+  const [cabEtaNotes, setCabEtaNotes] = useState<Record<number, string>>({});
+  const [etaEditId, setEtaEditId] = useState<number | null>(null);
+  const [etaInput, setEtaInput] = useState('');
+
   // Walk-in approval count — polls every 10s to show urgent banner
   const { data: pendingCount = 0 } = useQuery<number>({
     queryKey: ['visitors', 'pending-count'],
@@ -399,6 +404,27 @@ export default function VisitorsScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Cab ETA tracker — only for expected cab visitors */}
+        {item.type === 'CAB' && item.status === 'EXPECTED' && (
+          <View style={s.cabEtaRow}>
+            <View style={s.cabEtaLeft}>
+              <Ionicons name="navigate-circle-outline" size={15} color="#2563EB" />
+              <Text style={s.cabEtaLabel}>ETA: {item.expectedAt}</Text>
+              {cabEtaNotes[item.id] ? (
+                <View style={s.cabEtaNoteChip}>
+                  <Text style={s.cabEtaNoteText} numberOfLines={1}>{cabEtaNotes[item.id]}</Text>
+                </View>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              onPress={() => { setEtaEditId(item.id); setEtaInput(cabEtaNotes[item.id] || ''); }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Text style={s.cabEtaEditBtn}>{cabEtaNotes[item.id] ? 'Edit Note' : '+ Note'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   };
@@ -707,6 +733,42 @@ export default function VisitorsScreen() {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Cab ETA Note Modal ── */}
+      <Modal visible={etaEditId !== null} transparent animationType="slide" onRequestClose={() => setEtaEditId(null)}>
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setEtaEditId(null)} activeOpacity={1} />
+        <View style={s.etaSheet}>
+          <View style={s.etaSheetHandle} />
+          <Text style={s.etaSheetTitle}>Cab ETA Note</Text>
+          <Text style={s.etaSheetSub}>Add a note visible to the guard — e.g. "Running 15 min late" or cab number</Text>
+          <TextInput
+            style={s.etaInput}
+            value={etaInput}
+            onChangeText={setEtaInput}
+            placeholder="e.g. Running late, new ETA 10:30 PM"
+            placeholderTextColor={COLORS.textMuted}
+            maxLength={80}
+            autoFocus
+          />
+          <View style={s.etaActions}>
+            <TouchableOpacity style={s.etaCancelBtn} onPress={() => setEtaEditId(null)}>
+              <Text style={s.etaCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.etaSaveBtn}
+              onPress={() => {
+                if (etaEditId !== null) {
+                  const note = etaInput.trim();
+                  setCabEtaNotes(prev => note ? { ...prev, [etaEditId]: note } : Object.fromEntries(Object.entries(prev).filter(([k]) => Number(k) !== etaEditId)));
+                }
+                setEtaEditId(null);
+              }}
+            >
+              <Text style={s.etaSaveText}>Save Note</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1096,5 +1158,64 @@ const s = StyleSheet.create({
   },
   walkInAlertTitle: { fontSize: 14, fontWeight: '800', color: '#fff' },
   walkInAlertSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
+
+  // Cab ETA row
+  cabEtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#DBEAFE',
+    backgroundColor: '#EFF6FF',
+    marginHorizontal: -SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
+    borderBottomLeftRadius: RADIUS.xl,
+    borderBottomRightRadius: RADIUS.xl,
+  },
+  cabEtaLeft: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, flexWrap: 'wrap' },
+  cabEtaLabel: { fontSize: 11, color: '#1D4ED8', fontWeight: '600', fontFamily: 'DMSans-Medium' },
+  cabEtaNoteChip: {
+    backgroundColor: '#BFDBFE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    maxWidth: 160,
+  },
+  cabEtaNoteText: { fontSize: 10, color: '#1E40AF', fontWeight: '600', fontFamily: 'DMSans-Medium' },
+  cabEtaEditBtn: { fontSize: 11, color: '#2563EB', fontWeight: '700', fontFamily: 'Outfit-Bold' },
+
+  // Cab ETA note edit bottom sheet
+  etaSheet: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    paddingBottom: 36,
+    gap: 12,
+  },
+  etaSheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 4 },
+  etaSheetTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  etaSheetSub: { fontSize: 13, color: COLORS.textMuted, lineHeight: 18, fontFamily: 'DMSans-Regular' },
+  etaInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.text,
+    fontFamily: 'DMSans-Regular',
+  },
+  etaActions: { flexDirection: 'row', gap: 10 },
+  etaCancelBtn: { flex: 1, paddingVertical: 13, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  etaCancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
+  etaSaveBtn: { flex: 2, paddingVertical: 13, borderRadius: RADIUS.md, backgroundColor: '#2563EB', alignItems: 'center' },
+  etaSaveText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Outfit-Bold' },
 });
 
