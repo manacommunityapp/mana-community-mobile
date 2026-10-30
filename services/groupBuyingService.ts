@@ -234,11 +234,261 @@ function mapBackendOrderToGroupOrder(o: any): GroupOrder {
   };
 }
 
+// ── Seed catalog (used as offline/no-backend fallback) ───────────────────────
+
+const SEED_TIERS = [
+  { minQty: 1,  maxQty: 49,  price: 285, pricePerUnit: 285, discountPercent: 5,  label: '1–49 units',  status: 'UNLOCKED'  as const, isCurrentTier: true,  isNextTier: false },
+  { minQty: 50, maxQty: 99,  price: 260, pricePerUnit: 260, discountPercent: 13, label: '50–99 units', status: 'NEXT'     as const, isCurrentTier: false, isNextTier: true,  unitsToUnlock: 18 },
+  { minQty: 100,             price: 235, pricePerUnit: 235, discountPercent: 22, label: '100+ units',  status: 'LOCKED'   as const, isCurrentTier: false, isNextTier: false },
+];
+
+export const SEED_DEALS: GroupDeal[] = [
+  {
+    id: 'seed-1',
+    title: 'Fresh Devgad Alphonso Mangoes',
+    description: 'Premium GI-tagged Devgad Alphonso mangoes sourced directly from Konkan orchards.',
+    category: 'FRUITS_VEGETABLES',
+    imageUrl: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&auto=format&fit=crop&q=80',
+    productName: 'Alphonso Mangoes (1 Dozen)',
+    unit: 'Dozen',
+    originalPrice: 1200, mrp: 1200, standardPrice: 1200,
+    currentTierPrice: 850, currentPrice: 850, lowestPrice: 700,
+    targetQuantity: 100, targetQty: 100,
+    currentQuantity: 32, committedQty: 32,
+    minCommitmentQty: 1, maxCommitmentQty: 5,
+    joinedCount: 32, currentParticipants: 32, targetParticipants: 100,
+    savingsSoFar: 11200,
+    status: 'ACTIVE', dealStatus: 'OPEN',
+    startDate: '2026-10-01T00:00:00Z', endDate: '2026-11-05T23:59:59Z',
+    deliveryDate: '2026-11-07T00:00:00Z', pickupDate: '2026-11-07',
+    pickupLocation: 'Clubhouse Desk', pickupPoint: 'Clubhouse Desk',
+    pickupSlots: ['Morning (9 AM – 12 PM)', 'Evening (4 PM – 7 PM)'],
+    vendorName: 'Konkan Farms Direct', vendor: 'Konkan Farms Direct',
+    vendorRating: 4.8, vendorVerified: true, vendorId: 'vnd-seed-1',
+    pricingModel: 'THRESHOLD',
+    tiers: SEED_TIERS, priceTiers: SEED_TIERS,
+    nextTierUnitsNeeded: 18, daysLeft: 7, nextTierPrice: 260,
+    isTrending: true, isAlmostUnlocked: false,
+    dealEndsAt: '2026-11-05T23:59:59Z',
+    highlights: ['GI-Tagged Devgad Variety', 'Direct Orchard Sourcing', 'Doorstep OTP Handover'],
+    termsAndConditions: ['No cancellations after deal locks', 'Automated refunds for tier upgrades'],
+    inventoryRemaining: 68, fulfillmentType: 'BOTH', paymentType: 'ONLINE_ONLY',
+    moqLabel: 'Min 100 units',
+  },
+  {
+    id: 'seed-2',
+    title: 'Aashirvaad Whole Wheat Atta 10 kg',
+    description: 'Community bulk purchase of Aashirvaad Atta — direct from ITC warehouse at tier pricing.',
+    category: 'GROCERIES',
+    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80',
+    productName: 'Aashirvaad Atta 10 kg Bag',
+    unit: 'Bag',
+    originalPrice: 680, mrp: 680, standardPrice: 680,
+    currentTierPrice: 590, currentPrice: 590, lowestPrice: 545,
+    targetQuantity: 200, targetQty: 200,
+    currentQuantity: 127, committedQty: 127,
+    minCommitmentQty: 1, maxCommitmentQty: 10,
+    joinedCount: 89, currentParticipants: 89, targetParticipants: 200,
+    savingsSoFar: 11430,
+    status: 'ACTIVE', dealStatus: 'OPEN',
+    startDate: '2026-10-01T00:00:00Z', endDate: '2026-11-03T23:59:59Z',
+    deliveryDate: '2026-11-05T00:00:00Z', pickupDate: '2026-11-05',
+    pickupLocation: 'Tower A Lobby', pickupPoint: 'Tower A Lobby',
+    pickupSlots: ['Morning (9 AM – 12 PM)', 'Evening (4 PM – 7 PM)'],
+    vendorName: 'Metro Cash & Carry', vendor: 'Metro Cash & Carry',
+    vendorRating: 4.6, vendorVerified: true, vendorId: 'vnd-seed-2',
+    pricingModel: 'THRESHOLD',
+    tiers: [
+      { minQty: 1,   maxQty: 99,  price: 590, pricePerUnit: 590, discountPercent: 13, label: '1–99 bags',   status: 'UNLOCKED' as const, isCurrentTier: true,  isNextTier: false },
+      { minQty: 100, maxQty: 199, price: 565, pricePerUnit: 565, discountPercent: 17, label: '100–199 bags', status: 'NEXT'    as const, isCurrentTier: false, isNextTier: true,  unitsToUnlock: 73 },
+      { minQty: 200,              price: 545, pricePerUnit: 545, discountPercent: 20, label: '200+ bags',   status: 'LOCKED'   as const, isCurrentTier: false, isNextTier: false },
+    ],
+    priceTiers: [
+      { minQty: 1,   maxQty: 99,  price: 590, pricePerUnit: 590, discountPercent: 13, label: '1–99 bags',   status: 'UNLOCKED' as const },
+      { minQty: 100, maxQty: 199, price: 565, pricePerUnit: 565, discountPercent: 17, label: '100–199 bags', status: 'NEXT'    as const },
+      { minQty: 200,              price: 545, pricePerUnit: 545, discountPercent: 20, label: '200+ bags',   status: 'LOCKED'   as const },
+    ],
+    nextTierUnitsNeeded: 73, daysLeft: 5, nextTierPrice: 565,
+    isTrending: false, isAlmostUnlocked: false,
+    dealEndsAt: '2026-11-03T23:59:59Z',
+    highlights: ['Warehouse-Direct Pricing', 'ITC Authorised Dealer', 'Zero Adulteration Guarantee'],
+    termsAndConditions: ['Minimum 1 bag per order', 'Delivery within society premises'],
+    inventoryRemaining: 150, fulfillmentType: 'BOTH', paymentType: 'ONLINE_ONLY',
+    moqLabel: 'Min 200 bags',
+  },
+  {
+    id: 'seed-3',
+    title: 'Diwali Dry Fruits Premium Gift Box',
+    description: 'Celebrate Diwali with premium mixed dry fruits — almonds, cashews, pistachios & figs sourced from Afghani and Californian orchards.',
+    category: 'GROCERIES',
+    imageUrl: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=500',
+    productName: 'Premium Dry Fruits Box 1 kg',
+    unit: 'Box',
+    originalPrice: 1850, mrp: 1850, standardPrice: 1850,
+    currentTierPrice: 1250, currentPrice: 1250, lowestPrice: 1100,
+    targetQuantity: 150, targetQty: 150,
+    currentQuantity: 138, committedQty: 138,
+    minCommitmentQty: 1, maxCommitmentQty: 5,
+    joinedCount: 138, currentParticipants: 138, targetParticipants: 150,
+    savingsSoFar: 82800,
+    status: 'ACTIVE', dealStatus: 'OPEN',
+    startDate: '2026-10-15T00:00:00Z', endDate: '2026-11-01T23:59:59Z',
+    deliveryDate: '2026-11-02T00:00:00Z', pickupDate: '2026-11-02',
+    pickupLocation: 'Clubhouse Desk', pickupPoint: 'Clubhouse Desk',
+    pickupSlots: ['Morning (9 AM – 12 PM)', 'Evening (4 PM – 7 PM)'],
+    vendorName: 'Diwali Dhamaka Co-op', vendor: 'Diwali Dhamaka Co-op',
+    vendorRating: 4.9, vendorVerified: true, vendorId: 'vnd-seed-3',
+    pricingModel: 'THRESHOLD',
+    tiers: [
+      { minQty: 1,   maxQty: 49,  price: 1250, pricePerUnit: 1250, discountPercent: 32, label: '1–49 boxes',  status: 'UNLOCKED' as const, isCurrentTier: true,  isNextTier: false },
+      { minQty: 50,  maxQty: 149, price: 1150, pricePerUnit: 1150, discountPercent: 38, label: '50–149 boxes', status: 'NEXT'    as const, isCurrentTier: false, isNextTier: true,  unitsToUnlock: 12 },
+      { minQty: 150,              price: 1100, pricePerUnit: 1100, discountPercent: 41, label: '150+ boxes',  status: 'LOCKED'   as const, isCurrentTier: false, isNextTier: false },
+    ],
+    priceTiers: [
+      { minQty: 1,   maxQty: 49,  price: 1250, pricePerUnit: 1250, discountPercent: 32, label: '1–49 boxes',  status: 'UNLOCKED' as const },
+      { minQty: 50,  maxQty: 149, price: 1150, pricePerUnit: 1150, discountPercent: 38, label: '50–149 boxes', status: 'NEXT'    as const },
+      { minQty: 150,              price: 1100, pricePerUnit: 1100, discountPercent: 41, label: '150+ boxes',  status: 'LOCKED'   as const },
+    ],
+    nextTierUnitsNeeded: 12, daysLeft: 3, nextTierPrice: 1150,
+    isTrending: true, isFestivalDeal: true, isAlmostUnlocked: true, isEndingSoon: true,
+    dealEndsAt: '2026-11-01T23:59:59Z',
+    highlights: ['Afghani & Californian Sourcing', 'BIS-Certified Packaging', 'Zero Preservatives'],
+    termsAndConditions: ['Festival deal — no cancellations', 'Pickup compulsory for last 12 units'],
+    inventoryRemaining: 12, fulfillmentType: 'PICKUP_ONLY', paymentType: 'ONLINE_ONLY',
+    moqLabel: 'Min 150 boxes',
+  },
+];
+
+export const SEED_DEMANDS: DemandPool[] = [
+  {
+    id: 'seed-dem-1',
+    title: 'Organic A2 Milk — Home Delivery',
+    productName: 'Organic A2 Milk (500 ml)',
+    category: 'DAIRY_EGGS',
+    description: 'Looking for daily subscription of certified A2 cow milk with doorstep delivery by 7 AM.',
+    imageUrl: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80',
+    interestedResidents: 34,
+    expectedQty: 200,
+    expectedQuantity: 200,
+    targetQuantity: 50,
+    targetUpvotes: 50,
+    upvotes: 34,
+    hasUpvoted: false,
+    preferredPriceMin: 25,
+    preferredPriceMax: 35,
+    preferredBrand: 'Pride of Cows / Country Delight',
+    preferredBrands: ['Pride of Cows', 'Country Delight'],
+    suggestedBy: 'Flat 402, Tower B',
+    suggestedAt: '2026-10-18T09:00:00Z',
+    status: 'OPEN',
+    vendorOffers: [],
+  },
+  {
+    id: 'seed-dem-2',
+    title: 'Himalayan Pink Salt — Bulk Pack',
+    productName: 'Himalayan Pink Salt 5 kg',
+    category: 'GROCERIES',
+    description: 'Community request for natural unrefined Himalayan pink salt at wholesale rates.',
+    imageUrl: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=600&auto=format&fit=crop&q=80',
+    interestedResidents: 22,
+    expectedQty: 110,
+    expectedQuantity: 110,
+    targetQuantity: 30,
+    targetUpvotes: 30,
+    upvotes: 22,
+    hasUpvoted: false,
+    preferredPriceMin: 120,
+    preferredPriceMax: 180,
+    suggestedBy: 'Flat 104, Tower A',
+    suggestedAt: '2026-10-20T14:30:00Z',
+    status: 'VENDOR_OFFERED',
+    vendorOffers: [
+      {
+        id: 'offer-seed-1',
+        demandId: 'seed-dem-2',
+        vendorId: 'vnd-seed-2',
+        vendorName: 'Metro Cash & Carry',
+        vendorRating: 4.6,
+        isVerified: true,
+        vendorVerified: true,
+        pricePerUnit: 145,
+        offeredPrice: 145,
+        moq: 50,
+        minimumQty: 50,
+        estimatedDeliveryDays: 3,
+        deliveryDate: '2026-11-05',
+        notes: 'ISO-certified packaging, no additives',
+        terms: 'ISO-certified packaging, no additives',
+        createdAt: '2026-10-22T10:00:00Z',
+        status: 'PENDING',
+        fulfillmentRate: 99.0,
+        onTimeRate: 98.0,
+        cancellationRate: 0.2,
+        disputeRate: 0.1,
+        qualityScore: 4.9,
+      },
+    ],
+  },
+];
+
+export const SEED_ORDERS: GroupOrder[] = [
+  {
+    id: 'ORD-SEED-001',
+    dealId: 'seed-2',
+    dealTitle: 'Aashirvaad Whole Wheat Atta 10 kg',
+    title: 'Aashirvaad Whole Wheat Atta 10 kg',
+    productName: 'Aashirvaad Atta 10 kg Bag',
+    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80',
+    quantity: 2, qty: 2, unit: 'Bag',
+    unitPrice: 590, committedPrice: 590, finalPrice: 590,
+    total: 1180, totalCommittedAmount: 1180, finalAmount: 1180,
+    savings: 180,
+    status: 'READY_FOR_PICKUP',
+    paymentStatus: 'PAID',
+    paymentMethod: 'UPI',
+    joinedAt: '2026-10-25T11:30:00Z', createdAt: '2026-10-25T11:30:00Z',
+    pickupLocation: 'Tower A Lobby', pickupPoint: 'Tower A Lobby',
+    pickupDate: '2026-11-05',
+    pickupSlot: 'Morning (9 AM – 12 PM)',
+    pickupOtp: '7392',
+    pickupQrCode: 'QR-ORD-SEED-001',
+    qrCode: 'QR-ORD-SEED-001',
+    qrToken: 'QR-ORD-SEED-001',
+    authorizedCollectors: [],
+  },
+  {
+    id: 'ORD-SEED-002',
+    dealId: 'seed-3',
+    dealTitle: 'Diwali Dry Fruits Premium Gift Box',
+    title: 'Diwali Dry Fruits Premium Gift Box',
+    productName: 'Premium Dry Fruits Box 1 kg',
+    imageUrl: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=500',
+    quantity: 1, qty: 1, unit: 'Box',
+    unitPrice: 1250, committedPrice: 1250, finalPrice: 1250,
+    total: 1250, totalCommittedAmount: 1250, finalAmount: 1250,
+    savings: 600,
+    status: 'CONFIRMED',
+    paymentStatus: 'PAID',
+    paymentMethod: 'UPI',
+    joinedAt: '2026-10-27T09:15:00Z', createdAt: '2026-10-27T09:15:00Z',
+    pickupLocation: 'Clubhouse Desk', pickupPoint: 'Clubhouse Desk',
+    pickupDate: '2026-11-02',
+    pickupSlot: 'Evening (4 PM – 7 PM)',
+    pickupOtp: '4821',
+    pickupQrCode: 'QR-ORD-SEED-002',
+    qrCode: 'QR-ORD-SEED-002',
+    qrToken: 'QR-ORD-SEED-002',
+    authorizedCollectors: [],
+  },
+];
+
+// ── Service ───────────────────────────────────────────────────────────────────
+
 export const groupBuyingService = {
   getDeals: async (filters?: any): Promise<GroupDeal[]> => {
     try {
       const res = await api.get<any[]>('/group-buying/deals');
-      if (res.data && Array.isArray(res.data)) {
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         let list = res.data.map(mapBackendDealToGroupDeal);
         if (filters && typeof filters === 'object') {
           if (filters.category && filters.category !== 'ALL') {
@@ -257,7 +507,12 @@ export const groupBuyingService = {
     } catch (err) {
       console.warn('Failed to fetch deals from /group-buying/deals', err);
     }
-    return [];
+    let seed = SEED_DEALS;
+    if (filters && typeof filters === 'object') {
+      if (filters.category && filters.category !== 'ALL') seed = seed.filter(d => d.category === filters.category);
+      if (filters.search) { const q = filters.search.toLowerCase(); seed = seed.filter(d => d.title.toLowerCase().includes(q)); }
+    }
+    return seed;
   },
 
   getFestivalCategories: async (): Promise<string[]> => {
@@ -297,7 +552,7 @@ export const groupBuyingService = {
     } catch (err) {
       console.warn(`Failed to fetch deal ${dealId}`, err);
     }
-    return null;
+    return SEED_DEALS.find(d => d.id === dealId) ?? null;
   },
 
   joinDeal: async (arg1: any, arg2?: any, arg3?: any): Promise<GroupOrder> => {
@@ -341,13 +596,13 @@ export const groupBuyingService = {
   getUserOrders: async (): Promise<GroupOrder[]> => {
     try {
       const res = await api.get<any[]>('/group-buying/my-orders');
-      if (res.data && Array.isArray(res.data)) {
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         return res.data.map(mapBackendOrderToGroupOrder);
       }
     } catch (err) {
       console.warn('Failed to fetch user orders', err);
     }
-    return [];
+    return SEED_ORDERS;
   },
 
   getMyOrders: async (): Promise<GroupOrder[]> => {
@@ -583,7 +838,7 @@ export const groupBuyingService = {
   getDemands: async (): Promise<DemandPool[]> => {
     try {
       const res = await api.get<any[]>('/group-buying/demand');
-      if (res.data && Array.isArray(res.data)) {
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         return res.data.map((d: any) => ({
           id: String(d.id),
           title: d.title,
@@ -634,7 +889,7 @@ export const groupBuyingService = {
     } catch (err) {
       console.warn('Failed to fetch demand board', err);
     }
-    return [];
+    return SEED_DEMANDS;
   },
 
   getDemandBoard: async (): Promise<DemandPool[]> => {
