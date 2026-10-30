@@ -346,7 +346,7 @@ export const wellnessService = {
 
   async getDailySummary(date?: string): Promise<DailyNutritionSummary> {
     try {
-      const res = await api.get<DailyNutritionSummary>("/nutrition/summary/daily", { params: { date } });
+      const res = await api.get<DailyNutritionSummary>("/wellness/summary/daily", { params: { date } });
       return res.data;
     } catch {
       return SEED_DAILY_SUMMARY;
@@ -355,7 +355,7 @@ export const wellnessService = {
 
   async getWeeklyTrend(): Promise<WeeklyTrend> {
     try {
-      const res = await api.get<WeeklyTrend>("/nutrition/summary/weekly");
+      const res = await api.get<WeeklyTrend>("/wellness/summary/weekly");
       return res.data;
     } catch {
       return SEED_WEEKLY_TREND;
@@ -364,7 +364,7 @@ export const wellnessService = {
 
   async getMeals(date?: string): Promise<MealLogDto[]> {
     try {
-      const res = await api.get<MealLogDto[]>("/nutrition/meals", { params: { date } });
+      const res = await api.get<MealLogDto[]>("/wellness/meals", { params: { date } });
       return res.data;
     } catch {
       return mealsState;
@@ -373,7 +373,7 @@ export const wellnessService = {
 
   async logMeal(meal: Omit<MealLogDto, "id" | "createdAt">): Promise<MealLogDto> {
     try {
-      const res = await api.post<MealLogDto>("/nutrition/meals", meal);
+      const res = await api.post<MealLogDto>("/wellness/meals", meal);
       return res.data;
     } catch {
       const newMeal: MealLogDto = { ...meal, id: `ml-${Date.now()}`, createdAt: new Date().toISOString() };
@@ -384,7 +384,7 @@ export const wellnessService = {
 
   async analyzeMealPhoto(imageBase64: string, mealType: string): Promise<AiMealAnalysisResponse> {
     try {
-      const res = await api.post<AiMealAnalysisResponse>("/nutrition/meals/analyze", { imageBase64, mealType });
+      const res = await api.post<AiMealAnalysisResponse>("/wellness/meals/analyze", { imageBase64, mealType });
       return res.data;
     } catch {
       const seedItems: MealItemDto[] = [
@@ -412,7 +412,7 @@ export const wellnessService = {
 
   async analyzeMealText(text: string, mealType: string): Promise<AiMealAnalysisResponse> {
     try {
-      const res = await api.post<AiMealAnalysisResponse>("/nutrition/meals/analyze", { textDescription: text, mealType });
+      const res = await api.post<AiMealAnalysisResponse>("/wellness/meals/analyze", { textDescription: text, mealType });
       return res.data;
     } catch {
       const words = text.toLowerCase();
@@ -455,7 +455,7 @@ export const wellnessService = {
 
   async searchFood(query: string): Promise<FoodItemDto[]> {
     try {
-      const res = await api.get<FoodItemDto[]>("/nutrition/food-search", { params: { q: query } });
+      const res = await api.get<FoodItemDto[]>("/wellness/food/search", { params: { q: query } });
       return res.data;
     } catch {
       const q = query.toLowerCase();
