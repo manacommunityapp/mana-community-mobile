@@ -452,7 +452,7 @@ export const vehicleCareService = {
 
   cancelBooking: async (id: string, reason?: string): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/bookings/${id}/cancel`, { reason });
+      await apiClient.patch(`/vehicle-care/bookings/${id}/cancel`, { reason });
     } catch {
       // mock: silently succeed
     }

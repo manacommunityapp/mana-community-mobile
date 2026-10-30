@@ -63,10 +63,20 @@ export function normalizeApiPath(url?: string): string | undefined {
   return normalized;
 }
 
+function generateCorrelationId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 // Attach JWT on every request & normalize duplicate /api prefix
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await tokenStore.getAccess();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  config.headers['X-Platform'] = 'mobile';
+  config.headers['X-Correlation-Id'] = generateCorrelationId();
 
   // Fix Double /api Prefix Bug:
   // Since baseURL is configured as `${CONFIG.API_BASE_URL}/api`, any endpoint path passed with
@@ -118,6 +128,9 @@ api.interceptors.response.use(
           refreshToken,
         });
         await tokenStore.setAccess(data.token);
+        if (data.refreshToken) {
+          await tokenStore.setRefresh(data.refreshToken);
+        }
         refreshQueue.forEach((p) => p.resolve(data.token));
         refreshQueue = [];
         original.headers.Authorization = `Bearer ${data.token}`;
