@@ -344,8 +344,22 @@ export const vehicleCareService = {
   // Vehicle Profiles
   getMyVehicles: async (): Promise<VehicleProfile[]> => {
     try {
-      const res = await apiClient.get('/vehicle-care/vehicles/my');
-      return (res.data as any)?.data || res.data;
+      const res = await apiClient.get('/vehicle-care/vehicles');
+      const raw = (res.data as any)?.data || res.data;
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((v: any) => ({
+          id: String(v.id),
+          nickname: v.nickname,
+          type: (v.type || v.vehicleType || 'CAR') as VehicleType,
+          make: v.make,
+          model: v.model,
+          color: v.color,
+          plateNumber: v.plateNumber,
+          isDefault: !!v.isDefault,
+          imageEmoji: (v.type || v.vehicleType) === 'BIKE' ? '🛵' : '🚗',
+        }));
+      }
+      return MOCK_VEHICLES;
     } catch {
       return MOCK_VEHICLES;
     }
@@ -353,8 +367,28 @@ export const vehicleCareService = {
 
   addVehicle: async (data: Omit<VehicleProfile, 'id'>): Promise<VehicleProfile> => {
     try {
-      const res = await apiClient.post('/vehicle-care/vehicles', data);
-      return (res.data as any)?.data || res.data;
+      const payload = {
+        nickname: data.nickname,
+        vehicleType: data.type,
+        make: data.make,
+        model: data.model,
+        color: data.color,
+        plateNumber: data.plateNumber,
+        setAsDefault: data.isDefault,
+      };
+      const res = await apiClient.post('/vehicle-care/vehicles', payload);
+      const v = (res.data as any)?.data || res.data;
+      return {
+        id: String(v.id),
+        nickname: v.nickname,
+        type: (v.type || v.vehicleType || data.type) as VehicleType,
+        make: v.make,
+        model: v.model,
+        color: v.color,
+        plateNumber: v.plateNumber,
+        isDefault: !!v.isDefault,
+        imageEmoji: (v.type || v.vehicleType) === 'BIKE' ? '🛵' : '🚗',
+      };
     } catch {
       return { ...data, id: `v-${Date.now()}` };
     }
@@ -362,8 +396,28 @@ export const vehicleCareService = {
 
   updateVehicle: async (id: string, data: Partial<VehicleProfile>): Promise<VehicleProfile> => {
     try {
-      const res = await apiClient.put(`/vehicle-care/vehicles/${id}`, data);
-      return (res.data as any)?.data || res.data;
+      const payload = {
+        nickname: data.nickname,
+        vehicleType: data.type,
+        make: data.make,
+        model: data.model,
+        color: data.color,
+        plateNumber: data.plateNumber,
+        setAsDefault: data.isDefault,
+      };
+      const res = await apiClient.put(`/vehicle-care/vehicles/${id}`, payload);
+      const v = (res.data as any)?.data || res.data;
+      return {
+        id: String(v.id),
+        nickname: v.nickname,
+        type: (v.type || v.vehicleType || data.type || 'CAR') as VehicleType,
+        make: v.make,
+        model: v.model,
+        color: v.color,
+        plateNumber: v.plateNumber,
+        isDefault: !!v.isDefault,
+        imageEmoji: (v.type || v.vehicleType) === 'BIKE' ? '🛵' : '🚗',
+      };
     } catch {
       const existing = MOCK_VEHICLES.find(v => v.id === id) || MOCK_VEHICLES[0];
       return { ...existing, ...data };
@@ -374,15 +428,15 @@ export const vehicleCareService = {
     try {
       await apiClient.delete(`/vehicle-care/vehicles/${id}`);
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 
   setDefaultVehicle: async (id: string): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/vehicles/${id}/set-default`);
+      await apiClient.patch(`/vehicle-care/vehicles/${id}/default`);
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 
@@ -390,17 +444,51 @@ export const vehicleCareService = {
   getServiceCatalog: async (): Promise<ServiceCatalogItem[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/catalog');
-      return (res.data as any)?.data || res.data;
+      const raw = (res.data as any)?.data || res.data;
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((s: any) => ({
+          id: String(s.id),
+          serviceType: s.name as ServiceType,
+          name: s.name,
+          description: s.description || '',
+          emoji: s.name?.includes('Full') ? '🚿' : '💧',
+          basePrice: Number(s.basePrice || 0),
+          communityPrice: Number(s.communityPrice || s.basePrice || 0),
+          durationMins: Number(s.durationMinutes || 30),
+          vehicleTypes: (s.vehicleTypes || ['CAR', 'SUV', 'BIKE']) as VehicleType[],
+          addons: (s.addons || []).map((a: any) => ({
+            id: String(a.id),
+            name: a.name,
+            description: a.name,
+            price: Number(a.price || 0),
+            durationMins: 10,
+          })),
+          popular: !!s.isPopular,
+          gradientColors: [s.gradientStart || '#0284C7', s.gradientEnd || '#38BDF8'],
+        }));
+      }
+      return MOCK_CATALOG;
     } catch {
       return MOCK_CATALOG;
     }
   },
 
   // Availability
-  getAvailableSlots: async (date: string, serviceId: string): Promise<TimeSlot[]> => {
+  getAvailableSlots: async (date: string, _serviceId?: string): Promise<TimeSlot[]> => {
     try {
-      const res = await apiClient.get('/vehicle-care/slots', { params: { date, serviceId } });
-      return (res.data as any)?.data || res.data;
+      const res = await apiClient.get('/vehicle-care/slots', { params: { from: date, to: date } });
+      const raw = (res.data as any)?.data || res.data;
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((s: any) => ({
+          id: String(s.id),
+          date: s.slotDate || date,
+          startTime: s.startTime ? s.startTime.substring(0, 5) : '09:00',
+          endTime: s.endTime ? s.endTime.substring(0, 5) : '10:00',
+          available: !!s.available,
+          remaining: Number(s.remaining ?? s.totalCapacity ?? 1),
+        }));
+      }
+      return genSlots(new Date(date));
     } catch {
       return genSlots(new Date(date));
     }
@@ -409,8 +497,39 @@ export const vehicleCareService = {
   // Bookings
   createBooking: async (req: CreateBookingRequest): Promise<VehicleCareBooking> => {
     try {
-      const res = await apiClient.post('/vehicle-care/bookings', req);
-      return (res.data as any)?.data || res.data;
+      const payload = {
+        vehicleId: isNaN(Number(req.vehicleId)) ? 1 : Number(req.vehicleId),
+        serviceId: isNaN(Number(req.serviceId)) ? 1 : Number(req.serviceId),
+        slotId: isNaN(Number(req.slotId)) ? 1 : Number(req.slotId),
+        addonIds: (req.addonIds || []).map(id => isNaN(Number(id)) ? 1 : Number(id)),
+        locationNotes: req.location,
+        paymentReference: req.paymentMethod || 'COD',
+      };
+      const res = await apiClient.post('/vehicle-care/bookings', payload);
+      const b = (res.data as any)?.data || res.data;
+      const addonNames = b.addonNames || (b.addons || []).map((a: any) => a.name) || [];
+      return {
+        id: String(b.id),
+        bookingNumber: b.bookingNumber || `VC-${Date.now().toString().slice(-6)}`,
+        vehicleId: String(b.vehicleId || req.vehicleId),
+        vehicleDisplay: b.vehicleDisplay || `${b.vehicleNickname || 'Vehicle'} • ${b.vehiclePlate || ''}`,
+        serviceId: String(b.serviceId || req.serviceId),
+        serviceName: b.serviceName || 'Vehicle Service',
+        serviceEmoji: b.serviceName?.includes('Full') ? '🚿' : '💧',
+        addonIds: req.addonIds || [],
+        addonNames,
+        date: b.date || b.scheduledDate || '',
+        startTime: b.startTime || b.scheduledStart || '09:00',
+        endTime: b.endTime || b.scheduledEnd || '10:00',
+        location: b.location || b.locationNotes || req.location,
+        status: b.status || 'CONFIRMED',
+        quotedPrice: Number(b.quotedPrice ?? b.totalAmount ?? 0),
+        paidAmount: Number(b.paidAmount ?? b.totalAmount ?? 0),
+        technicianName: b.technicianName,
+        canCancel: b.canCancel ?? true,
+        canRate: b.canRate ?? false,
+        createdAt: b.createdAt || new Date().toISOString(),
+      };
     } catch {
       const svc = MOCK_CATALOG.find(s => s.id === req.serviceId) || MOCK_CATALOG[0];
       const veh = MOCK_VEHICLES.find(v => v.id === req.vehicleId) || MOCK_VEHICLES[0];
@@ -418,7 +537,6 @@ export const vehicleCareService = {
         const addon = svc.addons.find(a => a.id === aid);
         return sum + (addon?.price || 0);
       }, 0);
-      const [slotDate] = req.slotId.split('-slot-')[0].split('-slot');
       return {
         id: `b-${Date.now()}`,
         bookingNumber: `VC-${Date.now().toString().slice(-6)}`,
@@ -443,34 +561,78 @@ export const vehicleCareService = {
 
   getMyBookings: async (): Promise<VehicleCareBooking[]> => {
     try {
-      const res = await apiClient.get('/vehicle-care/bookings/my');
-      return (res.data as any)?.data || res.data;
+      const res = await apiClient.get('/vehicle-care/bookings', { params: { filter: 'all', page: 0, size: 50 } });
+      const raw = (res.data as any)?.content || (res.data as any)?.data || res.data;
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((b: any) => ({
+          id: String(b.id),
+          bookingNumber: b.bookingNumber || `VC-${b.id}`,
+          vehicleId: String(b.vehicleId || ''),
+          vehicleDisplay: b.vehicleDisplay || `${b.vehicleNickname || 'Vehicle'} • ${b.vehiclePlate || ''}`,
+          serviceId: String(b.serviceId || ''),
+          serviceName: b.serviceName || 'Vehicle Service',
+          serviceEmoji: b.serviceName?.includes('Full') ? '🚿' : '💧',
+          addonIds: (b.addons || []).map((a: any) => String(a.id)),
+          addonNames: b.addonNames || (b.addons || []).map((a: any) => a.name) || [],
+          date: b.date || b.scheduledDate || '',
+          startTime: b.startTime || b.scheduledStart || '',
+          endTime: b.endTime || b.scheduledEnd || '',
+          location: b.location || b.locationNotes || '',
+          status: b.status || 'CONFIRMED',
+          quotedPrice: Number(b.quotedPrice ?? b.totalAmount ?? 0),
+          paidAmount: Number(b.paidAmount ?? b.totalAmount ?? 0),
+          technicianName: b.technicianName,
+          eta: b.etaMinutes ? `${b.etaMinutes} mins` : undefined,
+          rating: b.rating,
+          reviewText: b.reviewText,
+          canCancel: b.canCancel ?? ['PENDING_PAYMENT', 'CONFIRMED', 'ASSIGNED'].includes(b.status),
+          canRate: b.canRate ?? (b.status === 'COMPLETED' && !b.rating),
+          createdAt: b.createdAt || '',
+        }));
+      }
+      return MOCK_BOOKINGS;
     } catch {
       return MOCK_BOOKINGS;
     }
   },
 
-  cancelBooking: async (id: string, reason?: string): Promise<void> => {
+  cancelBooking: async (id: string, _reason?: string): Promise<void> => {
     try {
-      await apiClient.patch(`/vehicle-care/bookings/${id}/cancel`, { reason });
+      await apiClient.patch(`/vehicle-care/bookings/${id}/cancel`);
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 
   rateBooking: async (id: string, rating: number, review?: string): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/bookings/${id}/rate`, { rating, review });
+      await apiClient.post(`/vehicle-care/bookings/${id}/review`, { rating, reviewText: review || '' });
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 
   // Wash Plans
   getMyPlans: async (): Promise<WashPlan[]> => {
     try {
-      const res = await apiClient.get('/vehicle-care/plans/my');
-      return (res.data as any)?.data || res.data;
+      const res = await apiClient.get('/vehicle-care/plans');
+      const raw = (res.data as any)?.data || res.data;
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((p: any) => ({
+          id: String(p.id),
+          name: p.name || p.planName || 'Wash Plan',
+          frequency: (p.frequency || p.frequencyLabel || 'MONTHLY') as PlanFrequency,
+          servicesIncluded: ['FULL_WASH'] as ServiceType[],
+          creditsTotal: Number(p.creditsTotal || 4),
+          creditsUsed: Number(p.creditsUsed || 0),
+          price: Number(p.price || 0),
+          nextRenewalDate: p.nextRenewalDate || p.endDate || '',
+          status: (p.status || 'ACTIVE') as PlanStatus,
+          vehicleId: String(p.vehicleId || ''),
+          vehicleDisplay: p.vehicleDisplay || `${p.vehicleNickname || ''} ${p.vehiclePlate || ''}`,
+        }));
+      }
+      return MOCK_PLANS;
     } catch {
       return MOCK_PLANS;
     }
@@ -479,7 +641,21 @@ export const vehicleCareService = {
   getPlanCatalog: async (): Promise<WashPlanCatalog[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/plans/catalog');
-      return (res.data as any)?.data || res.data;
+      const raw = (res.data as any)?.data || res.data;
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((c: any) => ({
+          id: String(c.id),
+          name: c.name,
+          frequency: (c.frequency || c.frequencyLabel || 'MONTHLY') as PlanFrequency,
+          serviceType: 'FULL_WASH' as ServiceType,
+          creditsPerCycle: Number(c.creditsPerCycle || c.washesPerMonth || 4),
+          price: Number(c.price || 0),
+          savingsPercent: Number(c.savingsPercent || 0),
+          emoji: c.emoji || '🚗',
+          popular: !!c.popular,
+        }));
+      }
+      return MOCK_PLAN_CATALOG;
     } catch {
       return MOCK_PLAN_CATALOG;
     }
@@ -487,8 +663,26 @@ export const vehicleCareService = {
 
   subscribePlan: async (req: SubscribePlanRequest): Promise<WashPlan> => {
     try {
-      const res = await apiClient.post('/vehicle-care/plans/subscribe', req);
-      return (res.data as any)?.data || res.data;
+      const payload = {
+        planCatalogId: isNaN(Number(req.planCatalogId)) ? 1 : Number(req.planCatalogId),
+        vehicleId: isNaN(Number(req.vehicleId)) ? 1 : Number(req.vehicleId),
+        paymentReference: req.paymentMethod,
+      };
+      const res = await apiClient.post('/vehicle-care/plans/subscribe', payload);
+      const p = (res.data as any)?.data || res.data;
+      return {
+        id: String(p.id),
+        name: p.name || p.planName || 'Wash Plan',
+        frequency: (p.frequency || p.frequencyLabel || 'MONTHLY') as PlanFrequency,
+        servicesIncluded: ['FULL_WASH'] as ServiceType[],
+        creditsTotal: Number(p.creditsTotal || 4),
+        creditsUsed: Number(p.creditsUsed || 0),
+        price: Number(p.price || 0),
+        nextRenewalDate: p.nextRenewalDate || p.endDate || '',
+        status: (p.status || 'ACTIVE') as PlanStatus,
+        vehicleId: String(p.vehicleId || req.vehicleId),
+        vehicleDisplay: p.vehicleDisplay || `${p.vehicleNickname || ''} ${p.vehiclePlate || ''}`,
+      };
     } catch {
       const cat = MOCK_PLAN_CATALOG.find(p => p.id === req.planCatalogId) || MOCK_PLAN_CATALOG[0];
       const veh = MOCK_VEHICLES.find(v => v.id === req.vehicleId) || MOCK_VEHICLES[0];
@@ -504,25 +698,25 @@ export const vehicleCareService = {
 
   pausePlan: async (id: string): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/plans/${id}/pause`);
+      await apiClient.patch(`/vehicle-care/plans/${id}/status?status=PAUSED`);
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 
   resumePlan: async (id: string): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/plans/${id}/resume`);
+      await apiClient.patch(`/vehicle-care/plans/${id}/status?status=ACTIVE`);
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 
   cancelPlan: async (id: string): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/plans/${id}/cancel`);
+      await apiClient.patch(`/vehicle-care/plans/${id}/status?status=CANCELLED`);
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 
@@ -530,7 +724,24 @@ export const vehicleCareService = {
   getVendorJobs: async (): Promise<VendorJob[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/vendor/jobs');
-      return (res.data as any)?.data || res.data;
+      const raw = (res.data as any)?.data || res.data;
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((j: any) => ({
+          id: String(j.id),
+          bookingNumber: j.bookingNumber || `VC-${j.id}`,
+          residentName: j.vehicleNickname || 'Resident',
+          address: j.location || j.locationNotes || 'Flat',
+          vehicleDisplay: j.vehicleDisplay || `${j.vehiclePlate || ''}`,
+          serviceName: j.serviceName || 'Wash',
+          addonNames: j.addonNames || [],
+          scheduledDate: j.date || j.scheduledDate || '',
+          scheduledTime: j.startTime || j.scheduledStart || '',
+          status: j.status || 'CONFIRMED',
+          amount: Number(j.totalAmount || j.paidAmount || 0),
+          technicianName: j.technicianName,
+        }));
+      }
+      return MOCK_VENDOR_JOBS;
     } catch {
       return MOCK_VENDOR_JOBS;
     }
@@ -538,17 +749,17 @@ export const vehicleCareService = {
 
   updateJobStatus: async (id: string, status: BookingStatus): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/vendor/jobs/${id}/status`, { status });
+      await apiClient.patch(`/vehicle-care/vendor/jobs/${id}/status?status=${status}`);
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 
-  completeJob: async (id: string, checklistCompleted: boolean): Promise<void> => {
+  completeJob: async (id: string, _checklistCompleted: boolean): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/vendor/jobs/${id}/complete`, { checklistCompleted });
+      await apiClient.patch(`/vehicle-care/vendor/jobs/${id}/status?status=COMPLETED`);
     } catch {
-      // mock: silently succeed
+      // mock fallback
     }
   },
 };
