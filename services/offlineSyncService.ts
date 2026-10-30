@@ -246,7 +246,7 @@ export const offlineSyncService = {
 
   async pullDeltaChanges(societyId: number = 1): Promise<SyncPullResponse> {
     try {
-      const res = await api.get<SyncPullResponse>(`/api/v1/sync/pull?societyId=${societyId}&checkpoint=${lastSyncCheckpoint}`);
+      const res = await api.post<SyncPullResponse>(`/api/v1/sync/pull`, { societyId, checkpoint: lastSyncCheckpoint });
       lastSyncCheckpoint = res.data.newCheckpoint;
       return res.data;
     } catch {

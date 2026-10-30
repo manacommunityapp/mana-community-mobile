@@ -236,12 +236,12 @@ export const guardService = {
 
   updateIncidentStatus: async (id: number, status: IncidentStatus): Promise<void> => {
     try {
-      await api.put(`/guard/incidents/${id}/status`, null, { params: { status } });
+      await api.patch(`/guard/incidents/${id}/status`, null, { params: { status } });
       return;
     } catch {}
 
     try {
-      await api.put(`/security/incidents/${id}/status`, null, { params: { status } });
+      await api.patch(`/security/incidents/${id}/status`, null, { params: { status } });
     } catch (err) {
       secureLog.warn(`GuardService: Update incident ${id} status failed`, err);
       throw err;
@@ -250,12 +250,12 @@ export const guardService = {
 
   getPatrolSession: async (): Promise<PatrolSession> => {
     try {
-      const res = await api.get<PatrolSession>('/guard/patrol/session');
+      const res = await api.post<PatrolSession>('/guard/patrol/session', {});
       if (res.data) return res.data;
     } catch {}
 
     try {
-      const res = await api.get<PatrolSession>('/security/patrol/session');
+      const res = await api.post<PatrolSession>('/security/patrol/session', {});
       if (res.data) return res.data;
       return { id: 0, startedAt: '', checkpoints: [], guardName: '' };
     } catch (err) {

@@ -92,6 +92,6 @@ export const chatService = {
   },
 
   async markRead(conversationId: number): Promise<void> {
-    await api.put(`/chat/conversations/${conversationId}/read`);
+    await api.post(`/chat/conversations/${conversationId}/read`);
   },
 };
