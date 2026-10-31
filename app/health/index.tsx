@@ -95,7 +95,7 @@ export default function HealthHubScreen() {
         <View style={styles.grid}>
           {[
             { title: "Care Journey", desc: "Track Full Journey", icon: "git-merge", route: "/health/care-journey", color: "#4F46E5", bg: "#EEF2FF" },
-            { title: "Find Doctors", desc: "Specialists & Clinic", icon: "medkit", route: "/health/doctors", color: "#0D9488", bg: "#CCFBF1" },
+            { title: "Find Doctors", desc: "~15 min · from ₹499", icon: "medkit", route: "/health/doctors", color: "#0D9488", bg: "#CCFBF1" },
             { title: "Clubhouse Camps", desc: "Screening Drives", icon: "fitness", route: "/health/camps", color: "#059669", bg: "#D1FAE5" },
             { title: "Family Health", desc: "Manage Dependents", icon: "people", route: "/health/family", color: "#6366F1", bg: "#EEF2FF" },
             { title: "Health Wallet", desc: "Allowance & Claims", icon: "card", route: "/health/benefits", color: "#2563EB", bg: "#DBEAFE" },

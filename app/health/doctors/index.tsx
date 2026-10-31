@@ -37,6 +37,23 @@ const FEE_OPTIONS = [
   { label: "₹1000+", min: 1001, max: 99999 }
 ];
 
+const CONDITION_GROUPS = [
+  { id: "cold-fever", label: "Cold & Fever", icon: "thermometer", color: "#DC2626", search: "General Medicine" },
+  { id: "skin", label: "Skin & Hair", icon: "color-palette", color: "#DB2777", search: "Dermatology" },
+  { id: "stomach", label: "Stomach Issues", icon: "nutrition", color: "#D97706", search: "Gastroenterology" },
+  { id: "back-joint", label: "Back & Joints", icon: "body", color: "#7C3AED", search: "Orthopedics" },
+  { id: "cardiac", label: "Heart Issues", icon: "heart", color: "#DC2626", search: "Cardiology" },
+  { id: "sexual-health", label: "Sexual Health", icon: "person", color: "#059669", search: "Sexual Health" },
+  { id: "pregnancy", label: "Pregnancy", icon: "woman", color: "#DB2777", search: "Gynecology" },
+  { id: "conceiving", label: "Conceiving", icon: "people", color: "#2563EB", search: "Fertility" },
+  { id: "child", label: "Child & Infant", icon: "happy", color: "#0D9488", search: "Pediatrics" },
+  { id: "lab-report", label: "Report Analysis", icon: "document-text", color: "#4F46E5", search: "Lab Report" },
+  { id: "weight", label: "Weight Loss", icon: "fitness", color: "#059669", search: "Nutrition" },
+  { id: "not-sure", label: "I Don't Know", icon: "help-circle", color: "#6B7280", search: "" },
+] as const;
+
+const LANGUAGES = ["Any Language", "Hindi", "English", "Telugu", "Tamil", "Kannada", "Marathi", "Bengali", "Malayalam", "Gujarati"];
+
 export default function HealthcareDirectoryScreen() {
   const router = useRouter();
   const { specialty } = useLocalSearchParams<{ specialty?: string }>();
@@ -49,6 +66,8 @@ export default function HealthcareDirectoryScreen() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [selectedDept, setSelectedDept] = useState("All Depts");
+  const [selectedCondition, setSelectedCondition] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState("Any Language");
 
   useEffect(() => {
     healthService.getDoctors().then(setProviders);
@@ -125,6 +144,30 @@ export default function HealthcareDirectoryScreen() {
           <Text style={styles.emergencyCallText}>Ambulance Gate 1</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── 1b. CONDITION GROUPS ── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.conditionScroll} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+        {CONDITION_GROUPS.map(cg => {
+          const isActive = selectedCondition === cg.id;
+          return (
+            <TouchableOpacity
+              key={cg.id}
+              style={[styles.condChip, isActive && { backgroundColor: cg.color + "20", borderColor: cg.color }]}
+              onPress={() => {
+                if (isActive) { setSelectedCondition(null); setSearchQuery(""); }
+                else {
+                  setSelectedCondition(cg.id);
+                  if (cg.id === "not-sure") { router.push("/health/ai-assistant" as any); }
+                  else { setSearchQuery(cg.search); }
+                }
+              }}
+            >
+              <Ionicons name={cg.icon as any} size={12} color={isActive ? cg.color : "#6B7280"} />
+              <Text style={[styles.condChipText, isActive && { color: cg.color, fontWeight: "700" }]}>{cg.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       {/* ── 2. SEARCH & FILTER ROW ── */}
       <View style={styles.searchRow}>
@@ -246,6 +289,7 @@ export default function HealthcareDirectoryScreen() {
                 </View>
                 <View style={styles.ratingBadge}>
                   <Text style={styles.ratingText}>⭐ {doc.rating}</Text>
+                  <Text style={styles.reviewCountText}>({Math.floor(doc.rating * 80 + 47)})</Text>
                 </View>
               </View>
 
@@ -415,6 +459,20 @@ export default function HealthcareDirectoryScreen() {
               <Text style={styles.checkboxLabel}>Open Now</Text>
             </TouchableOpacity>
 
+            {/* Language */}
+            <Text style={styles.sectionHeader}>Consultation Language</Text>
+            <View style={styles.chipsRow}>
+              {LANGUAGES.map(lang => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[styles.modalChip, selectedLanguage === lang && styles.modalChipActive]}
+                  onPress={() => setSelectedLanguage(lang)}
+                >
+                  <Text style={[styles.modalChipText, selectedLanguage === lang && styles.modalChipTextActive]}>{lang}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {/* Apply & Reset */}
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -424,6 +482,7 @@ export default function HealthcareDirectoryScreen() {
                   setSelectedFeeIndex(0);
                   setAvailableTodayOnly(false);
                   setOpenNowOnly(false);
+                  setSelectedLanguage("Any Language");
                 }}
               >
                 <Text style={styles.modalResetText}>Reset</Text>
@@ -444,6 +503,10 @@ export default function HealthcareDirectoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB" },
+  conditionScroll: { maxHeight: 40, marginTop: 8 },
+  condChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: "#F3F4F6", borderWidth: 1, borderColor: "#E5E7EB" },
+  condChipText: { fontSize: 11, color: "#4B5563" },
+  reviewCountText: { fontSize: 9, color: "#6B7280", marginTop: 1 },
   emergencyBar: {
     backgroundColor: "#FEF2F2",
     borderBottomWidth: 1,
