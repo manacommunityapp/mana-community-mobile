@@ -258,7 +258,9 @@ export interface LabPackageDto {
   testsIncluded: string[];
   homeCollectionAvailable: boolean;
   fastingRequired: boolean;
+  fastingHours?: number;
   reportTurnaroundHours: number;
+  category?: string;
 }
 
 export interface HomecareProviderDto {

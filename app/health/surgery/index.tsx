@@ -53,6 +53,17 @@ const POST_SURGERY_CHECKLIST = [
 
 const EMI_OPTIONS = [3, 6, 9, 12, 18, 24];
 
+const CONDITION_SHORTCUTS = [
+  { label: "Piles", icon: "medical", color: "#DC2626", category: "General Surgery" },
+  { label: "Kidney Stones", icon: "water", color: "#2563EB", category: "Urology" },
+  { label: "Lipoma", icon: "cut", color: "#059669", category: "General Surgery" },
+  { label: "Gallstones", icon: "medkit", color: "#D97706", category: "General Surgery" },
+  { label: "Fissure", icon: "medical", color: "#7C3AED", category: "General Surgery" },
+  { label: "Knee Replacement", icon: "accessibility", color: "#0D9488", category: "Orthopedics" },
+  { label: "Cataract", icon: "eye", color: "#6366F1", category: "Ophthalmology" },
+  { label: "Hernia", icon: "body", color: "#DB2777", category: "General Surgery" },
+] as const;
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 type Step = "select" | "plan" | "confirm" | "done";
@@ -104,6 +115,21 @@ export default function SurgeryCareScreen() {
             <Ionicons name="call" size={14} color="#7C3AED" />
           </TouchableOpacity>
         </View>
+
+        {/* Condition Shortcuts */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 52 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingVertical: 6 }}>
+          {CONDITION_SHORTCUTS.map(cs => (
+            <TouchableOpacity
+              key={cs.label}
+              style={[styles.shortcutChip, { borderColor: cs.color + "40" }]}
+              onPress={() => setFilter(cs.category)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name={cs.icon as any} size={14} color={cs.color} />
+              <Text style={[styles.shortcutChipText, { color: cs.color }]}>{cs.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {/* Free First Consultation CTA */}
         <View style={styles.freeConsultBanner}>
@@ -346,6 +372,8 @@ const styles = StyleSheet.create({
   headerTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "800", fontFamily: FONTS.displayBold },
   headerSub: { color: "#CCFBF1", fontSize: 12, fontFamily: FONTS.regular },
 
+  shortcutChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: "#FFFFFF", borderWidth: 1 },
+  shortcutChipText: { fontSize: 12, fontWeight: "700" },
   buddyBanner: { margin: 16, backgroundColor: "#EDE9FE", borderRadius: RADIUS.lg, padding: 12, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderColor: "#DDD6FE" },
   freeConsultBanner: { marginHorizontal: 16, marginBottom: 8, backgroundColor: "#0D9488", borderRadius: RADIUS.lg, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
   freeConsultTitle: { fontSize: 13, fontWeight: "800", color: "#FFFFFF" },

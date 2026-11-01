@@ -196,6 +196,46 @@ export default function CancerCareScreen() {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
           {!soSubmitted ? (
             <>
+              {/* Expert Panel CTA — Navya / Tata Memorial style */}
+              <View style={styles.expertPanelCard}>
+                <View style={styles.expertPanelHeader}>
+                  <View style={styles.expertPanelIconWrap}>
+                    <Ionicons name="ribbon" size={22} color="#7C3AED" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.expertPanelTitle}>Expert Tumor Board Opinion</Text>
+                    <Text style={styles.expertPanelSub}>In partnership with Tata Memorial Centre & National Cancer Grid</Text>
+                  </View>
+                  <View style={styles.expertTurnaroundBadge}>
+                    <Text style={styles.expertTurnaroundText}>1–3 Days</Text>
+                  </View>
+                </View>
+
+                <View style={styles.expertSteps}>
+                  {[
+                    { step: "1", title: "Submit Reports", desc: "Upload your biopsy, scan & pathology reports" },
+                    { step: "2", title: "Expert Review", desc: "Tumor board of 3–5 oncologists analyze your case" },
+                    { step: "3", title: "Receive Opinion", desc: "Personalised Expert Opinion Report in 1–3 days" },
+                  ].map(s => (
+                    <View key={s.step} style={styles.expertStep}>
+                      <View style={styles.expertStepNum}>
+                        <Text style={styles.expertStepNumText}>{s.step}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.expertStepTitle}>{s.title}</Text>
+                        <Text style={styles.expertStepDesc}>{s.desc}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity style={styles.expertSubmitBtn} onPress={() => router.push("/health/records" as any)} activeOpacity={0.85}>
+                  <Ionicons name="cloud-upload" size={16} color="#FFFFFF" />
+                  <Text style={styles.expertSubmitBtnText}>Submit Reports for Expert Review</Text>
+                </TouchableOpacity>
+                <Text style={styles.expertNote}>Your dedicated patient advocate will guide you through the process.</Text>
+              </View>
+
               <View style={styles.soInfoBanner}>
                 <Ionicons name="chatbubbles" size={24} color="#7C3AED" />
                 <View style={{ flex: 1 }}>
@@ -346,6 +386,22 @@ const styles = StyleSheet.create({
   chemoStatus: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.full },
   chemoStatusText: { fontSize: 11, fontWeight: "700" },
 
+  expertPanelCard: { backgroundColor: "#FFFFFF", borderRadius: RADIUS.squircle, padding: 16, gap: 12, borderWidth: 2, borderColor: "#7C3AED" },
+  expertPanelHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  expertPanelIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#EDE9FE", justifyContent: "center", alignItems: "center" },
+  expertPanelTitle: { fontSize: 14, fontWeight: "800", color: "#4C1D95" },
+  expertPanelSub: { fontSize: 11, color: "#6D28D9", marginTop: 2, lineHeight: 16 },
+  expertTurnaroundBadge: { backgroundColor: "#4C1D95", paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.full },
+  expertTurnaroundText: { color: "#FFFFFF", fontSize: 10, fontWeight: "800" },
+  expertSteps: { gap: 10, paddingLeft: 4 },
+  expertStep: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  expertStepNum: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#7C3AED", justifyContent: "center", alignItems: "center" },
+  expertStepNumText: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
+  expertStepTitle: { fontSize: 12, fontWeight: "700", color: "#1E293B" },
+  expertStepDesc: { fontSize: 11, color: "#64748B", marginTop: 2 },
+  expertSubmitBtn: { backgroundColor: "#7C3AED", paddingVertical: 12, borderRadius: RADIUS.sm, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  expertSubmitBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
+  expertNote: { fontSize: 10, color: "#94A3B8", textAlign: "center" },
   soInfoBanner: { backgroundColor: "#EDE9FE", borderRadius: RADIUS.lg, padding: 14, flexDirection: "row", gap: 10, borderWidth: 1, borderColor: "#DDD6FE" },
   soInfoTitle: { fontSize: 14, fontWeight: "700", color: "#4C1D95" },
   soInfoDesc: { fontSize: 12, color: "#6D28D9", marginTop: 3, lineHeight: 18 },
