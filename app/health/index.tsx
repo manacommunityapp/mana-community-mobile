@@ -113,6 +113,7 @@ export default function HealthHubScreen() {
           { title: "Cancer Care", desc: "Oncology · 2nd Opinion", icon: "ribbon", route: "/health/cancer", color: "#7C3AED", bg: "#EDE9FE" },
           { title: "Mental Health", desc: "Therapy · Psychiatry", icon: "heart", route: "/health/mental-health", color: "#7C3AED", bg: "#EDE9FE" },
           { title: "Hospitals", desc: "Cashless · Network Finder", icon: "business", route: "/health/hospitals", color: "#0D9488", bg: "#CCFBF1" },
+          { title: "Radiology", desc: "X-Ray · CT · MRI · USG", icon: "scan", route: "/health/radiology", color: "#0891B2", bg: "#ECFEFF" },
           { title: "Mana Gold", desc: "Premium Membership", icon: "star", route: "/health/gold", color: "#B45309", bg: "#FEF3C7" },
           ].map((item, idx) => (
             <TouchableOpacity
