@@ -95,7 +95,7 @@ export default function HealthHubScreen() {
         <View style={styles.grid}>
           {[
             { title: "Care Journey", desc: "Track Full Journey", icon: "git-merge", route: "/health/care-journey", color: "#4F46E5", bg: "#EEF2FF" },
-            { title: "Find Doctors", desc: "Specialists & Clinic", icon: "medkit", route: "/health/doctors", color: "#0D9488", bg: "#CCFBF1" },
+            { title: "Find Doctors", desc: "~15 min · from ₹499", icon: "medkit", route: "/health/doctors", color: "#0D9488", bg: "#CCFBF1" },
             { title: "Clubhouse Camps", desc: "Screening Drives", icon: "fitness", route: "/health/camps", color: "#059669", bg: "#D1FAE5" },
             { title: "Family Health", desc: "Manage Dependents", icon: "people", route: "/health/family", color: "#6366F1", bg: "#EEF2FF" },
             { title: "Health Wallet", desc: "Allowance & Claims", icon: "card", route: "/health/benefits", color: "#2563EB", bg: "#DBEAFE" },
@@ -115,6 +115,7 @@ export default function HealthHubScreen() {
           { title: "Cancer Care", desc: "Oncology · 2nd Opinion", icon: "ribbon", route: "/health/cancer", color: "#7C3AED", bg: "#EDE9FE" },
           { title: "Mental Health", desc: "Therapy · Psychiatry", icon: "heart", route: "/health/mental-health", color: "#7C3AED", bg: "#EDE9FE" },
           { title: "Hospitals", desc: "Cashless · Network Finder", icon: "business", route: "/health/hospitals", color: "#0D9488", bg: "#CCFBF1" },
+          { title: "Radiology", desc: "X-Ray · CT · MRI · USG", icon: "scan", route: "/health/radiology", color: "#0891B2", bg: "#ECFEFF" },
           { title: "Mana Gold", desc: "Premium Membership", icon: "star", route: "/health/gold", color: "#B45309", bg: "#FEF3C7" },
           ].map((item, idx) => (
             <TouchableOpacity

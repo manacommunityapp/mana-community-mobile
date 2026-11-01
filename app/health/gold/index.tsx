@@ -14,8 +14,10 @@ interface GoldBenefit {
   value: string;
 }
 
+const FAMILY_SLOTS = ["You", "Spouse", "Child 1", "Child 2", "Parent 1", "Parent 2"];
+
 const BENEFITS: GoldBenefit[] = [
-  { icon: "videocam", title: "Free Video Consultations", detail: "Unlimited teleconsults with any empanelled doctor", value: "Unlimited" },
+  { icon: "videocam", title: "Free Video Consultations", detail: "Unlimited teleconsults for up to 6 family members, 22+ specialties, 24×7", value: "Family of 6" },
   { icon: "flask", title: "Lab Test Discount", detail: "30% off on all lab packages & home collection", value: "30% off" },
   { icon: "medkit", title: "Medicine Discount", detail: "20% off on all pharmacy orders", value: "20% off" },
   { icon: "star", title: "Priority Booking", detail: "Skip the queue — instant slot confirmation", value: "Priority" },
@@ -23,6 +25,7 @@ const BENEFITS: GoldBenefit[] = [
   { icon: "person", title: "Dedicated Care Manager", detail: "Personal health navigator for your family", value: "Dedicated" },
   { icon: "heart", title: "Mental Wellness Sessions", detail: "4 free therapy/counselling sessions per month", value: "4 / month" },
   { icon: "call", title: "24×7 Doctor Helpline", detail: "On-call doctor for health queries anytime", value: "24×7" },
+  { icon: "language", title: "12+ Languages Supported", detail: "Consult in Hindi, Telugu, Tamil, Kannada, Bengali & more", value: "12+ langs" },
 ];
 
 export default function ManaGoldScreen() {
@@ -105,11 +108,27 @@ export default function ManaGoldScreen() {
           <Ionicons name="star" size={42} color="#FDE68A" />
         </View>
         <Text style={styles.heroTitle}>Mana Gold</Text>
-        <Text style={styles.heroTag}>Your Premium Health Membership</Text>
-        <Text style={styles.heroDesc}>Unlimited consultations, priority care, exclusive discounts — everything your family needs, in one plan.</Text>
+        <Text style={styles.heroTag}>Family of 6 · 22+ Specialties · 12+ Languages</Text>
+        <Text style={styles.heroDesc}>Unlimited video consultations for your entire family — doctors available 24×7 in your language, with priority care and exclusive discounts.</Text>
       </LinearGradient>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {/* Family Coverage Highlights */}
+        <View style={styles.familyCoverageCard}>
+          <Text style={styles.familyCoverageTitle}>Covers Your Whole Family</Text>
+          <Text style={styles.familyCoverageSub}>Up to 6 members • 22+ specialties • 12+ languages</Text>
+          <View style={styles.familySlots}>
+            {FAMILY_SLOTS.map((member, i) => (
+              <View key={i} style={styles.familySlot}>
+                <View style={styles.familySlotAvatar}>
+                  <Ionicons name="person" size={14} color="#A16207" />
+                </View>
+                <Text style={styles.familySlotLabel}>{member}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
         {/* Plan Toggle */}
         <View style={styles.planToggle}>
           {(["monthly", "annual"] as Plan[]).map(p => (
@@ -214,6 +233,13 @@ const styles = StyleSheet.create({
   planPeriod: { fontSize: 12, color: "#9CA3AF" },
   activePlanPeriod: { color: "#B45309" },
   annualNote: { fontSize: 10, color: "#9CA3AF" },
+  familyCoverageCard: { backgroundColor: "#FFFBEB", borderRadius: 16, padding: 14, borderWidth: 1, borderColor: "#FDE68A" },
+  familyCoverageTitle: { fontSize: 15, fontWeight: "800", color: "#78350F", textAlign: "center" },
+  familyCoverageSub: { fontSize: 12, color: "#A16207", textAlign: "center", marginTop: 2, marginBottom: 12 },
+  familySlots: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10 },
+  familySlot: { alignItems: "center", gap: 4 },
+  familySlotAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#FEF3C7", borderWidth: 2, borderColor: "#B45309", justifyContent: "center", alignItems: "center" },
+  familySlotLabel: { fontSize: 9, color: "#92400E", fontWeight: "600" },
   benefitsHeader: { fontSize: 16, fontWeight: "800", color: "#0F172A" },
   benefitRow: { backgroundColor: "#FFFFFF", borderRadius: 14, padding: 14, flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: "#E5E7EB" },
   benefitIcon: { width: 38, height: 38, borderRadius: 10, backgroundColor: "#FEF3C7", justifyContent: "center", alignItems: "center" },

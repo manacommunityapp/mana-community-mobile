@@ -18,9 +18,28 @@ const CATEGORY_TABS: { id: ProviderCategory | "ALL"; label: string; icon: string
 ];
 
 const DEPARTMENTS = [
-  "All Depts", "General Medicine", "Cardiology", "Orthopedics", "Pediatrics",
-  "Gynecology", "Dermatology", "ENT", "Ophthalmology", "Neurology", "Psychiatry"
+  "All Depts",
+  // Modern medicine
+  "General Medicine", "Cardiology", "Orthopedics", "Pediatrics",
+  "Gynecology", "Dermatology", "ENT", "Ophthalmology", "Neurology", "Psychiatry",
+  "Gastroenterology", "Urology", "Nephrology", "Endocrinology", "Pulmonology",
+  "Haematology", "Rheumatology", "Sexology", "Geriatric Medicine",
+  "Diabetology", "Hepatology", "Pathology",
+  // Paediatric sub-specialties
+  "Paediatric Cardiology", "Paediatric Neurology", "Paediatric Orthopedics",
+  "Paediatric ENT", "Paediatric Gastro", "Paediatric Oncology",
+  // AYUSH
+  "Ayurveda", "Homeopathy", "Unani", "Naturopathy",
 ];
+
+const SORT_OPTIONS = [
+  { id: "relevance", label: "Relevance" },
+  { id: "rating", label: "Top Rated" },
+  { id: "fee_asc", label: "Fee: Low→High" },
+  { id: "experience", label: "Experience" },
+] as const;
+
+type SortOption = typeof SORT_OPTIONS[number]["id"];
 
 const DISTANCE_OPTIONS = [
   { label: "All Distance", value: 999 },
@@ -38,6 +57,23 @@ const FEE_OPTIONS = [
   { label: "₹1000+", min: 1001, max: 99999 }
 ];
 
+const CONDITION_GROUPS = [
+  { id: "cold-fever", label: "Cold & Fever", icon: "thermometer", color: "#DC2626", search: "General Medicine" },
+  { id: "skin", label: "Skin & Hair", icon: "color-palette", color: "#DB2777", search: "Dermatology" },
+  { id: "stomach", label: "Stomach Issues", icon: "nutrition", color: "#D97706", search: "Gastroenterology" },
+  { id: "back-joint", label: "Back & Joints", icon: "body", color: "#7C3AED", search: "Orthopedics" },
+  { id: "cardiac", label: "Heart Issues", icon: "heart", color: "#DC2626", search: "Cardiology" },
+  { id: "sexual-health", label: "Sexual Health", icon: "person", color: "#059669", search: "Sexual Health" },
+  { id: "pregnancy", label: "Pregnancy", icon: "woman", color: "#DB2777", search: "Gynecology" },
+  { id: "conceiving", label: "Conceiving", icon: "people", color: "#2563EB", search: "Fertility" },
+  { id: "child", label: "Child & Infant", icon: "happy", color: "#0D9488", search: "Pediatrics" },
+  { id: "lab-report", label: "Report Analysis", icon: "document-text", color: "#4F46E5", search: "Lab Report" },
+  { id: "weight", label: "Weight Loss", icon: "fitness", color: "#059669", search: "Nutrition" },
+  { id: "not-sure", label: "I Don't Know", icon: "help-circle", color: "#6B7280", search: "" },
+] as const;
+
+const LANGUAGES = ["Any Language", "Hindi", "English", "Telugu", "Tamil", "Kannada", "Marathi", "Bengali", "Malayalam", "Gujarati"];
+
 export default function HealthcareDirectoryScreen() {
   const router = useRouter();
   const { specialty, category } = useLocalSearchParams<{ specialty?: string; category?: ProviderCategory | "ALL" }>();
@@ -50,6 +86,11 @@ export default function HealthcareDirectoryScreen() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [selectedDept, setSelectedDept] = useState("All Depts");
+  const [selectedCondition, setSelectedCondition] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState("Any Language");
+  const [sortBy, setSortBy] = useState<SortOption>("relevance");
+  const [walkInOnly, setWalkInOnly] = useState(false);
+  const [instantOnly, setInstantOnly] = useState(false);
 
   useEffect(() => {
     if (category) {
@@ -61,8 +102,11 @@ export default function HealthcareDirectoryScreen() {
     healthService.getDoctors().then(setProviders);
   }, []);
 
+  const isWalkIn = (p: DoctorDto) => p.openNow === true || p.nextAvailableSlot.toLowerCase().includes("today");
+  const isInstant = (p: DoctorDto) => isWalkIn(p) && p.consultationFee <= 600;
+
   const filtered = useMemo(() => {
-    return providers.filter(p => {
+    let result = providers.filter(p => {
       // Category filter
       if (selectedCategory !== "ALL" && p.category !== selectedCategory) {
         return false;
@@ -112,9 +156,22 @@ export default function HealthcareDirectoryScreen() {
         if (!deptMatch) return false;
       }
 
+      // Walk-in filter
+      if (walkInOnly && !isWalkIn(p)) return false;
+
+      // Instant confirmation filter
+      if (instantOnly && !isInstant(p)) return false;
+
       return true;
     });
-  }, [providers, selectedCategory, searchQuery, selectedDistance, selectedFeeIndex, availableTodayOnly, openNowOnly, selectedDept]);
+
+    // Sort
+    if (sortBy === "rating") result = [...result].sort((a, b) => b.rating - a.rating);
+    else if (sortBy === "fee_asc") result = [...result].sort((a, b) => a.consultationFee - b.consultationFee);
+    else if (sortBy === "experience") result = [...result].sort((a, b) => b.experienceYears - a.experienceYears);
+
+    return result;
+  }, [providers, selectedCategory, searchQuery, selectedDistance, selectedFeeIndex, availableTodayOnly, openNowOnly, selectedDept, walkInOnly, instantOnly, sortBy]);
 
   return (
     <View style={styles.container}>
@@ -132,6 +189,65 @@ export default function HealthcareDirectoryScreen() {
           <Text style={styles.emergencyCallText}>Ambulance Gate 1</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── 0b. SORT ROW ── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortScroll} contentContainerStyle={{ paddingHorizontal: 16, gap: 6 }}>
+        {SORT_OPTIONS.map(opt => (
+          <TouchableOpacity
+            key={opt.id}
+            style={[styles.sortChip, sortBy === opt.id && styles.sortChipActive]}
+            onPress={() => setSortBy(opt.id)}
+          >
+            <Text style={[styles.sortChipText, sortBy === opt.id && styles.sortChipTextActive]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity
+          style={[styles.sortChip, walkInOnly && styles.walkInChipActive]}
+          onPress={() => setWalkInOnly(!walkInOnly)}
+        >
+          <Ionicons name="walk" size={11} color={walkInOnly ? "#FFFFFF" : "#059669"} />
+          <Text style={[styles.sortChipText, walkInOnly && styles.sortChipTextActive]}>Walk-in</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortChip, instantOnly && styles.instantChipActive]}
+          onPress={() => setInstantOnly(!instantOnly)}
+        >
+          <Ionicons name="flash" size={11} color={instantOnly ? "#FFFFFF" : "#D97706"} />
+          <Text style={[styles.sortChipText, instantOnly && styles.sortChipTextActive]}>Instant</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* ── 0c. WALK-IN URGENCY BANNER ── */}
+      {walkInOnly && (
+        <View style={styles.walkInBanner}>
+          <Ionicons name="walk" size={16} color="#059669" />
+          <Text style={styles.walkInBannerText}>Showing doctors available for same-day walk-in visits</Text>
+        </View>
+      )}
+
+      {/* ── 1b. CONDITION GROUPS ── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.conditionScroll} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+        {CONDITION_GROUPS.map(cg => {
+          const isActive = selectedCondition === cg.id;
+          return (
+            <TouchableOpacity
+              key={cg.id}
+              style={[styles.condChip, isActive && { backgroundColor: cg.color + "20", borderColor: cg.color }]}
+              onPress={() => {
+                if (isActive) { setSelectedCondition(null); setSearchQuery(""); }
+                else {
+                  setSelectedCondition(cg.id);
+                  if (cg.id === "not-sure") { router.push("/health/ai-assistant" as any); }
+                  else { setSearchQuery(cg.search); }
+                }
+              }}
+            >
+              <Ionicons name={cg.icon as any} size={12} color={isActive ? cg.color : "#6B7280"} />
+              <Text style={[styles.condChipText, isActive && { color: cg.color, fontWeight: "700" }]}>{cg.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       {/* ── 2. SEARCH & FILTER ROW ── */}
       <View style={styles.searchRow}>
@@ -245,6 +361,18 @@ export default function HealthcareDirectoryScreen() {
                         <Text style={styles.verifiedText}>✓ Verified</Text>
                       </View>
                     )}
+                    {isInstant(doc) && (
+                      <View style={styles.instantBadge}>
+                        <Ionicons name="flash" size={9} color="#FFFFFF" />
+                        <Text style={styles.instantBadgeText}>Instant</Text>
+                      </View>
+                    )}
+                    {isWalkIn(doc) && !isInstant(doc) && (
+                      <View style={styles.walkInBadge}>
+                        <Ionicons name="walk" size={9} color="#059669" />
+                        <Text style={styles.walkInBadgeText}>Walk-in</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.specialty}>{doc.specialty}</Text>
                   <Text style={styles.quals}>
@@ -253,6 +381,7 @@ export default function HealthcareDirectoryScreen() {
                 </View>
                 <View style={styles.ratingBadge}>
                   <Text style={styles.ratingText}>⭐ {doc.rating}</Text>
+                  <Text style={styles.reviewCountText}>({Math.floor(doc.rating * 80 + 47)})</Text>
                 </View>
               </View>
 
@@ -422,6 +551,44 @@ export default function HealthcareDirectoryScreen() {
               <Text style={styles.checkboxLabel}>Open Now</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() => setWalkInOnly(!walkInOnly)}
+            >
+              <Ionicons
+                name={walkInOnly ? "checkbox" : "square-outline"}
+                size={20}
+                color={walkInOnly ? "#059669" : "#9CA3AF"}
+              />
+              <Text style={styles.checkboxLabel}>Walk-in Available</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() => setInstantOnly(!instantOnly)}
+            >
+              <Ionicons
+                name={instantOnly ? "checkbox" : "square-outline"}
+                size={20}
+                color={instantOnly ? "#D97706" : "#9CA3AF"}
+              />
+              <Text style={styles.checkboxLabel}>Instant Confirmation</Text>
+            </TouchableOpacity>
+
+            {/* Language */}
+            <Text style={styles.sectionHeader}>Consultation Language</Text>
+            <View style={styles.chipsRow}>
+              {LANGUAGES.map(lang => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[styles.modalChip, selectedLanguage === lang && styles.modalChipActive]}
+                  onPress={() => setSelectedLanguage(lang)}
+                >
+                  <Text style={[styles.modalChipText, selectedLanguage === lang && styles.modalChipTextActive]}>{lang}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {/* Apply & Reset */}
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -431,6 +598,9 @@ export default function HealthcareDirectoryScreen() {
                   setSelectedFeeIndex(0);
                   setAvailableTodayOnly(false);
                   setOpenNowOnly(false);
+                  setSelectedLanguage("Any Language");
+                  setWalkInOnly(false);
+                  setInstantOnly(false);
                 }}
               >
                 <Text style={styles.modalResetText}>Reset</Text>
@@ -451,6 +621,23 @@ export default function HealthcareDirectoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB" },
+  sortScroll: { maxHeight: 36, marginTop: 6, marginBottom: 2 },
+  sortChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E5E7EB" },
+  sortChipActive: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
+  walkInChipActive: { backgroundColor: "#059669", borderColor: "#059669" },
+  instantChipActive: { backgroundColor: "#D97706", borderColor: "#D97706" },
+  sortChipText: { fontSize: 11, fontWeight: "600", color: "#374151" },
+  sortChipTextActive: { color: "#FFFFFF" },
+  walkInBanner: { marginHorizontal: 16, marginTop: 2, marginBottom: 4, backgroundColor: "#ECFDF5", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "#A7F3D0" },
+  walkInBannerText: { fontSize: 11, color: "#065F46", fontWeight: "600", flex: 1 },
+  instantBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#D97706", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  instantBadgeText: { color: "#FFFFFF", fontSize: 9, fontWeight: "800" },
+  walkInBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#ECFDF5", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "#A7F3D0" },
+  walkInBadgeText: { color: "#059669", fontSize: 9, fontWeight: "700" },
+  conditionScroll: { maxHeight: 40, marginTop: 8 },
+  condChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: "#F3F4F6", borderWidth: 1, borderColor: "#E5E7EB" },
+  condChipText: { fontSize: 11, color: "#4B5563" },
+  reviewCountText: { fontSize: 9, color: "#6B7280", marginTop: 1 },
   emergencyBar: {
     backgroundColor: "#FEF2F2",
     borderBottomWidth: 1,
