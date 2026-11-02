@@ -222,6 +222,7 @@ function mapBackendOrderToGroupOrder(o: any): GroupOrder {
     refundAmount: o.refundAmount,
     refundReason: o.refundReason,
     tierPriceRefundAmount: o.tierPriceRefundAmount,
+    commerceOrderId: o.commerceOrderId,
     authorizedCollectors: o.collectorName ? [
       {
         id: 'col-1',
@@ -507,12 +508,15 @@ export const groupBuyingService = {
     } catch (err) {
       console.warn('Failed to fetch deals from /group-buying/deals', err);
     }
-    let seed = SEED_DEALS;
-    if (filters && typeof filters === 'object') {
-      if (filters.category && filters.category !== 'ALL') seed = seed.filter(d => d.category === filters.category);
-      if (filters.search) { const q = filters.search.toLowerCase(); seed = seed.filter(d => d.title.toLowerCase().includes(q)); }
+    if (__DEV__) {
+      let seed = SEED_DEALS;
+      if (filters && typeof filters === 'object') {
+        if (filters.category && filters.category !== 'ALL') seed = seed.filter(d => d.category === filters.category);
+        if (filters.search) { const q = filters.search.toLowerCase(); seed = seed.filter(d => d.title.toLowerCase().includes(q)); }
+      }
+      return seed;
     }
-    return seed;
+    return [];
   },
 
   getFestivalCategories: async (): Promise<string[]> => {
@@ -552,19 +556,20 @@ export const groupBuyingService = {
     } catch (err) {
       console.warn(`Failed to fetch deal ${dealId}`, err);
     }
-    return SEED_DEALS.find(d => d.id === dealId) ?? null;
+    if (__DEV__) return SEED_DEALS.find(d => d.id === dealId) ?? null;
+    return null;
   },
 
   joinDeal: async (arg1: any, arg2?: any, arg3?: any): Promise<GroupOrder> => {
     const payload: JoinDealPayload = typeof arg1 === 'string'
       ? { dealId: arg1, quantity: arg2 || 1, paymentMethod: arg3 || 'UPI' }
       : arg1;
-    
+
     const res = await api.post<any>(`/group-buying/deals/${payload.dealId}/join`, {
       quantity: payload.quantity || 1,
       paymentType: payload.paymentMethod || 'UPI',
-      deliveryAddress: payload.deliverySlot || 'Clubhouse',
-      specialNotes: payload.deliverySlot,
+      deliveryAddress: payload.deliveryAddress || 'Clubhouse',
+      specialNotes: payload.specialNotes,
     });
     return mapBackendOrderToGroupOrder(res.data);
   },
@@ -602,7 +607,8 @@ export const groupBuyingService = {
     } catch (err) {
       console.warn('Failed to fetch user orders', err);
     }
-    return SEED_ORDERS;
+    if (__DEV__) return SEED_ORDERS;
+    return [];
   },
 
   getMyOrders: async (): Promise<GroupOrder[]> => {
