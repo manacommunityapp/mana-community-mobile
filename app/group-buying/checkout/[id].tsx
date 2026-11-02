@@ -19,10 +19,10 @@ import { PaymentModal } from '@/components/payment/PaymentModal';
 import type { GroupDealDto } from '@/types/groupBuying';
 
 export default function GroupBuyCheckoutScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, qty: initialQty } = useLocalSearchParams<{ id: string; qty?: string }>();
   const router = useRouter();
 
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(() => (initialQty ? parseInt(initialQty, 10) || 1 : 1));
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'CREDIT_DEBIT_CARD' | 'NET_BANKING' | 'ESCROW_HOLD'>('UPI');
   const [upiProvider, setUpiProvider] = useState<'GPAY' | 'PHONEPE' | 'PAYTM' | 'OTHER'>('GPAY');
   const [deliveryOption, setDeliveryOption] = useState<'CLUBHOUSE' | 'DOORSTEP'>('CLUBHOUSE');
@@ -125,14 +125,25 @@ export default function GroupBuyCheckoutScreen() {
   const handlePaymentDismiss = useCallback(() => {
     if (paymentStatus === 'success' && pendingGroupOrderId) {
       setPaymentModalVisible(false);
-      router.replace(`/group-buying/join-success/${pendingGroupOrderId}` as any);
+      router.replace({
+        pathname: '/group-buying/join-success/[orderId]',
+        params: {
+          orderId: pendingGroupOrderId,
+          dealId: String(deal?.id || id),
+          qty: String(quantity),
+          savings: String(pricing.savings),
+          dealTitle: deal?.title || '',
+          nextUnits: String(deal?.nextTierUnitsNeeded ?? 0),
+          nextPrice: String(deal?.nextTierPrice ?? 0),
+        },
+      } as any);
     } else {
       setPaymentModalVisible(false);
       setPaymentStatus('idle');
       setCashfreeOrder(null);
       setPaymentError(null);
     }
-  }, [paymentStatus, pendingGroupOrderId, router]);
+  }, [paymentStatus, pendingGroupOrderId, router, deal, id, quantity, pricing]);
 
   if (isLoading || !deal) {
     return (

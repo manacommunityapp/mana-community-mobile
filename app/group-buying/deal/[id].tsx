@@ -65,7 +65,7 @@ export default function DealDetailScreen() {
     setShowConfirmModal(false);
     router.push({
       pathname: '/group-buying/checkout/[id]',
-      params: { id: String(id) },
+      params: { id: String(id), qty: String(quantity) },
     } as any);
   };
 
