@@ -43,6 +43,15 @@ const MODULES: ModuleCard[] = [
     badge: 'Daily',
   },
   {
+    key: 'wellness-basket',
+    title: 'Mana Fresh Wellness',
+    subtitle: 'Dietitian-designed morning nutrition boxes, fruit cuts & superfood bowls',
+    icon: 'nutrition',
+    route: '/wellness-basket',
+    gradient: ['#0D9488', '#0F766E'],
+    badge: 'Sub',
+  },
+  {
     key: 'home-chefs',
     title: 'Home Chef Marketplace',
     subtitle: 'Fresh homemade meals by society chefs delivered to your flat',
