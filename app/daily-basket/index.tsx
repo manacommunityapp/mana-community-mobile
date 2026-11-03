@@ -13,7 +13,7 @@ import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { freshKitchenService } from '@/services/freshKitchenService';
-import type { DailyBasket, DayOfWeek } from '@/types/freshKitchen';
+import type { DailyBasket, DayOfWeek, DeliveryPassDto } from '@/types/freshKitchen';
 
 const WEEKDAYS: { code: DayOfWeek; label: string }[] = [
   { code: 'MON', label: 'M' },
@@ -28,6 +28,7 @@ const WEEKDAYS: { code: DayOfWeek; label: string }[] = [
 export default function DailyBasketScreen() {
   const router = useRouter();
   const [basket, setBasket] = useState<DailyBasket | null>(null);
+  const [deliveryPass, setDeliveryPass] = useState<DeliveryPassDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [vacationModal, setVacationModal] = useState(false);
 
@@ -38,8 +39,12 @@ export default function DailyBasketScreen() {
   const loadBasket = async () => {
     setLoading(true);
     try {
-      const data = await freshKitchenService.getDailyBasket();
-      setBasket(data);
+      const [basketData, passData] = await Promise.all([
+        freshKitchenService.getDailyBasket(),
+        freshKitchenService.getTodayDeliveryPass().catch(() => null),
+      ]);
+      setBasket(basketData);
+      setDeliveryPass(passData);
     } catch {
       // fallback handled in service
     } finally {
@@ -124,6 +129,101 @@ export default function DailyBasketScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.scroll}>
+        {/* Today's Delivery Pass Card (Morning Handover Verification) */}
+        {deliveryPass && (
+          <View style={styles.passCard}>
+            {/* Header */}
+            <View style={styles.passHeader}>
+              <View style={styles.passHeaderLeft}>
+                <View style={styles.passIconWrap}>
+                  <Ionicons name="sparkles" size={16} color="#34d399" />
+                </View>
+                <View>
+                  <Text style={styles.passTag}>TODAY'S MORNING PASS</Text>
+                  <Text style={styles.passOrderNo}>#{deliveryPass.orderNumber}</Text>
+                </View>
+              </View>
+
+              <View
+                style={[
+                  styles.statusPill,
+                  deliveryPass.status === 'DELIVERED'
+                    ? styles.statusDelivered
+                    : deliveryPass.status === 'OUT_FOR_DELIVERY'
+                    ? styles.statusOut
+                    : styles.statusConfirmed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    deliveryPass.status === 'DELIVERED'
+                      ? styles.statusDeliveredText
+                      : deliveryPass.status === 'OUT_FOR_DELIVERY'
+                      ? styles.statusOutText
+                      : styles.statusConfirmedText,
+                  ]}
+                >
+                  {deliveryPass.status === 'DELIVERED'
+                    ? 'Delivered'
+                    : deliveryPass.status === 'OUT_FOR_DELIVERY'
+                    ? 'Out for Delivery'
+                    : 'Confirmed'}
+                </Text>
+              </View>
+            </View>
+
+            {/* OTP Section */}
+            <View style={styles.otpBlock}>
+              <Text style={styles.otpInstruction}>
+                Share this 6-Digit Handover PIN with the runner at your door:
+              </Text>
+              {deliveryPass.handoverOtp ? (
+                <View style={styles.otpBoxesRow}>
+                  {deliveryPass.handoverOtp.split('').map((digit, idx) => (
+                    <View key={idx} style={styles.otpBox}>
+                      <Text style={styles.otpBoxText}>{digit}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.otpPendingText}>Generating upon morning dispatch...</Text>
+              )}
+            </View>
+
+            {/* Token & Runner Mode Section */}
+            <View style={styles.qrRow}>
+              <View style={styles.tokenBox}>
+                <Ionicons name="qr-code-outline" size={16} color="#6ee7b7" />
+                <Text style={styles.tokenText} numberOfLines={1}>
+                  {deliveryPass.qrToken || 'MANA-BASKET-TOKEN'}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.runnerScanBtn}
+                onPress={() => router.push('/daily-basket/scanner' as any)}
+              >
+                <Ionicons name="scan-outline" size={15} color="#064e3b" />
+                <Text style={styles.runnerScanBtnText}>Runner Mode</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Items Summary & Escrow Protection */}
+            <View style={styles.passFooter}>
+              <View style={styles.escrowRow}>
+                <Ionicons name="shield-checkmark" size={14} color="#34d399" />
+                <Text style={styles.escrowText}>
+                  {deliveryPass.isEscrowLocked
+                    ? 'Escrow protected until PIN check'
+                    : 'Delivered & Escrow Released'}
+                </Text>
+              </View>
+              <Text style={styles.passAmount}>₹{deliveryPass.totalAmount}</Text>
+            </View>
+          </View>
+        )}
+
         {/* Vacation Pause Alert Banner */}
         {basket?.isVacationPaused && (
           <View style={styles.vacationBanner}>
@@ -485,4 +585,180 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  passCard: {
+    backgroundColor: '#064e3b',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: '#059669',
+    ...SHADOWS.md,
+  },
+  passHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  passHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  passIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#047857',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passTag: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#34d399',
+    letterSpacing: 0.5,
+  },
+  passOrderNo: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  statusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  statusConfirmed: {
+    backgroundColor: 'rgba(56, 189, 248, 0.2)',
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+  },
+  statusConfirmedText: {
+    color: '#bae6fd',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  statusOut: {
+    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+  },
+  statusOutText: {
+    color: '#fef08a',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  statusDelivered: {
+    backgroundColor: 'rgba(52, 211, 153, 0.2)',
+    borderWidth: 1,
+    borderColor: '#34d399',
+  },
+  statusDeliveredText: {
+    color: '#a7f3d0',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  otpBlock: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    gap: 8,
+  },
+  otpInstruction: {
+    fontSize: 11,
+    color: '#a7f3d0',
+    fontWeight: '500',
+  },
+  otpBoxesRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    marginVertical: 4,
+  },
+  otpBox: {
+    width: 36,
+    height: 44,
+    backgroundColor: '#022c22',
+    borderWidth: 1.5,
+    borderColor: '#34d399',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpBoxText: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#6ee7b7',
+  },
+  otpPendingText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingVertical: 6,
+  },
+  qrRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  tokenBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: '#047857',
+  },
+  tokenText: {
+    fontSize: 11,
+    color: '#d1fae5',
+    fontFamily: 'monospace',
+    fontWeight: '600',
+    flex: 1,
+  },
+  runnerScanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#34d399',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+  },
+  runnerScanBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#064e3b',
+  },
+  passFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 8,
+  },
+  escrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flex: 1,
+  },
+  escrowText: {
+    fontSize: 10,
+    color: '#a7f3d0',
+    fontWeight: '500',
+    flex: 1,
+  },
+  passAmount: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#ffffff',
+  },
 });
+

@@ -183,3 +183,37 @@ export interface VacationPauseRequest {
   vacationStartDate?: string;
   vacationEndDate?: string;
 }
+
+export interface DeliveryPassItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface DeliveryPassDto {
+  orderId: number;
+  orderNumber: string;
+  buyerId?: number;
+  buyerName?: string;
+  deliveryAddress: string;
+  deliverySlot?: string;
+  estimatedDeliveryDate: string;
+  status: 'PENDING' | 'CONFIRMED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
+  handoverOtp?: string;
+  qrToken?: string;
+  totalAmount: number;
+  paymentStatus: string;
+  paymentMethod: string;
+  isEscrowLocked: boolean;
+  actualDeliveryAt?: string;
+  items: DeliveryPassItem[];
+}
+
+export interface HandoverVerifyRequest {
+  qrToken?: string;
+  orderNumber?: string;
+  handoverOtp?: string;
+  runnerNotes?: string;
+}

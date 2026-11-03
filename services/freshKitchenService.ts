@@ -9,6 +9,8 @@ import type {
   CreateDailyBasketItemRequest,
   UpdateDailyBasketItemRequest,
   VacationPauseRequest,
+  DeliveryPassDto,
+  HandoverVerifyRequest,
 } from '@/types/freshKitchen';
 
 export const SEED_FRESH_PRODUCTS: FreshFoodProduct[] = [
@@ -336,6 +338,59 @@ export const freshKitchenService = {
         vacationEndDate: undefined,
       };
     }
+  },
+
+  getTodayDeliveryPass: async (): Promise<DeliveryPassDto | null> => {
+    try {
+      const response = await apiClient.get('/daily-basket/today-pass');
+      const payload = (response.data as any)?.data || response.data;
+      return payload || null;
+    } catch {
+      // Mock seed pass for offline preview if needed
+      return {
+        orderId: 9021,
+        orderNumber: 'ORD-BAS-TODAY-01',
+        buyerName: 'Resident Pass',
+        deliveryAddress: 'Flat 402, Tower B, Mana Community',
+        deliverySlot: '06:00 AM - 07:30 AM',
+        estimatedDeliveryDate: new Date().toISOString().split('T')[0],
+        status: 'CONFIRMED',
+        handoverOtp: '481923',
+        qrToken: 'MANA-BASKET-PASS-9021-SECURE',
+        totalAmount: 175,
+        paymentStatus: 'PAID',
+        paymentMethod: 'COMMERCE_WALLET',
+        isEscrowLocked: true,
+        items: [
+          {
+            productId: 'prod-std-idli-1',
+            productName: 'Classic Malgudi Idli Batter (1 kg)',
+            quantity: 1,
+            unitPrice: 85,
+            totalPrice: 85,
+          },
+          {
+            productId: 'prod-chutney-coconut-5',
+            productName: 'Tadkewali Coconut Chutney (250g)',
+            quantity: 2,
+            unitPrice: 45,
+            totalPrice: 90,
+          },
+        ],
+      };
+    }
+  },
+
+  lookupDeliveryOrder: async (tokenOrNumber: string): Promise<DeliveryPassDto> => {
+    const response = await apiClient.get('/daily-basket/orders/lookup', {
+      params: { tokenOrNumber },
+    });
+    return (response.data as any)?.data || response.data;
+  },
+
+  verifyDeliveryHandover: async (request: HandoverVerifyRequest): Promise<DeliveryPassDto> => {
+    const response = await apiClient.post('/daily-basket/handover/verify', request);
+    return (response.data as any)?.data || response.data;
   },
 };
 
