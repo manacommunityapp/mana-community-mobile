@@ -25,6 +25,24 @@ interface ModuleCard {
 
 const MODULES: ModuleCard[] = [
   {
+    key: 'fresh-kitchen',
+    title: 'Mana Fresh Kitchen',
+    subtitle: 'Stone-ground Idli/Dosa batters, chutneys & breakfast combos (2-4°C fresh)',
+    icon: 'sparkles',
+    route: '/fresh-kitchen',
+    gradient: ['#059669', '#047857'],
+    badge: 'Fresh 2-4°C',
+  },
+  {
+    key: 'daily-basket',
+    title: 'My Daily Basket',
+    subtitle: 'Automated morning fresh food delivery schedule with vacation freeze',
+    icon: 'basket',
+    route: '/daily-basket',
+    gradient: ['#D97706', '#B45309'],
+    badge: 'Daily',
+  },
+  {
     key: 'home-chefs',
     title: 'Home Chef Marketplace',
     subtitle: 'Fresh homemade meals by society chefs delivered to your flat',
