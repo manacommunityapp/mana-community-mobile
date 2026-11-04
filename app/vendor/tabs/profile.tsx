@@ -122,6 +122,7 @@ export default function VendorProfileScreen() {
         <Text style={s.sectionHeader}>Business</Text>
         <View style={s.menuSection}>
           <MenuItem icon="calendar-outline" label="My Availability" onPress={() => router.push('/vendor/availability')} iconColor={VENDOR_COLORS.accent} iconBg={VENDOR_COLORS.accentLight} />
+          <MenuItem icon="nutrition-outline" label="Fresh Operations & Cold Chain" onPress={() => router.push('/vendor/fresh/production' as any)} iconColor="#0284C7" iconBg="#E0F2FE" />
           <MenuItem icon="shield-checkmark-outline" label="KYC & Documents" onPress={() => router.push('/vendor/documents')} iconColor="#059669" iconBg="#DCFCE7" />
           <MenuItem icon="pricetags-outline" label="Service Rates" onPress={() => router.push('/vendor/products')} iconColor="#7C3AED" iconBg="#EDE9FE" />
           <MenuItem icon="document-text-outline" label="Settlements & Invoices" onPress={() => router.push('/vendor/settlements')} iconColor="#2563EB" iconBg="#DBEAFE" />
