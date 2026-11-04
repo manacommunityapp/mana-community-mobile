@@ -108,6 +108,8 @@ export interface FulfilmentGroupDto {
   subtotalAmount: number;
   totalWeightG: number;
   requiresColdChain: boolean;
+  failedOtpAttempts?: number;
+  isHandoverLocked?: boolean;
   items: FulfilmentItemDto[];
 }
 
