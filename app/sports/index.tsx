@@ -975,7 +975,7 @@ export default function SportsHubScreen() {
         {/* ── Sports Insurance CTA ── */}
         <TouchableOpacity
           style={s.insuranceBanner}
-          onPress={() => router.push('/sports/insurance' as any)}
+          onPress={() => router.push('/insurance' as any)}
           activeOpacity={0.85}
         >
           <View style={s.insuranceIcon}>
