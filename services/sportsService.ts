@@ -7,6 +7,7 @@ import type {
   LeaderboardEntryDto, LeaderboardCategory, MatchPhotoDto,
   MatchRatingSummaryDto, SubmitRatingsRequest,
   SportsChallengeDto, CreateSportsChallengeRequest,
+  SportsStreamResponse, StreamCameraRequest, StreamChatRequest,
 } from '@/types/api';
 
 export const sportsService = {
@@ -419,6 +420,36 @@ export const sportsService = {
       return sessionChallenges[idx];
     }
     throw new Error('Challenge not found');
+  },
+
+  // ── Live Streaming ─────────────────────────────────────────────
+  async getStream(matchId: number): Promise<SportsStreamResponse> {
+    const res = await api.get<SportsStreamResponse>(`/sports/matches/${matchId}/stream`);
+    return res.data;
+  },
+  async startStream(matchId: number, title?: string): Promise<SportsStreamResponse> {
+    const res = await api.post<SportsStreamResponse>(`/sports/matches/${matchId}/stream/start`, title ? { title } : undefined);
+    return res.data;
+  },
+  async endStream(matchId: number): Promise<SportsStreamResponse> {
+    const res = await api.put<SportsStreamResponse>(`/sports/matches/${matchId}/stream/end`);
+    return res.data;
+  },
+  async addStreamCamera(matchId: number, req: StreamCameraRequest): Promise<SportsStreamResponse> {
+    const res = await api.post<SportsStreamResponse>(`/sports/matches/${matchId}/stream/cameras`, req);
+    return res.data;
+  },
+  async removeStreamCamera(matchId: number, cameraId: number): Promise<SportsStreamResponse> {
+    const res = await api.delete<SportsStreamResponse>(`/sports/matches/${matchId}/stream/cameras/${cameraId}`);
+    return res.data;
+  },
+  async switchStreamCamera(matchId: number, cameraId: number): Promise<SportsStreamResponse> {
+    const res = await api.put<SportsStreamResponse>(`/sports/matches/${matchId}/stream/cameras/${cameraId}/active`);
+    return res.data;
+  },
+  async postStreamMessage(matchId: number, req: StreamChatRequest): Promise<SportsStreamResponse> {
+    const res = await api.post<SportsStreamResponse>(`/sports/matches/${matchId}/stream/chat`, req);
+    return res.data;
   },
 };
 

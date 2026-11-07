@@ -219,6 +219,17 @@ export default function LiveMatchScreen() {
               {!connected && <Text style={scr.reconnect}> ·Reconnecting</Text>}
             </View>
           )}
+          {isLive && (
+            <TouchableOpacity
+              style={scr.watchLiveBtn}
+              onPress={() => router.push(`/sports/stream/${id}` as never)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Watch live stream"
+            >
+              <Ionicons name="videocam" size={12} color="#fff" />
+              <Text style={scr.watchLiveText}>Watch Live</Text>
+            </TouchableOpacity>
+          )}
           {isDone && <Text style={scr.doneBadge}>FT</Text>}
           <TouchableOpacity
             onPress={() => shareMatch(match)}
@@ -377,6 +388,8 @@ const scr = StyleSheet.create({
   liveBadge:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   liveDot:        { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.error },
   liveText:       { fontSize: 11, fontWeight: '800', color: COLORS.error },
+  watchLiveBtn:   { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#dc2626', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  watchLiveText:  { fontSize: 11, fontWeight: '700', color: '#fff' },
   reconnect:      { fontSize: 10, color: COLORS.textMuted },
   doneBadge:      { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   scoreSection:   { backgroundColor: COLORS.surface, padding: 20, gap: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },

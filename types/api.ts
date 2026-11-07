@@ -1540,4 +1540,45 @@ export interface DataDeletionRequestDto {
   notes?: string;
 }
 
+// ── Live Streaming ──────────────────────────────────────────────
+export type StreamStatus = 'OFFLINE' | 'LIVE' | 'ENDED';
+export type StreamPlatform = 'YOUTUBE' | 'TWITCH' | 'CUSTOM';
+
+export interface StreamCameraDto {
+  id: number;
+  label: string;
+  url: string;
+  embedUrl: string;
+  platform: StreamPlatform;
+  active: boolean;
+}
+
+export interface StreamMessageDto {
+  id: number;
+  authorName: string;
+  text: string;
+  commentary: boolean;
+  postedAt: string;
+}
+
+export interface SportsStreamResponse {
+  matchId: number;
+  status: StreamStatus;
+  title?: string;
+  startedAt?: string;
+  endedAt?: string;
+  cameras: StreamCameraDto[];
+  messages: StreamMessageDto[];
+}
+
+export interface StreamCameraRequest {
+  label: string;
+  url: string;
+}
+
+export interface StreamChatRequest {
+  text: string;
+  commentary: boolean;
+}
+
 
