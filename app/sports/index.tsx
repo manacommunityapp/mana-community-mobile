@@ -504,6 +504,7 @@ export default function SportsHubScreen() {
             { label: 'Tournaments', emoji: '🏆', route: '/sports/tournaments', color: '#4338CA', bg: '#EEF2FF' },
             { label: 'Schedule', emoji: '⚔️', route: '/sports/matches', color: '#2563EB', bg: '#EFF6FF' },
             { label: 'Standings', emoji: '📊', route: '/sports/leaderboard', color: '#0891B2', bg: '#CFFAFE' },
+            { label: 'Rankings', emoji: '🎖️', route: '/sports/rankings', color: '#D97706', bg: '#FFFBEB' },
             { label: 'My Squads', emoji: '👥', route: '/sports/my-teams', color: '#7C3AED', bg: '#F5F3FF' },
             { label: 'Player Auction', emoji: '🏷️', route: '/sports/auction', color: '#7C3AED', bg: '#F5F3FF' },
             { label: 'Trainers', emoji: '🎽', route: '/sports/trainers', color: '#059669', bg: '#ECFDF5' },
@@ -971,6 +972,22 @@ export default function SportsHubScreen() {
           )}
         </View>
 
+        {/* ── Sports Insurance CTA ── */}
+        <TouchableOpacity
+          style={s.insuranceBanner}
+          onPress={() => router.push('/sports/insurance' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={s.insuranceIcon}>
+            <Text style={{ fontSize: 22 }}>🛡️</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.insuranceTitle}>Sports Injury Insurance</Text>
+            <Text style={s.insuranceSub}>Protect yourself during matches & tournaments. View plans →</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#b45309" />
+        </TouchableOpacity>
+
         {/* ── Top Performers (Community Leaderboard) ── */}
         <View style={s.card}>
           <View style={s.sectionHeader}>
@@ -1401,6 +1418,19 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.full, ...SHADOWS.sm,
   },
   eventRegisterNowBtnText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+
+  // Insurance Banner
+  insuranceBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#FFFBEB', borderRadius: RADIUS.lg, padding: 14,
+    borderWidth: 1, borderColor: '#FCD34D', ...SHADOWS.sm,
+  },
+  insuranceIcon: {
+    width: 44, height: 44, borderRadius: 12, backgroundColor: '#FEF3C7',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  insuranceTitle: { fontSize: 14, fontWeight: '700', color: '#78350F' },
+  insuranceSub:   { fontSize: 11, color: '#92400E', marginTop: 2 },
 
   // Utils
   row: { flexDirection: 'row', alignItems: 'center', gap: 5 },

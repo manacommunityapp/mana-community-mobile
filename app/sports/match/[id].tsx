@@ -342,6 +342,14 @@ export default function LiveMatchScreen() {
               <Text style={scr.actionBtnText}>⭐ Rate Players</Text>
             </TouchableOpacity>
           )}
+          {match.sport === 'ATHLETICS' || match.sport === 'SWIMMING' ? (
+            <TouchableOpacity
+              style={scr.actionBtn}
+              onPress={() => router.push(`/sports/match/race-results?id=${match.id}` as never)}
+            >
+              <Text style={scr.actionBtnText}>🏁 Race Results</Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={scr.actionBtn}
             onPress={() => shareMatch(match)}

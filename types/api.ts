@@ -1730,4 +1730,78 @@ export interface SportsCricHeroesProfileResponse {
   formatScope?: CricHeroesFormatScope;
 }
 
+// ── Race Results ────────────────────────────────────────────────
+export interface SportsRaceResultResponse {
+  id: number;
+  matchId: number;
+  playerId?: number;
+  playerName?: string;
+  teamId?: number;
+  teamName?: string;
+  heatNumber?: number;
+  laneNumber?: number;
+  finishTimeMillis?: number;
+  formattedTime?: string;
+  raceStatus?: string;
+  overallRank?: number;
+  heatRank?: number;
+  personalBestMillis?: number;
+  isPersonalBest?: boolean;
+  splitTimes?: string[];
+  notes?: string;
+}
+
+// ── Tournament Content ──────────────────────────────────────────
+export interface SportsTournamentAnnouncement {
+  id: number;
+  title: string;
+  content?: string;
+  icon?: string;
+  sortOrder?: number;
+  createdAt?: string;
+}
+export interface SportsTournamentGalleryImage {
+  id: number;
+  title?: string;
+  imageUrl: string;
+  bgColor?: string;
+  icon?: string;
+  sortOrder?: number;
+  createdAt?: string;
+}
+export interface SportsTournamentTimelineEntry {
+  id: number;
+  entryDate?: string;
+  dateLabel?: string;
+  title: string;
+  description?: string;
+  sortOrder?: number;
+  createdAt?: string;
+}
+
+// ── Generic Leaderboard ─────────────────────────────────────────
+export interface SportsGenericLeaderboardEntry {
+  playerId: number;
+  playerName?: string;
+  teamId?: number;
+  teamName?: string;
+  category?: string;
+  value: number;
+  matchesPlayed?: number;
+  rank: number;
+}
+
+// ── Player Rankings ─────────────────────────────────────────────
+export interface SportsPlayerRankingResponse {
+  id: number;
+  player: { id: number; fullName?: string; email?: string; flatNo?: string; avatarUrl?: string; };
+  sport?: { id: number; name: string; icon?: string; };
+  communityId?: number;
+  rank?: number;
+  rating?: number;
+  source?: string;
+  season?: string;
+  notes?: string;
+}
+
 

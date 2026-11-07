@@ -9,6 +9,9 @@ import type {
   SportsChallengeDto, CreateSportsChallengeRequest,
   SportsStreamResponse, StreamCameraRequest, StreamChatRequest,
   SportsCricHeroesLinkRequest, SportsCricHeroesProfileResponse,
+  SportsRaceResultResponse,
+  SportsTournamentAnnouncement, SportsTournamentGalleryImage, SportsTournamentTimelineEntry,
+  SportsGenericLeaderboardEntry, SportsPlayerRankingResponse,
 } from '@/types/api';
 
 export const sportsService = {
@@ -476,6 +479,55 @@ export const sportsService = {
   async refreshCricHeroesProfile(playerId: number): Promise<SportsCricHeroesProfileResponse> {
     const res = await api.get<SportsCricHeroesProfileResponse>(`/api/cricheroes/profile/${playerId}/refresh`);
     return res.data;
+  },
+
+  // ── Race Results ──────────────────────────────────────────────
+  async getRaceResults(matchId: number): Promise<SportsRaceResultResponse[]> {
+    const res = await api.get<SportsRaceResultResponse[]>(`/api/tournament/match/race/${matchId}/results`);
+    return res.data;
+  },
+  async getRaceHeat(matchId: number, heatNumber: number): Promise<SportsRaceResultResponse[]> {
+    const res = await api.get<SportsRaceResultResponse[]>(`/api/tournament/match/race/${matchId}/results/heat/${heatNumber}`);
+    return res.data;
+  },
+
+  // ── Tournament Content ────────────────────────────────────────
+  async getTournamentAnnouncements(tournamentId: number): Promise<SportsTournamentAnnouncement[]> {
+    const res = await api.get<SportsTournamentAnnouncement[]>(`/api/tournaments/${tournamentId}/announcements`);
+    return res.data;
+  },
+  async getTournamentGallery(tournamentId: number): Promise<SportsTournamentGalleryImage[]> {
+    const res = await api.get<SportsTournamentGalleryImage[]>(`/api/tournaments/${tournamentId}/gallery`);
+    return res.data;
+  },
+  async getTournamentTimeline(tournamentId: number): Promise<SportsTournamentTimelineEntry[]> {
+    const res = await api.get<SportsTournamentTimelineEntry[]>(`/api/tournaments/${tournamentId}/timeline`);
+    return res.data;
+  },
+
+  // ── Generic Leaderboard ───────────────────────────────────────
+  async getGenericLeaderboard(configId: number, category?: string): Promise<SportsGenericLeaderboardEntry[]> {
+    const res = await api.get<SportsGenericLeaderboardEntry[]>(
+      `/api/tournament/${configId}/leaderboard/generic`,
+      category ? { params: { category } } : undefined,
+    );
+    return res.data;
+  },
+  async getLeaderboardCategories(configId: number): Promise<string[]> {
+    const res = await api.get<string[]>(`/api/tournament/${configId}/leaderboard/generic/categories`);
+    return res.data;
+  },
+
+  // ── Player Rankings ───────────────────────────────────────────
+  async getRankings(params?: { sport?: string; season?: string }): Promise<SportsPlayerRankingResponse[]> {
+    const res = await api.get<SportsPlayerRankingResponse[]>('/api/sports/rankings', params ? { params } : undefined);
+    return res.data;
+  },
+  async getMyRanking(userId: number): Promise<SportsPlayerRankingResponse | null> {
+    try {
+      const res = await api.get<SportsPlayerRankingResponse>(`/api/sports/rankings/user/${userId}`);
+      return res.data;
+    } catch { return null; }
   },
 };
 
