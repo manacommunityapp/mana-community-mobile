@@ -1677,4 +1677,57 @@ export interface PlayerWithBidResponse {
   bids: SportsAuctionBidResponse[];
 }
 
+// ── CricHeroes ─────────────────────────────────────────────────
+export type CricHeroesFormatScope = 'ALL' | 'T20' | 'ODI' | 'TEST';
+
+export interface SportsCricHeroesLinkRequest {
+  playerId: number;
+  cricHeroesUrl: string;
+  formatScope?: CricHeroesFormatScope;
+}
+
+export interface CricHeroesRecentInning {
+  matchDate?: string;
+  opposition?: string;
+  runs?: number;
+  balls?: number;
+  wickets?: number;
+  economy?: number;
+  format?: string;
+}
+
+export interface SportsCricHeroesProfileResponse {
+  fullName?: string;
+  avatarUrl?: string;
+  battingStyle?: string;
+  bowlingStyle?: string;
+  primaryRole?: string;
+  // Batting
+  battingMatches?: number;
+  battingInnings?: number;
+  battingRuns?: number;
+  battingHighScore?: number;
+  battingAverage?: number;
+  battingStrikeRate?: number;
+  battingFifties?: number;
+  battingHundreds?: number;
+  // Bowling
+  bowlingMatches?: number;
+  bowlingOvers?: number;
+  bowlingWickets?: number;
+  bowlingEconomy?: number;
+  bowlingAverage?: number;
+  bowlingBest?: string;
+  // Fielding
+  catches?: number;
+  stumpings?: number;
+  runOuts?: number;
+  recentForm?: CricHeroesRecentInning[];
+  mvpPoints?: number;
+  rating?: number;
+  cricHeroesUrl?: string;
+  linkedAt?: string;
+  formatScope?: CricHeroesFormatScope;
+}
+
 

@@ -8,6 +8,7 @@ import type {
   MatchRatingSummaryDto, SubmitRatingsRequest,
   SportsChallengeDto, CreateSportsChallengeRequest,
   SportsStreamResponse, StreamCameraRequest, StreamChatRequest,
+  SportsCricHeroesLinkRequest, SportsCricHeroesProfileResponse,
 } from '@/types/api';
 
 export const sportsService = {
@@ -449,6 +450,31 @@ export const sportsService = {
   },
   async postStreamMessage(matchId: number, req: StreamChatRequest): Promise<SportsStreamResponse> {
     const res = await api.post<SportsStreamResponse>(`/sports/matches/${matchId}/stream/chat`, req);
+    return res.data;
+  },
+
+  // ── CricHeroes ────────────────────────────────────────────────
+  async linkCricHeroes(req: SportsCricHeroesLinkRequest): Promise<SportsCricHeroesProfileResponse> {
+    const res = await api.post<SportsCricHeroesProfileResponse>('/api/cricheroes/link', req);
+    return res.data;
+  },
+  async unlinkCricHeroes(playerId: number): Promise<void> {
+    await api.delete(`/api/cricheroes/${playerId}/unlink`);
+  },
+  async previewCricHeroes(url: string): Promise<SportsCricHeroesProfileResponse> {
+    const res = await api.get<SportsCricHeroesProfileResponse>('/api/cricheroes/preview', { params: { url } });
+    return res.data;
+  },
+  async getCricHeroesProfile(playerId: number): Promise<SportsCricHeroesProfileResponse | null> {
+    try {
+      const res = await api.get<SportsCricHeroesProfileResponse>(`/api/cricheroes/profile/${playerId}`);
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+  async refreshCricHeroesProfile(playerId: number): Promise<SportsCricHeroesProfileResponse> {
+    const res = await api.get<SportsCricHeroesProfileResponse>(`/api/cricheroes/profile/${playerId}/refresh`);
     return res.data;
   },
 };
