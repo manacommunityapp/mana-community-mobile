@@ -509,7 +509,7 @@ export default function SportsHubScreen() {
         {/* ── Quick Hub Actions (App Surface Cards) ── */}
         <View style={s.quickHubWrap}>
           {[
-            { label: 'Book Court', emoji: '🏸', route: '/facilities', color: '#4F46E5', bg: '#EEF2FF' },
+            { label: 'Book Court', emoji: '🏸', route: '/sports/facility/my-bookings', color: '#4F46E5', bg: '#EEF2FF' },
             { label: 'Tournaments', emoji: '🏆', route: '/sports/tournaments', color: '#4338CA', bg: '#EEF2FF' },
             { label: 'Schedule', emoji: '⚔️', route: '/sports/matches', color: '#2563EB', bg: '#EFF6FF' },
             { label: 'Standings', emoji: '📊', route: '/sports/leaderboard', color: '#0891B2', bg: '#CFFAFE' },
@@ -932,15 +932,15 @@ export default function SportsHubScreen() {
               <Ionicons name="flash" size={13} color={COLORS.primary} />
               <Text style={s.cardHeading}>Court Availability & Venues</Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/facilities')}>
-              <Text style={s.linkText}>Book Slot →</Text>
+            <TouchableOpacity onPress={() => router.push('/sports/facility/my-bookings' as any)}>
+              <Text style={s.linkText}>My Bookings →</Text>
             </TouchableOpacity>
           </View>
 
           {loadingFacilities ? (
             <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 12 }} />
           ) : sportsFacilities.length === 0 ? (
-            <TouchableOpacity style={s.emptyFacilitiesCard} onPress={() => router.push('/facilities')}>
+            <TouchableOpacity style={s.emptyFacilitiesCard} onPress={() => router.push('/sports/facility/my-bookings' as any)}>
               <Text style={{ fontSize: 24 }}>🏟️</Text>
               <View style={{ flex: 1 }}>
                 <Text style={s.emptyFacTitle}>Explore Community Amenities</Text>
@@ -956,7 +956,7 @@ export default function SportsHubScreen() {
                   <TouchableOpacity
                     key={court.id}
                     style={s.courtCard}
-                    onPress={() => router.push('/facilities')}
+                    onPress={() => router.push(`/sports/facility/${court.id}` as any)}
                     activeOpacity={0.8}
                   >
                     <View style={s.rowBetween}>

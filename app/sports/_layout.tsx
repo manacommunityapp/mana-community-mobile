@@ -21,6 +21,7 @@ export default function SportsLayout() {
       <Stack.Screen name="trainer" />
       <Stack.Screen name="stream" />
       <Stack.Screen name="auction" />
+      <Stack.Screen name="facility" />
     </Stack>
   );
 }
