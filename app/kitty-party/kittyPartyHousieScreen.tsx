@@ -1,0 +1,380 @@
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { kittyPartyService } from '@/services/kittyPartyService';
+import { KittyPartyHousieTicketView } from '@/components/kittyPartyHousieTicketView';
+import type { KittyPartyGameRoom, KittyPartyTicket } from '@/types/kittyPartyTypes';
+
+export default function KittyPartyHousieScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const circleId = Number(id);
+
+  const [room, setRoom] = useState<KittyPartyGameRoom | null>(null);
+  const [tickets, setTickets] = useState<KittyPartyTicket[]>([]);
+  const [dabbedNumbers, setDabbedNumbers] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [isCalling, setIsCalling] = useState(false);
+
+  useEffect(() => {
+    if (circleId) {
+      loadGame();
+    }
+  }, [circleId]);
+
+  const loadGame = async () => {
+    try {
+      setLoading(true);
+      try {
+        const details = await kittyPartyService.getRoomDetails(circleId);
+        if (details?.id) {
+          setRoom(details);
+          const myTickets = await kittyPartyService.getMyTickets(details.id);
+          setTickets(myTickets || []);
+        }
+      } catch {
+        // No room
+      }
+    } catch (e) {
+      console.error('Failed to load mobile Housie', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateRoom = async () => {
+    try {
+      setLoading(true);
+      const newRoom = await kittyPartyService.createGameRoom(circleId, {
+        roomName: 'Mana Housie Room',
+        maxPlayers: 50,
+      });
+      setRoom(newRoom);
+      Alert.alert('Room Created', 'Get your ticket and invite circle members!');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to create room');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGetTicket = async () => {
+    if (!room) return;
+    try {
+      const ticket = await kittyPartyService.generateTicket(room.id);
+      setTickets((prev) => [...prev, ticket]);
+      Alert.alert('Ticket Ready', 'Your 90-ball Tambola ticket is generated!');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to get ticket');
+    }
+  };
+
+  const handleCallNumber = async () => {
+    if (!room || isCalling) return;
+    try {
+      setIsCalling(true);
+      const res = await kittyPartyService.callNextNumber(room.id);
+      refreshRoom();
+    } catch (e: any) {
+      Alert.alert('Notice', e?.message || 'Unable to call next number');
+    } finally {
+      setIsCalling(false);
+    }
+  };
+
+  const handleClaim = async (ticketId: number, claimType: string) => {
+    if (!room) return;
+    try {
+      const win = await kittyPartyService.claimPrize(room.id, ticketId, claimType);
+      Alert.alert('🎉 Validated Winner!', `Claim '${win.claimType}' validated for ${win.userName}!`);
+      refreshRoom();
+    } catch (e: any) {
+      Alert.alert('Claim Rejected', e?.message || 'Pattern does not match called numbers');
+    }
+  };
+
+  const refreshRoom = async () => {
+    if (!room) return;
+    try {
+      const updated = await kittyPartyService.getRoomDetails(room.id);
+      setRoom(updated);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const toggleDab = (num: number) => {
+    setDabbedNumbers((prev) => {
+      const next = new Set(prev);
+      if (next.has(num)) next.delete(num);
+      else next.add(num);
+      return next;
+    });
+  };
+
+  const calledSet = new Set(room?.calledNumbers || []);
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#BE185D" />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.screenTitle}>🎲 Mana Play – Housie</Text>
+      <Text style={styles.screenSubtitle}>
+        Free-to-play 90-ball Tambola with live caller and real-time winner verification.
+      </Text>
+
+      {!room ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyIcon}>🎟️</Text>
+          <Text style={styles.emptyTitle}>No Active Game Room</Text>
+          <Text style={styles.emptyText}>Start a free Tambola room for your circle members.</Text>
+          <TouchableOpacity style={styles.createBtn} onPress={handleCreateRoom}>
+            <Text style={styles.createBtnText}>Create Game Room</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          {/* Ball Caller Billboard */}
+          <View style={styles.billboard}>
+            <View>
+              <Text style={styles.billboardLabel}>LATEST CALLED BALL</Text>
+              <Text style={styles.billboardNumber}>
+                {room.lastCalledNumber ? `#${room.lastCalledNumber}` : 'Waiting...'}
+              </Text>
+              <Text style={styles.billboardCount}>
+                Called: {room.calledNumbers.length} / 90 balls
+              </Text>
+            </View>
+
+            <View style={styles.billboardActions}>
+              {room.status === 'WAITING' && tickets.length === 0 && (
+                <TouchableOpacity style={styles.actionBtn} onPress={handleGetTicket}>
+                  <Text style={styles.actionBtnText}>+ Get Ticket</Text>
+                </TouchableOpacity>
+              )}
+
+              {room.status === 'IN_PROGRESS' && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, isCalling && styles.actionBtnDisabled]}
+                  disabled={isCalling}
+                  onPress={handleCallNumber}
+                >
+                  <Text style={styles.actionBtnText}>🎲 Draw Next</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Tickets Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>MY TICKETS ({tickets.length})</Text>
+              {tickets.length === 0 && (
+                <TouchableOpacity onPress={handleGetTicket}>
+                  <Text style={styles.addTicketText}>+ Take Ticket</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {tickets.length === 0 ? (
+              <Text style={styles.noTickets}>You haven't picked a ticket yet. Tap '+ Take Ticket' above!</Text>
+            ) : (
+              tickets.map((t) => (
+                <KittyPartyHousieTicketView
+                  key={t.ticketId}
+                  matrix={t.matrix}
+                  ticketId={t.ticketId}
+                  ticketHash={t.ticketHash}
+                  calledNumbers={calledSet}
+                  dabbedNumbers={dabbedNumbers}
+                  onToggleDab={toggleDab}
+                  onClaim={(type) => handleClaim(t.ticketId, type)}
+                />
+              ))
+            )}
+          </View>
+
+          {/* Winners List */}
+          {room.winners.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🏆 WINNERS</Text>
+              <View style={styles.winnersBox}>
+                {room.winners.map((w) => (
+                  <View key={w.id} style={styles.winnerRow}>
+                    <Text style={styles.winnerType}>{w.claimType.replace('_', ' ')}</Text>
+                    <Text style={styles.winnerName}>{w.userName}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </>
+      )}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#111827',
+  },
+  screenSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+    marginBottom: 16,
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    fontSize: 44,
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  emptyText: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  createBtn: {
+    backgroundColor: '#BE185D',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  createBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  billboard: {
+    backgroundColor: '#4C1D95',
+    borderRadius: 20,
+    padding: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  billboardLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#DDD6FE',
+    letterSpacing: 1,
+  },
+  billboardNumber: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginVertical: 2,
+  },
+  billboardCount: {
+    fontSize: 11,
+    color: '#C4B5FD',
+  },
+  billboardActions: {
+    alignItems: 'flex-end',
+  },
+  actionBtn: {
+    backgroundColor: '#DB2777',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  actionBtnDisabled: {
+    opacity: 0.6,
+  },
+  actionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#9CA3AF',
+    letterSpacing: 0.8,
+  },
+  addTicketText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#BE185D',
+  },
+  noTickets: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  winnersBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  winnerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  winnerType: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#BE185D',
+  },
+  winnerName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#374151',
+  },
+});
