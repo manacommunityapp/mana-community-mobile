@@ -88,6 +88,11 @@ export const kittyPartyService = {
     return res.data;
   },
 
+  getCircleActiveCycle: async (circleId: number): Promise<KittyPartyCycle> => {
+    const res = await apiClient.get<KittyPartyCycle>(`/v1/kitty-ledger/circles/${circleId}/active-cycle`);
+    return res.data;
+  },
+
   getContributions: async (cycleId: number, periodNumber?: number): Promise<KittyPartyContribution[]> => {
     const q = periodNumber ? `?periodNumber=${periodNumber}` : '';
     const res = await apiClient.get<KittyPartyContribution[]>(`/v1/kitty-ledger/cycles/${cycleId}/contributions${q}`);

@@ -43,9 +43,20 @@ export interface KittyPartyCycle {
   financialMode: string;
   status: string;
   totalExpectedPerPeriod: number;
+  totalExpectedFullCycle?: number;
+  totalCollectedCurrentPeriod?: number;
+  totalCollectedFullCycle?: number;
+  pendingContributionsAmount?: number;
+  pendingContributionsCount?: number;
+  paidContributionsCount?: number;
   currentPeriod: number;
   currentBeneficiaryUserId?: number;
   currentBeneficiaryName?: string;
+  nextBeneficiaryUserId?: number;
+  nextBeneficiaryName?: string;
+  previousPayoutsCount?: number;
+  previousPayoutsTotalAmount?: number;
+  cycleProgressPercent?: number;
   rotations: KittyPartyRotationEntry[];
 }
 
