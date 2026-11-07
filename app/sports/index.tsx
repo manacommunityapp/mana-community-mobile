@@ -505,7 +505,7 @@ export default function SportsHubScreen() {
             { label: 'Schedule', emoji: '⚔️', route: '/sports/matches', color: '#2563EB', bg: '#EFF6FF' },
             { label: 'Standings', emoji: '📊', route: '/sports/leaderboard', color: '#0891B2', bg: '#CFFAFE' },
             { label: 'My Squads', emoji: '👥', route: '/sports/my-teams', color: '#7C3AED', bg: '#F5F3FF' },
-            { label: 'Auctions', emoji: '🏷️', route: '/auction', color: '#7C3AED', bg: '#F5F3FF' },
+            { label: 'Player Auction', emoji: '🏷️', route: '/sports/auction', color: '#7C3AED', bg: '#F5F3FF' },
             { label: 'Trainers', emoji: '🎽', route: '/sports/trainers', color: '#059669', bg: '#ECFDF5' },
           ].map((item) => (
             <TouchableOpacity

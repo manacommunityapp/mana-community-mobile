@@ -1581,4 +1581,100 @@ export interface StreamChatRequest {
   commentary: boolean;
 }
 
+// ── Sports Player Auction ───────────────────────────────────────
+export type SportsAuctionStatus = 'DRAFT' | 'REGISTRATION' | 'LIVE' | 'ENDED' | 'CANCELLED';
+
+export interface SportsAuctionConfigResponse {
+  id: number;
+  eventId: number;
+  eventName: string;
+  sportName: string;
+  sportId: number;
+  communityId: number;
+  seasonName: string;
+  auctionFormat: string;
+  totalTeams: number;
+  totalPlayers: number;
+  budgetPerTeam: number;
+  basePrice: number;
+  bidIncrementDefault: number;
+  bidIncrementThreshold: number;
+  bidIncrementAbove: number;
+  bidTimerSeconds: number;
+  rtmEnabled: boolean;
+  unsoldRule: string;
+  status: SportsAuctionStatus;
+  categories: string[];
+  committeeMembers: string[];
+}
+
+export interface SportsAuctionPlayerResponse {
+  id: number;
+  configId: number;
+  userId?: number;
+  playerName: string;
+  category?: string;
+  playerRole?: string;
+  age?: number;
+  basePrice?: number;
+  statsJson?: string;
+  queueOrder?: number;
+  status: 'AVAILABLE' | 'ON_BLOCK' | 'SOLD' | 'UNSOLD' | string;
+  assignedTeamId?: number;
+  assignedTeamName?: string;
+  soldPrice?: number;
+  rtmUsed?: boolean;
+  soldAt?: string;
+  innings?: number;
+  bestBowling?: string;
+  cricHeroesId?: string;
+  cricHeroesUrl?: string;
+}
+
+export interface SportsAuctionTeamResponse {
+  id: number;
+  configId: number;
+  eventId: number;
+  teamName: string;
+  ownerName: string;
+  ownerUserId: number;
+  captainUserId?: number;
+  colorHex?: string;
+  totalBudget: number;
+  remainingBudget: number;
+  spent: number;
+  captainNomination?: boolean;
+  captainConfirmation?: boolean;
+  createdAt?: string;
+}
+
+export interface SportsAuctionBidResponse {
+  id: number;
+  configId: number;
+  playerId: number;
+  teamId: number;
+  teamName: string;
+  bidAmount: number;
+  incrementUsed?: number;
+  isRtm?: boolean;
+  bidByUserId: number;
+  bidAt: string;
+}
+
+export interface SportsAuctionStatsResponse {
+  totalPlayers: number;
+  soldPlayers: number;
+  unsoldPlayers: number;
+  remainingPlayers: number;
+  totalAmountSpent: number;
+  totalBids: number;
+}
+
+export interface PlayerWithBidResponse {
+  player: SportsAuctionPlayerResponse;
+  currentBid?: number;
+  currentTeamName?: string;
+  bids: SportsAuctionBidResponse[];
+}
+
 
