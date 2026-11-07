@@ -152,7 +152,7 @@ export const marketplaceService = {
     try {
       const media = await mediaService.uploadMedia(
         { uri: localUri, name: fileName, type: mimeType },
-        { module: 'MARKETPLACE', moduleId: 'listing', communityId: 1, mediaType: 'IMAGE' },
+        { module: 'MARKETPLACE', moduleId: 'listing', communityId: undefined, mediaType: 'IMAGE' },
       );
       if (media?.url) return media.url;
     } catch (e) {
