@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { sportsService } from '@/services/sportsService';
 import { facilityService, FacilityDto } from '@/services/facilityService';
 import { auctionService } from '@/services/auctionService';
+import { commuteService } from '@/services/commuteService';
 import { SportsRegisterModal, RegistrationRecord } from '@/components/sports/SportsRegisterModal';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
@@ -164,6 +165,14 @@ export default function SportsHubScreen() {
     queryFn: sportsService.getDashboardStats,
     staleTime: 30_000,
   });
+
+  // 10. Community Rides (commute integration)
+  const { data: communityRidesPage } = useQuery({
+    queryKey: ['sports-hub-rides'],
+    queryFn: () => commuteService.getUpcomingRides(undefined, 0),
+    staleTime: 60_000,
+  });
+  const communityRides = (communityRidesPage?.content ?? []).slice(0, 3);
 
   // ── Refetch All ───────────────────────────────────────────────────────
   const isRefreshing = isRefetchingLive;
@@ -988,6 +997,56 @@ export default function SportsHubScreen() {
           <Ionicons name="chevron-forward" size={16} color="#b45309" />
         </TouchableOpacity>
 
+        {/* ── Get to the Game (Commute Integration) ── */}
+        {communityRides.length > 0 && (
+          <View style={s.card}>
+            <View style={s.sectionHeader}>
+              <View style={s.row}>
+                <Text style={{ fontSize: 14 }}>🚗</Text>
+                <Text style={s.cardHeading}>Get to the Game</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/commute' as any)}>
+                <Text style={s.linkText}>All rides →</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={s.rideSectionSub}>Community rides to upcoming venues</Text>
+            {communityRides.map((ride: any) => (
+              <TouchableOpacity
+                key={ride.id}
+                style={s.rideHubRow}
+                onPress={() => router.push(`/commute/ride/${ride.id}` as any)}
+                activeOpacity={0.8}
+              >
+                <View style={s.rideHubAvatar}>
+                  <Text style={s.rideHubAvatarText}>{(ride.driverName || 'D')[0]?.toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.rideHubDriver} numberOfLines={1}>{ride.driverName || 'Community Member'}</Text>
+                  <Text style={s.rideHubRoute} numberOfLines={1}>
+                    {ride.fromLocation} → {ride.toLocation}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={s.rideHubSeats}>{ride.availableSeats} seat{ride.availableSeats !== 1 ? 's' : ''}</Text>
+                  {ride.free ? (
+                    <Text style={s.rideHubFree}>Free</Text>
+                  ) : (
+                    <Text style={s.rideHubPrice}>₹{ride.pricePerSeat}</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={s.offerRideHubBtn}
+              onPress={() => router.push('/commute/offer-ride' as any)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add-circle-outline" size={15} color="#1d4ed8" />
+              <Text style={s.offerRideHubBtnText}>Offer a Ride to Teammates</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Top Performers (Community Leaderboard) ── */}
         <View style={s.card}>
           <View style={s.sectionHeader}>
@@ -1431,6 +1490,29 @@ const s = StyleSheet.create({
   },
   insuranceTitle: { fontSize: 14, fontWeight: '700', color: '#78350F' },
   insuranceSub:   { fontSize: 11, color: '#92400E', marginTop: 2 },
+
+  // Get to the Game (Commute Section)
+  rideSectionSub: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
+  rideHubRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  rideHubAvatar: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: '#DBEAFE',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  rideHubAvatarText: { fontSize: 14, fontWeight: '700', color: '#1d4ed8' },
+  rideHubDriver:    { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  rideHubRoute:     { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  rideHubSeats:     { fontSize: 11, fontWeight: '600', color: COLORS.text },
+  rideHubFree:      { fontSize: 11, fontWeight: '700', color: COLORS.success, marginTop: 2 },
+  rideHubPrice:     { fontSize: 11, fontWeight: '700', color: COLORS.primary, marginTop: 2 },
+  offerRideHubBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 10, paddingVertical: 9, borderRadius: RADIUS.md,
+    backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE',
+  },
+  offerRideHubBtnText: { fontSize: 13, fontWeight: '600', color: '#1d4ed8' },
 
   // Utils
   row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
