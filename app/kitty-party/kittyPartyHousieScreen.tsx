@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { kittyPartyService } from '@/services/kittyPartyService';
@@ -22,6 +23,7 @@ export default function KittyPartyHousieScreen() {
   const [dabbedNumbers, setDabbedNumbers] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isCalling, setIsCalling] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
 
   useEffect(() => {
     if (circleId) {
@@ -55,11 +57,31 @@ export default function KittyPartyHousieScreen() {
       const newRoom = await kittyPartyService.createGameRoom(circleId, {
         roomName: 'Mana Housie Room',
         maxPlayers: 50,
+        allowGuestPlayers: true,
       });
       setRoom(newRoom);
-      Alert.alert('Room Created', 'Get your ticket and invite circle members!');
+      Alert.alert('Room Created', `Room PIN: ${newRoom.roomCode || 'Ready'}. Get your ticket and invite friends!`);
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Failed to create room');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinByCode = async () => {
+    if (!joinCode.trim()) {
+      Alert.alert('Required', 'Please enter a 6-character room PIN');
+      return;
+    }
+    try {
+      setLoading(true);
+      const joined = await kittyPartyService.joinGameRoomByCode(joinCode.trim().toUpperCase());
+      setRoom(joined);
+      const myTickets = await kittyPartyService.getMyTickets(joined.id);
+      setTickets(myTickets || []);
+      Alert.alert('Joined!', `Successfully entered "${joined.roomName}"!`);
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to join game room by PIN');
     } finally {
       setLoading(false);
     }
@@ -137,16 +159,51 @@ export default function KittyPartyHousieScreen() {
       </Text>
 
       {!room ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyIcon}>🎟️</Text>
-          <Text style={styles.emptyTitle}>No Active Game Room</Text>
-          <Text style={styles.emptyText}>Start a free Tambola room for your circle members.</Text>
-          <TouchableOpacity style={styles.createBtn} onPress={handleCreateRoom}>
-            <Text style={styles.createBtnText}>Create Game Room</Text>
-          </TouchableOpacity>
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyIcon}>🎟️</Text>
+            <Text style={styles.emptyTitle}>Host New Game Room</Text>
+            <Text style={styles.emptyText}>Start a free Tambola room for your circle and external guests.</Text>
+            <TouchableOpacity style={styles.createBtn} onPress={handleCreateRoom}>
+              <Text style={styles.createBtnText}>Create Game Room</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.emptyCard, { marginTop: 16 }]}>
+            <Text style={styles.emptyIcon}>🔑</Text>
+            <Text style={styles.emptyTitle}>Join via 6-Digit PIN</Text>
+            <Text style={styles.emptyText}>Enter the room code shared by your friend or host.</Text>
+            <TextInput
+              style={styles.pinInput}
+              placeholder="e.g. AB12CD"
+              placeholderTextColor="#9CA3AF"
+              maxLength={10}
+              autoCapitalize="characters"
+              value={joinCode}
+              onChangeText={(t) => setJoinCode(t.toUpperCase())}
+            />
+            <TouchableOpacity style={styles.joinBtn} onPress={handleJoinByCode}>
+              <Text style={styles.joinBtnText}>Join by PIN</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
         <>
+          {/* Room PIN Banner */}
+          {room.roomCode && (
+            <View style={styles.pinBanner}>
+              <View style={styles.pinInfo}>
+                <Text style={styles.pinLabel}>ROOM CODE / PIN</Text>
+                <Text style={styles.pinCodeText}>{room.roomCode}</Text>
+              </View>
+              {room.allowGuestPlayers && (
+                <View style={styles.guestAllowedTag}>
+                  <Text style={styles.guestAllowedTagText}>🌍 Guests Allowed</Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Ball Caller Billboard */}
           <View style={styles.billboard}>
             <View>
@@ -376,5 +433,74 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#374151',
+  },
+  emptyContainer: {
+    marginTop: 10,
+  },
+  pinBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+  },
+  pinInfo: {
+    flexDirection: 'column',
+  },
+  pinLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#4338CA',
+    letterSpacing: 0.5,
+  },
+  pinCodeText: {
+    fontFamily: 'monospace',
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#312E81',
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  guestAllowedTag: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  guestAllowedTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#065F46',
+  },
+  pinInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    fontFamily: 'monospace',
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+    letterSpacing: 2,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  joinBtn: {
+    backgroundColor: '#4F46E5',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  joinBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Share,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { kittyPartyService } from '@/services/kittyPartyService';
@@ -43,6 +45,18 @@ export default function KittyPartyDetailsScreen() {
     }
   };
 
+  const handleShareCircle = async () => {
+    if (!circle) return;
+    const message = `Hey neighbor! Join our "${circle.circleName}" kitty circle on Mana Community App!`;
+    try {
+      await Share.share({ message });
+    } catch {
+      Linking.openURL(`whatsapp://send?text=${encodeURIComponent(message)}`).catch(() => {
+        Alert.alert('Invite Link', message);
+      });
+    }
+  };
+
   const handleJoinRequest = async () => {
     try {
       await kittyPartyService.requestToJoin(circleId, 'I would like to join this circle.');
@@ -70,6 +84,7 @@ export default function KittyPartyDetailsScreen() {
   }
 
   const isMember = !!circle.currentUserRole;
+  const isAdmin = circle.currentUserRole === 'OWNER' || circle.currentUserRole === 'ADMIN';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -91,10 +106,25 @@ export default function KittyPartyDetailsScreen() {
           <Text style={styles.metaText}>
             👥 {members.length} / {circle.maxMembers || '∞'} members
           </Text>
+          {circle.allowExternalMembers && (
+            <Text style={styles.guestAllowedBadge}>
+              🌍 Guests Allowed ({circle.externalMembersCount || 0}/{circle.maxExternalMembers || 0})
+            </Text>
+          )}
           {circle.currentUserRole && (
             <Text style={styles.roleTag}>Role: {circle.currentUserRole}</Text>
           )}
         </View>
+
+        {isMember && (
+          <TouchableOpacity
+            style={styles.shareCircleBtn}
+            onPress={handleShareCircle}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.shareCircleBtnText}>💬 Invite via WhatsApp / Share</Text>
+          </TouchableOpacity>
+        )}
 
         {!isMember && (
           <TouchableOpacity
@@ -150,6 +180,23 @@ export default function KittyPartyDetailsScreen() {
             style={styles.moduleCard}
             onPress={() =>
               router.push({
+                pathname: '/kitty-party/kittyPartyEventScreen',
+                params: { circleId, id: circleId },
+              })
+            }
+          >
+            <Text style={styles.moduleIcon}>🎉</Text>
+            <View style={styles.moduleInfo}>
+              <Text style={styles.moduleName}>Party Gatherings & RSVP</Text>
+              <Text style={styles.moduleSub}>Monthly meetups, calendar RSVPs & guest tracking</Text>
+            </View>
+            <Text style={styles.chevron}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.moduleCard}
+            onPress={() =>
+              router.push({
                 pathname: '/kitty-party/kittyPartyExpenseScreen',
                 params: { id: circleId },
               })
@@ -159,6 +206,57 @@ export default function KittyPartyDetailsScreen() {
             <View style={styles.moduleInfo}>
               <Text style={styles.moduleName}>Party Bill Splitting</Text>
               <Text style={styles.moduleSub}>Track food, venue, and cake expenditures</Text>
+            </View>
+            <Text style={styles.chevron}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.moduleCard}
+            onPress={() =>
+              router.push({
+                pathname: '/kitty-party/kittyPartyFeedScreen',
+                params: { circleId, id: circleId, isAdmin: String(isAdmin) },
+              })
+            }
+          >
+            <Text style={styles.moduleIcon}>💬</Text>
+            <View style={styles.moduleInfo}>
+              <Text style={styles.moduleName}>Discussion Feed & Polls</Text>
+              <Text style={styles.moduleSub}>Circle announcements, voting polls & comments</Text>
+            </View>
+            <Text style={styles.chevron}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.moduleCard}
+            onPress={() =>
+              router.push({
+                pathname: '/kitty-party/kittyPartyLeaderboardScreen',
+                params: { circleId, id: circleId },
+              })
+            }
+          >
+            <Text style={styles.moduleIcon}>🏆</Text>
+            <View style={styles.moduleInfo}>
+              <Text style={styles.moduleName}>Housie Leaderboard & Trophies</Text>
+              <Text style={styles.moduleSub}>Circle rankings, win counts & player badges</Text>
+            </View>
+            <Text style={styles.chevron}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.moduleCard}
+            onPress={() =>
+              router.push({
+                pathname: '/kitty-party/kittyPartyVendorPackagesScreen',
+                params: { circleId, id: circleId },
+              })
+            }
+          >
+            <Text style={styles.moduleIcon}>🛍️</Text>
+            <View style={styles.moduleInfo}>
+              <Text style={styles.moduleName}>Curated Party Vendors</Text>
+              <Text style={styles.moduleSub}>Catering, themes, balloon decor & emcees</Text>
             </View>
             <Text style={styles.chevron}>→</Text>
           </TouchableOpacity>
@@ -175,8 +273,24 @@ export default function KittyPartyDetailsScreen() {
                 <Text style={styles.avatarText}>{m.fullName.charAt(0)}</Text>
               </View>
               <View style={styles.memberMeta}>
-                <Text style={styles.memberName}>{m.fullName}</Text>
-                <Text style={styles.memberRole}>{m.roleCode}</Text>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.memberName}>{m.fullName}</Text>
+                    {m.isExternal && (
+                      <View style={styles.guestBadge}>
+                        <Text style={styles.guestBadgeText}>Guest</Text>
+                      </View>
+                    )}
+                  </View>
+                  {m.isExternal && (
+                    <Text style={styles.guestSponsorText} numberOfLines={1}>
+                      🌍 {m.externalSocietyName || 'Guest'}{m.sponsorName ? ` • via ${m.sponsorName}` : ''}
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.memberRole}>
+                  {m.flatUnit ? `🏢 ${m.flatUnit} • ${m.roleCode}` : m.roleCode}
+                </Text>
               </View>
             </View>
           ))}
@@ -372,5 +486,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
+  },
+  shareCircleBtn: {
+    marginTop: 14,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareCircleBtnText: {
+    color: '#065F46',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  guestAllowedBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#065F46',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  guestBadge: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  guestBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#065F46',
+  },
+  guestSponsorText: {
+    fontSize: 10,
+    color: '#059669',
+    marginTop: 2,
   },
 });
