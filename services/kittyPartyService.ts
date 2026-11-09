@@ -352,5 +352,29 @@ export const kittyPartyService = {
     const res = await apiClient.get<KittyPartyGameRoom[]>(`/v1/kitty-games/circles/${circleId}/rooms`);
     return res.data;
   },
+
+  // Start a Housie game room (host/admin only)
+  startGame: async (roomId: number): Promise<{ success: boolean; message: string }> => {
+    const res = await apiClient.post<{ success: boolean; message: string }>(`/v1/kitty-games/rooms/${roomId}/start`, {});
+    return res.data;
+  },
+
+  // Accept a circle invitation by token
+  acceptInvitation: async (inviteToken: string): Promise<{ success: boolean; message: string }> => {
+    const res = await apiClient.post<{ success: boolean; message: string }>('/v1/kitty-circles/invitations/accept', { inviteToken });
+    return res.data;
+  },
+
+  // Verify a member's contribution (treasurer/admin)
+  verifyContribution: async (contributionId: number): Promise<{ success: boolean; message: string }> => {
+    const res = await apiClient.post<{ success: boolean; message: string }>(`/v1/kitty-ledger/contributions/${contributionId}/verify`, {});
+    return res.data;
+  },
+
+  // Disburse payout to the cycle beneficiary (admin)
+  disbursePayout: async (cycleId: number, periodNumber?: number): Promise<{ success: boolean; message: string }> => {
+    const res = await apiClient.post<{ success: boolean; message: string }>(`/v1/kitty-ledger/cycles/${cycleId}/disburse`, { periodNumber });
+    return res.data;
+  },
 };
 

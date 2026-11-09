@@ -43,7 +43,7 @@ export default function KittyPartyHousieScreen() {
       onConnect: () => {
         setWsConnected(true);
         // Subscribe to live number calls for this room
-        client.subscribe(`/topic/housie/${roomId}`, (msg: IMessage) => {
+        client.subscribe(`/topic/kitty-games/${roomId}`, (msg: IMessage) => {
           try {
             const update = JSON.parse(msg.body) as Partial<KittyPartyGameRoom>;
             setRoom((prev) => prev ? { ...prev, ...update } : prev);
@@ -151,6 +151,18 @@ export default function KittyPartyHousieScreen() {
       Alert.alert('Ticket Ready', 'Your 90-ball Tambola ticket is generated!');
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Failed to get ticket');
+    }
+  };
+
+  const handleStartGame = async () => {
+    if (!room) return;
+    try {
+      await kittyPartyService.startGame(room.id);
+      const updated = await kittyPartyService.getRoomDetails(room.id);
+      setRoom(updated);
+      Alert.alert('Game Started!', 'The Housie game is now live. Start calling numbers!');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to start game');
     }
   };
 
@@ -276,6 +288,12 @@ export default function KittyPartyHousieScreen() {
               {(room.status === 'WAITING' || room.status === 'IN_PROGRESS') && tickets.length === 0 && (
                 <TouchableOpacity style={styles.actionBtn} onPress={handleGetTicket}>
                   <Text style={styles.actionBtnText}>+ Get Ticket</Text>
+                </TouchableOpacity>
+              )}
+
+              {room.status === 'WAITING' && (
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#059669' }]} onPress={handleStartGame}>
+                  <Text style={styles.actionBtnText}>▶ Start Game</Text>
                 </TouchableOpacity>
               )}
 
