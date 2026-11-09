@@ -16,6 +16,15 @@ import type { KittyPartyCircleSummary, KittyPartyMember } from '@/types/kittyPar
 
 type DetailsTab = 'overview' | 'modules' | 'members';
 
+const CATEGORY_LABELS: Record<string, string> = {
+  KITTY_PARTY: 'Monthly Kitty',
+  LADIES_CLUB: 'Ladies Club',
+  BOOK_CLUB: 'Book Club',
+  FITNESS_SPORTS: 'Fitness & Sports',
+  SENIOR_CITIZENS: 'Senior Citizens',
+  GENERAL_SOCIAL: 'General Social',
+};
+
 export default function KittyPartyDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -101,7 +110,9 @@ export default function KittyPartyDetailsScreen() {
       <View style={styles.heroCard}>
         <View style={styles.badgeRow}>
           <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>{circle.categoryCode}</Text>
+            <Text style={styles.categoryBadgeText}>
+              {CATEGORY_LABELS[circle.categoryCode] || circle.categoryCode.replace(/_/g, ' ')}
+            </Text>
           </View>
           <Text style={styles.privacyTag}>{circle.privacyType.replace('_', ' ')}</Text>
         </View>
@@ -183,6 +194,24 @@ export default function KittyPartyDetailsScreen() {
               <Text style={styles.statLabel}>Status</Text>
             </View>
           </View>
+        </View>
+      )}
+
+      {/* Non-member placeholder for Modules tab */}
+      {!isMember && activeTab === 'modules' && (
+        <View style={styles.lockedModulesContainer}>
+          <Text style={styles.lockedModulesIcon}>🔒</Text>
+          <Text style={styles.lockedModulesTitle}>Members Only</Text>
+          <Text style={styles.lockedModulesText}>
+            Join this circle to access Kitty Savings, Live Housie, Party RSVPs, Bill Splitting and more.
+          </Text>
+          <TouchableOpacity
+            style={styles.joinButton}
+            onPress={handleJoinRequest}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.joinButtonText}>Request to Join</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -629,5 +658,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#9CA3AF',
     marginTop: 2,
+  },
+  lockedModulesContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    marginBottom: 16,
+  },
+  lockedModulesIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  lockedModulesTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  lockedModulesText: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
   },
 });
