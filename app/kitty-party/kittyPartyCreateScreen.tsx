@@ -16,7 +16,7 @@ export default function KittyPartyCreateScreen() {
   const router = useRouter();
   const [circleName, setCircleName] = useState('');
   const [description, setDescription] = useState('');
-  const [categoryCode, setCategoryCode] = useState('KITTY');
+  const [categoryCode, setCategoryCode] = useState('KITTY_PARTY');
   const [privacyType, setPrivacyType] = useState('PRIVATE');
   const [approvalRequired, setApprovalRequired] = useState(true);
   const [maxMembers, setMaxMembers] = useState('15');
@@ -84,11 +84,12 @@ export default function KittyPartyCreateScreen() {
         <Text style={styles.label}>CATEGORY</Text>
         <View style={styles.chipsRow}>
           {[
-            { code: 'KITTY', label: 'Monthly Kitty' },
+            { code: 'KITTY_PARTY', label: 'Monthly Kitty' },
             { code: 'LADIES_CLUB', label: 'Ladies Club' },
-            { code: 'FAMILY', label: 'Family' },
-            { code: 'FRIENDS', label: 'Friends & Games' },
-            { code: 'PROFESSIONAL', label: 'Women Network' },
+            { code: 'BOOK_CLUB', label: 'Book Club' },
+            { code: 'FITNESS_SPORTS', label: 'Fitness & Sports' },
+            { code: 'SENIOR_CITIZENS', label: 'Senior Citizens' },
+            { code: 'GENERAL_SOCIAL', label: 'General Social' },
           ].map((cat) => (
             <TouchableOpacity
               key={cat.code}

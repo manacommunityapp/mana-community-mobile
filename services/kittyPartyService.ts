@@ -342,13 +342,14 @@ export const kittyPartyService = {
   },
 
   // Phase 5: Poll Voting
-  votePoll: async (postId: number, optionId: number): Promise<KittyPartyPost> => {
+  castVote: async (postId: number, optionId: number): Promise<KittyPartyPost> => {
     const res = await apiClient.post<KittyPartyPost>(`/v1/kitty-posts/${postId}/vote`, { optionId });
     return res.data;
   },
 
-  castVote: async (postId: number, optionId: number): Promise<KittyPartyPost> => {
-    const res = await apiClient.post<KittyPartyPost>(`/v1/kitty-posts/${postId}/vote`, { optionId });
+  // List game rooms for a circle (used by Housie screen to find the active room)
+  getCircleRooms: async (circleId: number): Promise<KittyPartyGameRoom[]> => {
+    const res = await apiClient.get<KittyPartyGameRoom[]>(`/v1/kitty-games/circles/${circleId}/rooms`);
     return res.data;
   },
 };

@@ -735,24 +735,42 @@ export default function KittyPartyLedgerScreen() {
         </View>
       </Modal>
 
-      {/* Feature 5: Replace Member Modal */}
+      {/* Feature 5: Replace Member Modal — member picker */}
       <Modal visible={showReplaceModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { maxHeight: '85%' }]}>
             <Text style={styles.modalTitle}>👥 Replace Member</Text>
-            <Text style={styles.modalSub}>Transfer future rotations and contributions to replacement.</Text>
-            <Text style={styles.inputLabel}>Withdrawing Member User ID</Text>
+            <Text style={styles.modalSub}>Transfer future rotations and contributions to a substitute.</Text>
+
+            <Text style={styles.inputLabel}>Withdrawing Member</Text>
+            <ScrollView style={styles.memberPickerList} nestedScrollEnabled>
+              {members.filter((m) => m.membershipStatus === 'ACTIVE').map((m) => (
+                <TouchableOpacity
+                  key={m.memberId}
+                  style={[
+                    styles.memberPickerRow,
+                    replaceOldId === String(m.userId) && styles.memberPickerRowSelected,
+                  ]}
+                  onPress={() => setReplaceOldId(String(m.userId))}
+                >
+                  <View style={styles.memberPickerAvatar}>
+                    <Text style={styles.memberPickerAvatarText}>{m.fullName.charAt(0)}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.memberPickerName}>{m.fullName}</Text>
+                    {m.flatUnit && <Text style={styles.memberPickerFlat}>🏢 {m.flatUnit}</Text>}
+                  </View>
+                  {replaceOldId === String(m.userId) && (
+                    <Text style={styles.memberPickerCheck}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={[styles.inputLabel, { marginTop: 10 }]}>New Substitute Member User ID</Text>
             <TextInput
               style={styles.input}
-              placeholder="Old User ID"
-              value={replaceOldId}
-              onChangeText={setReplaceOldId}
-              keyboardType="number-pad"
-            />
-            <Text style={styles.inputLabel}>New Substitute User ID</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="New User ID"
+              placeholder="Enter new resident's User ID"
               value={replaceNewId}
               onChangeText={setReplaceNewId}
               keyboardType="number-pad"
@@ -1298,5 +1316,53 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontStyle: 'italic',
     marginTop: 12,
+  },
+  memberPickerList: {
+    maxHeight: 160,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    marginBottom: 4,
+  },
+  memberPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  memberPickerRowSelected: {
+    backgroundColor: '#FDF2F8',
+    borderColor: '#FBCFE8',
+  },
+  memberPickerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FCE7F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  memberPickerAvatarText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#BE185D',
+  },
+  memberPickerName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  memberPickerFlat: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  memberPickerCheck: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#BE185D',
+    marginLeft: 8,
   },
 });

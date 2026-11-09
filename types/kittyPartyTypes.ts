@@ -1,4 +1,4 @@
-export type CircleCategory = 'KITTY' | 'LADIES_CLUB' | 'FAMILY' | 'FRIENDS' | 'HOBBY' | 'PROFESSIONAL';
+export type CircleCategory = 'KITTY_PARTY' | 'LADIES_CLUB' | 'BOOK_CLUB' | 'FITNESS_SPORTS' | 'SENIOR_CITIZENS' | 'GENERAL_SOCIAL';
 export type PrivacyType = 'COMMUNITY_PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
 export type CircleStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'CLOSED';
 export type MemberRole = 'OWNER' | 'ADMIN' | 'TREASURER' | 'HOST' | 'MEMBER';

@@ -13,16 +13,27 @@ import { kittyPartyService } from '@/services/kittyPartyService';
 import { KittyPartyCircleCard } from '@/components/kittyPartyCircleCard';
 import type { KittyPartyCircleSummary } from '@/types/kittyPartyTypes';
 
+const DISCOVER_CATEGORIES = [
+  { code: '', label: 'All' },
+  { code: 'KITTY_PARTY', label: 'Kitty' },
+  { code: 'LADIES_CLUB', label: 'Ladies Club' },
+  { code: 'BOOK_CLUB', label: 'Book Club' },
+  { code: 'FITNESS_SPORTS', label: 'Fitness' },
+  { code: 'SENIOR_CITIZENS', label: 'Seniors' },
+  { code: 'GENERAL_SOCIAL', label: 'Social' },
+];
+
 export default function KittyPartyIndexScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'my' | 'discover'>('my');
+  const [discoverCategory, setDiscoverCategory] = useState('');
   const [circles, setCircles] = useState<KittyPartyCircleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
-  }, [activeTab]);
+  }, [activeTab, discoverCategory]);
 
   const loadData = async () => {
     try {
@@ -31,7 +42,7 @@ export default function KittyPartyIndexScreen() {
         const res = await kittyPartyService.getMyCircles();
         setCircles(res?.content || []);
       } else {
-        const res = await kittyPartyService.discoverCircles();
+        const res = await kittyPartyService.discoverCircles(discoverCategory || undefined);
         setCircles(res?.content || []);
       }
     } catch (e) {
@@ -88,6 +99,28 @@ export default function KittyPartyIndexScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Category filter chips — shown only on Discover tab */}
+      {activeTab === 'discover' && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryChipsContent}
+          style={styles.categoryChipsBar}
+        >
+          {DISCOVER_CATEGORIES.map((cat) => (
+            <TouchableOpacity
+              key={cat.code}
+              style={[styles.categoryChip, discoverCategory === cat.code && styles.categoryChipActive]}
+              onPress={() => setDiscoverCategory(cat.code)}
+            >
+              <Text style={[styles.categoryChipText, discoverCategory === cat.code && styles.categoryChipTextActive]}>
+                {cat.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       {/* Circle List */}
       <ScrollView
@@ -245,6 +278,31 @@ const styles = StyleSheet.create({
   emptyButtonText: {
     fontSize: 12,
     fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  categoryChipsBar: {
+    marginBottom: 4,
+  },
+  categoryChipsContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+    flexDirection: 'row',
+  },
+  categoryChip: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  categoryChipActive: {
+    backgroundColor: '#BE185D',
+  },
+  categoryChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  categoryChipTextActive: {
     color: '#FFFFFF',
   },
 });

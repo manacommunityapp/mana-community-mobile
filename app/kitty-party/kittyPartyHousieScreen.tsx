@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,11 @@ import {
   TextInput,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { Client, type IMessage } from '@stomp/stompjs';
 import { kittyPartyService } from '@/services/kittyPartyService';
 import { KittyPartyHousieTicketView } from '@/components/kittyPartyHousieTicketView';
+import { CONFIG } from '@/constants/config';
+import { tokenStore } from '@/services/apiClient';
 import type { KittyPartyGameRoom, KittyPartyTicket } from '@/types/kittyPartyTypes';
 
 export default function KittyPartyHousieScreen() {
@@ -24,7 +27,51 @@ export default function KittyPartyHousieScreen() {
   const [loading, setLoading] = useState(true);
   const [isCalling, setIsCalling] = useState(false);
   const [joinCode, setJoinCode] = useState('');
+  const [wsConnected, setWsConnected] = useState(false);
 
+  const stompRef = useRef<Client | null>(null);
+
+  // ── WebSocket ───────────────────────────────────────────────────
+  const connectWebSocket = useCallback(async (roomId: number) => {
+    if (stompRef.current?.connected) return;
+
+    const token = await tokenStore.getAccess();
+    const client = new Client({
+      brokerURL: CONFIG.WS_URL,
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+      reconnectDelay: 5000,
+      onConnect: () => {
+        setWsConnected(true);
+        // Subscribe to live number calls for this room
+        client.subscribe(`/topic/housie/${roomId}`, (msg: IMessage) => {
+          try {
+            const update = JSON.parse(msg.body) as Partial<KittyPartyGameRoom>;
+            setRoom((prev) => prev ? { ...prev, ...update } : prev);
+          } catch {
+            // ignore malformed frames
+          }
+        });
+      },
+      onDisconnect: () => setWsConnected(false),
+      onStompError: () => setWsConnected(false),
+    });
+    client.activate();
+    stompRef.current = client;
+  }, []);
+
+  const disconnectWebSocket = useCallback(() => {
+    stompRef.current?.deactivate();
+    stompRef.current = null;
+    setWsConnected(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [disconnectWebSocket]);
+
+  // ── Load game: list rooms for circle, pick first active/waiting ──
   useEffect(() => {
     if (circleId) {
       loadGame();
@@ -34,18 +81,25 @@ export default function KittyPartyHousieScreen() {
   const loadGame = async () => {
     try {
       setLoading(true);
-      try {
-        const details = await kittyPartyService.getRoomDetails(circleId);
-        if (details?.id) {
-          setRoom(details);
-          const myTickets = await kittyPartyService.getMyTickets(details.id);
-          setTickets(myTickets || []);
-        }
-      } catch {
-        // No room
+      disconnectWebSocket();
+
+      const rooms = await kittyPartyService.getCircleRooms(circleId).catch(() => []);
+      const activeRoom = rooms.find(
+        (r) => r.status === 'IN_PROGRESS' || r.status === 'WAITING'
+      ) || null;
+
+      if (activeRoom?.id) {
+        const details = await kittyPartyService.getRoomDetails(activeRoom.id);
+        setRoom(details);
+        const myTickets = await kittyPartyService.getMyTickets(details.id);
+        setTickets(myTickets || []);
+        connectWebSocket(details.id);
+      } else {
+        setRoom(null);
+        setTickets([]);
       }
     } catch (e) {
-      console.error('Failed to load mobile Housie', e);
+      console.error('Failed to load Housie', e);
     } finally {
       setLoading(false);
     }
@@ -60,6 +114,7 @@ export default function KittyPartyHousieScreen() {
         allowGuestPlayers: true,
       });
       setRoom(newRoom);
+      connectWebSocket(newRoom.id);
       Alert.alert('Room Created', `Room PIN: ${newRoom.roomCode || 'Ready'}. Get your ticket and invite friends!`);
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Failed to create room');
@@ -79,6 +134,7 @@ export default function KittyPartyHousieScreen() {
       setRoom(joined);
       const myTickets = await kittyPartyService.getMyTickets(joined.id);
       setTickets(myTickets || []);
+      connectWebSocket(joined.id);
       Alert.alert('Joined!', `Successfully entered "${joined.roomName}"!`);
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Failed to join game room by PIN');
@@ -102,8 +158,12 @@ export default function KittyPartyHousieScreen() {
     if (!room || isCalling) return;
     try {
       setIsCalling(true);
-      const res = await kittyPartyService.callNextNumber(room.id);
-      refreshRoom();
+      await kittyPartyService.callNextNumber(room.id);
+      // WebSocket will push the update; fall back to HTTP poll if WS is disconnected
+      if (!wsConnected) {
+        const updated = await kittyPartyService.getRoomDetails(room.id);
+        setRoom(updated);
+      }
     } catch (e: any) {
       Alert.alert('Notice', e?.message || 'Unable to call next number');
     } finally {
@@ -116,19 +176,10 @@ export default function KittyPartyHousieScreen() {
     try {
       const win = await kittyPartyService.claimPrize(room.id, ticketId, claimType);
       Alert.alert('🎉 Validated Winner!', `Claim '${win.claimType}' validated for ${win.userName}!`);
-      refreshRoom();
-    } catch (e: any) {
-      Alert.alert('Claim Rejected', e?.message || 'Pattern does not match called numbers');
-    }
-  };
-
-  const refreshRoom = async () => {
-    if (!room) return;
-    try {
       const updated = await kittyPartyService.getRoomDetails(room.id);
       setRoom(updated);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      Alert.alert('Claim Rejected', e?.message || 'Pattern does not match called numbers');
     }
   };
 
@@ -196,11 +247,16 @@ export default function KittyPartyHousieScreen() {
                 <Text style={styles.pinLabel}>ROOM CODE / PIN</Text>
                 <Text style={styles.pinCodeText}>{room.roomCode}</Text>
               </View>
-              {room.allowGuestPlayers && (
-                <View style={styles.guestAllowedTag}>
-                  <Text style={styles.guestAllowedTagText}>🌍 Guests Allowed</Text>
+              <View style={styles.pinRightCol}>
+                {room.allowGuestPlayers && (
+                  <View style={styles.guestAllowedTag}>
+                    <Text style={styles.guestAllowedTagText}>🌍 Guests Allowed</Text>
+                  </View>
+                )}
+                <View style={[styles.wsIndicator, wsConnected ? styles.wsConnected : styles.wsDisconnected]}>
+                  <Text style={styles.wsIndicatorText}>{wsConnected ? '● Live' : '○ Offline'}</Text>
                 </View>
-              )}
+              </View>
             </View>
           )}
 
@@ -465,6 +521,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginTop: 2,
   },
+  pinRightCol: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
   guestAllowedTag: {
     backgroundColor: '#D1FAE5',
     paddingHorizontal: 8,
@@ -475,6 +535,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#065F46',
+  },
+  wsIndicator: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  wsConnected: {
+    backgroundColor: '#D1FAE5',
+  },
+  wsDisconnected: {
+    backgroundColor: '#FEE2E2',
+  },
+  wsIndicatorText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#374151',
   },
   pinInput: {
     backgroundColor: '#F9FAFB',
@@ -491,12 +567,14 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginTop: 10,
     marginBottom: 8,
+    width: '100%',
   },
   joinBtn: {
     backgroundColor: '#4F46E5',
     paddingVertical: 10,
     borderRadius: 10,
     alignItems: 'center',
+    width: '100%',
   },
   joinBtnText: {
     color: '#FFFFFF',

@@ -68,7 +68,6 @@ export const KittyPartyHousieTicketView: React.FC<Props> = ({
       <View style={styles.claimsRow}>
         {[
           { type: 'EARLY_FIVE', label: 'Early 5' },
-          { type: 'FOUR_CORNERS', label: '4 Corners' },
           { type: 'TOP_LINE', label: 'Top Line' },
           { type: 'MIDDLE_LINE', label: 'Mid Line' },
           { type: 'BOTTOM_LINE', label: 'Bot Line' },

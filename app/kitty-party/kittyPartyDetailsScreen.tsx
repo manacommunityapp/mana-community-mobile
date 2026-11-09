@@ -14,6 +14,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { kittyPartyService } from '@/services/kittyPartyService';
 import type { KittyPartyCircleSummary, KittyPartyMember } from '@/types/kittyPartyTypes';
 
+type DetailsTab = 'overview' | 'modules' | 'members';
+
 export default function KittyPartyDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -22,6 +24,7 @@ export default function KittyPartyDetailsScreen() {
   const [circle, setCircle] = useState<KittyPartyCircleSummary | null>(null);
   const [members, setMembers] = useState<KittyPartyMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<DetailsTab>('overview');
 
   useEffect(() => {
     if (circleId) {
@@ -86,6 +89,12 @@ export default function KittyPartyDetailsScreen() {
   const isMember = !!circle.currentUserRole;
   const isAdmin = circle.currentUserRole === 'OWNER' || circle.currentUserRole === 'ADMIN';
 
+  const TABS: { key: DetailsTab; label: string }[] = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'modules', label: 'Modules' },
+    { key: 'members', label: `Members (${members.length})` },
+  ];
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Circle Hero Card */}
@@ -137,8 +146,48 @@ export default function KittyPartyDetailsScreen() {
         )}
       </View>
 
+      {/* Tab Bar */}
+      <View style={styles.tabBar}>
+        {TABS.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tabItem, activeTab === tab.key && styles.tabItemActive]}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <Text style={[styles.tabItemText, activeTab === tab.key && styles.tabItemTextActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Overview Tab: quick stats */}
+      {activeTab === 'overview' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>CIRCLE STATS</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{members.length}</Text>
+              <Text style={styles.statLabel}>Members</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{circle.maxMembers || '∞'}</Text>
+              <Text style={styles.statLabel}>Max Cap</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{circle.externalMembersCount || 0}</Text>
+              <Text style={styles.statLabel}>Guests</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={[styles.statValue, { color: '#BE185D', fontSize: 11 }]}>{circle.status}</Text>
+              <Text style={styles.statLabel}>Status</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Circle Hub Features */}
-      {isMember && (
+      {isMember && activeTab === 'modules' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>CIRCLE MODULES</Text>
 
@@ -264,38 +313,40 @@ export default function KittyPartyDetailsScreen() {
       )}
 
       {/* Members List */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>MEMBERS ({members.length})</Text>
-        <View style={styles.membersContainer}>
-          {members.map((m) => (
-            <View key={m.memberId} style={styles.memberRow}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{m.fullName.charAt(0)}</Text>
-              </View>
-              <View style={styles.memberMeta}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.memberName}>{m.fullName}</Text>
+      {activeTab === 'members' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>MEMBERS ({members.length})</Text>
+          <View style={styles.membersContainer}>
+            {members.map((m) => (
+              <View key={m.memberId} style={styles.memberRow}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{m.fullName.charAt(0)}</Text>
+                </View>
+                <View style={styles.memberMeta}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.memberName}>{m.fullName}</Text>
+                      {m.isExternal && (
+                        <View style={styles.guestBadge}>
+                          <Text style={styles.guestBadgeText}>Guest</Text>
+                        </View>
+                      )}
+                    </View>
                     {m.isExternal && (
-                      <View style={styles.guestBadge}>
-                        <Text style={styles.guestBadgeText}>Guest</Text>
-                      </View>
+                      <Text style={styles.guestSponsorText} numberOfLines={1}>
+                        🌍 {m.externalSocietyName || 'Guest'}{m.sponsorName ? ` • via ${m.sponsorName}` : ''}
+                      </Text>
                     )}
                   </View>
-                  {m.isExternal && (
-                    <Text style={styles.guestSponsorText} numberOfLines={1}>
-                      🌍 {m.externalSocietyName || 'Guest'}{m.sponsorName ? ` • via ${m.sponsorName}` : ''}
-                    </Text>
-                  )}
+                  <Text style={styles.memberRole}>
+                    {m.flatUnit ? `🏢 ${m.flatUnit} • ${m.roleCode}` : m.roleCode}
+                  </Text>
                 </View>
-                <Text style={styles.memberRole}>
-                  {m.flatUnit ? `🏢 ${m.flatUnit} • ${m.roleCode}` : m.roleCode}
-                </Text>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
-      </View>
+      )}
     </ScrollView>
   );
 }
@@ -525,6 +576,58 @@ const styles = StyleSheet.create({
   guestSponsorText: {
     fontSize: 10,
     color: '#059669',
+    marginTop: 2,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  tabItemActive: {
+    backgroundColor: '#BE185D',
+  },
+  tabItemText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  tabItemTextActive: {
+    color: '#FFFFFF',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#111827',
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#9CA3AF',
     marginTop: 2,
   },
 });
