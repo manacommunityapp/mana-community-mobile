@@ -27,6 +27,11 @@ export default function KittyPartyIndexScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'my' | 'discover'>('my');
   const [discoverCategory, setDiscoverCategory] = useState('');
+
+  const switchTab = (tab: 'my' | 'discover') => {
+    if (tab === 'my') setDiscoverCategory('');
+    setActiveTab(tab);
+  };
   const [circles, setCircles] = useState<KittyPartyCircleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -84,7 +89,7 @@ export default function KittyPartyIndexScreen() {
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'my' && styles.activeTab]}
-          onPress={() => setActiveTab('my')}
+          onPress={() => switchTab('my')}
         >
           <Text style={[styles.tabText, activeTab === 'my' && styles.activeTabText]}>
             My Circles
@@ -92,7 +97,7 @@ export default function KittyPartyIndexScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'discover' && styles.activeTab]}
-          onPress={() => setActiveTab('discover')}
+          onPress={() => switchTab('discover')}
         >
           <Text style={[styles.tabText, activeTab === 'discover' && styles.activeTabText]}>
             Discover Circles

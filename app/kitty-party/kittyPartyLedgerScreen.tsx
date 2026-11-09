@@ -767,10 +767,34 @@ export default function KittyPartyLedgerScreen() {
               ))}
             </ScrollView>
 
-            <Text style={[styles.inputLabel, { marginTop: 10 }]}>New Substitute Member User ID</Text>
+            <Text style={[styles.inputLabel, { marginTop: 10 }]}>Incoming Substitute (pick from circle or enter ID)</Text>
+            <ScrollView style={styles.memberPickerList} nestedScrollEnabled>
+              {members.filter((m) => m.membershipStatus === 'ACTIVE' && String(m.userId) !== replaceOldId).map((m) => (
+                <TouchableOpacity
+                  key={m.memberId}
+                  style={[
+                    styles.memberPickerRow,
+                    replaceNewId === String(m.userId) && styles.memberPickerRowSelected,
+                  ]}
+                  onPress={() => setReplaceNewId(String(m.userId))}
+                >
+                  <View style={styles.memberPickerAvatar}>
+                    <Text style={styles.memberPickerAvatarText}>{m.fullName.charAt(0)}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.memberPickerName}>{m.fullName}</Text>
+                    {m.flatUnit && <Text style={styles.memberPickerFlat}>🏢 {m.flatUnit}</Text>}
+                  </View>
+                  {replaceNewId === String(m.userId) && (
+                    <Text style={styles.memberPickerCheck}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={[styles.inputLabel, { marginTop: 6, color: '#9CA3AF' }]}>Or type a User ID for someone outside this circle</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter new resident's User ID"
+              placeholder="e.g. 10045"
               value={replaceNewId}
               onChangeText={setReplaceNewId}
               keyboardType="number-pad"
