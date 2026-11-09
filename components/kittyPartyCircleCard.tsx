@@ -2,6 +2,15 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { KittyPartyCircleSummary } from '@/types/kittyPartyTypes';
 
+const CATEGORY_LABELS: Record<string, string> = {
+  KITTY_PARTY: 'Monthly Kitty',
+  LADIES_CLUB: 'Ladies Club',
+  BOOK_CLUB: 'Book Club',
+  FITNESS_SPORTS: 'Fitness & Sports',
+  SENIOR_CITIZENS: 'Senior Citizens',
+  GENERAL_SOCIAL: 'General Social',
+};
+
 interface Props {
   circle: KittyPartyCircleSummary;
   onPress: () => void;
@@ -12,9 +21,11 @@ export const KittyPartyCircleCard: React.FC<Props> = ({ circle, onPress }) => {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.headerRow}>
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{circle.categoryCode}</Text>
+          <Text style={styles.categoryText}>
+            {CATEGORY_LABELS[circle.categoryCode] || circle.categoryCode.replace(/_/g, ' ')}
+          </Text>
         </View>
-        <Text style={styles.privacyText}>{circle.privacyType.replace('_', ' ')}</Text>
+        <Text style={styles.privacyText}>{circle.privacyType.replace(/_/g, ' ')}</Text>
       </View>
 
       <Text style={styles.title} numberOfLines={1}>

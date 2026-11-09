@@ -273,7 +273,7 @@ export default function KittyPartyHousieScreen() {
             </View>
 
             <View style={styles.billboardActions}>
-              {room.status === 'WAITING' && tickets.length === 0 && (
+              {(room.status === 'WAITING' || room.status === 'IN_PROGRESS') && tickets.length === 0 && (
                 <TouchableOpacity style={styles.actionBtn} onPress={handleGetTicket}>
                   <Text style={styles.actionBtnText}>+ Get Ticket</Text>
                 </TouchableOpacity>
@@ -327,7 +327,7 @@ export default function KittyPartyHousieScreen() {
               <View style={styles.winnersBox}>
                 {room.winners.map((w) => (
                   <View key={w.id} style={styles.winnerRow}>
-                    <Text style={styles.winnerType}>{w.claimType.replace('_', ' ')}</Text>
+                    <Text style={styles.winnerType}>{w.claimType.replace(/_/g, ' ')}</Text>
                     <Text style={styles.winnerName}>{w.userName}</Text>
                   </View>
                 ))}

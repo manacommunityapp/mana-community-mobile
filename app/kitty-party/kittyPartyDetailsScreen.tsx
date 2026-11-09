@@ -114,7 +114,7 @@ export default function KittyPartyDetailsScreen() {
               {CATEGORY_LABELS[circle.categoryCode] || circle.categoryCode.replace(/_/g, ' ')}
             </Text>
           </View>
-          <Text style={styles.privacyTag}>{circle.privacyType.replace('_', ' ')}</Text>
+          <Text style={styles.privacyTag}>{circle.privacyType.replace(/_/g, ' ')}</Text>
         </View>
 
         <Text style={styles.circleTitle}>{circle.circleName}</Text>

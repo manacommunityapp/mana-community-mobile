@@ -48,13 +48,13 @@ export default function KittyPartyVendorPackagesScreen() {
 
   useEffect(() => {
     if (circleId) {
-      fetchPackages(activeCategory);
+      fetchPackages(activeCategory === 'ALL' ? undefined : activeCategory);
     }
   }, [circleId, activeCategory]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchPackages(activeCategory);
+    fetchPackages(activeCategory === 'ALL' ? undefined : activeCategory);
   };
 
   const handleCall = (phone?: string) => {
@@ -132,7 +132,7 @@ export default function KittyPartyVendorPackagesScreen() {
             <View key={pkg.id} style={styles.pkgCard}>
               <View style={styles.pkgHeaderRow}>
                 <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryBadgeText}>{pkg.category.replace('_', ' ')}</Text>
+                  <Text style={styles.categoryBadgeText}>{pkg.category.replace(/_/g, ' ')}</Text>
                 </View>
                 <View style={styles.ratingBadge}>
                   <Text style={styles.starIcon}>⭐</Text>

@@ -20,6 +20,8 @@ export default function KittyPartyCreateScreen() {
   const [privacyType, setPrivacyType] = useState('PRIVATE');
   const [approvalRequired, setApprovalRequired] = useState(true);
   const [maxMembers, setMaxMembers] = useState('15');
+  const [allowExternalMembers, setAllowExternalMembers] = useState(false);
+  const [maxExternalMembers, setMaxExternalMembers] = useState('5');
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
@@ -37,6 +39,8 @@ export default function KittyPartyCreateScreen() {
         privacyType,
         approvalRequired,
         maxMembers: parseInt(maxMembers, 10) || 20,
+        allowExternalMembers,
+        maxExternalMembers: allowExternalMembers ? (parseInt(maxExternalMembers, 10) || 5) : undefined,
       });
 
       Alert.alert('Success', 'Circle created successfully!', [
@@ -167,6 +171,30 @@ export default function KittyPartyCreateScreen() {
           thumbColor={approvalRequired ? '#BE185D' : '#F3F4F6'}
         />
       </View>
+
+      {/* Allow External / Guest Members */}
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>Allow External / Guest Members</Text>
+        <Switch
+          value={allowExternalMembers}
+          onValueChange={setAllowExternalMembers}
+          trackColor={{ false: '#D1D5DB', true: '#A7F3D0' }}
+          thumbColor={allowExternalMembers ? '#059669' : '#F3F4F6'}
+        />
+      </View>
+
+      {allowExternalMembers && (
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>MAX EXTERNAL GUESTS</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={maxExternalMembers}
+            onChangeText={setMaxExternalMembers}
+            placeholder="e.g. 5"
+          />
+        </View>
+      )}
 
       {/* Submit Button */}
       <TouchableOpacity
