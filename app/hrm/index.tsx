@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import * as Location from 'expo-location';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, ActivityIndicator, Alert,
@@ -12,7 +13,7 @@ import { CheckInOutButton } from '@/components/hrm/CheckInOutButton';
 import { hrmService } from '@/services/hrmService';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, FONTS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
-import type { AttendanceRecord } from '@/types/hrm';
+import type { AttendanceRecord, LeaveBalance } from '@/types/hrm';
 
 function formatTime(iso?: string): string {
   if (!iso) return '--:--';
@@ -60,14 +61,23 @@ export default function HrmHomeScreen() {
 
   const { from, to } = monthRange();
 
+  // Bootstrap: get orgId from user's HR organizations first
+  const { data: orgs, isLoading: orgsLoading } = useQuery({
+    queryKey: ['hrm-my-orgs'],
+    queryFn: hrmService.getMyOrganizations,
+  });
+  const orgId = orgs?.[0]?.id;
+
   const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['hrm-profile'],
-    queryFn: hrmService.getMyProfile,
+    queryKey: ['hrm-profile', orgId],
+    queryFn: () => hrmService.getMyProfile(orgId!),
+    enabled: !!orgId,
   });
 
   const { data: attendance, refetch: refetchAttendance } = useQuery({
-    queryKey: ['hrm-attendance-month', from, to],
-    queryFn: () => hrmService.getMyAttendance(from, to),
+    queryKey: ['hrm-attendance-month', orgId, from, to],
+    queryFn: () => hrmService.getMyAttendance(orgId!, from, to),
+    enabled: !!orgId,
   });
 
   const { data: leaveBalances } = useQuery({
@@ -80,8 +90,24 @@ export default function HrmHomeScreen() {
   );
   const isCheckedIn = !!todayRecord?.firstCheckIn && !todayRecord?.lastCheckOut;
 
+  async function getGpsCoords(): Promise<{ latitude?: number; longitude?: number }> {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        return { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      }
+    } catch {
+      // GPS unavailable — proceed without it
+    }
+    return {};
+  }
+
   const checkInMutation = useMutation({
-    mutationFn: () => hrmService.checkIn({ source: 'MOBILE' }),
+    mutationFn: async () => {
+      const coords = await getGpsCoords();
+      return hrmService.checkIn(orgId!, { source: 'MOBILE', ...coords });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hrm-attendance-month'] });
     },
@@ -89,7 +115,10 @@ export default function HrmHomeScreen() {
   });
 
   const checkOutMutation = useMutation({
-    mutationFn: () => hrmService.checkOut({ source: 'MOBILE' }),
+    mutationFn: async () => {
+      const coords = await getGpsCoords();
+      return hrmService.checkOut(orgId!, { source: 'MOBILE', ...coords });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hrm-attendance-month'] });
     },
@@ -108,7 +137,7 @@ export default function HrmHomeScreen() {
   const absentCount = attendance?.filter((a: AttendanceRecord) => a.attendanceStatus === 'ABSENT').length ?? 0;
   const leaveCount = attendance?.filter((a: AttendanceRecord) => a.attendanceStatus === 'ON_LEAVE').length ?? 0;
 
-  if (profileLoading) {
+  if (orgsLoading || profileLoading) {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <View style={s.loadingBox}>
@@ -193,7 +222,7 @@ export default function HrmHomeScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Leave Balance</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.balanceScroll}>
-              {leaveBalances.map((b: any) => (
+              {leaveBalances.map((b: LeaveBalance) => (
                 <View key={b.leaveTypeName} style={s.balanceMini}>
                   <Text style={s.balanceName}>{b.leaveTypeName}</Text>
                   <Text style={s.balanceNum}>{b.remainingBalance}/{b.totalBalance}</Text>

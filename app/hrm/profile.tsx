@@ -34,9 +34,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function ProfileScreen() {
   const router = useRouter();
 
+  const { data: orgs } = useQuery({
+    queryKey: ['hrm-my-orgs'],
+    queryFn: hrmService.getMyOrganizations,
+  });
+  const orgId = orgs?.[0]?.id;
+
   const { data: profile, isLoading } = useQuery({
-    queryKey: ['hrm-profile'],
-    queryFn: hrmService.getMyProfile,
+    queryKey: ['hrm-profile', orgId],
+    queryFn: () => hrmService.getMyProfile(orgId!),
+    enabled: !!orgId,
   });
 
   const { data: documents } = useQuery({

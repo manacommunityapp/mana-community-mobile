@@ -18,20 +18,30 @@ import type {
 
 const BASE = '/v1/hr';
 
+interface HrOrganizationSummary {
+  id: number;
+  organizationName: string;
+  organizationType: string;
+}
+
 export const hrmService = {
+  // Organizations - bootstrap to get orgId
+  getMyOrganizations: () =>
+    api.get<HrOrganizationSummary[]>(`${BASE}/organizations`).then(r => r.data),
+
   // Employee profile
-  getMyProfile: () =>
-    api.get<HrEmployee>(`${BASE}/employees/me`).then(r => r.data),
+  getMyProfile: (orgId: number) =>
+    api.get<HrEmployee>(`${BASE}/employees/me`, { params: { orgId } }).then(r => r.data),
 
   // Attendance
-  checkIn: (data: CheckInOutRequest) =>
-    api.post<AttendanceRecord>(`${BASE}/attendance/check-in`, data).then(r => r.data),
+  checkIn: (orgId: number, data: CheckInOutRequest) =>
+    api.post<AttendanceRecord>(`${BASE}/attendance/check-in?orgId=${orgId}`, data).then(r => r.data),
 
-  checkOut: (data: CheckInOutRequest) =>
-    api.post<AttendanceRecord>(`${BASE}/attendance/check-out`, data).then(r => r.data),
+  checkOut: (orgId: number, data: CheckInOutRequest) =>
+    api.post<AttendanceRecord>(`${BASE}/attendance/check-out?orgId=${orgId}`, data).then(r => r.data),
 
-  getMyAttendance: (from: string, to: string) =>
-    api.get<AttendanceRecord[]>(`${BASE}/attendance/my`, { params: { from, to } }).then(r => r.data),
+  getMyAttendance: (orgId: number, from: string, to: string) =>
+    api.get<AttendanceRecord[]>(`${BASE}/attendance/my`, { params: { orgId, from, to } }).then(r => r.data),
 
   getAttendanceSummary: (orgId: number, date: string) =>
     api.get<AttendanceSummary>(`${BASE}/attendance/organizations/${orgId}/summary`, { params: { date } }).then(r => r.data),
