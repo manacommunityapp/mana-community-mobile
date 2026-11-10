@@ -21,11 +21,15 @@ import type {
   KittyPartyVenueType,
 } from '@/types/kittyPartyTypes';
 import { KittyPartyEventCard } from '@/components/kittyPartyEventCard';
+import type { MemberRole } from '@/types/kittyPartyTypes';
+import { hasPermission, isEventManager } from '@/utils/kittyPartyPermissions';
 
 export default function KittyPartyEventScreen() {
-  const { circleId: paramCircleId, id: paramId } = useLocalSearchParams<{ circleId?: string; id?: string }>();
+  const { circleId: paramCircleId, id: paramId, role: paramRole } = useLocalSearchParams<{ circleId?: string; id?: string; role?: string }>();
   const router = useRouter();
   const circleId = Number(paramCircleId || paramId || 0);
+  const userRole = (paramRole as MemberRole) || 'MEMBER';
+  const canCreateEvent = isEventManager(userRole);
 
   const [events, setEvents] = useState<KittyPartyEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,9 +168,11 @@ export default function KittyPartyEventScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Party Gatherings</Text>
-        <TouchableOpacity onPress={() => setShowCreateModal(true)} style={styles.addBtn}>
-          <Text style={styles.addBtnText}>+ Plan</Text>
-        </TouchableOpacity>
+        {canCreateEvent && (
+          <TouchableOpacity onPress={() => setShowCreateModal(true)} style={styles.addBtn}>
+            <Text style={styles.addBtnText}>+ Plan</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView

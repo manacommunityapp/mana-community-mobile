@@ -20,11 +20,14 @@ import type {
   KittyPartyDispute,
   MonthlyStatementResponse,
   KittyPartyMember,
+  MemberRole,
 } from '@/types/kittyPartyTypes';
+import { hasPermission, isFinanceRole, isAdminOrOwner } from '@/utils/kittyPartyPermissions';
 
 export default function KittyPartyLedgerScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, role: paramRole } = useLocalSearchParams<{ id: string; role?: string }>();
   const circleId = Number(id);
+  const userRole = (paramRole as MemberRole) || 'MEMBER';
 
   const [cycle, setCycle] = useState<KittyPartyCycle | null>(null);
   const [contributions, setContributions] = useState<KittyPartyContribution[]>([]);
@@ -327,26 +330,36 @@ export default function KittyPartyLedgerScreen() {
         </View>
       ) : (
         <>
-          {/* Quick Actions Bar */}
+          {/* Quick Actions Bar — role-gated */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.actionsBar}>
-            <TouchableOpacity style={styles.actionPill} onPress={openStatement}>
-              <Text style={styles.actionPillText}>📥 Statement</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionPill, styles.actionPillIndigo]} onPress={openAuditTrail}>
-              <Text style={[styles.actionPillText, { color: '#4338CA' }]}>🔒 Audit Trail</Text>
-            </TouchableOpacity>
+            {hasPermission(userRole, 'VIEW_OWN_STATEMENT') && (
+              <TouchableOpacity style={styles.actionPill} onPress={openStatement}>
+                <Text style={styles.actionPillText}>📥 Statement</Text>
+              </TouchableOpacity>
+            )}
+            {hasPermission(userRole, 'VIEW_AUDIT_TRAIL') && (
+              <TouchableOpacity style={[styles.actionPill, styles.actionPillIndigo]} onPress={openAuditTrail}>
+                <Text style={[styles.actionPillText, { color: '#4338CA' }]}>🔒 Audit Trail</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={[styles.actionPill, styles.actionPillRose]} onPress={openDisputes}>
               <Text style={[styles.actionPillText, { color: '#BE123C' }]}>⚖️ Disputes</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionPill, styles.actionPillAmber]} onPress={handleSendReminders}>
-              <Text style={[styles.actionPillText, { color: '#B45309' }]}>🔔 Remind Pending</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionPill} onPress={() => setShowSwapModal(true)}>
-              <Text style={styles.actionPillText}>⇄ Swap Turn</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionPill} onPress={() => setShowReplaceModal(true)}>
-              <Text style={styles.actionPillText}>👥 Replace</Text>
-            </TouchableOpacity>
+            {hasPermission(userRole, 'SEND_REMINDERS') && (
+              <TouchableOpacity style={[styles.actionPill, styles.actionPillAmber]} onPress={handleSendReminders}>
+                <Text style={[styles.actionPillText, { color: '#B45309' }]}>🔔 Remind Pending</Text>
+              </TouchableOpacity>
+            )}
+            {hasPermission(userRole, 'SWAP_ROTATION') && (
+              <TouchableOpacity style={styles.actionPill} onPress={() => setShowSwapModal(true)}>
+                <Text style={styles.actionPillText}>⇄ Swap Turn</Text>
+              </TouchableOpacity>
+            )}
+            {hasPermission(userRole, 'REPLACE_MEMBER_IN_CYCLE') && (
+              <TouchableOpacity style={styles.actionPill} onPress={() => setShowReplaceModal(true)}>
+                <Text style={styles.actionPillText}>👥 Replace</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
 
           {/* Indicator 7: Full Cycle Progress Banner */}

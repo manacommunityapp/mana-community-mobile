@@ -22,13 +22,16 @@ import type {
   KittyPartyPostType,
 } from '@/types/kittyPartyTypes';
 import { KittyPartyPostCard } from '@/components/kittyPartyPostCard';
+import type { MemberRole } from '@/types/kittyPartyTypes';
+import { hasPermission, isAdminOrOwner } from '@/utils/kittyPartyPermissions';
 
 export default function KittyPartyFeedScreen() {
-  const { circleId: paramCircleId, id: paramId, isAdmin: paramIsAdmin } =
-    useLocalSearchParams<{ circleId?: string; id?: string; isAdmin?: string }>();
+  const { circleId: paramCircleId, id: paramId, role: paramRole } =
+    useLocalSearchParams<{ circleId?: string; id?: string; role?: string }>();
   const router = useRouter();
   const circleId = Number(paramCircleId || paramId || 0);
-  const isAdmin = paramIsAdmin === 'true';
+  const userRole = (paramRole as MemberRole) || 'MEMBER';
+  const isAdmin = isAdminOrOwner(userRole);
 
   const [posts, setPosts] = useState<KittyPartyPost[]>([]);
   const [loading, setLoading] = useState(true);

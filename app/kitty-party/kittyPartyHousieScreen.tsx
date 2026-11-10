@@ -15,11 +15,14 @@ import { kittyPartyService } from '@/services/kittyPartyService';
 import { KittyPartyHousieTicketView } from '@/components/kittyPartyHousieTicketView';
 import { CONFIG } from '@/constants/config';
 import { tokenStore } from '@/services/apiClient';
-import type { KittyPartyGameRoom, KittyPartyTicket } from '@/types/kittyPartyTypes';
+import type { KittyPartyGameRoom, KittyPartyTicket, MemberRole } from '@/types/kittyPartyTypes';
+import { hasPermission, isGameHost } from '@/utils/kittyPartyPermissions';
 
 export default function KittyPartyHousieScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, role: paramRole } = useLocalSearchParams<{ id: string; role?: string }>();
   const circleId = Number(id);
+  const userRole = (paramRole as MemberRole) || 'MEMBER';
+  const canManageGame = isGameHost(userRole);
 
   const [room, setRoom] = useState<KittyPartyGameRoom | null>(null);
   const [tickets, setTickets] = useState<KittyPartyTicket[]>([]);
@@ -223,14 +226,16 @@ export default function KittyPartyHousieScreen() {
 
       {!room ? (
         <View style={styles.emptyContainer}>
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>🎟️</Text>
-            <Text style={styles.emptyTitle}>Host New Game Room</Text>
-            <Text style={styles.emptyText}>Start a free Tambola room for your circle and external guests.</Text>
-            <TouchableOpacity style={styles.createBtn} onPress={handleCreateRoom}>
-              <Text style={styles.createBtnText}>Create Game Room</Text>
-            </TouchableOpacity>
-          </View>
+          {canManageGame && (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyIcon}>🎟️</Text>
+              <Text style={styles.emptyTitle}>Host New Game Room</Text>
+              <Text style={styles.emptyText}>Start a free Tambola room for your circle and external guests.</Text>
+              <TouchableOpacity style={styles.createBtn} onPress={handleCreateRoom}>
+                <Text style={styles.createBtnText}>Create Game Room</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={[styles.emptyCard, { marginTop: 16 }]}>
             <Text style={styles.emptyIcon}>🔑</Text>
@@ -291,13 +296,13 @@ export default function KittyPartyHousieScreen() {
                 </TouchableOpacity>
               )}
 
-              {room.status === 'WAITING' && (
+              {room.status === 'WAITING' && canManageGame && (
                 <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#059669' }]} onPress={handleStartGame}>
                   <Text style={styles.actionBtnText}>▶ Start Game</Text>
                 </TouchableOpacity>
               )}
 
-              {room.status === 'IN_PROGRESS' && (
+              {room.status === 'IN_PROGRESS' && canManageGame && (
                 <TouchableOpacity
                   style={[styles.actionBtn, isCalling && styles.actionBtnDisabled]}
                   disabled={isCalling}

@@ -13,6 +13,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { kittyPartyService } from '@/services/kittyPartyService';
 import type { KittyPartyCircleSummary, KittyPartyMember } from '@/types/kittyPartyTypes';
+import { hasPermission, isAdminOrOwner, getRoleBadgeColor } from '@/utils/kittyPartyPermissions';
 
 type DetailsTab = 'overview' | 'modules' | 'members';
 
@@ -96,7 +97,8 @@ export default function KittyPartyDetailsScreen() {
   }
 
   const isMember = !!circle.currentUserRole;
-  const isAdmin = circle.currentUserRole === 'OWNER' || circle.currentUserRole === 'ADMIN';
+  const isAdmin = isAdminOrOwner(circle.currentUserRole);
+  const currentUserRole = circle.currentUserRole;
 
   const TABS: { key: DetailsTab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
@@ -225,7 +227,7 @@ export default function KittyPartyDetailsScreen() {
             onPress={() =>
               router.push({
                 pathname: '/kitty-party/kittyPartyLedgerScreen',
-                params: { id: circleId },
+                params: { id: circleId, role: currentUserRole },
               })
             }
           >
@@ -242,7 +244,7 @@ export default function KittyPartyDetailsScreen() {
             onPress={() =>
               router.push({
                 pathname: '/kitty-party/kittyPartyHousieScreen',
-                params: { id: circleId },
+                params: { id: circleId, role: currentUserRole },
               })
             }
           >
@@ -259,7 +261,7 @@ export default function KittyPartyDetailsScreen() {
             onPress={() =>
               router.push({
                 pathname: '/kitty-party/kittyPartyEventScreen',
-                params: { circleId, id: circleId },
+                params: { circleId, id: circleId, role: currentUserRole },
               })
             }
           >
@@ -276,7 +278,7 @@ export default function KittyPartyDetailsScreen() {
             onPress={() =>
               router.push({
                 pathname: '/kitty-party/kittyPartyExpenseScreen',
-                params: { id: circleId },
+                params: { id: circleId, role: currentUserRole },
               })
             }
           >
@@ -293,7 +295,7 @@ export default function KittyPartyDetailsScreen() {
             onPress={() =>
               router.push({
                 pathname: '/kitty-party/kittyPartyFeedScreen',
-                params: { circleId, id: circleId, isAdmin: String(isAdmin) },
+                params: { circleId, id: circleId, role: currentUserRole },
               })
             }
           >
@@ -310,7 +312,7 @@ export default function KittyPartyDetailsScreen() {
             onPress={() =>
               router.push({
                 pathname: '/kitty-party/kittyPartyLeaderboardScreen',
-                params: { circleId, id: circleId },
+                params: { circleId, id: circleId, role: currentUserRole },
               })
             }
           >
@@ -327,7 +329,7 @@ export default function KittyPartyDetailsScreen() {
             onPress={() =>
               router.push({
                 pathname: '/kitty-party/kittyPartyVendorPackagesScreen',
-                params: { circleId, id: circleId },
+                params: { circleId, id: circleId, role: currentUserRole },
               })
             }
           >
@@ -367,9 +369,11 @@ export default function KittyPartyDetailsScreen() {
                       </Text>
                     )}
                   </View>
-                  <Text style={styles.memberRole}>
-                    {m.flatUnit ? `🏢 ${m.flatUnit} • ${m.roleCode}` : m.roleCode}
-                  </Text>
+                  <View style={[styles.roleBadge, { backgroundColor: getRoleBadgeColor(m.roleCode).bg }]}>
+                    <Text style={[styles.roleBadgeText, { color: getRoleBadgeColor(m.roleCode).text }]}>
+                      {m.flatUnit ? `🏢 ${m.flatUnit} • ${m.roleCode}` : m.roleCode}
+                    </Text>
+                  </View>
                 </View>
               </View>
             ))}
@@ -566,6 +570,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   shareCircleBtn: {
     marginTop: 14,
