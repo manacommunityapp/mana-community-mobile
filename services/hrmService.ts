@@ -80,8 +80,11 @@ export const hrmService = {
   l2ApproveLeave: (id: number, orgId: number, remarks?: string) =>
     api.post(`${BASE}/leaves/${id}/l2-approve?orgId=${orgId}`, { approverRemarks: remarks }).then(r => r.data),
 
-  grantCompOff: (orgId: number, employeeId: number, workedDate: string, reason?: string) =>
-    api.post(`${BASE}/leaves/comp-off`, { params: { orgId, employeeId, workedDate, ...(reason && { reason }) } }).then(r => r.data),
+  grantCompOff: (orgId: number, employeeId: number, workedDate: string, reason?: string) => {
+    const params = new URLSearchParams({ employeeId: String(employeeId), workedDate });
+    if (reason) params.set('reason', reason);
+    return api.post(`${BASE}/leaves/organizations/${orgId}/comp-off?${params}`).then((r: any) => r.data);
+  },
 
   // Shifts
   getMyShifts: (from: string, to: string) =>
