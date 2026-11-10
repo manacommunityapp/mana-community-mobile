@@ -14,6 +14,10 @@ import type {
   HrHoliday,
   ApplyLeaveRequest,
   CheckInOutRequest,
+  EmploymentHistory,
+  OnboardingTask,
+  OffboardingTask,
+  SelfServiceUpdateRequest,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -110,4 +114,29 @@ export const hrmService = {
   // Holidays
   getHolidays: (orgId: number, year: number) =>
     api.get<HrHoliday[]>(`${BASE}/organizations/${orgId}/holidays`, { params: { year } }).then(r => r.data),
+
+  // Self-service
+  updateMyProfile: (orgId: number, data: SelfServiceUpdateRequest) =>
+    api.patch<HrEmployee>(`${BASE}/employees/me`, data, { params: { orgId } }).then(r => r.data),
+
+  // Employment history
+  getEmploymentHistory: (orgId: number, employeeId: number) =>
+    api.get<EmploymentHistory[]>(`${BASE}/organizations/${orgId}/employees/${employeeId}/history`).then(r => r.data),
+
+  // Onboarding
+  getOnboardingTasks: (orgId: number, employeeId: number) =>
+    api.get<OnboardingTask[]>(`${BASE}/onboarding/employees/${employeeId}/tasks`, { params: { orgId } }).then(r => r.data),
+
+  completeOnboardingTask: (orgId: number, taskId: number) =>
+    api.post<OnboardingTask>(`${BASE}/onboarding/tasks/${taskId}/complete`, null, { params: { orgId } }).then(r => r.data),
+
+  getPendingOnboarding: (orgId: number) =>
+    api.get<OnboardingTask[]>(`${BASE}/onboarding/organizations/${orgId}/pending`).then(r => r.data),
+
+  // Offboarding
+  getOffboardingTasks: (orgId: number, employeeId: number) =>
+    api.get<OffboardingTask[]>(`${BASE}/offboarding/employees/${employeeId}/tasks`, { params: { orgId } }).then(r => r.data),
+
+  completeOffboardingTask: (orgId: number, taskId: number) =>
+    api.post<OffboardingTask>(`${BASE}/offboarding/tasks/${taskId}/complete`, null, { params: { orgId } }).then(r => r.data),
 };

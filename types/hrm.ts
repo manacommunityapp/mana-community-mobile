@@ -176,3 +176,60 @@ export interface CheckInOutRequest {
   deviceId?: string;
   source?: string;
 }
+
+export interface EmploymentHistory {
+  id: number;
+  changeType: string;
+  effectiveDate: string;
+  previousDesignation?: string;
+  newDesignation?: string;
+  previousDepartment?: string;
+  newDepartment?: string;
+  previousBranch?: string;
+  newBranch?: string;
+  reason?: string;
+  remarks?: string;
+  changedBy: number;
+  createdAt: string;
+}
+
+export interface OnboardingTask {
+  id: number;
+  taskTitle: string;
+  taskDescription?: string;
+  category: string;
+  dueDate?: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  assignedTo?: number;
+  employeeId?: number;
+  employeeName?: string;
+}
+
+export interface OffboardingTask {
+  id: number;
+  taskTitle: string;
+  taskDescription?: string;
+  category: string;
+  dueDate?: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  employeeId?: number;
+}
+
+export interface SelfServiceUpdateRequest {
+  personalEmail?: string;
+  phone?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+}
+
+export interface OrgHierarchyNode {
+  id: number;
+  employeeCode: string;
+  firstName: string;
+  lastName?: string;
+  designation?: string;
+  department?: string;
+  directReports: OrgHierarchyNode[];
+}

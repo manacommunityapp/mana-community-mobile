@@ -242,6 +242,7 @@ export default function HrmHomeScreen() {
             <QuickLink icon="list-outline" label="My Leaves" onPress={() => router.push('/hrm/leaves')} color="#3B82F6" bgColor="#EFF6FF" />
             <QuickLink icon="time-outline" label="My Shifts" onPress={() => router.push('/hrm/shifts')} color="#8B5CF6" bgColor="#F5F3FF" />
             <QuickLink icon="person-outline" label="Profile" onPress={() => router.push('/hrm/profile')} color={COLORS.warning} bgColor={COLORS.warningLight} />
+            <QuickLink icon="checkbox-outline" label="Onboarding" onPress={() => router.push('/hrm/onboarding')} color="#6366F1" bgColor="#EEF2FF" />
             {isManager && (
               <QuickLink icon="checkmark-done-outline" label="Approvals" onPress={() => router.push('/hrm/approvals')} color={COLORS.error} bgColor={COLORS.errorLight} />
             )}

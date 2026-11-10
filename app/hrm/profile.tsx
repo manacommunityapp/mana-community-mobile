@@ -1,10 +1,11 @@
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, TextInput, TouchableOpacity, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Header } from '@/components/common/Header';
 import { hrmService } from '@/services/hrmService';
 import { COLORS, FONTS, SHADOWS, RADIUS } from '@/constants/config';
@@ -33,6 +34,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    phone: '',
+    personalEmail: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+  });
 
   const { data: orgs } = useQuery({
     queryKey: ['hrm-my-orgs'],
@@ -51,6 +61,36 @@ export default function ProfileScreen() {
     queryFn: hrmService.getMyDocuments,
     enabled: !!profile,
   });
+
+  function startEditing() {
+    if (!profile) return;
+    setEditForm({
+      phone: profile.phone ?? '',
+      personalEmail: profile.personalEmail ?? '',
+      emergencyContactName: profile.emergencyContactName ?? '',
+      emergencyContactPhone: profile.emergencyContactPhone ?? '',
+    });
+    setEditing(true);
+  }
+
+  async function saveProfile() {
+    if (!orgId) return;
+    setSaving(true);
+    try {
+      await hrmService.updateMyProfile(orgId, {
+        phone: editForm.phone || undefined,
+        personalEmail: editForm.personalEmail || undefined,
+        emergencyContactName: editForm.emergencyContactName || undefined,
+        emergencyContactPhone: editForm.emergencyContactPhone || undefined,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['hrm-profile', orgId] });
+      setEditing(false);
+    } catch {
+      Alert.alert('Error', 'Failed to save profile changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -91,7 +131,13 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <Header title="My HR Profile" leftIcon="arrow-back" onLeftPress={() => router.back()} />
+      <Header
+        title="My HR Profile"
+        leftIcon="arrow-back"
+        onLeftPress={() => editing ? setEditing(false) : router.back()}
+        rightIcon={editing ? undefined : 'create-outline'}
+        onRightPress={editing ? undefined : startEditing}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
         {/* Profile Header */}
@@ -122,15 +168,81 @@ export default function ProfileScreen() {
         </Section>
 
         <Section title="Contact Information">
-          <InfoRow icon="call-outline" label="Phone" value={profile.phone} />
-          <InfoRow icon="mail-outline" label="Personal Email" value={profile.personalEmail} />
-          <InfoRow icon="mail-outline" label="Work Email" value={profile.workEmail} />
+          {editing ? (
+            <>
+              <View style={s.editRow}>
+                <Text style={s.editLabel}>Phone</Text>
+                <TextInput
+                  style={s.editInput}
+                  value={editForm.phone}
+                  onChangeText={v => setEditForm(f => ({ ...f, phone: v }))}
+                  keyboardType="phone-pad"
+                  placeholder="Enter phone number"
+                />
+              </View>
+              <View style={s.editRow}>
+                <Text style={s.editLabel}>Personal Email</Text>
+                <TextInput
+                  style={s.editInput}
+                  value={editForm.personalEmail}
+                  onChangeText={v => setEditForm(f => ({ ...f, personalEmail: v }))}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholder="Enter personal email"
+                />
+              </View>
+              <InfoRow icon="mail-outline" label="Work Email (read-only)" value={profile.workEmail} />
+            </>
+          ) : (
+            <>
+              <InfoRow icon="call-outline" label="Phone" value={profile.phone} />
+              <InfoRow icon="mail-outline" label="Personal Email" value={profile.personalEmail} />
+              <InfoRow icon="mail-outline" label="Work Email" value={profile.workEmail} />
+            </>
+          )}
         </Section>
 
         <Section title="Emergency Contact">
-          <InfoRow icon="person-outline" label="Name" value={profile.emergencyContactName} />
-          <InfoRow icon="call-outline" label="Phone" value={profile.emergencyContactPhone} />
+          {editing ? (
+            <>
+              <View style={s.editRow}>
+                <Text style={s.editLabel}>Contact Name</Text>
+                <TextInput
+                  style={s.editInput}
+                  value={editForm.emergencyContactName}
+                  onChangeText={v => setEditForm(f => ({ ...f, emergencyContactName: v }))}
+                  placeholder="Emergency contact name"
+                />
+              </View>
+              <View style={s.editRow}>
+                <Text style={s.editLabel}>Contact Phone</Text>
+                <TextInput
+                  style={s.editInput}
+                  value={editForm.emergencyContactPhone}
+                  onChangeText={v => setEditForm(f => ({ ...f, emergencyContactPhone: v }))}
+                  keyboardType="phone-pad"
+                  placeholder="Emergency contact phone"
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <InfoRow icon="person-outline" label="Name" value={profile.emergencyContactName} />
+              <InfoRow icon="call-outline" label="Phone" value={profile.emergencyContactPhone} />
+            </>
+          )}
         </Section>
+
+        {editing && (
+          <View style={s.editActions}>
+            <TouchableOpacity style={s.cancelBtn} onPress={() => setEditing(false)}>
+              <Text style={s.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.saveBtn, saving && { opacity: 0.6 }]} onPress={saveProfile} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.saveBtnText}>Save Changes</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
 
         {documents && documents.length > 0 && (
           <Section title="Documents">
@@ -243,4 +355,47 @@ const s = StyleSheet.create({
   docInfo: { flex: 1 },
   docName: { fontSize: 13, fontFamily: FONTS.medium, color: COLORS.text },
   docType: { fontSize: 11, fontFamily: FONTS.regular, color: COLORS.textMuted },
+
+  editRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  editLabel: { fontSize: 11, fontFamily: FONTS.regular, color: COLORS.textMuted, marginBottom: 4 },
+  editInput: {
+    fontSize: 14,
+    fontFamily: FONTS.medium,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#F8FAFC',
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  cancelBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+  },
+  cancelBtnText: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.text },
+  saveBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+  },
+  saveBtnText: { fontSize: 14, fontFamily: FONTS.bold, color: '#fff', fontWeight: '700' },
 });
