@@ -16,6 +16,10 @@ export default function HrmLayout() {
       <Stack.Screen name="shifts" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="approvals" />
+      <Stack.Screen name="payslips" />
+      <Stack.Screen name="expenses" />
+      <Stack.Screen name="tasks" />
+      <Stack.Screen name="helpdesk" />
     </Stack>
   );
 }

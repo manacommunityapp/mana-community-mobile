@@ -243,6 +243,10 @@ export default function HrmHomeScreen() {
             <QuickLink icon="time-outline" label="My Shifts" onPress={() => router.push('/hrm/shifts')} color="#8B5CF6" bgColor="#F5F3FF" />
             <QuickLink icon="person-outline" label="Profile" onPress={() => router.push('/hrm/profile')} color={COLORS.warning} bgColor={COLORS.warningLight} />
             <QuickLink icon="checkbox-outline" label="Onboarding" onPress={() => router.push('/hrm/onboarding')} color="#6366F1" bgColor="#EEF2FF" />
+            <QuickLink icon="cash-outline" label="Payslips" onPress={() => router.push('/hrm/payslips')} color="#059669" bgColor="#ECFDF5" />
+            <QuickLink icon="receipt-outline" label="Expenses" onPress={() => router.push('/hrm/expenses')} color="#D97706" bgColor="#FFFBEB" />
+            <QuickLink icon="checkmark-circle-outline" label="My Tasks" onPress={() => router.push('/hrm/tasks')} color="#2563EB" bgColor="#EFF6FF" />
+            <QuickLink icon="help-circle-outline" label="Help Desk" onPress={() => router.push('/hrm/helpdesk')} color="#7C3AED" bgColor="#F5F3FF" />
             {isManager && (
               <QuickLink icon="checkmark-done-outline" label="Approvals" onPress={() => router.push('/hrm/approvals')} color={COLORS.error} bgColor={COLORS.errorLight} />
             )}

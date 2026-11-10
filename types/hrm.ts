@@ -459,3 +459,94 @@ export interface PageResponse<T> {
   number: number;
   size: number;
 }
+
+// ── Payroll ──
+export interface Payslip {
+  id: number;
+  payrollRun: { id: number; payrollMonth: number; payrollYear: number };
+  workingDays: number;
+  paidDays: number;
+  lopDays: number;
+  basicSalary: number;
+  hra: number;
+  da: number;
+  specialAllowance: number;
+  otherAllowances: number;
+  grossSalary: number;
+  pfEmployee: number;
+  esiEmployee: number;
+  professionalTax: number;
+  tds: number;
+  otherDeductions: number;
+  totalDeductions: number;
+  netSalary: number;
+  isPublished: boolean;
+}
+
+// ── Expenses ──
+export interface ExpenseItem {
+  id: number;
+  description: string;
+  amount: number;
+  expenseDate?: string;
+}
+
+export interface ExpenseClaim {
+  id: number;
+  claimTitle: string;
+  claimType: string;
+  totalAmount: number;
+  claimDate: string;
+  description?: string;
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'REIMBURSED';
+  items: ExpenseItem[];
+}
+
+export interface TravelRequest {
+  id: number;
+  destination: string;
+  purpose: string;
+  travelFrom: string;
+  travelTo: string;
+  modeOfTravel: string;
+  estimatedCost?: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
+// ── Assets ──
+export interface HrAsset {
+  id: number;
+  assetName: string;
+  assetType: string;
+  serialNumber?: string;
+  make?: string;
+  model?: string;
+  status: 'AVAILABLE' | 'ASSIGNED' | 'UNDER_REPAIR' | 'RETIRED';
+  assignedDate?: string;
+}
+
+// ── Tasks ──
+export interface HrTask {
+  id: number;
+  title: string;
+  description?: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: 'OPEN' | 'IN_PROGRESS' | 'DONE';
+  dueDate?: string;
+  completedAt?: string;
+  assignedBy?: { id: number; firstName: string; lastName?: string };
+}
+
+// ── Help Desk ──
+export interface HelpDeskTicket {
+  id: number;
+  ticketNumber: string;
+  category: string;
+  subject: string;
+  description: string;
+  priority: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  resolution?: string;
+  resolvedAt?: string;
+  createdAt: string;
+}

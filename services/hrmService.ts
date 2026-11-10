@@ -38,6 +38,13 @@ import type {
   CareerPath,
   Recognition,
   PageResponse,
+  Payslip,
+  ExpenseClaim,
+  ExpenseItem,
+  TravelRequest,
+  HrAsset,
+  HrTask,
+  HelpDeskTicket,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -267,4 +274,36 @@ export const hrmService = {
     api.get<PageResponse<Recognition>>(`${BASE}/learning/organizations/${orgId}/recognitions`).then(r => r.data),
   giveRecognition: (orgId: number, data: { receiverEmployeeId: number; recognitionType: string; message: string; points?: number; isPublic?: boolean; category?: string }) =>
     api.post<Recognition>(`${BASE}/learning/organizations/${orgId}/recognitions`, data).then(r => r.data),
+
+  // ── Payroll ──
+  getMyPayslips: (orgId: number) =>
+    api.get<Payslip[]>(`${BASE}/payroll/my-payslips?orgId=${orgId}`).then(r => r.data),
+
+  // ── Expenses ──
+  getMyClaims: (orgId: number) =>
+    api.get<PageResponse<ExpenseClaim>>(`${BASE}/expenses/my-claims?orgId=${orgId}`).then(r => r.data),
+  createExpenseClaim: (orgId: number, data: { claimTitle: string; claimType: string; claimDate: string; description?: string; items: Partial<ExpenseItem>[] }) =>
+    api.post<ExpenseClaim>(`${BASE}/expenses/organizations/${orgId}/claims`, data).then(r => r.data),
+  submitExpenseClaim: (orgId: number, claimId: number) =>
+    api.post<ExpenseClaim>(`${BASE}/expenses/claims/${claimId}/submit?orgId=${orgId}`, {}).then(r => r.data),
+  getMyTravelRequests: (orgId: number) =>
+    api.get<PageResponse<TravelRequest>>(`${BASE}/expenses/my-travel?orgId=${orgId}`).then(r => r.data),
+  createTravelRequest: (orgId: number, data: { destination: string; purpose: string; travelFrom: string; travelTo: string; modeOfTravel?: string; estimatedCost?: number }) =>
+    api.post<TravelRequest>(`${BASE}/expenses/organizations/${orgId}/travel`, data).then(r => r.data),
+
+  // ── Assets ──
+  getMyAssets: (orgId: number, employeeId: number) =>
+    api.get<HrAsset[]>(`${BASE}/operations/employees/${employeeId}/assets?orgId=${orgId}`).then(r => r.data),
+
+  // ── Tasks ──
+  getMyTasks: (orgId: number) =>
+    api.get<HrTask[]>(`${BASE}/operations/my-tasks?orgId=${orgId}`).then(r => r.data),
+  updateTaskStatus: (orgId: number, taskId: number, status: string) =>
+    api.patch<HrTask>(`${BASE}/operations/tasks/${taskId}/status?orgId=${orgId}`, { status }).then(r => r.data),
+
+  // ── Help Desk ──
+  getMyTickets: (orgId: number) =>
+    api.get<PageResponse<HelpDeskTicket>>(`${BASE}/operations/my-tickets?orgId=${orgId}`).then(r => r.data),
+  createTicket: (orgId: number, data: { subject: string; description: string; category: string; priority: string }) =>
+    api.post<HelpDeskTicket>(`${BASE}/operations/organizations/${orgId}/tickets`, data).then(r => r.data),
 };
