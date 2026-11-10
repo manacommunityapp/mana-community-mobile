@@ -233,3 +233,35 @@ export interface OrgHierarchyNode {
   department?: string;
   directReports: OrgHierarchyNode[];
 }
+
+export interface AttendanceCorrectionRequest {
+  correctedCheckIn?: string;
+  correctedCheckOut?: string;
+  correctedStatus?: string;
+  reason: string;
+}
+
+export interface Timesheet {
+  id: number;
+  weekStartDate: string;
+  weekEndDate: string;
+  totalMinutes: number;
+  totalOvertimeMinutes: number;
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  submittedAt?: string;
+  approvedBy?: number;
+  approvedAt?: string;
+  remarks?: string;
+}
+
+export interface ShiftSwapRequest {
+  id: number;
+  requesterEmployee: { id: number; firstName: string; lastName?: string; employeeCode: string };
+  targetEmployee: { id: number; firstName: string; lastName?: string; employeeCode: string };
+  requesterShiftDate: string;
+  targetShiftDate: string;
+  reason?: string;
+  status: 'PENDING_COLLEAGUE' | 'PENDING_MANAGER' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string;
+  createdAt: string;
+}

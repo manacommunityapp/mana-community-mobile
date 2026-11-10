@@ -18,6 +18,9 @@ import type {
   OnboardingTask,
   OffboardingTask,
   SelfServiceUpdateRequest,
+  AttendanceCorrectionRequest,
+  Timesheet,
+  ShiftSwapRequest,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -139,4 +142,47 @@ export const hrmService = {
 
   completeOffboardingTask: (orgId: number, taskId: number) =>
     api.post<OffboardingTask>(`${BASE}/offboarding/tasks/${taskId}/complete`, null, { params: { orgId } }).then(r => r.data),
+
+  // Attendance correction
+  correctAttendance: (orgId: number, attendanceId: number, data: AttendanceCorrectionRequest) =>
+    api.post<AttendanceRecord>(`${BASE}/attendance/${attendanceId}/correct`, data, { params: { orgId } }).then(r => r.data),
+
+  // Overtime
+  approveOvertime: (orgId: number, attendanceId: number) =>
+    api.post<AttendanceRecord>(`${BASE}/attendance/${attendanceId}/approve-overtime`, null, { params: { orgId } }).then(r => r.data),
+
+  // Timesheets
+  generateTimesheet: (orgId: number, weekDate?: string) =>
+    api.post<Timesheet>(`${BASE}/timesheets/generate`, null, { params: weekDate ? { orgId, weekDate } : { orgId } }).then(r => r.data),
+
+  getMyTimesheets: (orgId: number) =>
+    api.get<Timesheet[]>(`${BASE}/timesheets/my`, { params: { orgId } }).then(r => r.data),
+
+  submitTimesheet: (orgId: number, timesheetId: number) =>
+    api.post<Timesheet>(`${BASE}/timesheets/${timesheetId}/submit`, null, { params: { orgId } }).then(r => r.data),
+
+  approveTimesheet: (orgId: number, timesheetId: number, remarks?: string) =>
+    api.post<Timesheet>(`${BASE}/timesheets/${timesheetId}/approve`, null, { params: remarks ? { orgId, remarks } : { orgId } }).then(r => r.data),
+
+  getPendingTimesheets: (orgId: number) =>
+    api.get<{ content: Timesheet[] }>(`${BASE}/timesheets/organizations/${orgId}/pending`).then(r => r.data),
+
+  // Shift swaps
+  requestShiftSwap: (orgId: number, data: { targetEmployeeId: number; requesterShiftDate: string; targetShiftDate: string; reason?: string }) =>
+    api.post<ShiftSwapRequest>(`${BASE}/shifts/swap/request`, data, { params: { orgId } }).then(r => r.data),
+
+  respondToSwap: (orgId: number, swapId: number, accepted: boolean, rejectionReason?: string) =>
+    api.post<ShiftSwapRequest>(`${BASE}/shifts/swap/${swapId}/colleague-respond`, null, { params: rejectionReason ? { orgId, accepted, rejectionReason } : { orgId, accepted } }).then(r => r.data),
+
+  managerApproveSwap: (orgId: number, swapId: number, approved: boolean, reason?: string) =>
+    api.post<ShiftSwapRequest>(`${BASE}/shifts/swap/${swapId}/manager-approve`, null, { params: reason ? { orgId, approved, reason } : { orgId, approved } }).then(r => r.data),
+
+  getMySwapRequests: (orgId: number) =>
+    api.get<ShiftSwapRequest[]>(`${BASE}/shifts/swap/my`, { params: { orgId } }).then(r => r.data),
+
+  getIncomingSwapRequests: (orgId: number) =>
+    api.get<ShiftSwapRequest[]>(`${BASE}/shifts/swap/incoming`, { params: { orgId } }).then(r => r.data),
+
+  getPendingSwapApprovals: (orgId: number) =>
+    api.get<ShiftSwapRequest[]>(`${BASE}/shifts/swap/organizations/${orgId}/pending`).then(r => r.data),
 };

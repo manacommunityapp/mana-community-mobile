@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, ActivityIndicator,
+  RefreshControl, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/common/Header';
 import { hrmService } from '@/services/hrmService';
 import { COLORS, FONTS, SHADOWS, RADIUS } from '@/constants/config';
-import type { HrEmployeeShift } from '@/types/hrm';
+import type { HrEmployeeShift, ShiftSwapRequest } from '@/types/hrm';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -35,6 +35,59 @@ function formatShortDate(d: Date): string {
 export default function ShiftsScreen() {
   const router = useRouter();
   const [weekOffset, setWeekOffset] = useState(0);
+  const [activeTab, setActiveTab] = useState<'schedule' | 'swaps'>('schedule');
+  const [incomingSwaps, setIncomingSwaps] = useState<ShiftSwapRequest[]>([]);
+  const [mySwaps, setMySwaps] = useState<ShiftSwapRequest[]>([]);
+  const [orgId, setOrgId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadSwaps = async () => {
+      try {
+        const orgs = await hrmService.getMyOrganizations();
+        if (orgs.length > 0) {
+          const oid = orgs[0].id;
+          setOrgId(oid);
+          const [incoming, mine] = await Promise.all([
+            hrmService.getIncomingSwapRequests(oid),
+            hrmService.getMySwapRequests(oid),
+          ]);
+          setIncomingSwaps(incoming);
+          setMySwaps(mine);
+        }
+      } catch (err) {
+        console.error('Failed to load swap requests:', err);
+      }
+    };
+    loadSwaps();
+  }, []);
+
+  const handleRespondSwap = async (swapId: number, accepted: boolean) => {
+    if (!orgId) return;
+    Alert.alert(
+      accepted ? 'Accept Swap' : 'Decline Swap',
+      `Are you sure you want to ${accepted ? 'accept' : 'decline'} this swap?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: accepted ? 'Accept' : 'Decline',
+          style: accepted ? 'default' : 'destructive',
+          onPress: async () => {
+            try {
+              await hrmService.respondToSwap(orgId, swapId, accepted);
+              const [incoming, mine] = await Promise.all([
+                hrmService.getIncomingSwapRequests(orgId),
+                hrmService.getMySwapRequests(orgId),
+              ]);
+              setIncomingSwaps(incoming);
+              setMySwaps(mine);
+            } catch {
+              Alert.alert('Error', 'Failed to respond to swap request');
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const { from, to, dates } = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
@@ -49,10 +102,76 @@ export default function ShiftsScreen() {
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
+  const swapCount = incomingSwaps.filter(sw => sw.status === 'PENDING_COLLEAGUE').length;
+
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <Header title="My Shifts" leftIcon="arrow-back" onLeftPress={() => router.back()} />
 
+      {/* Tabs */}
+      <View style={s.tabs}>
+        <TouchableOpacity
+          style={[s.tab, activeTab === 'schedule' && s.tabActive]}
+          onPress={() => setActiveTab('schedule')}
+        >
+          <Text style={[s.tabText, activeTab === 'schedule' && s.tabTextActive]}>Schedule</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.tab, activeTab === 'swaps' && s.tabActive]}
+          onPress={() => setActiveTab('swaps')}
+        >
+          <Text style={[s.tabText, activeTab === 'swaps' && s.tabTextActive]}>
+            Swap Requests{swapCount > 0 ? ` (${swapCount})` : ''}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'swaps' ? (
+        <ScrollView contentContainerStyle={s.content}>
+          {incomingSwaps.length === 0 && mySwaps.length === 0 ? (
+            <Text style={{ color: COLORS.textMuted, textAlign: 'center', marginTop: 40 }}>No swap requests</Text>
+          ) : null}
+
+          {incomingSwaps.length > 0 && (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={s.sectionTitle}>Incoming Requests</Text>
+              {incomingSwaps.map(sw => (
+                <View key={sw.id} style={[s.swapCard, { borderColor: '#fde68a', backgroundColor: '#fffbeb' }]}>
+                  <Text style={s.swapFrom}>From: {sw.requesterEmployee.firstName} {sw.requesterEmployee.lastName}</Text>
+                  <Text style={s.swapDates}>{sw.requesterShiftDate} ↔ {sw.targetShiftDate}</Text>
+                  {sw.reason ? <Text style={s.swapReason}>{sw.reason}</Text> : null}
+                  {sw.status === 'PENDING_COLLEAGUE' && (
+                    <View style={s.swapActions}>
+                      <TouchableOpacity onPress={() => handleRespondSwap(sw.id, true)} style={s.acceptBtn}>
+                        <Text style={s.acceptBtnText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleRespondSwap(sw.id, false)} style={s.declineBtn}>
+                        <Text style={s.declineBtnText}>Decline</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+
+          {mySwaps.length > 0 && (
+            <View>
+              <Text style={s.sectionTitle}>My Requests</Text>
+              {mySwaps.map(sw => (
+                <View key={sw.id} style={s.swapCard}>
+                  <Text style={s.swapFrom}>With: {sw.targetEmployee.firstName} {sw.targetEmployee.lastName}</Text>
+                  <Text style={s.swapDates}>{sw.requesterShiftDate} ↔ {sw.targetShiftDate}</Text>
+                  <Text style={[s.swapStatus, { color: sw.status === 'APPROVED' ? '#16a34a' : sw.status === 'REJECTED' ? '#dc2626' : '#d97706' }]}>
+                    {sw.status.replace('_', ' ')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      ) : (
+        <>
       {/* Week Navigator */}
       <View style={s.weekNav}>
         <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} hitSlop={8}>
@@ -119,6 +238,8 @@ export default function ShiftsScreen() {
           })
         )}
       </ScrollView>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -126,6 +247,54 @@ export default function ShiftsScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { paddingHorizontal: 16, paddingBottom: 40 },
+
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: { borderBottomColor: COLORS.primary },
+  tabText: { fontSize: 14, fontFamily: FONTS.regular, color: COLORS.textMuted },
+  tabTextActive: { color: COLORS.primary, fontFamily: FONTS.semiBold, fontWeight: '600' },
+
+  sectionTitle: {
+    fontSize: 14,
+    fontFamily: FONTS.semiBold,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  swapCard: {
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.md,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...SHADOWS.sm,
+  },
+  swapFrom: { fontSize: 14, fontFamily: FONTS.semiBold, color: COLORS.text, fontWeight: '600' },
+  swapDates: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
+  swapReason: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  swapStatus: { fontSize: 12, fontFamily: FONTS.bold, fontWeight: '700', marginTop: 6 },
+  swapActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  acceptBtn: {
+    flex: 1, backgroundColor: '#16a34a', paddingVertical: 8, borderRadius: RADIUS.sm, alignItems: 'center',
+  },
+  acceptBtnText: { color: '#fff', fontSize: 13, fontFamily: FONTS.semiBold, fontWeight: '600' },
+  declineBtn: {
+    flex: 1, backgroundColor: '#dc2626', paddingVertical: 8, borderRadius: RADIUS.sm, alignItems: 'center',
+  },
+  declineBtnText: { color: '#fff', fontSize: 13, fontFamily: FONTS.semiBold, fontWeight: '600' },
 
   weekNav: {
     flexDirection: 'row',
