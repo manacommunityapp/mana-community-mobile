@@ -323,5 +323,9 @@ export const hrmService = {
   getHrAnalyticsDashboard: (orgId: number) =>
     api.get<HrAnalyticsDashboard>(`${BASE}/analytics/${orgId}/dashboard`).then(r => r.data),
   getDepartmentBreakdown: (orgId: number) =>
-    api.get<{ department: string; count: number }[]>(`${BASE}/analytics/${orgId}/department-breakdown`).then(r => r.data),
+    api.get<{ departmentId: number; departmentName: string; employeeCount: number }[]>(`${BASE}/analytics/${orgId}/department-breakdown`).then(r => r.data),
+  getWorkforceMetrics: (orgId: number) =>
+    api.get<{ totalActive: number; tenureBands: Record<string, number> }>(`${BASE}/analytics/${orgId}/workforce-metrics`).then(r => r.data),
+  resolveComplianceAlert: (orgId: number, alertId: number) =>
+    api.put<HrComplianceAlert>(`${BASE}/compliance/${orgId}/alerts/${alertId}/resolve`).then(r => r.data),
 };

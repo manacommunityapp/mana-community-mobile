@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/common/Header';
 import { hrmService } from '@/services/hrmService';
-import { useAuth } from '@/hooks/useAuth';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 
 function StatCard({ label, value, icon, color }: { label: string; value: string | number; icon: keyof typeof Ionicons.glyphMap; color: string }) {
@@ -20,12 +19,12 @@ function StatCard({ label, value, icon, color }: { label: string; value: string 
 }
 
 export default function HrmAnalyticsScreen() {
-  const { currentOrg } = useAuth();
-  const orgId = currentOrg?.id;
+  const { data: orgs } = useQuery({ queryKey: ['hrm-my-orgs'], queryFn: hrmService.getMyOrganizations });
+  const orgId = orgs?.[0]?.id;
 
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ['hrm-analytics-dashboard', orgId],
-    queryFn: () => hrmService.getHrDashboard(orgId!),
+    queryFn: () => hrmService.getHrAnalyticsDashboard(orgId!),
     enabled: !!orgId,
   });
 
