@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
-  TouchableOpacity, ActivityIndicator, Alert, Platform,
+  TouchableOpacity, ActivityIndicator, Alert, Platform, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -44,17 +44,21 @@ export default function ApplyLeaveScreen() {
   const [reason, setReason] = useState('');
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+  const [halfDay, setHalfDay] = useState(false);
+  const [leaveSession, setLeaveSession] = useState<'FIRST_HALF' | 'SECOND_HALF'>('FIRST_HALF');
 
-  const totalDays = useMemo(() => diffDays(fromDate, toDate), [fromDate, toDate]);
+  const totalDays = useMemo(() => halfDay ? 0.5 : diffDays(fromDate, toDate), [fromDate, toDate, halfDay]);
 
   const applyMutation = useMutation({
     mutationFn: () =>
       hrmService.applyLeave(orgId!, {
         leaveTypeId: selectedTypeId!,
         fromDate: formatDate(fromDate),
-        toDate: formatDate(toDate),
+        toDate: halfDay ? formatDate(fromDate) : formatDate(toDate),
         totalDays,
         reason: reason.trim() || undefined,
+        halfDay: halfDay || undefined,
+        leaveSession: halfDay ? leaveSession : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hrm-my-leave-requests'] });
@@ -154,6 +158,36 @@ export default function ApplyLeaveScreen() {
             {totalDays} {totalDays === 1 ? 'day' : 'days'}
           </Text>
         </View>
+
+        {/* Half Day Toggle */}
+        <View style={s.halfDayRow}>
+          <Text style={s.label}>Half Day</Text>
+          <Switch
+            value={halfDay}
+            onValueChange={(v) => {
+              setHalfDay(v);
+              if (v) setToDate(fromDate);
+            }}
+            trackColor={{ false: '#E2E8F0', true: COLORS.primary }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+        {halfDay && (
+          <View style={s.sessionRow}>
+            <TouchableOpacity style={s.sessionOption} onPress={() => setLeaveSession('FIRST_HALF')} activeOpacity={0.7}>
+              <View style={[s.radio, leaveSession === 'FIRST_HALF' && s.radioActive]}>
+                {leaveSession === 'FIRST_HALF' && <View style={s.radioDot} />}
+              </View>
+              <Text style={s.sessionText}>First Half</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.sessionOption} onPress={() => setLeaveSession('SECOND_HALF')} activeOpacity={0.7}>
+              <View style={[s.radio, leaveSession === 'SECOND_HALF' && s.radioActive]}>
+                {leaveSession === 'SECOND_HALF' && <View style={s.radioDot} />}
+              </View>
+              <Text style={s.sessionText}>Second Half</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Reason */}
         <Text style={s.label}>Reason</Text>
@@ -294,5 +328,47 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontFamily: FONTS.bold,
     fontWeight: '700',
+  },
+
+  halfDayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  sessionOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: {
+    borderColor: COLORS.primary,
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.primary,
+  },
+  sessionText: {
+    fontSize: 14,
+    fontFamily: FONTS.medium,
+    color: COLORS.text,
   },
 });

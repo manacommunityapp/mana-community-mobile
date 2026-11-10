@@ -9,13 +9,16 @@ interface LeaveRequestItemProps {
   showEmployee?: boolean;
   onApprove?: (id: number) => void;
   onReject?: (id: number) => void;
+  onL2Approve?: (id: number) => void;
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  PENDING:  { bg: '#FEF3C7', text: '#D97706', label: 'Pending' },
-  APPROVED: { bg: '#ECFDF5', text: '#059669', label: 'Approved' },
-  REJECTED: { bg: '#FEF2F2', text: '#DC2626', label: 'Rejected' },
-  CANCELLED:{ bg: '#F1F5F9', text: '#64748B', label: 'Cancelled' },
+  PENDING:     { bg: '#FEF3C7', text: '#D97706', label: 'Pending' },
+  APPROVED:    { bg: '#ECFDF5', text: '#059669', label: 'Approved' },
+  REJECTED:    { bg: '#FEF2F2', text: '#DC2626', label: 'Rejected' },
+  CANCELLED:   { bg: '#F1F5F9', text: '#64748B', label: 'Cancelled' },
+  L1_APPROVED: { bg: '#DBEAFE', text: '#2563EB', label: 'L1 Approved' },
+  L1_REJECTED: { bg: '#FFEDD5', text: '#EA580C', label: 'L1 Rejected' },
 };
 
 export function LeaveRequestItem({
@@ -24,6 +27,7 @@ export function LeaveRequestItem({
   showEmployee,
   onApprove,
   onReject,
+  onL2Approve,
 }: LeaveRequestItemProps) {
   const status = STATUS_CONFIG[request.approvalStatus] ?? STATUS_CONFIG.PENDING;
 
@@ -78,6 +82,16 @@ export function LeaveRequestItem({
               <Text style={[s.actionBtnText, { color: COLORS.error }]}>Reject</Text>
             </TouchableOpacity>
           </View>
+        )}
+        {request.approvalStatus === 'L1_APPROVED' && onL2Approve && (
+          <TouchableOpacity
+            style={[s.actionBtn, { backgroundColor: '#DBEAFE' }]}
+            onPress={() => onL2Approve(request.id)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="shield-checkmark" size={16} color="#2563EB" />
+            <Text style={[s.actionBtnText, { color: '#2563EB' }]}>HR Approve</Text>
+          </TouchableOpacity>
         )}
       </View>
     </View>

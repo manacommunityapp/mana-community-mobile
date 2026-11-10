@@ -64,6 +64,14 @@ export interface LeaveType {
   leaveTypeName: string;
   defaultBalance: number;
   isPaid: boolean;
+  isCarryForward?: boolean;
+  maxCarryForward?: number;
+  isActive?: boolean;
+  approvalLevels?: number;
+  requiresHrApproval?: boolean;
+  minNoticeDays?: number;
+  maxConsecutiveDays?: number;
+  allowNegativeBalance?: boolean;
 }
 
 export interface LeaveBalance {
@@ -88,6 +96,12 @@ export interface LeaveRequest {
   approverRemarks?: string;
   approvedAt?: string;
   createdAt: string;
+  halfDay?: boolean;
+  leaveSession?: LeaveSession;
+  approvalLevel?: number;
+  l1ApprovedBy?: number;
+  l1ApprovedAt?: string;
+  l1Remarks?: string;
 }
 
 export interface HrShift {
@@ -143,7 +157,8 @@ export interface HrHoliday {
 export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN' | 'TEMPORARY' | 'GIG';
 export type EmploymentStatus = 'ACTIVE' | 'ON_NOTICE' | 'SUSPENDED' | 'TERMINATED' | 'RESIGNED' | 'RETIRED';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'HALF_DAY' | 'ON_LEAVE' | 'HOLIDAY' | 'WEEK_OFF' | 'NOT_MARKED';
-export type LeaveApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type LeaveApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'L1_APPROVED' | 'L1_REJECTED';
+export type LeaveSession = 'FIRST_HALF' | 'SECOND_HALF' | 'FULL_DAY';
 
 export interface ApplyLeaveRequest {
   leaveTypeId: number;
@@ -151,6 +166,8 @@ export interface ApplyLeaveRequest {
   toDate: string;
   totalDays: number;
   reason?: string;
+  halfDay?: boolean;
+  leaveSession?: LeaveSession;
 }
 
 export interface CheckInOutRequest {

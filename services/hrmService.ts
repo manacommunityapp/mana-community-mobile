@@ -77,6 +77,12 @@ export const hrmService = {
   rejectLeave: (id: number, orgId: number, remarks?: string) =>
     api.post(`${BASE}/leaves/${id}/reject?orgId=${orgId}`, { approverRemarks: remarks }).then(r => r.data),
 
+  l2ApproveLeave: (id: number, orgId: number, remarks?: string) =>
+    api.post(`${BASE}/leaves/${id}/l2-approve?orgId=${orgId}`, { approverRemarks: remarks }).then(r => r.data),
+
+  grantCompOff: (orgId: number, employeeId: number, workedDate: string, reason?: string) =>
+    api.post(`${BASE}/leaves/comp-off`, { params: { orgId, employeeId, workedDate, ...(reason && { reason }) } }).then(r => r.data),
+
   // Shifts
   getMyShifts: (from: string, to: string) =>
     api.get<HrEmployeeShift[]>(`${BASE}/shifts/my-schedule`, { params: { from, to } }).then(r => r.data),
