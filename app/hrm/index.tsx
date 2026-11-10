@@ -250,6 +250,12 @@ export default function HrmHomeScreen() {
             {isManager && (
               <QuickLink icon="checkmark-done-outline" label="Approvals" onPress={() => router.push('/hrm/approvals')} color={COLORS.error} bgColor={COLORS.errorLight} />
             )}
+            {isManager && (
+              <QuickLink icon="bar-chart-outline" label="Analytics" onPress={() => router.push('/hrm/analytics')} color="#0369A1" bgColor="#E0F2FE" />
+            )}
+            {isManager && (
+              <QuickLink icon="alert-circle-outline" label="Compliance" onPress={() => router.push('/hrm/compliance')} color="#B45309" bgColor="#FEF3C7" />
+            )}
           </View>
         </View>
       </ScrollView>

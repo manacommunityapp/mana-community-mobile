@@ -45,6 +45,8 @@ import type {
   HrAsset,
   HrTask,
   HelpDeskTicket,
+  HrComplianceAlert,
+  HrAnalyticsDashboard,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -306,4 +308,20 @@ export const hrmService = {
     api.get<PageResponse<HelpDeskTicket>>(`${BASE}/operations/my-tickets?orgId=${orgId}`).then(r => r.data),
   createTicket: (orgId: number, data: { subject: string; description: string; category: string; priority: string }) =>
     api.post<HelpDeskTicket>(`${BASE}/operations/organizations/${orgId}/tickets`, data).then(r => r.data),
+
+  // ── Compliance ──
+  getComplianceAlerts: (orgId: number) =>
+    api.get<HrComplianceAlert[]>(`${BASE}/compliance/${orgId}/alerts`).then(r => r.data),
+  generateComplianceAlerts: (orgId: number) =>
+    api.post<{ generated: number }>(`${BASE}/compliance/${orgId}/alerts/generate`).then(r => r.data),
+  acknowledgeAlert: (orgId: number, alertId: number) =>
+    api.put<HrComplianceAlert>(`${BASE}/compliance/${orgId}/alerts/${alertId}/acknowledge`).then(r => r.data),
+  dismissAlert: (orgId: number, alertId: number) =>
+    api.put<HrComplianceAlert>(`${BASE}/compliance/${orgId}/alerts/${alertId}/dismiss`).then(r => r.data),
+
+  // ── Analytics ──
+  getHrAnalyticsDashboard: (orgId: number) =>
+    api.get<HrAnalyticsDashboard>(`${BASE}/analytics/${orgId}/dashboard`).then(r => r.data),
+  getDepartmentBreakdown: (orgId: number) =>
+    api.get<{ department: string; count: number }[]>(`${BASE}/analytics/${orgId}/department-breakdown`).then(r => r.data),
 };

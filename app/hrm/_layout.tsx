@@ -20,6 +20,9 @@ export default function HrmLayout() {
       <Stack.Screen name="expenses" />
       <Stack.Screen name="tasks" />
       <Stack.Screen name="helpdesk" />
+      <Stack.Screen name="analytics" />
+      <Stack.Screen name="compliance" />
+      <Stack.Screen name="compliance-alerts" />
     </Stack>
   );
 }
