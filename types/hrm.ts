@@ -265,3 +265,197 @@ export interface ShiftSwapRequest {
   rejectionReason?: string;
   createdAt: string;
 }
+
+// ── Recruitment ──
+export interface JobPosting {
+  id: number;
+  title: string;
+  departmentId?: number;
+  description?: string;
+  requirements?: string;
+  openings: number;
+  location?: string;
+  employmentType?: string;
+  minSalary?: number;
+  maxSalary?: number;
+  status: 'DRAFT' | 'OPEN' | 'CLOSED';
+  postedDate?: string;
+  closingDate?: string;
+  createdAt: string;
+}
+
+export interface Applicant {
+  id: number;
+  jobPosting: { id: number; title: string };
+  firstName: string;
+  lastName?: string;
+  email: string;
+  phone?: string;
+  resumeUrl?: string;
+  currentEmployer?: string;
+  experienceYears?: number;
+  expectedSalary?: number;
+  status: 'APPLIED' | 'SCREENING' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
+  notes?: string;
+  createdAt: string;
+}
+
+export interface Interview {
+  id: number;
+  applicant: { id: number; firstName: string; lastName?: string };
+  interviewer?: { id: number; firstName: string };
+  interviewType: string;
+  scheduledAt?: string;
+  durationMinutes: number;
+  status: string;
+  feedback?: string;
+  rating?: number;
+  outcome?: string;
+}
+
+export interface Offer {
+  id: number;
+  applicant: { id: number; firstName: string; lastName?: string };
+  offeredSalary: number;
+  proposedJoiningDate?: string;
+  expiryDate?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  responseDate?: string;
+}
+
+// ── Performance ──
+export interface AppraisalCycle {
+  id: number;
+  name: string;
+  periodStart: string;
+  periodEnd: string;
+  status: 'DRAFT' | 'ACTIVE' | 'CLOSED';
+  description?: string;
+}
+
+export interface Goal {
+  id: number;
+  title: string;
+  description?: string;
+  isKra: boolean;
+  weightage: number;
+  targetValue?: string;
+  achievementPercent: number;
+  dueDate?: string;
+  status: string;
+}
+
+export interface AppraisalForm {
+  id: number;
+  employee: { id: number; firstName: string; lastName?: string };
+  appraisalCycle: { id: number; name: string };
+  selfRating?: number;
+  selfComments?: string;
+  managerRating?: number;
+  managerComments?: string;
+  finalRating?: number;
+  status: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+}
+
+export interface Okr {
+  id: number;
+  objective: string;
+  quarter?: string;
+  year?: number;
+  overallProgress: number;
+  status: string;
+  keyResults?: OkrKeyResult[];
+}
+
+export interface OkrKeyResult {
+  id: number;
+  title: string;
+  targetValue?: string;
+  currentValue?: string;
+  progressPercent: number;
+}
+
+export interface FeedbackRequest {
+  id: number;
+  subjectEmployee: { id: number; firstName: string; lastName?: string };
+  deadline?: string;
+  status: string;
+  isAnonymous: boolean;
+}
+
+export interface FeedbackResponse {
+  id: number;
+  overallRating?: number;
+  communicationRating?: number;
+  teamworkRating?: number;
+  technicalRating?: number;
+  leadershipRating?: number;
+  strengths?: string;
+  improvements?: string;
+  generalComments?: string;
+  submittedAt?: string;
+}
+
+// ── Learning & Development ──
+export interface TrainingProgram {
+  id: number;
+  title: string;
+  description?: string;
+  trainingType?: string;
+  provider?: string;
+  durationHours?: number;
+  isMandatory: boolean;
+  status: string;
+}
+
+export interface TrainingEnrollment {
+  id: number;
+  trainingProgram: { id: number; title: string };
+  status: 'ENROLLED' | 'COMPLETED' | 'FAILED';
+  enrolledDate?: string;
+  completionDate?: string;
+  score?: number;
+}
+
+export interface Certification {
+  id: number;
+  name: string;
+  issuingBody?: string;
+  credentialId?: string;
+  issuedDate?: string;
+  expiryDate?: string;
+  certificateUrl?: string;
+  isVerified: boolean;
+}
+
+export interface CareerPath {
+  id: number;
+  currentRole?: string;
+  targetRole?: string;
+  targetDate?: string;
+  developmentActivities?: string;
+  skillsToDevelop?: string;
+  status: string;
+}
+
+export interface Recognition {
+  id: number;
+  giverEmployee: { id: number; firstName: string; lastName?: string };
+  receiverEmployee: { id: number; firstName: string; lastName?: string };
+  recognitionType: 'KUDOS' | 'AWARD' | 'MILESTONE';
+  message: string;
+  points: number;
+  isPublic: boolean;
+  category?: string;
+  createdAt: string;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}

@@ -21,6 +21,23 @@ import type {
   AttendanceCorrectionRequest,
   Timesheet,
   ShiftSwapRequest,
+  JobPosting,
+  Applicant,
+  Interview,
+  Offer,
+  AppraisalCycle,
+  Goal,
+  AppraisalForm,
+  Okr,
+  OkrKeyResult,
+  FeedbackRequest,
+  FeedbackResponse,
+  TrainingProgram,
+  TrainingEnrollment,
+  Certification,
+  CareerPath,
+  Recognition,
+  PageResponse,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -185,4 +202,69 @@ export const hrmService = {
 
   getPendingSwapApprovals: (orgId: number) =>
     api.get<ShiftSwapRequest[]>(`${BASE}/shifts/swap/organizations/${orgId}/pending`).then(r => r.data),
+
+  // ── Recruitment ──
+  getJobPostings: (orgId: number, status?: string) => {
+    const params: Record<string, string> = {};
+    if (status) params.status = status;
+    return api.get<PageResponse<JobPosting>>(`${BASE}/recruitment/organizations/${orgId}/postings`, { params }).then(r => r.data);
+  },
+  createJobPosting: (orgId: number, data: Partial<JobPosting>) =>
+    api.post<JobPosting>(`${BASE}/recruitment/organizations/${orgId}/postings`, data).then(r => r.data),
+
+  getApplicants: (orgId: number, postingId: number, status?: string) => {
+    const params: Record<string, string> = {};
+    if (status) params.status = status;
+    return api.get<PageResponse<Applicant>>(`${BASE}/recruitment/organizations/${orgId}/postings/${postingId}/applicants`, { params }).then(r => r.data);
+  },
+  updateApplicantStatus: (orgId: number, applicantId: number, status: string, notes?: string) => {
+    const params: Record<string, string> = { status };
+    if (notes) params.notes = notes;
+    return api.patch<Applicant>(`${BASE}/recruitment/organizations/${orgId}/applicants/${applicantId}/status`, null, { params }).then(r => r.data);
+  },
+  scheduleInterview: (orgId: number, applicantId: number, data: Partial<Interview>) =>
+    api.post<Interview>(`${BASE}/recruitment/organizations/${orgId}/applicants/${applicantId}/interviews`, data).then(r => r.data),
+  createOffer: (orgId: number, applicantId: number, data: Partial<Offer>) =>
+    api.post<Offer>(`${BASE}/recruitment/organizations/${orgId}/applicants/${applicantId}/offers`, data).then(r => r.data),
+
+  // ── Performance ──
+  getAppraisalCycles: (orgId: number) =>
+    api.get<AppraisalCycle[]>(`${BASE}/performance/organizations/${orgId}/cycles`).then(r => r.data),
+  getGoals: (employeeId: number, cycleId?: number) => {
+    const params: Record<string, string> = {};
+    if (cycleId !== undefined) params.cycleId = String(cycleId);
+    return api.get<Goal[]>(`${BASE}/performance/employees/${employeeId}/goals`, { params }).then(r => r.data);
+  },
+  createGoal: (orgId: number, employeeId: number, data: Partial<Goal>) =>
+    api.post<Goal>(`${BASE}/performance/organizations/${orgId}/employees/${employeeId}/goals`, data).then(r => r.data),
+  updateGoalProgress: (goalId: number, achievementPercent: number) =>
+    api.patch<Goal>(`${BASE}/performance/goals/${goalId}/progress`, null, { params: { achievementPercent } }).then(r => r.data),
+  submitSelfAppraisal: (employeeId: number, cycleId: number, rating: number, comments: string) =>
+    api.post<AppraisalForm>(`${BASE}/performance/employees/${employeeId}/self-appraisal`, { cycleId, rating, comments }).then(r => r.data),
+  getOkrs: (employeeId: number) =>
+    api.get<Okr[]>(`${BASE}/performance/employees/${employeeId}/okrs`).then(r => r.data),
+  createOkr: (orgId: number, data: { objective: string; quarter?: string; year?: number; keyResults: Partial<OkrKeyResult>[] }) =>
+    api.post<Okr>(`${BASE}/performance/organizations/${orgId}/okrs`, data).then(r => r.data),
+  updateKeyResult: (keyResultId: number, progressPercent: number, currentValue?: string) =>
+    api.patch<OkrKeyResult>(`${BASE}/performance/key-results/${keyResultId}/progress`, { progressPercent, currentValue }).then(r => r.data),
+  submitFeedback: (requestId: number, data: Partial<FeedbackResponse>) =>
+    api.post<FeedbackResponse>(`${BASE}/performance/feedback-requests/${requestId}/respond`, data).then(r => r.data),
+
+  // ── Learning ──
+  getTrainingPrograms: (orgId: number) =>
+    api.get<PageResponse<TrainingProgram>>(`${BASE}/learning/organizations/${orgId}/programs`).then(r => r.data),
+  enrollInTraining: (orgId: number, employeeId: number, programId: number) =>
+    api.post<TrainingEnrollment>(`${BASE}/learning/organizations/${orgId}/programs/${programId}/enroll`, null, { params: { employeeId } }).then(r => r.data),
+  getMyEnrollments: (employeeId: number) =>
+    api.get<TrainingEnrollment[]>(`${BASE}/learning/employees/${employeeId}/enrollments`).then(r => r.data),
+  getMyCertifications: (employeeId: number) =>
+    api.get<Certification[]>(`${BASE}/learning/employees/${employeeId}/certifications`).then(r => r.data),
+  addCertification: (orgId: number, employeeId: number, data: Partial<Certification>) =>
+    api.post<Certification>(`${BASE}/learning/organizations/${orgId}/employees/${employeeId}/certifications`, data).then(r => r.data),
+  getCareerPath: (employeeId: number) =>
+    api.get<CareerPath>(`${BASE}/learning/employees/${employeeId}/career-path`).then(r => r.data),
+  getPublicRecognitions: (orgId: number) =>
+    api.get<PageResponse<Recognition>>(`${BASE}/learning/organizations/${orgId}/recognitions`).then(r => r.data),
+  giveRecognition: (orgId: number, data: { receiverEmployeeId: number; recognitionType: string; message: string; points?: number; isPublic?: boolean; category?: string }) =>
+    api.post<Recognition>(`${BASE}/learning/organizations/${orgId}/recognitions`, data).then(r => r.data),
 };
