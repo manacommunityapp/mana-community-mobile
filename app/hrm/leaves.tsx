@@ -19,18 +19,26 @@ export default function LeavesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
+  const { data: orgs } = useQuery({
+    queryKey: ['hrm-my-orgs'],
+    queryFn: hrmService.getMyOrganizations,
+  });
+  const orgId = orgs?.[0]?.id;
+
   const { data: balances, isLoading: balancesLoading } = useQuery({
-    queryKey: ['hrm-leave-balance'],
-    queryFn: hrmService.getLeaveBalance,
+    queryKey: ['hrm-leave-balance', orgId],
+    queryFn: () => hrmService.getLeaveBalance(orgId!),
+    enabled: !!orgId,
   });
 
   const { data: requestsData, isLoading: requestsLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['hrm-my-leave-requests'],
-    queryFn: () => hrmService.getMyLeaveRequests(0, 50),
+    queryKey: ['hrm-my-leave-requests', orgId],
+    queryFn: () => hrmService.getMyLeaveRequests(orgId!, 0, 50),
+    enabled: !!orgId,
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (id: number) => hrmService.cancelLeave(id),
+    mutationFn: (id: number) => hrmService.cancelLeave(id, orgId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hrm-my-leave-requests'] });
       queryClient.invalidateQueries({ queryKey: ['hrm-leave-balance'] });

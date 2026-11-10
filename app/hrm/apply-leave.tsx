@@ -26,15 +26,16 @@ export default function ApplyLeaveScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: profile } = useQuery({
-    queryKey: ['hrm-profile'],
-    queryFn: hrmService.getMyProfile,
+  const { data: orgs } = useQuery({
+    queryKey: ['hrm-my-orgs'],
+    queryFn: hrmService.getMyOrganizations,
   });
+  const orgId = orgs?.[0]?.id;
 
   const { data: leaveTypes, isLoading: typesLoading } = useQuery({
-    queryKey: ['hrm-leave-types', profile?.organizationId],
-    queryFn: () => hrmService.getLeaveTypes(profile!.organizationId),
-    enabled: !!profile?.organizationId,
+    queryKey: ['hrm-leave-types', orgId],
+    queryFn: () => hrmService.getLeaveTypes(orgId!),
+    enabled: !!orgId,
   });
 
   const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
@@ -48,7 +49,7 @@ export default function ApplyLeaveScreen() {
 
   const applyMutation = useMutation({
     mutationFn: () =>
-      hrmService.applyLeave({
+      hrmService.applyLeave(orgId!, {
         leaveTypeId: selectedTypeId!,
         fromDate: formatDate(fromDate),
         toDate: formatDate(toDate),

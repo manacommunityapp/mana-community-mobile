@@ -31,7 +31,7 @@ export const hrmService = {
 
   // Employee profile
   getMyProfile: (orgId: number) =>
-    api.get<HrEmployee>(`${BASE}/employees/me`, { params: { orgId } }).then(r => r.data),
+    api.get<HrEmployee>(`${BASE}/organizations/${orgId}/employees/me`, { params: { orgId } }).then(r => r.data),
 
   // Attendance
   checkIn: (orgId: number, data: CheckInOutRequest) =>
@@ -50,19 +50,19 @@ export const hrmService = {
   getLeaveTypes: (orgId: number) =>
     api.get<LeaveType[]>(`${BASE}/organizations/${orgId}/leave-types`).then(r => r.data),
 
-  applyLeave: (data: ApplyLeaveRequest) =>
-    api.post<LeaveRequest>(`${BASE}/leaves/apply`, data).then(r => r.data),
+  applyLeave: (orgId: number, data: ApplyLeaveRequest) =>
+    api.post<LeaveRequest>(`${BASE}/leaves/apply?orgId=${orgId}`, data).then(r => r.data),
 
-  getLeaveBalance: () =>
-    api.get<LeaveBalance[]>(`${BASE}/leaves/balance`).then(r => r.data),
+  getLeaveBalance: (orgId: number) =>
+    api.get<LeaveBalance[]>(`${BASE}/leaves/balance`, { params: { orgId } }).then(r => r.data),
 
-  getMyLeaveRequests: (page = 0, size = 20) =>
+  getMyLeaveRequests: (orgId: number, page = 0, size = 20) =>
     api.get<{ content: LeaveRequest[]; totalElements: number; totalPages: number; page: number }>(
-      `${BASE}/leaves/my-requests`, { params: { page, size } },
+      `${BASE}/leaves/my-requests`, { params: { orgId, page, size } },
     ).then(r => r.data),
 
-  cancelLeave: (id: number) =>
-    api.post(`${BASE}/leaves/${id}/cancel`).then(r => r.data),
+  cancelLeave: (id: number, orgId: number) =>
+    api.post(`${BASE}/leaves/${id}/cancel?orgId=${orgId}`).then(r => r.data),
 
   // Manager leave approvals
   getPendingLeaveRequests: (orgId: number, page = 0, size = 20) =>
@@ -71,11 +71,11 @@ export const hrmService = {
       { params: { status: 'PENDING', page, size } },
     ).then(r => r.data),
 
-  approveLeave: (id: number, remarks?: string) =>
-    api.post(`${BASE}/leaves/${id}/approve`, { approverRemarks: remarks }).then(r => r.data),
+  approveLeave: (id: number, orgId: number, remarks?: string) =>
+    api.post(`${BASE}/leaves/${id}/approve?orgId=${orgId}`, { approverRemarks: remarks }).then(r => r.data),
 
-  rejectLeave: (id: number, remarks?: string) =>
-    api.post(`${BASE}/leaves/${id}/reject`, { approverRemarks: remarks }).then(r => r.data),
+  rejectLeave: (id: number, orgId: number, remarks?: string) =>
+    api.post(`${BASE}/leaves/${id}/reject?orgId=${orgId}`, { approverRemarks: remarks }).then(r => r.data),
 
   // Shifts
   getMyShifts: (from: string, to: string) =>

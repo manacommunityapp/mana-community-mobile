@@ -81,8 +81,9 @@ export default function HrmHomeScreen() {
   });
 
   const { data: leaveBalances } = useQuery({
-    queryKey: ['hrm-leave-balance'],
-    queryFn: hrmService.getLeaveBalance,
+    queryKey: ['hrm-leave-balance', orgId],
+    queryFn: () => hrmService.getLeaveBalance(orgId!),
+    enabled: !!orgId,
   });
 
   const todayRecord = attendance?.find(

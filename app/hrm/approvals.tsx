@@ -17,12 +17,11 @@ export default function ApprovalsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: profile } = useQuery({
-    queryKey: ['hrm-profile'],
-    queryFn: hrmService.getMyProfile,
+  const { data: orgs } = useQuery({
+    queryKey: ['hrm-my-orgs'],
+    queryFn: hrmService.getMyOrganizations,
   });
-
-  const orgId = profile?.organizationId;
+  const orgId = orgs?.[0]?.id;
 
   const { data: requestsData, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['hrm-pending-leaves', orgId],
@@ -35,7 +34,7 @@ export default function ApprovalsScreen() {
 
   const approveMutation = useMutation({
     mutationFn: ({ id, remarks }: { id: number; remarks?: string }) =>
-      hrmService.approveLeave(id, remarks),
+      hrmService.approveLeave(id, orgId!, remarks),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hrm-pending-leaves'] });
       setActionModal(null);
@@ -47,7 +46,7 @@ export default function ApprovalsScreen() {
 
   const rejectMutation = useMutation({
     mutationFn: ({ id, remarks }: { id: number; remarks?: string }) =>
-      hrmService.rejectLeave(id, remarks),
+      hrmService.rejectLeave(id, orgId!, remarks),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hrm-pending-leaves'] });
       setActionModal(null);
