@@ -650,3 +650,52 @@ export interface MwSkillPassport {
   createdAt: string;
   updatedAt: string;
 }
+
+// ── Workforce Pool (Mana Workforce 360) ─────────────────────────────
+export type PayType = 'HOURLY' | 'DAILY' | 'FIXED';
+export type PoolListingStatus = 'OPEN' | 'FILLED' | 'CLOSED';
+export type PoolApplicationStatus = 'APPLIED' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
+export type ContractStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+
+export interface MwPoolListing {
+  id: number;
+  organizationId: number;
+  title: string;
+  description?: string;
+  requiredSkills?: string;
+  shiftDate: string;
+  shiftStart: string;
+  shiftEnd: string;
+  location?: string;
+  payRate?: number;
+  payType: PayType;
+  maxWorkers: number;
+  acceptedCount: number;
+  status: PoolListingStatus;
+  createdBy: number;
+  createdAt: string;
+}
+
+export interface MwPoolApplication {
+  id: number;
+  listingId: number;
+  manaUserId: number;
+  passportId?: number;
+  status: PoolApplicationStatus;
+  workerNote?: string;
+  employerNote?: string;
+  appliedAt: string;
+  respondedAt?: string;
+}
+
+export interface MwEngagementContract {
+  id: number;
+  applicationId: number;
+  termsSummary?: string;
+  workerConsented: boolean;
+  consentedAt?: string;
+  hoursWorked?: number;
+  amountDue?: number;
+  status: ContractStatus;
+  completedAt?: string;
+}

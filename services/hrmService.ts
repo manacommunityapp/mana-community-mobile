@@ -51,6 +51,8 @@ import type {
   MwPassportSkill,
   MwPassportCertification,
   MwPassportWorkHistory,
+  MwPoolListing,
+  MwPoolApplication,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -350,4 +352,28 @@ export const hrmService = {
     api.post<MwPassportWorkHistory>('/api/v1/mw/passport/work-history', data).then(r => r.data),
   removeWorkHistory: (whId: number) =>
     api.delete<void>(`/api/v1/mw/passport/work-history/${whId}`).then(r => r.data),
+
+  // ── Workforce Pool — Employer ──
+  getPoolListings: (orgId: number) =>
+    api.get<MwPoolListing[]>(`/api/v1/mw/pool/${orgId}/listings`).then(r => r.data),
+  createPoolListing: (orgId: number, data: Partial<MwPoolListing>) =>
+    api.post<MwPoolListing>(`/api/v1/mw/pool/${orgId}/listings`, data).then(r => r.data),
+  closePoolListing: (orgId: number, listingId: number) =>
+    api.put<void>(`/api/v1/mw/pool/${orgId}/listings/${listingId}/close`).then(r => r.data),
+  getListingApplications: (orgId: number, listingId: number) =>
+    api.get<MwPoolApplication[]>(`/api/v1/mw/pool/${orgId}/listings/${listingId}/applications`).then(r => r.data),
+  respondToPoolApplication: (orgId: number, listingId: number, appId: number, action: 'accept' | 'reject', employerNote?: string) =>
+    api.put<MwPoolApplication>(`/api/v1/mw/pool/${orgId}/listings/${listingId}/applications/${appId}`, { action, employerNote }).then(r => r.data),
+
+  // ── Workforce Pool — Worker ──
+  getOpenPoolListings: () =>
+    api.get<MwPoolListing[]>('/api/v1/mw/pool/open').then(r => r.data),
+  applyToPoolListing: (listingId: number, workerNote?: string) =>
+    api.post<MwPoolApplication>(`/api/v1/mw/pool/listings/${listingId}/apply`, { workerNote }).then(r => r.data),
+  withdrawPoolApplication: (listingId: number) =>
+    api.delete<void>(`/api/v1/mw/pool/listings/${listingId}/apply`).then(r => r.data),
+  getMyPoolApplications: () =>
+    api.get<MwPoolApplication[]>('/api/v1/mw/pool/my-applications').then(r => r.data),
+  consentToContract: (appId: number) =>
+    api.put<void>(`/api/v1/mw/pool/my-applications/${appId}/consent`).then(r => r.data),
 };

@@ -24,6 +24,7 @@ export default function HrmLayout() {
       <Stack.Screen name="compliance" />
       <Stack.Screen name="compliance-alerts" />
       <Stack.Screen name="passport" />
+      <Stack.Screen name="pool" options={{ title: 'Workforce Pool' }} />
     </Stack>
   );
 }
