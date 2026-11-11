@@ -47,6 +47,10 @@ import type {
   HelpDeskTicket,
   HrComplianceAlert,
   HrAnalyticsDashboard,
+  MwSkillPassport,
+  MwPassportSkill,
+  MwPassportCertification,
+  MwPassportWorkHistory,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -328,4 +332,22 @@ export const hrmService = {
     api.get<{ totalActive: number; tenureBands: Record<string, number> }>(`${BASE}/analytics/${orgId}/workforce-metrics`).then(r => r.data),
   resolveComplianceAlert: (orgId: number, alertId: number) =>
     api.put<HrComplianceAlert>(`${BASE}/compliance/${orgId}/alerts/${alertId}/resolve`).then(r => r.data),
+
+  // ── Workforce 360 — Skill Passport ──
+  getMyPassport: () =>
+    api.get<MwSkillPassport>('/api/v1/mw/passport/me').then(r => r.data),
+  updatePassport: (data: Partial<Pick<MwSkillPassport, 'bio' | 'location' | 'preferredRoles' | 'availability' | 'isPublic'>>) =>
+    api.put<MwSkillPassport>('/api/v1/mw/passport/me', data).then(r => r.data),
+  addSkill: (data: { skillName: string; category?: string; proficiency?: string; yearsExp?: number }) =>
+    api.post<MwPassportSkill>('/api/v1/mw/passport/skills', data).then(r => r.data),
+  removeSkill: (skillId: number) =>
+    api.delete<void>(`/api/v1/mw/passport/skills/${skillId}`).then(r => r.data),
+  addCertification: (data: { name: string; issuingBody?: string; issueDate?: string; expiryDate?: string; credentialUrl?: string }) =>
+    api.post<MwPassportCertification>('/api/v1/mw/passport/certifications', data).then(r => r.data),
+  removeCertification: (certId: number) =>
+    api.delete<void>(`/api/v1/mw/passport/certifications/${certId}`).then(r => r.data),
+  addWorkHistory: (data: { employerName: string; role?: string; startDate?: string; endDate?: string; isCurrent?: boolean }) =>
+    api.post<MwPassportWorkHistory>('/api/v1/mw/passport/work-history', data).then(r => r.data),
+  removeWorkHistory: (whId: number) =>
+    api.delete<void>(`/api/v1/mw/passport/work-history/${whId}`).then(r => r.data),
 };
