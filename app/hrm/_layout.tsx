@@ -27,6 +27,8 @@ export default function HrmLayout() {
       <Stack.Screen name="pool" options={{ title: 'Workforce Pool' }} />
       <Stack.Screen name="jobs" options={{ title: 'Job Board' }} />
       <Stack.Screen name="handover" options={{ title: 'Duty Handover' }} />
+      <Stack.Screen name="integrations" options={{ title: 'Integration Settings' }} />
+      <Stack.Screen name="forecasting" options={{ title: 'Forecasting' }} />
     </Stack>
   );
 }

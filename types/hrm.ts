@@ -768,3 +768,78 @@ export interface MwOperationalAssignment {
   performanceScore?: number;
   notes?: string;
 }
+
+// ── Sprint 4: Integration Config + Mana Fresh ─────────────────────────
+export interface MwIntegrationConfig {
+  id: number;
+  organizationId: number;
+  freshEnabled: boolean;
+  homesEnabled: boolean;
+  sportsEnabled: boolean;
+  baseDeliveryPay: number;
+  perKmRate: number;
+  onTimeBonus: number;
+}
+
+export interface MwFreshAssignment {
+  id: number;
+  freshOrderId: string;
+  pickupLocation?: string;
+  dropLocation?: string;
+  estimatedKm?: number;
+  actualKm?: number;
+  onTime?: boolean;
+  basePay: number;
+  kmBonus: number;
+  timeBonus: number;
+  totalIncentive: number;
+  operationalAssignment: {
+    id: number;
+    employeeId: number;
+    status: string;
+    incentiveAmount?: number;
+    performanceScore?: number;
+    assignedAt: string;
+    completedAt?: string;
+  };
+  createdAt: string;
+}
+
+// ── Sprint 5: Workforce Forecasting ──────────────────────────────────
+export interface MwForecastConfig {
+  id: number;
+  organizationId: number;
+  horizonWeeks: number;
+  minWorkersPerShift: number;
+  peakDayMultiplier: number;
+  sourceModules: string;
+  autoSnapshotEnabled: boolean;
+}
+
+export interface MwForecastSnapshot {
+  id: number;
+  organizationId: number;
+  weekStartDate: string;
+  sourceModule: string;
+  demandUnits: number;
+  fulfilledUnits: number;
+  avgPayRate?: number;
+  workerCount: number;
+  notes?: string;
+  snapshotAt: string;
+}
+
+export interface MwForecastProjection {
+  id: number;
+  projectedWeek: string;
+  sourceModule: string;
+  projectedDemand: number;
+  confidencePct: number;
+}
+
+export interface MwForecastSummary {
+  config: MwForecastConfig;
+  recentSnapshots: MwForecastSnapshot[];
+  projections: MwForecastProjection[];
+  gapByModule: Record<string, number>;
+}

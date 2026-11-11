@@ -57,6 +57,12 @@ import type {
   MwJobApplication,
   MwDutyHandover,
   MwOperationalAssignment,
+  MwIntegrationConfig,
+  MwFreshAssignment,
+  MwForecastConfig,
+  MwForecastSnapshot,
+  MwForecastProjection,
+  MwForecastSummary,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -423,4 +429,30 @@ export const hrmService = {
     api.put<MwOperationalAssignment>(`/api/v1/mw/operational/${orgId}/assignments/${assignmentId}/start`).then(r => r.data),
   completeAssignment: (orgId: number, assignmentId: number, performanceScore?: number, notes?: string) =>
     api.put<MwOperationalAssignment>(`/api/v1/mw/operational/${orgId}/assignments/${assignmentId}/complete`, { performanceScore, notes }).then(r => r.data),
+
+  // ── Integration Config ──
+  getIntegrationConfig: (orgId: number) =>
+    api.get<MwIntegrationConfig>(`/api/v1/mw/integrations/${orgId}/config`).then(r => r.data),
+  updateIntegrationConfig: (orgId: number, data: Partial<MwIntegrationConfig>) =>
+    api.put<MwIntegrationConfig>(`/api/v1/mw/integrations/${orgId}/config`, data).then(r => r.data),
+
+  // ── Mana Fresh Deliveries ──
+  getOrgFreshDeliveries: (orgId: number) =>
+    api.get<MwFreshAssignment[]>(`/api/v1/mw/integrations/fresh/${orgId}/deliveries`).then(r => r.data),
+  completeFreshDelivery: (orgId: number, id: number, actualKm: number, onTime: boolean, performanceScore?: number) =>
+    api.put<MwFreshAssignment>(`/api/v1/mw/integrations/fresh/${orgId}/deliveries/${id}/complete`, { actualKm, onTime, performanceScore }).then(r => r.data),
+
+  // ── Workforce Forecasting ──
+  getForecastSummary: (orgId: number) =>
+    api.get<MwForecastSummary>(`/api/v1/mw/forecasting/${orgId}/summary`).then(r => r.data),
+  getForecastConfig: (orgId: number) =>
+    api.get<MwForecastConfig>(`/api/v1/mw/forecasting/${orgId}/config`).then(r => r.data),
+  updateForecastConfig: (orgId: number, data: Partial<MwForecastConfig>) =>
+    api.put<MwForecastConfig>(`/api/v1/mw/forecasting/${orgId}/config`, data).then(r => r.data),
+  getForecastSnapshots: (orgId: number) =>
+    api.get<MwForecastSnapshot[]>(`/api/v1/mw/forecasting/${orgId}/snapshots`).then(r => r.data),
+  addForecastSnapshot: (orgId: number, data: Partial<MwForecastSnapshot>) =>
+    api.post<MwForecastSnapshot>(`/api/v1/mw/forecasting/${orgId}/snapshots`, data).then(r => r.data),
+  generateProjections: (orgId: number) =>
+    api.post<MwForecastProjection[]>(`/api/v1/mw/forecasting/${orgId}/projections/generate`).then(r => r.data),
 };
