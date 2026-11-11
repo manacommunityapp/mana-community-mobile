@@ -264,6 +264,8 @@ export default function HrmHomeScreen() {
             <QuickLink icon="help-circle-outline" label="Help Desk" onPress={() => router.push('/hrm/helpdesk')} color="#7C3AED" bgColor="#F5F3FF" />
             <QuickLink icon="id-card-outline" label="Skill Passport" onPress={() => router.push('/hrm/passport')} color="#0F766E" bgColor="#F0FDFA" />
             <QuickLink icon="people-outline" label="Workforce Pool" onPress={() => router.push('/hrm/pool')} color="#7C3AED" bgColor="#F5F3FF" />
+            <QuickLink icon="briefcase-outline" label="Job Board" onPress={() => router.push('/hrm/jobs')} color="#1D4ED8" bgColor="#EFF6FF" />
+            <QuickLink icon="swap-horizontal-outline" label="Duty Handover" onPress={() => router.push('/hrm/handover')} color="#B45309" bgColor="#FFFBEB" />
             {isManager && (
               <QuickLink icon="checkmark-done-outline" label="Approvals" onPress={() => router.push('/hrm/approvals')} color={COLORS.error} bgColor={COLORS.errorLight} />
             )}

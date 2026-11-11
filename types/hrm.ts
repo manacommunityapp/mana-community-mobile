@@ -699,3 +699,72 @@ export interface MwEngagementContract {
   status: ContractStatus;
   completedAt?: string;
 }
+
+// ── Mana Jobs ────────────────────────────────────────────────────────
+export type JobStatus = 'ACTIVE' | 'PAUSED' | 'CLOSED';
+export type JobApplicationStatus = 'APPLIED' | 'SHORTLISTED' | 'REJECTED' | 'OFFERED' | 'WITHDRAWN';
+export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'GIG';
+
+export interface MwJobListing {
+  id: number;
+  organizationId: number;
+  title: string;
+  description?: string;
+  employmentType: EmploymentType;
+  location?: string;
+  isRemote: boolean;
+  salaryMin?: number;
+  salaryMax?: number;
+  requiredSkills?: string;
+  experienceYears?: number;
+  status: JobStatus;
+  expiresAt?: string;
+  createdBy: number;
+  createdAt: string;
+}
+
+export interface MwJobApplication {
+  id: number;
+  jobId: number;
+  manaUserId: number;
+  passportId?: number;
+  coverNote?: string;
+  status: JobApplicationStatus;
+  appliedAt: string;
+  respondedAt?: string;
+  employerNote?: string;
+}
+
+// ── Duty Handover + Operational Assignments ──────────────────────────
+export interface MwDutyHandover {
+  id: number;
+  organizationId: number;
+  shiftAssignmentId?: number;
+  handoverFrom?: { id: number; firstName: string; lastName: string };
+  handoverTo?: { id: number; firstName: string; lastName: string };
+  location?: string;
+  notes?: string;
+  pendingTasks?: string;
+  equipmentStatus?: string;
+  incidentFlag: boolean;
+  incidentDesc?: string;
+  acknowledged: boolean;
+  acknowledgedAt?: string;
+  createdAt: string;
+}
+
+export interface MwOperationalAssignment {
+  id: number;
+  organizationId: number;
+  sourceModule: string;
+  sourceRefId: number;
+  employeeId: number;
+  assignmentType?: string;
+  status: string;
+  assignedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  incentiveAmount?: number;
+  performanceScore?: number;
+  notes?: string;
+}

@@ -53,6 +53,10 @@ import type {
   MwPassportWorkHistory,
   MwPoolListing,
   MwPoolApplication,
+  MwJobListing,
+  MwJobApplication,
+  MwDutyHandover,
+  MwOperationalAssignment,
 } from '@/types/hrm';
 
 const BASE = '/v1/hr';
@@ -376,4 +380,47 @@ export const hrmService = {
     api.get<MwPoolApplication[]>('/api/v1/mw/pool/my-applications').then(r => r.data),
   consentToContract: (appId: number) =>
     api.put<void>(`/api/v1/mw/pool/my-applications/${appId}/consent`).then(r => r.data),
+
+  // ── Mana Jobs — Employer ──
+  getOrgJobListings: (orgId: number) =>
+    api.get<MwJobListing[]>(`/api/v1/mw/jobs/${orgId}/listings`).then(r => r.data),
+  createJobListing: (orgId: number, data: Partial<MwJobListing>) =>
+    api.post<MwJobListing>(`/api/v1/mw/jobs/${orgId}/listings`, data).then(r => r.data),
+  pauseJobListing: (orgId: number, jobId: number) =>
+    api.put<void>(`/api/v1/mw/jobs/${orgId}/listings/${jobId}/pause`).then(r => r.data),
+  closeJobListing: (orgId: number, jobId: number) =>
+    api.put<void>(`/api/v1/mw/jobs/${orgId}/listings/${jobId}/close`).then(r => r.data),
+  getJobApplications: (orgId: number, jobId: number) =>
+    api.get<MwJobApplication[]>(`/api/v1/mw/jobs/${orgId}/listings/${jobId}/applications`).then(r => r.data),
+  respondToJobApplication: (orgId: number, jobId: number, appId: number, status: string, employerNote?: string) =>
+    api.put<MwJobApplication>(`/api/v1/mw/jobs/${orgId}/listings/${jobId}/applications/${appId}`, { status, employerNote }).then(r => r.data),
+
+  // ── Mana Jobs — Worker ──
+  getCommunityJobs: (search?: string) =>
+    api.get<MwJobListing[]>(`/api/v1/mw/jobs${search ? `?search=${encodeURIComponent(search)}` : ''}`).then(r => r.data),
+  applyToJob: (jobId: number, coverNote?: string, passportId?: number) =>
+    api.post<MwJobApplication>(`/api/v1/mw/jobs/listings/${jobId}/apply`, { coverNote, passportId }).then(r => r.data),
+  getMyJobApplications: () =>
+    api.get<MwJobApplication[]>('/api/v1/mw/jobs/my-applications').then(r => r.data),
+
+  // ── Duty Handover ──
+  createHandover: (orgId: number, data: Partial<MwDutyHandover> & { handoverFromEmployeeId?: number; handoverToEmployeeId?: number }) =>
+    api.post<MwDutyHandover>(`/api/v1/mw/handover/${orgId}/handovers`, data).then(r => r.data),
+  acknowledgeHandover: (orgId: number, handoverId: number) =>
+    api.put<MwDutyHandover>(`/api/v1/mw/handover/${orgId}/handovers/${handoverId}/acknowledge`).then(r => r.data),
+  getHandovers: (orgId: number, date?: string) =>
+    api.get<MwDutyHandover[]>(`/api/v1/mw/handover/${orgId}/handovers${date ? `?date=${date}` : ''}`).then(r => r.data),
+
+  // ── Operational Assignments ──
+  getOrgAssignments: (orgId: number, module?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (module) params.set('module', module);
+    if (status) params.set('status', status);
+    const qs = params.toString();
+    return api.get<MwOperationalAssignment[]>(`/api/v1/mw/operational/${orgId}/assignments${qs ? `?${qs}` : ''}`).then(r => r.data);
+  },
+  startAssignment: (orgId: number, assignmentId: number) =>
+    api.put<MwOperationalAssignment>(`/api/v1/mw/operational/${orgId}/assignments/${assignmentId}/start`).then(r => r.data),
+  completeAssignment: (orgId: number, assignmentId: number, performanceScore?: number, notes?: string) =>
+    api.put<MwOperationalAssignment>(`/api/v1/mw/operational/${orgId}/assignments/${assignmentId}/complete`, { performanceScore, notes }).then(r => r.data),
 };
