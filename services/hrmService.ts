@@ -377,7 +377,7 @@ export const hrmService = {
 
   // ── Workforce Pool — Worker ──
   getOpenPoolListings: () =>
-    api.get<MwPoolListing[]>('/api/v1/mw/pool/open').then(r => r.data),
+    api.get<MwPoolListing[]>('/api/v1/mw/pool/browse').then(r => r.data),
   applyToPoolListing: (listingId: number, workerNote?: string) =>
     api.post<MwPoolApplication>(`/api/v1/mw/pool/listings/${listingId}/apply`, { workerNote }).then(r => r.data),
   withdrawPoolApplication: (listingId: number) =>
