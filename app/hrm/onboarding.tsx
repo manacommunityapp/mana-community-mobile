@@ -1,6 +1,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,11 +23,8 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: orgs } = useQuery({
-    queryKey: ['hrm-my-orgs'],
-    queryFn: hrmService.getMyOrganizations,
-  });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data: profile } = useQuery({
     queryKey: ['hrm-profile', orgId],

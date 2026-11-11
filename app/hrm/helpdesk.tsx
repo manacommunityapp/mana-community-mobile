@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -44,8 +45,8 @@ export default function HelpDeskScreen() {
   const [catIndex, setCatIndex] = useState(4);
   const [priIndex, setPriIndex] = useState(1);
 
-  const { data: orgs } = useQuery({ queryKey: ['hrm-my-orgs'], queryFn: hrmService.getMyOrganizations });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['hrm-my-tickets', orgId],

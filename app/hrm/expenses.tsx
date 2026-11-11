@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -46,8 +47,8 @@ export default function ExpensesScreen() {
   const [form, setForm] = useState({ claimTitle: '', claimType: 'TRAVEL', claimDate: new Date().toISOString().slice(0, 10), description: '' });
   const [items, setItems] = useState<Partial<ExpenseItem>[]>([{ description: '', amount: 0 }]);
 
-  const { data: orgs } = useQuery({ queryKey: ['hrm-my-orgs'], queryFn: hrmService.getMyOrganizations });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['hrm-my-claims', orgId],

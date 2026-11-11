@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -48,8 +49,8 @@ function TaskCard({ item, onStatusChange }: { item: HrTask; onStatusChange: (id:
 
 export default function TasksScreen() {
   const qc = useQueryClient();
-  const { data: orgs } = useQuery({ queryKey: ['hrm-my-orgs'], queryFn: hrmService.getMyOrganizations });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data: tasks, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['hrm-my-tasks', orgId],

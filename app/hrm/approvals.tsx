@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import {
   View, Text, StyleSheet, FlatList, RefreshControl,
   ActivityIndicator, Alert, TextInput, Modal, TouchableOpacity,
@@ -17,11 +18,8 @@ export default function ApprovalsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: orgs } = useQuery({
-    queryKey: ['hrm-my-orgs'],
-    queryFn: hrmService.getMyOrganizations,
-  });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data: requestsData, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['hrm-pending-leaves', orgId],

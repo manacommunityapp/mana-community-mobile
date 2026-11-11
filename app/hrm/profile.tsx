@@ -1,6 +1,7 @@
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, TextInput, TouchableOpacity, Alert,
 } from 'react-native';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -44,11 +45,8 @@ export default function ProfileScreen() {
     emergencyContactPhone: '',
   });
 
-  const { data: orgs } = useQuery({
-    queryKey: ['hrm-my-orgs'],
-    queryFn: hrmService.getMyOrganizations,
-  });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['hrm-profile', orgId],

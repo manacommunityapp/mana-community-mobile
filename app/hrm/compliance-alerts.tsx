@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/common/Header';
@@ -57,8 +58,8 @@ function AlertCard({ item, onAcknowledge, onDismiss }: {
 
 export default function ComplianceAlertsScreen() {
   const qc = useQueryClient();
-  const { data: orgs } = useQuery({ queryKey: ['hrm-my-orgs'], queryFn: hrmService.getMyOrganizations });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data: alerts, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['hrm-compliance-alerts', orgId],

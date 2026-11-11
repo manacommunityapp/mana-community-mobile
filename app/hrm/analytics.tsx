@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,8 +20,8 @@ function StatCard({ label, value, icon, color }: { label: string; value: string 
 }
 
 export default function HrmAnalyticsScreen() {
-  const { data: orgs } = useQuery({ queryKey: ['hrm-my-orgs'], queryFn: hrmService.getMyOrganizations });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ['hrm-analytics-dashboard', orgId],

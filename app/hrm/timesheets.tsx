@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import {
   View, Text, TouchableOpacity, FlatList, Alert, ActivityIndicator,
   StyleSheet,
@@ -25,22 +26,20 @@ function formatHours(mins: number) {
 export default function TimesheetsScreen() {
   const router = useRouter();
   const [timesheets, setTimesheets] = useState<Timesheet[]>([]);
-  const [orgId, setOrgId] = useState<number | null>(null);
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
+  useEffect(() => { initialize(); }, []);
+
   useEffect(() => {
-    const init = async () => {
-      const orgs = await hrmService.getMyOrganizations();
-      if (orgs.length > 0) {
-        const oid = orgs[0].id;
-        setOrgId(oid);
-        const data = await hrmService.getMyTimesheets(oid);
-        setTimesheets(data);
-      }
-    };
-    init().catch(console.error).finally(() => setLoading(false));
-  }, []);
+    if (!orgId) return;
+    setLoading(true);
+    hrmService.getMyTimesheets(orgId)
+      .then(setTimesheets)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [orgId]);
 
   const handleGenerate = async () => {
     if (!orgId) return;

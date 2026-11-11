@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, ActivityIndicator, Alert,
@@ -38,28 +39,19 @@ export default function ShiftsScreen() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'swaps'>('schedule');
   const [incomingSwaps, setIncomingSwaps] = useState<ShiftSwapRequest[]>([]);
   const [mySwaps, setMySwaps] = useState<ShiftSwapRequest[]>([]);
-  const [orgId, setOrgId] = useState<number | null>(null);
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+
+  useEffect(() => { initialize(); }, []);
 
   useEffect(() => {
-    const loadSwaps = async () => {
-      try {
-        const orgs = await hrmService.getMyOrganizations();
-        if (orgs.length > 0) {
-          const oid = orgs[0].id;
-          setOrgId(oid);
-          const [incoming, mine] = await Promise.all([
-            hrmService.getIncomingSwapRequests(oid),
-            hrmService.getMySwapRequests(oid),
-          ]);
-          setIncomingSwaps(incoming);
-          setMySwaps(mine);
-        }
-      } catch (err) {
-        console.error('Failed to load swap requests:', err);
-      }
-    };
-    loadSwaps();
-  }, []);
+    if (!orgId) return;
+    Promise.all([
+      hrmService.getIncomingSwapRequests(orgId),
+      hrmService.getMySwapRequests(orgId),
+    ])
+      .then(([incoming, mine]) => { setIncomingSwaps(incoming); setMySwaps(mine); })
+      .catch((err) => console.error('Failed to load swap requests:', err));
+  }, [orgId]);
 
   const handleRespondSwap = async (swapId: number, accepted: boolean) => {
     if (!orgId) return;

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   StyleSheet, ActivityIndicator, Alert, Modal,
@@ -41,8 +42,8 @@ function RecognitionCard({ item }: { item: Recognition }) {
 }
 
 export default function RecognitionScreen() {
-  const { data: orgs } = useQuery({ queryKey: ['hrm-my-orgs'], queryFn: hrmService.getMyOrganizations });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({

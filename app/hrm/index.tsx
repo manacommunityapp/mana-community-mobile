@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import * as Location from 'expo-location';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -12,6 +12,7 @@ import { Header } from '@/components/common/Header';
 import { CheckInOutButton } from '@/components/hrm/CheckInOutButton';
 import { hrmService } from '@/services/hrmService';
 import { useAuth } from '@/hooks/useAuth';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { COLORS, FONTS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import type { AttendanceRecord, LeaveBalance } from '@/types/hrm';
 
@@ -61,12 +62,8 @@ export default function HrmHomeScreen() {
 
   const { from, to } = monthRange();
 
-  // Bootstrap: get orgId from user's HR organizations first
-  const { data: orgs, isLoading: orgsLoading } = useQuery({
-    queryKey: ['hrm-my-orgs'],
-    queryFn: hrmService.getMyOrganizations,
-  });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, organizations, setActiveOrgId, loading: orgsLoading, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['hrm-profile', orgId],
@@ -165,6 +162,24 @@ export default function HrmHomeScreen() {
         }
         contentContainerStyle={s.scrollContent}
       >
+        {/* Organisation switcher — only shown when user manages multiple orgs */}
+        {organizations.length > 1 && (
+          <View style={s.orgSwitcherRow}>
+            <Ionicons name="business-outline" size={16} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+              {organizations.map((org) => (
+                <TouchableOpacity
+                  key={org.id}
+                  onPress={() => setActiveOrgId(org.id)}
+                  style={[s.orgChip, orgId === org.id && s.orgChipActive]}
+                >
+                  <Text style={[s.orgChipText, orgId === org.id && s.orgChipTextActive]}>{org.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Check In / Out */}
         <View style={s.checkInSection}>
           <CheckInOutButton
@@ -268,6 +283,37 @@ const s = StyleSheet.create({
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { fontSize: 13, color: COLORS.textMuted, fontFamily: FONTS.medium },
   scrollContent: { paddingBottom: 40 },
+
+  orgSwitcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  orgChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  orgChipActive: {
+    backgroundColor: COLORS.primary + '15',
+    borderColor: COLORS.primary,
+  },
+  orgChipText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontFamily: FONTS.medium,
+  },
+  orgChipTextActive: {
+    color: COLORS.primary,
+  },
 
   checkInSection: {
     alignItems: 'center',

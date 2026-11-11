@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, ActivityIndicator, Alert, Platform, Switch,
@@ -26,11 +27,8 @@ export default function ApplyLeaveScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: orgs } = useQuery({
-    queryKey: ['hrm-my-orgs'],
-    queryFn: hrmService.getMyOrganizations,
-  });
-  const orgId = orgs?.[0]?.id;
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const { data: leaveTypes, isLoading: typesLoading } = useQuery({
     queryKey: ['hrm-leave-types', orgId],
