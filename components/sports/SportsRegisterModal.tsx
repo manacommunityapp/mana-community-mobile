@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
-  TextInput, ScrollView, ActivityIndicator, Alert,
+  TextInput, ScrollView, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { sportsService } from '@/services/sportsService';
 import api from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -80,6 +81,7 @@ const FALLBACK_EVENTS: EventItem[] = [];
 export function SportsRegisterModal({ visible, onClose, onRegistered, initialEventId }: SportsRegisterModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [step, setStep] = useState(0);
   const [selectedSportFilter, setSelectedSportFilter] = useState('ALL');
@@ -424,6 +426,25 @@ export function SportsRegisterModal({ visible, onClose, onRegistered, initialEve
                 <Text style={s.receiptValGold}>₹{done.fee.toLocaleString('en-IN')}</Text>
               </View>
             </View>
+
+            {/* Offer a ride CTA */}
+            {done.venueName ? (
+              <TouchableOpacity
+                style={s.offerRideCta}
+                activeOpacity={0.85}
+                onPress={() => {
+                  handleClose();
+                  router.push(`/commute/offer-ride?to=${encodeURIComponent(done.venueName)}` as never);
+                }}
+              >
+                <Text style={s.offerRideCtaEmoji}>🚗</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.offerRideCtaTitle}>Offer a Ride to Teammates</Text>
+                  <Text style={s.offerRideCtaSub}>Going to {done.venueName}? Help others get there!</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#1d4ed8" />
+              </TouchableOpacity>
+            ) : null}
 
             <TouchableOpacity style={s.primaryBtn} onPress={handleClose} activeOpacity={0.85}>
               <LinearGradient colors={['#1E1B4B', '#3730A3', '#4F46E5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGradient}>
@@ -1185,6 +1206,16 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13,
   },
   btnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+
+  // Offer-ride CTA on success screen
+  offerRideCta: {
+    width: '100%', flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#EFF6FF', borderRadius: RADIUS.lg, padding: 14,
+    borderWidth: 1, borderColor: '#BFDBFE', marginBottom: 4,
+  },
+  offerRideCtaEmoji: { fontSize: 22 },
+  offerRideCtaTitle: { fontSize: 13, fontWeight: '700', color: '#1e40af' },
+  offerRideCtaSub:   { fontSize: 11, color: '#3b82f6', marginTop: 2 },
 
   // Done View
   doneContainer: {

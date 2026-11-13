@@ -146,6 +146,29 @@ export default function VendorDashboardScreen() {
           <Ionicons name="chevron-forward" size={18} color="#10B981" />
         </TouchableOpacity>
 
+        {/* Mana Fresh Kitchen & Operations */}
+        <TouchableOpacity
+          style={[s.groupBuyBanner, { borderColor: '#0284C7' }]}
+          onPress={() => router.push('/vendor/fresh/production' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={[s.groupBuyIconWrap, { backgroundColor: '#0284C7' }]}>
+            <Ionicons name="nutrition" size={22} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={s.groupBuyTitleRow}>
+              <Text style={s.groupBuyTitle}>Mana Fresh Kitchen & Hub</Text>
+              <View style={[s.groupBuyBadge, { backgroundColor: '#E0F2FE' }]}>
+                <Text style={[s.groupBuyBadgeText, { color: '#0284C7' }]}>COLD CHAIN</Text>
+              </View>
+            </View>
+            <Text style={s.groupBuySub}>
+              Production runs, cold-chain gate release, packing manifests & delivery drops
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#0284C7" />
+        </TouchableOpacity>
+
         {/* Availability toggle */}
         <TouchableOpacity style={s.availCard} activeOpacity={0.8}>
           <View style={s.availLeft}>

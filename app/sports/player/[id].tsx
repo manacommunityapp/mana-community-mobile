@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
 import { BadgeCard, BadgeRow } from '@/components/sports/BadgeCard';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, getInitials } from '@/constants/config';
 import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import { safeFormat } from '@/utils/dateUtils';
@@ -197,6 +198,20 @@ export default function PlayerProfileScreen() {
           </View>
         )}
 
+        {/* CricHeroes */}
+        <TouchableOpacity
+          style={s.cricHeroesBtn}
+          onPress={() => router.push(`/sports/player/cricheroes?id=${id}` as never)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="stats-chart-outline" size={18} color="#16a34a" />
+          <View style={{ flex: 1 }}>
+            <Text style={s.cricHeroesTitle}>CricHeroes Stats</Text>
+            <Text style={s.cricHeroesSub}>Link your CricHeroes profile to show detailed cricket stats</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+        </TouchableOpacity>
+
         {/* Recent matches */}
         {profile.recentMatches.length > 0 && (
           <View style={s.section}>
@@ -256,4 +271,7 @@ const s = StyleSheet.create({
   matchResult:    { flex: 1, fontSize: 13, color: COLORS.text, fontWeight: '500' },
   matchDate:      { fontSize: 12, color: COLORS.textMuted },
   lockedGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  cricHeroesBtn:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#16a34a30' },
+  cricHeroesTitle:{ fontSize: 14, fontWeight: '700', color: COLORS.text },
+  cricHeroesSub:  { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
 });

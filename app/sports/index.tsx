@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { sportsService } from '@/services/sportsService';
 import { facilityService, FacilityDto } from '@/services/facilityService';
 import { auctionService } from '@/services/auctionService';
+import { commuteService } from '@/services/commuteService';
 import { SportsRegisterModal, RegistrationRecord } from '@/components/sports/SportsRegisterModal';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
@@ -164,6 +165,14 @@ export default function SportsHubScreen() {
     queryFn: sportsService.getDashboardStats,
     staleTime: 30_000,
   });
+
+  // 10. Community Rides (commute integration)
+  const { data: communityRidesPage } = useQuery({
+    queryKey: ['sports-hub-rides'],
+    queryFn: () => commuteService.getUpcomingRides(undefined, 0),
+    staleTime: 60_000,
+  });
+  const communityRides = (communityRidesPage?.content ?? []).slice(0, 3);
 
   // ── Refetch All ───────────────────────────────────────────────────────
   const isRefreshing = isRefetchingLive;
@@ -500,12 +509,13 @@ export default function SportsHubScreen() {
         {/* ── Quick Hub Actions (App Surface Cards) ── */}
         <View style={s.quickHubWrap}>
           {[
-            { label: 'Book Court', emoji: '🏸', route: '/facilities', color: '#4F46E5', bg: '#EEF2FF' },
+            { label: 'Book Court', emoji: '🏸', route: '/sports/facility/my-bookings', color: '#4F46E5', bg: '#EEF2FF' },
             { label: 'Tournaments', emoji: '🏆', route: '/sports/tournaments', color: '#4338CA', bg: '#EEF2FF' },
             { label: 'Schedule', emoji: '⚔️', route: '/sports/matches', color: '#2563EB', bg: '#EFF6FF' },
             { label: 'Standings', emoji: '📊', route: '/sports/leaderboard', color: '#0891B2', bg: '#CFFAFE' },
+            { label: 'Rankings', emoji: '🎖️', route: '/sports/rankings', color: '#D97706', bg: '#FFFBEB' },
             { label: 'My Squads', emoji: '👥', route: '/sports/my-teams', color: '#7C3AED', bg: '#F5F3FF' },
-            { label: 'Auctions', emoji: '🏷️', route: '/auction', color: '#7C3AED', bg: '#F5F3FF' },
+            { label: 'Player Auction', emoji: '🏷️', route: '/sports/auction', color: '#7C3AED', bg: '#F5F3FF' },
             { label: 'Trainers', emoji: '🎽', route: '/sports/trainers', color: '#059669', bg: '#ECFDF5' },
           ].map((item) => (
             <TouchableOpacity
@@ -922,15 +932,15 @@ export default function SportsHubScreen() {
               <Ionicons name="flash" size={13} color={COLORS.primary} />
               <Text style={s.cardHeading}>Court Availability & Venues</Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/facilities')}>
-              <Text style={s.linkText}>Book Slot →</Text>
+            <TouchableOpacity onPress={() => router.push('/sports/facility/my-bookings' as any)}>
+              <Text style={s.linkText}>My Bookings →</Text>
             </TouchableOpacity>
           </View>
 
           {loadingFacilities ? (
             <ActivityIndicator color={COLORS.primary} size="small" style={{ marginVertical: 12 }} />
           ) : sportsFacilities.length === 0 ? (
-            <TouchableOpacity style={s.emptyFacilitiesCard} onPress={() => router.push('/facilities')}>
+            <TouchableOpacity style={s.emptyFacilitiesCard} onPress={() => router.push('/sports/facility/my-bookings' as any)}>
               <Text style={{ fontSize: 24 }}>🏟️</Text>
               <View style={{ flex: 1 }}>
                 <Text style={s.emptyFacTitle}>Explore Community Amenities</Text>
@@ -946,7 +956,7 @@ export default function SportsHubScreen() {
                   <TouchableOpacity
                     key={court.id}
                     style={s.courtCard}
-                    onPress={() => router.push('/facilities')}
+                    onPress={() => router.push(`/sports/facility/${court.id}` as any)}
                     activeOpacity={0.8}
                   >
                     <View style={s.rowBetween}>
@@ -970,6 +980,72 @@ export default function SportsHubScreen() {
             </ScrollView>
           )}
         </View>
+
+        {/* ── Sports Insurance CTA ── */}
+        <TouchableOpacity
+          style={s.insuranceBanner}
+          onPress={() => router.push('/insurance' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={s.insuranceIcon}>
+            <Text style={{ fontSize: 22 }}>🛡️</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.insuranceTitle}>Sports Injury Insurance</Text>
+            <Text style={s.insuranceSub}>Protect yourself during matches & tournaments. View plans →</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#b45309" />
+        </TouchableOpacity>
+
+        {/* ── Get to the Game (Commute Integration) ── */}
+        {communityRides.length > 0 && (
+          <View style={s.card}>
+            <View style={s.sectionHeader}>
+              <View style={s.row}>
+                <Text style={{ fontSize: 14 }}>🚗</Text>
+                <Text style={s.cardHeading}>Get to the Game</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/commute' as any)}>
+                <Text style={s.linkText}>All rides →</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={s.rideSectionSub}>Community rides to upcoming venues</Text>
+            {communityRides.map((ride: any) => (
+              <TouchableOpacity
+                key={ride.id}
+                style={s.rideHubRow}
+                onPress={() => router.push(`/commute/ride/${ride.id}` as any)}
+                activeOpacity={0.8}
+              >
+                <View style={s.rideHubAvatar}>
+                  <Text style={s.rideHubAvatarText}>{(ride.driverName || 'D')[0]?.toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.rideHubDriver} numberOfLines={1}>{ride.driverName || 'Community Member'}</Text>
+                  <Text style={s.rideHubRoute} numberOfLines={1}>
+                    {ride.fromLocation} → {ride.toLocation}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={s.rideHubSeats}>{ride.availableSeats} seat{ride.availableSeats !== 1 ? 's' : ''}</Text>
+                  {ride.free ? (
+                    <Text style={s.rideHubFree}>Free</Text>
+                  ) : (
+                    <Text style={s.rideHubPrice}>₹{ride.pricePerSeat}</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={s.offerRideHubBtn}
+              onPress={() => router.push('/commute/offer-ride' as any)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add-circle-outline" size={15} color="#1d4ed8" />
+              <Text style={s.offerRideHubBtnText}>Offer a Ride to Teammates</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── Top Performers (Community Leaderboard) ── */}
         <View style={s.card}>
@@ -1401,6 +1477,42 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.full, ...SHADOWS.sm,
   },
   eventRegisterNowBtnText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+
+  // Insurance Banner
+  insuranceBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#FFFBEB', borderRadius: RADIUS.lg, padding: 14,
+    borderWidth: 1, borderColor: '#FCD34D', ...SHADOWS.sm,
+  },
+  insuranceIcon: {
+    width: 44, height: 44, borderRadius: 12, backgroundColor: '#FEF3C7',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  insuranceTitle: { fontSize: 14, fontWeight: '700', color: '#78350F' },
+  insuranceSub:   { fontSize: 11, color: '#92400E', marginTop: 2 },
+
+  // Get to the Game (Commute Section)
+  rideSectionSub: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
+  rideHubRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  rideHubAvatar: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: '#DBEAFE',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  rideHubAvatarText: { fontSize: 14, fontWeight: '700', color: '#1d4ed8' },
+  rideHubDriver:    { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  rideHubRoute:     { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  rideHubSeats:     { fontSize: 11, fontWeight: '600', color: COLORS.text },
+  rideHubFree:      { fontSize: 11, fontWeight: '700', color: COLORS.success, marginTop: 2 },
+  rideHubPrice:     { fontSize: 11, fontWeight: '700', color: COLORS.primary, marginTop: 2 },
+  offerRideHubBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 10, paddingVertical: 9, borderRadius: RADIUS.md,
+    backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE',
+  },
+  offerRideHubBtnText: { fontSize: 13, fontWeight: '600', color: '#1d4ed8' },
 
   // Utils
   row: { flexDirection: 'row', alignItems: 'center', gap: 5 },

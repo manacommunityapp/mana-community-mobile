@@ -12,11 +12,16 @@ export default function SportsLayout() {
       <Stack.Screen name="create-team" options={{ presentation: 'modal' }} />
       <Stack.Screen name="scorecard" />
       <Stack.Screen name="leaderboard" />
+      <Stack.Screen name="rankings" />
+      <Stack.Screen name="challenge" />
       <Stack.Screen name="player" />
       <Stack.Screen name="photos" />
       <Stack.Screen name="rate" />
       <Stack.Screen name="trainers" />
       <Stack.Screen name="trainer" />
+      <Stack.Screen name="stream" />
+      <Stack.Screen name="auction" />
+      <Stack.Screen name="facility" />
     </Stack>
   );
 }

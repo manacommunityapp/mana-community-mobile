@@ -179,6 +179,7 @@ export interface GroupOrder {
   refundAmount?: number;
   refundReason?: string;
   tierPriceRefundAmount?: number;
+  commerceOrderId?: number;
 }
 
 export type GroupOrderDto = GroupOrder;
@@ -339,7 +340,10 @@ export interface DealFilterState {
 export interface JoinDealPayload {
   dealId: string;
   quantity: number;
+  /** @deprecated use deliveryAddress instead */
   deliverySlot?: string;
+  deliveryAddress?: string;
+  specialNotes?: string;
   paymentMethod: 'UPI' | 'CARD' | 'NETBANKING' | 'WALLET';
 }
 

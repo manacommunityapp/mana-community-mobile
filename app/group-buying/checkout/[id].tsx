@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,19 +14,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { groupBuyingService } from '@/services/groupBuyingService';
+import { paymentService, type CashfreeOrderResponse } from '@/services/paymentService';
+import { PaymentModal } from '@/components/payment/PaymentModal';
 import type { GroupDealDto } from '@/types/groupBuying';
 
 export default function GroupBuyCheckoutScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, qty: initialQty } = useLocalSearchParams<{ id: string; qty?: string }>();
   const router = useRouter();
 
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(() => (initialQty ? parseInt(initialQty, 10) || 1 : 1));
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'CREDIT_DEBIT_CARD' | 'NET_BANKING' | 'ESCROW_HOLD'>('UPI');
   const [upiProvider, setUpiProvider] = useState<'GPAY' | 'PHONEPE' | 'PAYTM' | 'OTHER'>('GPAY');
   const [deliveryOption, setDeliveryOption] = useState<'CLUBHOUSE' | 'DOORSTEP'>('CLUBHOUSE');
   const [flatNumber, setFlatNumber] = useState('Tower A - 402');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // ── Payment modal state ──────────────────────────────────────────────────────
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'creating' | 'checkout' | 'verifying' | 'success' | 'failed'>('idle');
+  const [cashfreeOrder, setCashfreeOrder] = useState<CashfreeOrderResponse | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [pendingGroupOrderId, setPendingGroupOrderId] = useState<string | null>(null);
 
   const { data: deal, isLoading } = useQuery({
     queryKey: ['group-deal', id],
@@ -63,34 +72,78 @@ export default function GroupBuyCheckoutScreen() {
     if (!deal) return;
     setSubmitting(true);
     try {
-      const order = await groupBuyingService.checkoutGroupBuy(deal.id, quantity, {
-        paymentMethod,
-        amountToPayNow: pricing.total,
-        escrowHoldAmount: paymentMethod === 'ESCROW_HOLD' ? pricing.total : 0,
-        deliveryAddressOrPickup: deliveryOption === 'CLUBHOUSE' ? (deal.pickupPoint || 'Clubhouse Desk') : flatNumber,
+      const deliveryAddress = deliveryOption === 'CLUBHOUSE'
+        ? (deal.pickupPoint || 'Clubhouse Desk')
+        : flatNumber;
+
+      // Step 1: join deal → creates CommerceOrder in PENDING state
+      const order = await groupBuyingService.joinDeal({
+        dealId: deal.id,
+        quantity,
+        paymentMethod: 'UPI',
+        deliveryAddress,
         specialNotes: notes,
       });
 
-      Alert.alert(
-        '🎉 Group Buy Confirmed!',
-        `Your order ${order.id} for ${quantity}x ${deal.title} is locked at ₹${pricing.unitPrice}/unit. Digital pickup pass generated.`,
-        [
-          {
-            text: 'View Pickup Pass',
-            onPress: () => router.replace(`/group-buying/pickup/${order.id}`),
-          },
-          {
-            text: 'My Orders',
-            onPress: () => router.replace('/group-buying/orders'),
-          },
-        ]
-      );
-    } catch {
-      Alert.alert('Checkout Error', 'Unable to complete checkout. Please try again.');
+      if (!order.commerceOrderId) {
+        Alert.alert('Error', 'Could not create payment order. Please try again.');
+        return;
+      }
+
+      setPendingGroupOrderId(order.id);
+
+      // Step 2: create Cashfree payment order linked to the CommerceOrder
+      setPaymentStatus('creating');
+      setPaymentModalVisible(true);
+      const cfOrder = await paymentService.createOrder({
+        amount: pricing.total,
+        referenceType: 'GROUP_BUY_ORDER',
+        referenceId: order.commerceOrderId,
+        description: `Group Buy: ${deal.title} × ${quantity}`,
+      });
+      setCashfreeOrder(cfOrder);
+      setPaymentStatus('checkout');
+    } catch (err: any) {
+      setPaymentStatus('failed');
+      setPaymentError(err?.message || 'Checkout failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleVerify = useCallback(async (manaOrderId: string) => {
+    setPaymentStatus('verifying');
+    try {
+      await paymentService.verifyPayment(manaOrderId);
+      setPaymentStatus('success');
+    } catch {
+      setPaymentStatus('failed');
+      setPaymentError('Payment verification failed. If amount was debited, please contact support.');
+    }
+  }, []);
+
+  const handlePaymentDismiss = useCallback(() => {
+    if (paymentStatus === 'success' && pendingGroupOrderId) {
+      setPaymentModalVisible(false);
+      router.replace({
+        pathname: '/group-buying/join-success/[orderId]',
+        params: {
+          orderId: pendingGroupOrderId,
+          dealId: String(deal?.id || id),
+          qty: String(quantity),
+          savings: String(pricing.savings),
+          dealTitle: deal?.title || '',
+          nextUnits: String(deal?.nextTierUnitsNeeded ?? 0),
+          nextPrice: String(deal?.nextTierPrice ?? 0),
+        },
+      } as any);
+    } else {
+      setPaymentModalVisible(false);
+      setPaymentStatus('idle');
+      setCashfreeOrder(null);
+      setPaymentError(null);
+    }
+  }, [paymentStatus, pendingGroupOrderId, router, deal, id, quantity, pricing]);
 
   if (isLoading || !deal) {
     return (
@@ -325,6 +378,15 @@ export default function GroupBuyCheckoutScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <PaymentModal
+        visible={paymentModalVisible}
+        order={cashfreeOrder}
+        status={paymentStatus}
+        error={paymentError}
+        onDismiss={handlePaymentDismiss}
+        onVerify={handleVerify}
+      />
     </>
   );
 }

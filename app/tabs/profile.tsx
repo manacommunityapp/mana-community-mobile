@@ -1022,6 +1022,17 @@ export default function ProfileScreen() {
               iconBg="#CCFBF1"
             />
           )}
+          <MenuItem
+            icon="sparkles-outline"
+            label="Kitty & Social Circles"
+            sublabel="Monthly pools, meetups, Housie & party vendors"
+            onPress={() => router.push('/kitty-party/kittyPartyIndex' as any)}
+            iconColor="#BE185D"
+            iconBg="#FCE7F3"
+            badge="NEW"
+            badgeBg="#FCE7F3"
+            badgeColor="#BE185D"
+          />
           {showSports && (
             <MenuItem
               icon="trophy-outline"
