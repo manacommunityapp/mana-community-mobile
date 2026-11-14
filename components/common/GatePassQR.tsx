@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import QRCode from 'react-native-qrcode-svg';
+import { toQR } from 'toqr';
 import { COLORS, RADIUS, SPACING, SHADOWS } from '@/constants/config';
 
 export interface GatePassData {
@@ -12,6 +12,37 @@ export interface GatePassData {
   vehicleNumber?: string;
   status?: string;
   expectedAt?: string;
+}
+
+function QRMatrix({ value, size = 200 }: { value: string; size?: number }) {
+  const { rows, cellSize } = useMemo(() => {
+    try {
+      const data = toQR(value);
+      const n = Math.round(Math.sqrt(data.length));
+      const r: boolean[][] = [];
+      for (let i = 0; i < n; i++) {
+        const row: boolean[] = [];
+        for (let j = 0; j < n; j++) row.push(data[i * n + j] !== 0);
+        r.push(row);
+      }
+      return { rows: r, cellSize: Math.floor(size / n) };
+    } catch {
+      return { rows: [] as boolean[][], cellSize: 4 };
+    }
+  }, [value, size]);
+
+  if (!rows.length) return null;
+  return (
+    <View style={{ width: size, height: size, backgroundColor: '#fff', padding: 4 }}>
+      {rows.map((row, r) => (
+        <View key={r} style={{ flexDirection: 'row' }}>
+          {row.map((on, c) => (
+            <View key={c} style={{ width: cellSize, height: cellSize, backgroundColor: on ? '#111827' : '#ffffff' }} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
 }
 
 interface GatePassQRProps {
@@ -75,7 +106,7 @@ export default function GatePassQR({ pass, onClose, showCloseButton = true }: Ga
 
       {/* QR code */}
       <View style={s.qrWrap}>
-        <QRCode value={qrPayload} size={200} color="#111827" backgroundColor="#ffffff" />
+        <QRMatrix value={qrPayload} size={200} />
         <Text style={s.qrHint}>Scan at security checkpoint</Text>
       </View>
 
