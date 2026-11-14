@@ -145,6 +145,7 @@ export const marketplaceService = {
     localUri: string,
     declaredMimeType?: string,
     onProgress?: (pct: number) => void,
+    communityId?: number,
   ): Promise<string> {
     const fileName = localUri.split('/').pop() ?? 'image.jpg';
     const mimeType = inferMimeType(localUri, declaredMimeType);
@@ -152,7 +153,8 @@ export const marketplaceService = {
     try {
       const media = await mediaService.uploadMedia(
         { uri: localUri, name: fileName, type: mimeType },
-        { module: 'MARKETPLACE', moduleId: 'listing', communityId: undefined, mediaType: 'IMAGE' },
+        { module: 'MARKETPLACE', moduleId: 'listing', communityId, mediaType: 'IMAGE' },
+
       );
       if (media?.url) return media.url;
     } catch (e) {

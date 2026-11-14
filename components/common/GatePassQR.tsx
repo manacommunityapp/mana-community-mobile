@@ -1,12 +1,7 @@
-/**
- * GatePassQR — renders a live QR code + styled gate pass card.
- * Uses `qrcode` (pure JS matrix) so no native modules are needed.
- * The QR encodes a compact JSON payload the guard scanner can verify.
- */
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import QRCodeLib from 'qrcode';
+import { toQR } from 'toqr';
 import { COLORS, RADIUS, SPACING, SHADOWS } from '@/constants/config';
 
 export interface GatePassData {
@@ -19,46 +14,30 @@ export interface GatePassData {
   expectedAt?: string;
 }
 
-interface QRMatrixProps {
-  value: string;
-  size?: number;
-}
-
-function QRMatrix({ value, size = 200 }: QRMatrixProps) {
-  const { modules, cellSize } = useMemo(() => {
+function QRMatrix({ value, size = 200 }: { value: string; size?: number }) {
+  const { rows, cellSize } = useMemo(() => {
     try {
-      const qr = QRCodeLib.create(value, { errorCorrectionLevel: 'M' });
-      const n = qr.modules.size;
-      const data = qr.modules.data;
-      const rows: boolean[][] = [];
-      for (let r = 0; r < n; r++) {
+      const data = toQR(value);
+      const n = Math.round(Math.sqrt(data.length));
+      const r: boolean[][] = [];
+      for (let i = 0; i < n; i++) {
         const row: boolean[] = [];
-        for (let c = 0; c < n; c++) {
-          row.push(!!data[r * n + c]);
-        }
-        rows.push(row);
+        for (let j = 0; j < n; j++) row.push(data[i * n + j] !== 0);
+        r.push(row);
       }
-      return { modules: rows, cellSize: Math.floor(size / n) };
+      return { rows: r, cellSize: Math.floor(size / n) };
     } catch {
-      return { modules: [] as boolean[][], cellSize: 4 };
+      return { rows: [] as boolean[][], cellSize: 4 };
     }
   }, [value, size]);
 
-  if (!modules.length) return null;
-
+  if (!rows.length) return null;
   return (
     <View style={{ width: size, height: size, backgroundColor: '#fff', padding: 4 }}>
-      {modules.map((row, r) => (
+      {rows.map((row, r) => (
         <View key={r} style={{ flexDirection: 'row' }}>
           {row.map((on, c) => (
-            <View
-              key={c}
-              style={{
-                width: cellSize,
-                height: cellSize,
-                backgroundColor: on ? '#111827' : '#ffffff',
-              }}
-            />
+            <View key={c} style={{ width: cellSize, height: cellSize, backgroundColor: on ? '#111827' : '#ffffff' }} />
           ))}
         </View>
       ))}
