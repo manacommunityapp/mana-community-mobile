@@ -52,6 +52,9 @@ const MODULE_KEYS: Record<string, string[]> = {
 
   // Commerce & Food
   food:             ["FOOD_OS"],
+  fresh_kitchen:    ["FOOD_OS"],
+  daily_basket:     ["FOOD_OS"],
+  wellness_basket:  ["HEALTH", "FOOD_OS"],
   group_buying:     ["GROUP_BUYING"],
   auctions:         ["MARKETPLACE"],
 
@@ -144,6 +147,9 @@ export const ALL_COMMUNITY_SERVICES: QuickActionItem[] = [
 
   // Commerce & Food
   { id: "market",           emoji: "🏪", icon: "storefront-outline",       label: "Marketplace",   route: "/tabs/marketplace",         bg: "#D1FAE5", color: "#059669", category: "Commerce & Food" },
+  { id: "fresh_kitchen",    emoji: "🥞", icon: "sparkles-outline",         label: "Fresh Kitchen", route: "/fresh-kitchen",            bg: "#ECFDF5", color: "#059669", category: "Commerce & Food",      badge: "2-4°C" },
+  { id: "daily_basket",     emoji: "🧺", icon: "basket-outline",           label: "Daily Basket",  route: "/daily-basket",             bg: "#FEF3C7", color: "#D97706", category: "Commerce & Food",      badge: "DAILY" },
+  { id: "wellness_basket",  emoji: "🥗", icon: "nutrition-outline",        label: "Wellness Box",  route: "/wellness-basket",          bg: "#F0FDFA", color: "#0D9488", category: "Commerce & Food",      badge: "SUB" },
   { id: "offers",           emoji: "🛍️", icon: "pricetag-outline",          label: "Deals & Offers", route: "/offers",                   bg: "#FEF3C7", color: "#D97706", category: "Commerce & Food",      badge: "NEW" },
   { id: "group_buying",     emoji: "👜", icon: "bag-handle-outline",         label: "Group Buy",     route: "/group-buying",             bg: "#ECFDF5", color: "#059669", category: "Commerce & Food" },
   { id: "food",             emoji: "🍽️", icon: "restaurant-outline",       label: "Food & Kitchen",route: "/food",                     bg: "#FFE4E6", color: "#E11D48", category: "Commerce & Food" },

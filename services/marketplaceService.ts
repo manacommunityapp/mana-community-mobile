@@ -154,6 +154,7 @@ export const marketplaceService = {
       const media = await mediaService.uploadMedia(
         { uri: localUri, name: fileName, type: mimeType },
         { module: 'MARKETPLACE', moduleId: 'listing', communityId, mediaType: 'IMAGE' },
+
       );
       if (media?.url) return media.url;
     } catch (e) {

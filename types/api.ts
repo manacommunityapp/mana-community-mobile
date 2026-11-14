@@ -1540,4 +1540,268 @@ export interface DataDeletionRequestDto {
   notes?: string;
 }
 
+// ── Live Streaming ──────────────────────────────────────────────
+export type StreamStatus = 'OFFLINE' | 'LIVE' | 'ENDED';
+export type StreamPlatform = 'YOUTUBE' | 'TWITCH' | 'CUSTOM';
+
+export interface StreamCameraDto {
+  id: number;
+  label: string;
+  url: string;
+  embedUrl: string;
+  platform: StreamPlatform;
+  active: boolean;
+}
+
+export interface StreamMessageDto {
+  id: number;
+  authorName: string;
+  text: string;
+  commentary: boolean;
+  postedAt: string;
+}
+
+export interface SportsStreamResponse {
+  matchId: number;
+  status: StreamStatus;
+  title?: string;
+  startedAt?: string;
+  endedAt?: string;
+  cameras: StreamCameraDto[];
+  messages: StreamMessageDto[];
+}
+
+export interface StreamCameraRequest {
+  label: string;
+  url: string;
+}
+
+export interface StreamChatRequest {
+  text: string;
+  commentary: boolean;
+}
+
+// ── Sports Player Auction ───────────────────────────────────────
+export type SportsAuctionStatus = 'DRAFT' | 'REGISTRATION' | 'LIVE' | 'ENDED' | 'CANCELLED';
+
+export interface SportsAuctionConfigResponse {
+  id: number;
+  eventId: number;
+  eventName: string;
+  sportName: string;
+  sportId: number;
+  communityId: number;
+  seasonName: string;
+  auctionFormat: string;
+  totalTeams: number;
+  totalPlayers: number;
+  budgetPerTeam: number;
+  basePrice: number;
+  bidIncrementDefault: number;
+  bidIncrementThreshold: number;
+  bidIncrementAbove: number;
+  bidTimerSeconds: number;
+  rtmEnabled: boolean;
+  unsoldRule: string;
+  status: SportsAuctionStatus;
+  categories: string[];
+  committeeMembers: string[];
+}
+
+export interface SportsAuctionPlayerResponse {
+  id: number;
+  configId: number;
+  userId?: number;
+  playerName: string;
+  category?: string;
+  playerRole?: string;
+  age?: number;
+  basePrice?: number;
+  statsJson?: string;
+  queueOrder?: number;
+  status: 'AVAILABLE' | 'ON_BLOCK' | 'SOLD' | 'UNSOLD' | string;
+  assignedTeamId?: number;
+  assignedTeamName?: string;
+  soldPrice?: number;
+  rtmUsed?: boolean;
+  soldAt?: string;
+  innings?: number;
+  bestBowling?: string;
+  cricHeroesId?: string;
+  cricHeroesUrl?: string;
+}
+
+export interface SportsAuctionTeamResponse {
+  id: number;
+  configId: number;
+  eventId: number;
+  teamName: string;
+  ownerName: string;
+  ownerUserId: number;
+  captainUserId?: number;
+  colorHex?: string;
+  totalBudget: number;
+  remainingBudget: number;
+  spent: number;
+  captainNomination?: boolean;
+  captainConfirmation?: boolean;
+  createdAt?: string;
+}
+
+export interface SportsAuctionBidResponse {
+  id: number;
+  configId: number;
+  playerId: number;
+  teamId: number;
+  teamName: string;
+  bidAmount: number;
+  incrementUsed?: number;
+  isRtm?: boolean;
+  bidByUserId: number;
+  bidAt: string;
+}
+
+export interface SportsAuctionStatsResponse {
+  totalPlayers: number;
+  soldPlayers: number;
+  unsoldPlayers: number;
+  remainingPlayers: number;
+  totalAmountSpent: number;
+  totalBids: number;
+}
+
+export interface PlayerWithBidResponse {
+  player: SportsAuctionPlayerResponse;
+  currentBid?: number;
+  currentTeamName?: string;
+  bids: SportsAuctionBidResponse[];
+}
+
+// ── CricHeroes ─────────────────────────────────────────────────
+export type CricHeroesFormatScope = 'ALL' | 'T20' | 'ODI' | 'TEST';
+
+export interface SportsCricHeroesLinkRequest {
+  playerId: number;
+  cricHeroesUrl: string;
+  formatScope?: CricHeroesFormatScope;
+}
+
+export interface CricHeroesRecentInning {
+  matchDate?: string;
+  opposition?: string;
+  runs?: number;
+  balls?: number;
+  wickets?: number;
+  economy?: number;
+  format?: string;
+}
+
+export interface SportsCricHeroesProfileResponse {
+  fullName?: string;
+  avatarUrl?: string;
+  battingStyle?: string;
+  bowlingStyle?: string;
+  primaryRole?: string;
+  // Batting
+  battingMatches?: number;
+  battingInnings?: number;
+  battingRuns?: number;
+  battingHighScore?: number;
+  battingAverage?: number;
+  battingStrikeRate?: number;
+  battingFifties?: number;
+  battingHundreds?: number;
+  // Bowling
+  bowlingMatches?: number;
+  bowlingOvers?: number;
+  bowlingWickets?: number;
+  bowlingEconomy?: number;
+  bowlingAverage?: number;
+  bowlingBest?: string;
+  // Fielding
+  catches?: number;
+  stumpings?: number;
+  runOuts?: number;
+  recentForm?: CricHeroesRecentInning[];
+  mvpPoints?: number;
+  rating?: number;
+  cricHeroesUrl?: string;
+  linkedAt?: string;
+  formatScope?: CricHeroesFormatScope;
+}
+
+// ── Race Results ────────────────────────────────────────────────
+export interface SportsRaceResultResponse {
+  id: number;
+  matchId: number;
+  playerId?: number;
+  playerName?: string;
+  teamId?: number;
+  teamName?: string;
+  heatNumber?: number;
+  laneNumber?: number;
+  finishTimeMillis?: number;
+  formattedTime?: string;
+  raceStatus?: string;
+  overallRank?: number;
+  heatRank?: number;
+  personalBestMillis?: number;
+  isPersonalBest?: boolean;
+  splitTimes?: string[];
+  notes?: string;
+}
+
+// ── Tournament Content ──────────────────────────────────────────
+export interface SportsTournamentAnnouncement {
+  id: number;
+  title: string;
+  content?: string;
+  icon?: string;
+  sortOrder?: number;
+  createdAt?: string;
+}
+export interface SportsTournamentGalleryImage {
+  id: number;
+  title?: string;
+  imageUrl: string;
+  bgColor?: string;
+  icon?: string;
+  sortOrder?: number;
+  createdAt?: string;
+}
+export interface SportsTournamentTimelineEntry {
+  id: number;
+  entryDate?: string;
+  dateLabel?: string;
+  title: string;
+  description?: string;
+  sortOrder?: number;
+  createdAt?: string;
+}
+
+// ── Generic Leaderboard ─────────────────────────────────────────
+export interface SportsGenericLeaderboardEntry {
+  playerId: number;
+  playerName?: string;
+  teamId?: number;
+  teamName?: string;
+  category?: string;
+  value: number;
+  matchesPlayed?: number;
+  rank: number;
+}
+
+// ── Player Rankings ─────────────────────────────────────────────
+export interface SportsPlayerRankingResponse {
+  id: number;
+  player: { id: number; fullName?: string; email?: string; flatNo?: string; avatarUrl?: string; };
+  sport?: { id: number; name: string; icon?: string; };
+  communityId?: number;
+  rank?: number;
+  rating?: number;
+  source?: string;
+  season?: string;
+  notes?: string;
+}
+
 

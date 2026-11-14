@@ -7,6 +7,11 @@ import type {
   LeaderboardEntryDto, LeaderboardCategory, MatchPhotoDto,
   MatchRatingSummaryDto, SubmitRatingsRequest,
   SportsChallengeDto, CreateSportsChallengeRequest,
+  SportsStreamResponse, StreamCameraRequest, StreamChatRequest,
+  SportsCricHeroesLinkRequest, SportsCricHeroesProfileResponse,
+  SportsRaceResultResponse,
+  SportsTournamentAnnouncement, SportsTournamentGalleryImage, SportsTournamentTimelineEntry,
+  SportsGenericLeaderboardEntry, SportsPlayerRankingResponse,
 } from '@/types/api';
 
 export const sportsService = {
@@ -419,6 +424,110 @@ export const sportsService = {
       return sessionChallenges[idx];
     }
     throw new Error('Challenge not found');
+  },
+
+  // ── Live Streaming ─────────────────────────────────────────────
+  async getStream(matchId: number): Promise<SportsStreamResponse> {
+    const res = await api.get<SportsStreamResponse>(`/sports/matches/${matchId}/stream`);
+    return res.data;
+  },
+  async startStream(matchId: number, title?: string): Promise<SportsStreamResponse> {
+    const res = await api.post<SportsStreamResponse>(`/sports/matches/${matchId}/stream/start`, title ? { title } : undefined);
+    return res.data;
+  },
+  async endStream(matchId: number): Promise<SportsStreamResponse> {
+    const res = await api.put<SportsStreamResponse>(`/sports/matches/${matchId}/stream/end`);
+    return res.data;
+  },
+  async addStreamCamera(matchId: number, req: StreamCameraRequest): Promise<SportsStreamResponse> {
+    const res = await api.post<SportsStreamResponse>(`/sports/matches/${matchId}/stream/cameras`, req);
+    return res.data;
+  },
+  async removeStreamCamera(matchId: number, cameraId: number): Promise<SportsStreamResponse> {
+    const res = await api.delete<SportsStreamResponse>(`/sports/matches/${matchId}/stream/cameras/${cameraId}`);
+    return res.data;
+  },
+  async switchStreamCamera(matchId: number, cameraId: number): Promise<SportsStreamResponse> {
+    const res = await api.put<SportsStreamResponse>(`/sports/matches/${matchId}/stream/cameras/${cameraId}/active`);
+    return res.data;
+  },
+  async postStreamMessage(matchId: number, req: StreamChatRequest): Promise<SportsStreamResponse> {
+    const res = await api.post<SportsStreamResponse>(`/sports/matches/${matchId}/stream/chat`, req);
+    return res.data;
+  },
+
+  // ── CricHeroes ────────────────────────────────────────────────
+  async linkCricHeroes(req: SportsCricHeroesLinkRequest): Promise<SportsCricHeroesProfileResponse> {
+    const res = await api.post<SportsCricHeroesProfileResponse>('/api/cricheroes/link', req);
+    return res.data;
+  },
+  async unlinkCricHeroes(playerId: number): Promise<void> {
+    await api.delete(`/api/cricheroes/${playerId}/unlink`);
+  },
+  async previewCricHeroes(url: string): Promise<SportsCricHeroesProfileResponse> {
+    const res = await api.get<SportsCricHeroesProfileResponse>('/api/cricheroes/preview', { params: { url } });
+    return res.data;
+  },
+  async getCricHeroesProfile(playerId: number): Promise<SportsCricHeroesProfileResponse | null> {
+    try {
+      const res = await api.get<SportsCricHeroesProfileResponse>(`/api/cricheroes/profile/${playerId}`);
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+  async refreshCricHeroesProfile(playerId: number): Promise<SportsCricHeroesProfileResponse> {
+    const res = await api.get<SportsCricHeroesProfileResponse>(`/api/cricheroes/profile/${playerId}/refresh`);
+    return res.data;
+  },
+
+  // ── Race Results ──────────────────────────────────────────────
+  async getRaceResults(matchId: number): Promise<SportsRaceResultResponse[]> {
+    const res = await api.get<SportsRaceResultResponse[]>(`/api/tournament/match/race/${matchId}/results`);
+    return res.data;
+  },
+  async getRaceHeat(matchId: number, heatNumber: number): Promise<SportsRaceResultResponse[]> {
+    const res = await api.get<SportsRaceResultResponse[]>(`/api/tournament/match/race/${matchId}/results/heat/${heatNumber}`);
+    return res.data;
+  },
+
+  // ── Tournament Content ────────────────────────────────────────
+  async getTournamentAnnouncements(tournamentId: number): Promise<SportsTournamentAnnouncement[]> {
+    const res = await api.get<SportsTournamentAnnouncement[]>(`/api/tournaments/${tournamentId}/announcements`);
+    return res.data;
+  },
+  async getTournamentGallery(tournamentId: number): Promise<SportsTournamentGalleryImage[]> {
+    const res = await api.get<SportsTournamentGalleryImage[]>(`/api/tournaments/${tournamentId}/gallery`);
+    return res.data;
+  },
+  async getTournamentTimeline(tournamentId: number): Promise<SportsTournamentTimelineEntry[]> {
+    const res = await api.get<SportsTournamentTimelineEntry[]>(`/api/tournaments/${tournamentId}/timeline`);
+    return res.data;
+  },
+
+  // ── Generic Leaderboard ───────────────────────────────────────
+  async getGenericLeaderboard(configId: number, category?: string): Promise<SportsGenericLeaderboardEntry[]> {
+    const res = await api.get<SportsGenericLeaderboardEntry[]>(
+      `/api/tournament/${configId}/leaderboard/generic`,
+      category ? { params: { category } } : undefined,
+    );
+    return res.data;
+  },
+  async getLeaderboardCategories(configId: number): Promise<string[]> {
+    const res = await api.get<string[]>(`/api/tournament/${configId}/leaderboard/generic/categories`);
+    return res.data;
+  },
+
+  // ── Player Rankings ───────────────────────────────────────────
+  async getRankings(params?: { sport?: string; season?: string }): Promise<SportsPlayerRankingResponse[]> {
+    const res = await api.get<SportsPlayerRankingResponse[]>('/api/sports/rankings', params ? { params } : undefined);
+    return res.data;
+  },
+  async getMyRanking(userId: number): Promise<SportsPlayerRankingResponse | null> {
+    try {
+      const res = await api.get<SportsPlayerRankingResponse>(`/api/sports/rankings/user/${userId}`);
+      return res.data;
+    } catch { return null; }
   },
 };
 

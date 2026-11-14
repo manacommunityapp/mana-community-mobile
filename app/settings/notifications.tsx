@@ -67,6 +67,15 @@ const CATEGORIES: CategoryConfig[] = [
     description: 'Ride booking requests, ride confirmations & departure reminders',
     types: ['COMMUTE_BOOKING_CONFIRMED', 'COMMUTE_RIDE_REMINDER', 'COMMUTE_BOOKING_RECEIVED'],
   },
+  {
+    id: 'freshKitchen',
+    title: 'Fresh Kitchen & Daily Basket',
+    icon: 'basket-outline',
+    color: '#059669',
+    bg: '#D1FAE5',
+    description: 'Morning doorstep PIN alerts, delivery confirmations & 8 PM cutoff reminders',
+    types: ['DAILY_BASKET_DELIVERY', 'DAILY_BASKET_REMINDER'],
+  },
 ];
 
 const LANGUAGES = [
@@ -86,11 +95,12 @@ export default function NotificationPreferencesScreen() {
 
   // Category channel states: { [categoryId]: { push: boolean, sms: boolean, whatsapp: boolean } }
   const [channelState, setChannelState] = useState<Record<string, { push: boolean; sms: boolean; whatsapp: boolean }>>({
-    sports:   { push: true, sms: false, whatsapp: true },
-    events:   { push: true, sms: true,  whatsapp: true },
-    auctions: { push: true, sms: false, whatsapp: true },
-    visitors: { push: true, sms: true,  whatsapp: true },
-    commute:  { push: true, sms: false, whatsapp: false },
+    sports:       { push: true, sms: false, whatsapp: true },
+    events:       { push: true, sms: true,  whatsapp: true },
+    auctions:     { push: true, sms: false, whatsapp: true },
+    visitors:     { push: true, sms: true,  whatsapp: true },
+    commute:      { push: true, sms: false, whatsapp: false },
+    freshKitchen: { push: true, sms: false, whatsapp: true },
   });
 
   useEffect(() => {

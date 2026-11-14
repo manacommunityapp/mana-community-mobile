@@ -53,6 +53,17 @@ const POST_SURGERY_CHECKLIST = [
 
 const EMI_OPTIONS = [3, 6, 9, 12, 18, 24];
 
+const CONDITION_SHORTCUTS = [
+  { label: "Piles", icon: "medical", color: "#DC2626", category: "General Surgery" },
+  { label: "Kidney Stones", icon: "water", color: "#2563EB", category: "Urology" },
+  { label: "Lipoma", icon: "cut", color: "#059669", category: "General Surgery" },
+  { label: "Gallstones", icon: "medkit", color: "#D97706", category: "General Surgery" },
+  { label: "Fissure", icon: "medical", color: "#7C3AED", category: "General Surgery" },
+  { label: "Knee Replacement", icon: "accessibility", color: "#0D9488", category: "Orthopedics" },
+  { label: "Cataract", icon: "eye", color: "#6366F1", category: "Ophthalmology" },
+  { label: "Hernia", icon: "body", color: "#DB2777", category: "General Surgery" },
+] as const;
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 type Step = "select" | "plan" | "confirm" | "done";
@@ -102,6 +113,36 @@ export default function SurgeryCareScreen() {
           </View>
           <TouchableOpacity onPress={() => Alert.alert("Care Buddy", "Priya Sharma will coordinate your pre-op tests, hospital admission, paperwork, and post-surgery follow-ups.\n\nCall: +91 98765 43210")} style={styles.buddyCallBtn}>
             <Ionicons name="call" size={14} color="#7C3AED" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Condition Shortcuts */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 52 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingVertical: 6 }}>
+          {CONDITION_SHORTCUTS.map(cs => (
+            <TouchableOpacity
+              key={cs.label}
+              style={[styles.shortcutChip, { borderColor: cs.color + "40" }]}
+              onPress={() => setFilter(cs.category)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name={cs.icon as any} size={14} color={cs.color} />
+              <Text style={[styles.shortcutChipText, { color: cs.color }]}>{cs.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Free First Consultation CTA */}
+        <View style={styles.freeConsultBanner}>
+          <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.freeConsultTitle}>Book Free Consultation</Text>
+            <Text style={styles.freeConsultSub}>Talk to a surgical specialist first — free, no obligation</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.freeConsultBtn}
+            onPress={() => Alert.alert("Free Consultation", "A surgical specialist will call you within 2 hours to understand your condition and guide you — completely free of charge.")}
+          >
+            <Text style={styles.freeConsultBtnText}>Book Free →</Text>
           </TouchableOpacity>
         </View>
 
@@ -161,6 +202,24 @@ export default function SurgeryCareScreen() {
               <View style={styles.costItem}><Text style={styles.costItemLabel}>Hospital charges</Text><Text style={styles.costItemVal}>~₹{(estimatedCost * 0.45 / 1000).toFixed(0)}K</Text></View>
               <View style={styles.costItem}><Text style={styles.costItemLabel}>Implants / Misc</Text><Text style={styles.costItemVal}>~₹{(estimatedCost * 0.25 / 1000).toFixed(0)}K</Text></View>
             </View>
+          </View>
+
+          {/* Insurance Coverage Check */}
+          <View style={styles.insuranceCard}>
+            <View style={styles.insuranceHeader}>
+              <Ionicons name="shield-checkmark" size={18} color="#0D9488" />
+              <Text style={styles.insuranceTitle}>Insurance Coverage Check</Text>
+              <View style={styles.coveredBadge}><Text style={styles.coveredText}>✓ COVERED</Text></View>
+            </View>
+            <Text style={styles.insuranceSub}>
+              {selected.name} is covered under your Star Health policy (SH-2026-XXXXX)
+            </Text>
+            <View style={styles.insuranceDetails}>
+              <View style={styles.insDetailItem}><Text style={styles.insDetailLabel}>Sum Insured</Text><Text style={styles.insDetailVal}>₹5,00,000</Text></View>
+              <View style={styles.insDetailItem}><Text style={styles.insDetailLabel}>Used</Text><Text style={styles.insDetailVal}>₹1,20,000</Text></View>
+              <View style={styles.insDetailItem}><Text style={styles.insDetailLabel}>Available</Text><Text style={styles.insDetailVal}>₹3,80,000</Text></View>
+            </View>
+            <Text style={styles.insuranceNote}>Cashless pre-authorization will be submitted by your Care Buddy.</Text>
           </View>
 
           {/* Hospital Selector */}
@@ -313,7 +372,25 @@ const styles = StyleSheet.create({
   headerTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "800", fontFamily: FONTS.displayBold },
   headerSub: { color: "#CCFBF1", fontSize: 12, fontFamily: FONTS.regular },
 
+  shortcutChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: "#FFFFFF", borderWidth: 1 },
+  shortcutChipText: { fontSize: 12, fontWeight: "700" },
   buddyBanner: { margin: 16, backgroundColor: "#EDE9FE", borderRadius: RADIUS.lg, padding: 12, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderColor: "#DDD6FE" },
+  freeConsultBanner: { marginHorizontal: 16, marginBottom: 8, backgroundColor: "#0D9488", borderRadius: RADIUS.lg, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
+  freeConsultTitle: { fontSize: 13, fontWeight: "800", color: "#FFFFFF" },
+  freeConsultSub: { fontSize: 11, color: "#CCFBF1", marginTop: 1 },
+  freeConsultBtn: { backgroundColor: "#FFFFFF", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  freeConsultBtnText: { fontSize: 11, fontWeight: "800", color: "#0D9488" },
+  insuranceCard: { backgroundColor: "#F0FDF4", borderRadius: RADIUS.lg, padding: 14, borderWidth: 1, borderColor: "#BBF7D0" },
+  insuranceHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  insuranceTitle: { flex: 1, fontSize: 14, fontWeight: "800", color: "#064E3B" },
+  coveredBadge: { backgroundColor: "#059669", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  coveredText: { fontSize: 10, fontWeight: "900", color: "#FFFFFF" },
+  insuranceSub: { fontSize: 12, color: "#065F46", marginBottom: 10 },
+  insuranceDetails: { flexDirection: "row", gap: 8, marginBottom: 8 },
+  insDetailItem: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 8, padding: 8, alignItems: "center" },
+  insDetailLabel: { fontSize: 10, color: "#6B7280" },
+  insDetailVal: { fontSize: 13, fontWeight: "800", color: "#0F172A", marginTop: 2 },
+  insuranceNote: { fontSize: 11, color: "#065F46", fontStyle: "italic" },
   buddyAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#C4B5FD", justifyContent: "center", alignItems: "center" },
   buddyTitle: { fontSize: 13, fontWeight: "700", color: "#4C1D95", fontFamily: FONTS.semiBold },
   buddySub: { fontSize: 11, color: "#6D28D9", marginTop: 1 },

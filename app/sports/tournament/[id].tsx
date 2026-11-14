@@ -472,6 +472,34 @@ export default function TournamentDetailScreen() {
           </View>
         )}
 
+        {/* ── QUICK LINKS (announcements / leaderboard) ── */}
+        <View style={scr.quickLinks}>
+          <TouchableOpacity
+            style={scr.quickLink}
+            onPress={() => router.push(`/sports/tournament/announcements?id=${id}` as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={scr.quickLinkEmoji}>📣</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={scr.quickLinkTitle}>Updates & Gallery</Text>
+              <Text style={scr.quickLinkSub}>Announcements, photos, timeline</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={15} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={scr.quickLink}
+            onPress={() => router.push(`/sports/tournament/leaderboard?id=${id}` as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={scr.quickLinkEmoji}>🏆</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={scr.quickLinkTitle}>Leaderboard</Text>
+              <Text style={scr.quickLinkSub}>Points table & rankings</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={15} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         <View style={{ height: 24 }} />
       </ScrollView>
 
@@ -626,4 +654,10 @@ const scr = StyleSheet.create({
   footer:         { padding: 16, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border },
   registerBtn:    { backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   registerBtnText:{ color: '#fff', fontWeight: '800', fontSize: 16 },
+
+  quickLinks:     { gap: 8 },
+  quickLink:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: COLORS.border },
+  quickLinkEmoji: { fontSize: 20 },
+  quickLinkTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  quickLinkSub:   { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
 });

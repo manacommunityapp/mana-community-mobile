@@ -21,6 +21,7 @@ export default function HealthLayout() {
       <Stack.Screen name="labs/book" options={{ title: "📅 Book Home Collection" }} />
       <Stack.Screen name="pharmacy/index" options={{ title: "💊 Medicine Delivery" }} />
       <Stack.Screen name="appointments/video-room" options={{ title: "Video Consultation", headerShown: false }} />
+      <Stack.Screen name="radiology/index" options={{ title: "🩻 Radiology & Imaging" }} />
     </Stack>
   );
 }

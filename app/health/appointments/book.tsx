@@ -17,6 +17,7 @@ export default function AppointmentBookScreen() {
   const [selectedMode, setSelectedMode] = useState<ConsultationMode>("IN_PERSON");
   const [syncFinance, setSyncFinance] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [bookingMode, setBookingMode] = useState<BookingMode>("slot");
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [queueJoined, setQueueJoined] = useState(false);
@@ -221,6 +222,22 @@ export default function AppointmentBookScreen() {
           </View>
         )}
 
+        {/* Language Preference */}
+        <View style={styles.languageCard}>
+          <Text style={styles.languageTitle}>Consultation Language</Text>
+          <View style={styles.languageChips}>
+            {["English", "Hindi", "Telugu", "Tamil", "Kannada", "Marathi", "Bengali"].map(lang => (
+              <TouchableOpacity
+                key={lang}
+                style={[styles.langChip, selectedLanguage === lang && styles.langChipActive]}
+                onPress={() => setSelectedLanguage(lang)}
+              >
+                <Text style={[styles.langChipText, selectedLanguage === lang && styles.langChipTextActive]}>{lang}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {/* Smart Personal Finance Sync */}
         <TouchableOpacity
           style={styles.syncCard}
@@ -287,6 +304,13 @@ const styles = StyleSheet.create({
   activeSlotChip: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
   slotText: { fontSize: 12, fontWeight: "600", color: "#374151" },
   activeSlotText: { color: "#FFFFFF" },
+  languageCard: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E5E7EB", padding: 14, borderRadius: 14 },
+  languageTitle: { fontSize: 13, fontWeight: "700", color: "#0F172A", marginBottom: 10 },
+  languageChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  langChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: "#F3F4F6", borderWidth: 1, borderColor: "#E5E7EB" },
+  langChipActive: { backgroundColor: "#0D9488", borderColor: "#0D9488" },
+  langChipText: { fontSize: 12, color: "#4B5563" },
+  langChipTextActive: { color: "#FFFFFF", fontWeight: "700" },
   syncCard: { backgroundColor: "#F0FDFA", borderWidth: 1, borderColor: "#99F6E4", padding: 14, borderRadius: 14, flexDirection: "row", gap: 10, alignItems: "center" },
   syncTitle: { fontSize: 13, fontWeight: "bold", color: "#0F766E" },
   syncDesc: { fontSize: 11, color: "#115E59", marginTop: 2 },
