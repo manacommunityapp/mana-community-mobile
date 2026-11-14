@@ -1,12 +1,7 @@
-/**
- * GatePassQR — renders a live QR code + styled gate pass card.
- * Uses `qrcode` (pure JS matrix) so no native modules are needed.
- * The QR encodes a compact JSON payload the guard scanner can verify.
- */
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import QRCodeLib from 'qrcode';
+import QRCode from 'react-native-qrcode-svg';
 import { COLORS, RADIUS, SPACING, SHADOWS } from '@/constants/config';
 
 export interface GatePassData {
@@ -17,53 +12,6 @@ export interface GatePassData {
   vehicleNumber?: string;
   status?: string;
   expectedAt?: string;
-}
-
-interface QRMatrixProps {
-  value: string;
-  size?: number;
-}
-
-function QRMatrix({ value, size = 200 }: QRMatrixProps) {
-  const { modules, cellSize } = useMemo(() => {
-    try {
-      const qr = QRCodeLib.create(value, { errorCorrectionLevel: 'M' });
-      const n = qr.modules.size;
-      const data = qr.modules.data;
-      const rows: boolean[][] = [];
-      for (let r = 0; r < n; r++) {
-        const row: boolean[] = [];
-        for (let c = 0; c < n; c++) {
-          row.push(!!data[r * n + c]);
-        }
-        rows.push(row);
-      }
-      return { modules: rows, cellSize: Math.floor(size / n) };
-    } catch {
-      return { modules: [] as boolean[][], cellSize: 4 };
-    }
-  }, [value, size]);
-
-  if (!modules.length) return null;
-
-  return (
-    <View style={{ width: size, height: size, backgroundColor: '#fff', padding: 4 }}>
-      {modules.map((row, r) => (
-        <View key={r} style={{ flexDirection: 'row' }}>
-          {row.map((on, c) => (
-            <View
-              key={c}
-              style={{
-                width: cellSize,
-                height: cellSize,
-                backgroundColor: on ? '#111827' : '#ffffff',
-              }}
-            />
-          ))}
-        </View>
-      ))}
-    </View>
-  );
 }
 
 interface GatePassQRProps {
@@ -127,7 +75,7 @@ export default function GatePassQR({ pass, onClose, showCloseButton = true }: Ga
 
       {/* QR code */}
       <View style={s.qrWrap}>
-        <QRMatrix value={qrPayload} size={200} />
+        <QRCode value={qrPayload} size={200} color="#111827" backgroundColor="#ffffff" />
         <Text style={s.qrHint}>Scan at security checkpoint</Text>
       </View>
 
