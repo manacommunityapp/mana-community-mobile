@@ -1,27 +1,22 @@
 import api from './apiClient';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types (field names match backend DTOs exactly) ───────────────────────────
 
 export type AccountType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
 export type JournalEntryStatus = 'DRAFT' | 'POSTED' | 'REVERSED';
 export type JournalEntryType = 'MANUAL' | 'SYSTEM' | 'REVERSAL';
 export type SourceModule =
-  | 'BILLING'
-  | 'SPORTS'
-  | 'EVENTS'
-  | 'PROCUREMENT'
-  | 'EXPENSES'
-  | 'PAYROLL'
-  | 'MANUAL';
+  | 'BILLING' | 'PAYMENT' | 'EXPENSE' | 'VENDOR' | 'FUND' | 'TAX' | 'TREASURY'
+  | 'MANUAL' | 'EVENTS' | 'SPORTS' | 'MARKETPLACE' | 'RESOURCE_BOOKING'
+  | 'DONATIONS' | 'HOME_SERVICES' | 'TRIPS' | 'SOCIAL_CIRCLES' | 'MAINTENANCE';
 
 export interface AccountTreeNode {
   id: number;
   code: string;
   name: string;
   accountType: AccountType;
-  level: number;
-  balance: number;
-  isSystem: boolean;
+  currentBalance: number;
+  isSystemAccount: boolean;
   children: AccountTreeNode[];
 }
 
@@ -29,22 +24,25 @@ export interface JournalLine {
   id: number;
   accountCode: string;
   accountName: string;
-  description?: string;
-  debit: number;
-  credit: number;
+  debitAmount: number;
+  creditAmount: number;
+  narration: string;
 }
 
 export interface JournalEntry {
   id: number;
   entryNumber: string;
   entryDate: string;
-  description: string;
-  status: JournalEntryStatus;
   entryType: JournalEntryType;
-  sourceModule?: SourceModule;
+  sourceModule: SourceModule;
+  sourceDocumentType: string;
+  sourceDocumentId: number;
+  narration: string;
+  totalDebit: number;
+  totalCredit: number;
+  status: JournalEntryStatus;
+  postedAt: string;
   lines: JournalLine[];
-  createdAt: string;
-  reversedEntryId?: number;
 }
 
 export interface JournalEntriesPage {
@@ -59,17 +57,16 @@ export interface TrialBalanceLine {
   accountCode: string;
   accountName: string;
   accountType: AccountType;
-  debit: number;
-  credit: number;
+  debitBalance: number;
+  creditBalance: number;
 }
 
 export interface TrialBalance {
-  fiscalYearId: number;
-  lines: TrialBalanceLine[];
+  fiscalYearName: string;
+  generatedAt: string;
   totalDebit: number;
   totalCredit: number;
-  balanced: boolean;
-  generatedAt: string;
+  lines: TrialBalanceLine[];
 }
 
 export interface FiscalYear {
@@ -77,37 +74,32 @@ export interface FiscalYear {
   name: string;
   startDate: string;
   endDate: string;
+  status: string;
   isCurrent: boolean;
-  status: 'OPEN' | 'CLOSED';
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
+// Backend controller: @RequestMapping("/api/cfbos/v1/accounting")
+// Mobile baseURL already includes /api — interceptor strips duplicate /api prefix.
+// These endpoints are scoped by JWT principal; no communityId param needed.
 
 const BASE = '/cfbos/v1/accounting';
 
 export const cfbosAccountingService = {
-  getAccountTree: (communityId: number): Promise<AccountTreeNode[]> =>
-    api.get(`${BASE}/accounts/tree`, { params: { communityId } }).then(r => r.data),
+  getAccountTree: (): Promise<AccountTreeNode[]> =>
+    api.get(`${BASE}/accounts`).then(r => r.data),
 
-  getJournalEntries: (
-    communityId: number,
-    from: string,
-    to: string,
-    page = 0,
-    size = 20,
-  ): Promise<JournalEntriesPage> =>
+  getJournalEntries: (from: string, to: string, page = 0, size = 20): Promise<JournalEntriesPage> =>
     api
-      .get(`${BASE}/journal`, { params: { communityId, from, to, page, size } })
+      .get(`${BASE}/journal-entries`, { params: { from, to, page, size, sort: 'entryDate,desc' } })
       .then(r => r.data),
 
-  getJournalEntry: (communityId: number, id: number): Promise<JournalEntry> =>
-    api.get(`${BASE}/journal/${id}`, { params: { communityId } }).then(r => r.data),
+  getJournalEntry: (id: number): Promise<JournalEntry> =>
+    api.get(`${BASE}/journal-entries/${id}`).then(r => r.data),
 
-  getFiscalYears: (communityId: number): Promise<FiscalYear[]> =>
-    api.get(`${BASE}/fiscal-years`, { params: { communityId } }).then(r => r.data),
+  getFiscalYears: (): Promise<FiscalYear[]> =>
+    api.get(`${BASE}/fiscal-years`).then(r => r.data),
 
-  getTrialBalance: (communityId: number, fiscalYearId: number): Promise<TrialBalance> =>
-    api
-      .get(`${BASE}/trial-balance`, { params: { communityId, fiscalYearId } })
-      .then(r => r.data),
+  getTrialBalance: (fiscalYearId: number): Promise<TrialBalance> =>
+    api.get(`${BASE}/trial-balance`, { params: { fiscalYearId } }).then(r => r.data),
 };

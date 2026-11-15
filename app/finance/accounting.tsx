@@ -6,16 +6,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { COLORS, SHADOWS, FONTS } from '@/constants/config';
+import { SHADOWS, FONTS } from '@/constants/config';
 import { THEME } from '@/constants/theme';
-import { useAuth } from '@/hooks/useAuth';
 import {
   cfbosAccountingService,
   AccountTreeNode,
   AccountType,
   JournalEntry,
-  TrialBalance,
-  FiscalYear,
 } from '@/services/cfbosAccountingService';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -61,27 +58,26 @@ function AccountNode({ node, depth = 0 }: { node: AccountTreeNode; depth?: numbe
       >
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {hasChildren && (
+            {hasChildren ? (
               <Ionicons
                 name={expanded ? 'chevron-down' : 'chevron-forward'}
                 size={12}
                 color={THEME.textSecondary}
               />
-            )}
-            {!hasChildren && <View style={{ width: 12 }} />}
+            ) : <View style={{ width: 12 }} />}
             <Text style={[s.acctCode, { color: ACCOUNT_TYPE_COLOR[node.accountType] }]}>
               {node.code}
             </Text>
-            {node.isSystem && (
+            {node.isSystemAccount && (
               <View style={s.sysBadge}>
                 <Text style={s.sysBadgeText}>SYS</Text>
               </View>
             )}
           </View>
-          <Text style={[s.acctName, { paddingLeft: hasChildren ? 18 : 18 }]}>{node.name}</Text>
+          <Text style={[s.acctName, { paddingLeft: 18 }]}>{node.name}</Text>
         </View>
-        <Text style={[s.acctBal, { color: node.balance < 0 ? THEME.lossDark : THEME.textPrimary }]}>
-          {fmt(node.balance)}
+        <Text style={[s.acctBal, { color: node.currentBalance < 0 ? THEME.lossDark : THEME.textPrimary }]}>
+          {fmt(node.currentBalance)}
         </Text>
       </TouchableOpacity>
       {expanded && hasChildren && node.children.map(child => (
@@ -91,10 +87,10 @@ function AccountNode({ node, depth = 0 }: { node: AccountTreeNode; depth?: numbe
   );
 }
 
-function ChartOfAccountsView({ communityId }: { communityId: number }) {
+function ChartOfAccountsView() {
   const { data: tree = [], isLoading, refetch } = useQuery({
-    queryKey: ['cfbos-coa', communityId],
-    queryFn: () => cfbosAccountingService.getAccountTree(communityId),
+    queryKey: ['cfbos-coa'],
+    queryFn: cfbosAccountingService.getAccountTree,
   });
 
   const [refreshing, setRefreshing] = useState(false);
@@ -121,7 +117,7 @@ function ChartOfAccountsView({ communityId }: { communityId: number }) {
                 {node.accountType}
               </Text>
               <Text style={[s.acctTypeBal, { color: ACCOUNT_TYPE_COLOR[node.accountType] }]}>
-                {fmt(node.balance)}
+                {fmt(node.currentBalance)}
               </Text>
             </View>
             {node.children.map(child => (
@@ -148,19 +144,19 @@ function statusBg(status: JournalEntry['status']): string {
   return THEME.surfaceMuted;
 }
 
-function JournalLedgerView({ communityId }: { communityId: number }) {
+function JournalLedgerView() {
   const today = new Date();
   const thirtyAgo = new Date(today);
   thirtyAgo.setDate(today.getDate() - 30);
 
-  const [from, setFromDate] = useState(isoDate(thirtyAgo));
-  const [to, setToDate] = useState(isoDate(today));
+  const [from] = useState(isoDate(thirtyAgo));
+  const [to]   = useState(isoDate(today));
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<JournalEntry | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['cfbos-journal', communityId, from, to, page],
-    queryFn: () => cfbosAccountingService.getJournalEntries(communityId, from, to, page, 20),
+    queryKey: ['cfbos-journal', from, to, page],
+    queryFn: () => cfbosAccountingService.getJournalEntries(from, to, page, 20),
   });
 
   const [refreshing, setRefreshing] = useState(false);
@@ -169,7 +165,7 @@ function JournalLedgerView({ communityId }: { communityId: number }) {
     try { await refetch(); } finally { setRefreshing(false); }
   }, [refetch]);
 
-  const entries = data?.content ?? [];
+  const entries    = data?.content ?? [];
   const totalPages = data?.totalPages ?? 1;
 
   if (selected) {
@@ -188,7 +184,7 @@ function JournalLedgerView({ communityId }: { communityId: number }) {
               </Text>
             </View>
           </View>
-          <Text style={s.detailDesc}>{selected.description}</Text>
+          <Text style={s.detailDesc}>{selected.narration}</Text>
           <Text style={s.detailMeta}>{dateStr(selected.entryDate)} · {selected.entryType}</Text>
           {selected.sourceModule && (
             <Text style={s.detailMeta}>Source: {selected.sourceModule}</Text>
@@ -207,11 +203,11 @@ function JournalLedgerView({ communityId }: { communityId: number }) {
                 <Text style={s.lineAcctCode}>{l.accountCode}</Text>
                 <Text style={s.lineAcctName}>{l.accountName}</Text>
               </View>
-              <Text style={[s.lineAmt, { color: l.debit > 0 ? '#2563EB' : THEME.textMuted }]}>
-                {l.debit > 0 ? fmt(l.debit) : '—'}
+              <Text style={[s.lineAmt, { color: l.debitAmount > 0 ? '#2563EB' : THEME.textMuted }]}>
+                {l.debitAmount > 0 ? fmt(l.debitAmount) : '—'}
               </Text>
-              <Text style={[s.lineAmt, { color: l.credit > 0 ? THEME.brandDark : THEME.textMuted }]}>
-                {l.credit > 0 ? fmt(l.credit) : '—'}
+              <Text style={[s.lineAmt, { color: l.creditAmount > 0 ? THEME.brandDark : THEME.textMuted }]}>
+                {l.creditAmount > 0 ? fmt(l.creditAmount) : '—'}
               </Text>
             </View>
           ))}
@@ -219,10 +215,10 @@ function JournalLedgerView({ communityId }: { communityId: number }) {
           <View style={s.lineRow}>
             <Text style={[s.lineAcctCode, { flex: 2, fontFamily: FONTS.bold }]}>Total</Text>
             <Text style={[s.lineAmt, { color: '#2563EB', fontFamily: FONTS.bold }]}>
-              {fmt(selected.lines.reduce((a, l) => a + l.debit, 0))}
+              {fmt(selected.totalDebit)}
             </Text>
             <Text style={[s.lineAmt, { color: THEME.brandDark, fontFamily: FONTS.bold }]}>
-              {fmt(selected.lines.reduce((a, l) => a + l.credit, 0))}
+              {fmt(selected.totalCredit)}
             </Text>
           </View>
         </View>
@@ -262,7 +258,7 @@ function JournalLedgerView({ communityId }: { communityId: number }) {
                     <Text style={[s.statusPillText, { color: statusColor(e.status) }]}>{e.status}</Text>
                   </View>
                 </View>
-                <Text style={s.journalDesc} numberOfLines={1}>{e.description}</Text>
+                <Text style={s.journalDesc} numberOfLines={1}>{e.narration}</Text>
                 <Text style={s.journalMeta}>{dateStr(e.entryDate)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={15} color={THEME.textSecondary} />
@@ -294,10 +290,10 @@ function JournalLedgerView({ communityId }: { communityId: number }) {
 
 // ─── Trial Balance ────────────────────────────────────────────────────────────
 
-function TrialBalanceView({ communityId }: { communityId: number }) {
+function TrialBalanceView() {
   const { data: fiscalYears = [], isLoading: loadingFY } = useQuery({
-    queryKey: ['cfbos-fy', communityId],
-    queryFn: () => cfbosAccountingService.getFiscalYears(communityId),
+    queryKey: ['cfbos-fy'],
+    queryFn: cfbosAccountingService.getFiscalYears,
   });
 
   const currentFY = useMemo(() => fiscalYears.find(y => y.isCurrent) ?? fiscalYears[0], [fiscalYears]);
@@ -305,21 +301,23 @@ function TrialBalanceView({ communityId }: { communityId: number }) {
   const activeFYId = selectedFYId ?? currentFY?.id ?? null;
 
   const { data: tb, isLoading: loadingTB } = useQuery({
-    queryKey: ['cfbos-tb', communityId, activeFYId],
-    queryFn: () => cfbosAccountingService.getTrialBalance(communityId, activeFYId!),
+    queryKey: ['cfbos-tb', activeFYId],
+    queryFn: () => cfbosAccountingService.getTrialBalance(activeFYId!),
     enabled: activeFYId !== null,
   });
 
   const groupedLines = useMemo(() => {
-    if (!tb) return {} as Record<AccountType, typeof tb.lines>;
+    if (!tb) return {} as Partial<Record<AccountType, typeof tb.lines>>;
     const order: AccountType[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'];
     const result: Partial<Record<AccountType, typeof tb.lines>> = {};
     for (const t of order) {
       const lines = tb.lines.filter(l => l.accountType === t);
       if (lines.length > 0) result[t] = lines;
     }
-    return result as Record<AccountType, typeof tb.lines>;
+    return result;
   }, [tb]);
+
+  const isBalanced = tb ? tb.totalDebit === tb.totalCredit : false;
 
   if (loadingFY || loadingTB) {
     return <ActivityIndicator color={THEME.brand} style={{ marginTop: 60 }} />;
@@ -339,9 +337,7 @@ function TrialBalanceView({ communityId }: { communityId: number }) {
               <Text style={[s.fyChipText, activeFYId === fy.id && s.fyChipTextActive]}>
                 {fy.name}
               </Text>
-              {fy.isCurrent && (
-                <View style={s.fyCurrentDot} />
-              )}
+              {fy.isCurrent && <View style={s.fyCurrentDot} />}
             </TouchableOpacity>
           ))}
         </View>
@@ -350,14 +346,14 @@ function TrialBalanceView({ communityId }: { communityId: number }) {
       {tb && (
         <>
           {/* Balance check banner */}
-          <View style={[s.balanceBanner, { backgroundColor: tb.balanced ? THEME.brandLight : THEME.lossLight }]}>
+          <View style={[s.balanceBanner, { backgroundColor: isBalanced ? THEME.brandLight : THEME.lossLight }]}>
             <Ionicons
-              name={tb.balanced ? 'checkmark-circle' : 'warning'}
+              name={isBalanced ? 'checkmark-circle' : 'warning'}
               size={16}
-              color={tb.balanced ? THEME.brandDark : THEME.lossDark}
+              color={isBalanced ? THEME.brandDark : THEME.lossDark}
             />
-            <Text style={[s.balanceBannerText, { color: tb.balanced ? THEME.brandDark : THEME.lossDark }]}>
-              {tb.balanced
+            <Text style={[s.balanceBannerText, { color: isBalanced ? THEME.brandDark : THEME.lossDark }]}>
+              {isBalanced
                 ? 'Books are balanced — Debits = Credits'
                 : `Out of balance by ₹${Math.abs(tb.totalDebit - tb.totalCredit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
             </Text>
@@ -369,7 +365,6 @@ function TrialBalanceView({ communityId }: { communityId: number }) {
               <View style={[s.tbTypeHeader, { borderLeftColor: ACCOUNT_TYPE_COLOR[type] }]}>
                 <Text style={[s.tbTypeLabel, { color: ACCOUNT_TYPE_COLOR[type] }]}>{type}</Text>
               </View>
-              {/* Column header */}
               <View style={s.tbRow}>
                 <Text style={[s.tbAcct, s.tbHeaderText]}>Account</Text>
                 <Text style={[s.tbAmt, s.tbHeaderText]}>Debit</Text>
@@ -381,11 +376,11 @@ function TrialBalanceView({ communityId }: { communityId: number }) {
                     <Text style={s.tbAcctCode}>{l.accountCode}</Text>
                     <Text style={s.tbAcctName}>{l.accountName}</Text>
                   </View>
-                  <Text style={[s.tbAmt, { color: l.debit > 0 ? '#2563EB' : THEME.textMuted }]}>
-                    {l.debit > 0 ? fmt(l.debit) : '—'}
+                  <Text style={[s.tbAmt, { color: l.debitBalance > 0 ? '#2563EB' : THEME.textMuted }]}>
+                    {l.debitBalance > 0 ? fmt(l.debitBalance) : '—'}
                   </Text>
-                  <Text style={[s.tbAmt, { color: l.credit > 0 ? THEME.brandDark : THEME.textMuted }]}>
-                    {l.credit > 0 ? fmt(l.credit) : '—'}
+                  <Text style={[s.tbAmt, { color: l.creditBalance > 0 ? THEME.brandDark : THEME.textMuted }]}>
+                    {l.creditBalance > 0 ? fmt(l.creditBalance) : '—'}
                   </Text>
                 </View>
               ))}
@@ -398,21 +393,25 @@ function TrialBalanceView({ communityId }: { communityId: number }) {
             <View style={{ flexDirection: 'row', gap: 24 }}>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={s.tbTotalMeta}>Total Debits</Text>
-                <Text style={[s.tbTotalAmt, { color: '#2563EB' }]}>{fmt(tb.totalDebit)}</Text>
+                <Text style={[s.tbTotalAmt, { color: '#FFFFFF' }]}>{fmt(tb.totalDebit)}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={s.tbTotalMeta}>Total Credits</Text>
-                <Text style={[s.tbTotalAmt, { color: THEME.brandDark }]}>{fmt(tb.totalCredit)}</Text>
+                <Text style={[s.tbTotalAmt, { color: '#FFFFFF' }]}>{fmt(tb.totalCredit)}</Text>
               </View>
             </View>
           </View>
         </>
       )}
+
+      {!tb && !loadingTB && (
+        <EmptyState icon="stats-chart-outline" text="Select a fiscal year to view the trial balance" />
+      )}
     </ScrollView>
   );
 }
 
-// ─── Empty state helper ───────────────────────────────────────────────────────
+// ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyState({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
   return (
@@ -433,8 +432,6 @@ const TABS: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] 
 
 export default function AccountingScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const communityId = user?.communityId as number;
   const [activeTab, setActiveTab] = useState<Tab>('coa');
 
   return (
@@ -467,16 +464,9 @@ export default function AccountingScreen() {
         ))}
       </View>
 
-      {/* Content */}
-      {communityId ? (
-        <>
-          {activeTab === 'coa'     && <ChartOfAccountsView communityId={communityId} />}
-          {activeTab === 'journal' && <JournalLedgerView communityId={communityId} />}
-          {activeTab === 'trial'   && <TrialBalanceView communityId={communityId} />}
-        </>
-      ) : (
-        <EmptyState icon="warning-outline" text="No community selected" />
-      )}
+      {activeTab === 'coa'     && <ChartOfAccountsView />}
+      {activeTab === 'journal' && <JournalLedgerView />}
+      {activeTab === 'trial'   && <TrialBalanceView />}
     </View>
   );
 }
@@ -524,14 +514,18 @@ const s = StyleSheet.create({
 
   listContent: { padding: 14, gap: 10, paddingBottom: 40 },
 
-  // Account tree
-  acctTypeGroup: { backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: THEME.border, overflow: 'hidden', ...SHADOWS.card },
+  acctTypeGroup: {
+    backgroundColor: '#FFFFFF', borderRadius: 12,
+    borderWidth: 1, borderColor: THEME.border,
+    overflow: 'hidden', ...SHADOWS.card,
+  },
   acctTypeHeader: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 8,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 10, gap: 8,
   },
   acctTypeDot: { width: 8, height: 8, borderRadius: 4 },
   acctTypeLabel: { flex: 1, fontSize: 12, fontWeight: '700', letterSpacing: 0.5, fontFamily: FONTS.semiBold },
-  acctTypeBal: { fontSize: 12, fontWeight: '700', fontFamily: FONTS.semiBold, fontVariant: ['tabular-nums'] },
+  acctTypeBal:   { fontSize: 12, fontWeight: '700', fontFamily: FONTS.semiBold, fontVariant: ['tabular-nums'] },
 
   acctRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -544,7 +538,6 @@ const s = StyleSheet.create({
   sysBadge: { backgroundColor: THEME.indigoLight, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 },
   sysBadgeText: { fontSize: 8, fontWeight: '700', color: THEME.indigo },
 
-  // Journal
   filterRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#FFFFFF', borderRadius: 10, padding: 12,
@@ -576,7 +569,6 @@ const s = StyleSheet.create({
   pageBtnDisabled: { backgroundColor: THEME.surfaceMuted, borderColor: THEME.border },
   pageText: { fontSize: 13, color: THEME.textSecondary, fontFamily: FONTS.medium },
 
-  // Journal detail
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
   backText: { fontSize: 13, fontWeight: '600', color: THEME.brandDark, fontFamily: FONTS.semiBold },
   detailCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.border },
@@ -593,7 +585,6 @@ const s = StyleSheet.create({
   lineAcctName: { fontSize: 11, color: THEME.textSecondary, fontFamily: FONTS.regular },
   lineAmt: { flex: 1, fontSize: 12, fontWeight: '600', textAlign: 'right', fontFamily: FONTS.semiBold, fontVariant: ['tabular-nums'] },
 
-  // Trial Balance
   balanceBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: 10, padding: 12, marginBottom: 4,
@@ -611,7 +602,11 @@ const s = StyleSheet.create({
   fyChipTextActive: { color: THEME.indigo },
   fyCurrentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.brand },
 
-  tbTypeGroup: { backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: THEME.border, overflow: 'hidden', marginBottom: 2 },
+  tbTypeGroup: {
+    backgroundColor: '#FFFFFF', borderRadius: 12,
+    borderWidth: 1, borderColor: THEME.border,
+    overflow: 'hidden', marginBottom: 2,
+  },
   tbTypeHeader: { borderLeftWidth: 3, paddingHorizontal: 12, paddingVertical: 8 },
   tbTypeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, fontFamily: FONTS.semiBold },
   tbRow: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: THEME.border },
@@ -628,9 +623,8 @@ const s = StyleSheet.create({
   },
   tbTotalLabel: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', fontFamily: FONTS.displayBold },
   tbTotalMeta:  { fontSize: 10, color: 'rgba(255,255,255,0.7)', fontFamily: FONTS.regular },
-  tbTotalAmt:   { fontSize: 15, fontWeight: '800', color: '#FFFFFF', fontFamily: FONTS.displayBold, fontVariant: ['tabular-nums'], marginTop: 2 },
+  tbTotalAmt:   { fontSize: 15, fontWeight: '800', fontFamily: FONTS.displayBold, fontVariant: ['tabular-nums'], marginTop: 2 },
 
-  // Empty
   emptyBox: { alignItems: 'center', paddingVertical: 48, gap: 8 },
   emptyText: { fontSize: 13, color: THEME.textMuted, fontFamily: FONTS.regular },
 });
