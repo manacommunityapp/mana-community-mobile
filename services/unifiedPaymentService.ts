@@ -5,7 +5,7 @@
 
 import api from './apiClient';
 
-export type PaymentGateway = 'CASHFREE' | 'RAZORPAY';
+export type PaymentGateway = 'CASHFREE' | 'RAZORPAY' | 'MANA_PAY' | 'UPI_DIRECT' | 'MANUAL';
 
 export type PaymentReferenceType =
   | 'MAINTENANCE_BILL'
@@ -39,6 +39,8 @@ export interface PaymentOrder {
   referenceType: PaymentReferenceType;
   referenceId: number;
   amount: number;
+  convenienceFeeAmount: number;
+  grossAmount: number;
   currency: string;
   status: PaymentOrderStatus;
   receiptNumber?: string;
