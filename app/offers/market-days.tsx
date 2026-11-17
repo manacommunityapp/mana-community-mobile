@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { COLORS } from '@/constants/config';
 import { PaymentModal } from '@/components/payment/PaymentModal';
 import { marketBazaarService } from '@/services/marketBazaarService';
-import { paymentService, type CashfreeOrderResponse } from '@/services/paymentService';
+import { unifiedPaymentService } from '@/services/unifiedPaymentService';
 import type { MarketApplicationDto, MarketEventDto, MarketStallDto } from '@/types/marketBazaar';
 
 type PaymentStatus = 'idle' | 'checkout' | 'verifying' | 'success' | 'failed';
@@ -34,7 +34,7 @@ export default function MarketDaysScreen() {
   const [category, setCategory] = useState('');
   const [products, setProducts] = useState('');
   const [compliance, setCompliance] = useState('');
-  const [paymentOrder, setPaymentOrder] = useState<CashfreeOrderResponse | null>(null);
+  const [paymentOrder, setPaymentOrder] = useState<any | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
@@ -97,8 +97,8 @@ export default function MarketDaysScreen() {
   const verifyPayment = async (orderId: string) => {
     setPaymentStatus('verifying');
     try {
-      const verified = await paymentService.verifyPayment(orderId);
-      if (verified.status === 'PAID') {
+      const verified = await unifiedPaymentService.verifyPayment(Number(orderId));
+      if (verified.status === 'SUCCESS') {
         setPaymentOrder(verified); setPaymentStatus('success');
         await qc.invalidateQueries({ queryKey: ['myMarketApplications'] });
         await qc.invalidateQueries({ queryKey: ['marketBazaarStalls'] });
