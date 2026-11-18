@@ -9,6 +9,7 @@ export default function FoodLayout() {
       <Stack.Screen name="grocery" />
       <Stack.Screen name="pantry" />
       <Stack.Screen name="dining" />
+      <Stack.Screen name="checkout" />
     </Stack>
   );
 }
