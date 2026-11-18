@@ -15,6 +15,7 @@ export default function TripsLayout() {
       <Stack.Screen name="create" options={{ title: '🗺️ Host a Community Trip' }} />
       <Stack.Screen name="roster" options={{ title: '📋 Passenger Manifest Roster' }} />
       <Stack.Screen name="flights" options={{ title: '✈ Search Flights' }} />
+      <Stack.Screen name="checkout" options={{ title: 'Trip Booking Payment' }} />
     </Stack>
   );
 }
