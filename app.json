@@ -89,7 +89,6 @@
           "faceIDPermission": "Use Face ID to sign in to Mana Community."
         }
       ],
-      "@sentry/react-native",
       "expo-image",
       "expo-localization",
       [
