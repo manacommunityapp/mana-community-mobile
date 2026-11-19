@@ -171,63 +171,123 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   login: async (data) => {
-    await authService.login(data);
-    try {
-      const user = await authService.getProfile();
-      const roles = computeRoles(user);
-      const roleSet = new Set(roles);
-      const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
-      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
-      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
-      const isVendor = roleSet.has('VENDOR');
-      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+    const res = await authService.login(data);
+    const resolvedName = res.fullName || res.userId || 'Neighbor';
+    const roles = res.role ? [res.role.toUpperCase()] : ['RESIDENT'];
+    const roleSet = new Set(roles);
+    const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
+    const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
+    const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
+    const isVendor = roleSet.has('VENDOR');
+    const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
 
-      set({
-        user,
-        isAuthenticated: true,
-        roles,
-        permissions: user.permissions || [],
-        enabledModules: user.enabledModules || [],
-        activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
-        isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
-      });
-    } catch {
-      set({ isAuthenticated: true });
-    }
+    const initialUser: UserProfileResponse = {
+      id: Number(res.userId) || 0,
+      name: resolvedName,
+      fullName: resolvedName,
+      email: res.email || '',
+      role: res.role || 'RESIDENT',
+      roles,
+      communityId: res.communityId,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      enabledModules: res.enabledModules || [],
+      permissions: [],
+    };
+
+    set({
+      user: initialUser,
+      isAuthenticated: true,
+      roles,
+      permissions: [],
+      enabledModules: initialUser.enabledModules || [],
+      activePersona: resolvePrimaryPersona(roles),
+      isAdmin,
+      isSuperAdmin,
+      isGuard,
+      isVendor,
+      isAnyAdmin,
+    });
+
+    // Background profile hydration
+    authService.getProfile()
+      .then((fullUser) => {
+        const fullRoles = computeRoles(fullUser);
+        const fullRoleSet = new Set(fullRoles);
+        set({
+          user: fullUser,
+          roles: fullRoles,
+          permissions: fullUser.permissions || [],
+          enabledModules: fullUser.enabledModules || [],
+          activePersona: resolvePrimaryPersona(fullRoles),
+          isAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('ADMIN') || fullRoleSet.has('COMMUNITY_ADMIN'),
+          isSuperAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('SUPERADMIN'),
+          isGuard: fullRoleSet.has('GUARD') || fullRoleSet.has('SECURITY_GUARD'),
+          isVendor: fullRoleSet.has('VENDOR'),
+          isAnyAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoles.some(r => r.includes('ADMIN')),
+        });
+      })
+      .catch(() => {});
   },
 
   register: async (data) => {
-    await authService.register(data);
-    try {
-      const user = await authService.getProfile();
-      const roles = computeRoles(user);
-      const roleSet = new Set(roles);
-      const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
-      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
-      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
-      const isVendor = roleSet.has('VENDOR');
-      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+    const res = await authService.register(data);
+    const resolvedName = res.fullName || res.userId || 'Neighbor';
+    const roles = res.role ? [res.role.toUpperCase()] : ['RESIDENT'];
+    const roleSet = new Set(roles);
+    const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
+    const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
+    const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
+    const isVendor = roleSet.has('VENDOR');
+    const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
 
-      set({
-        user,
-        isAuthenticated: true,
-        roles,
-        permissions: user.permissions || [],
-        enabledModules: user.enabledModules || [],
-        activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
-        isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
-      });
-    } catch {
-      set({ isAuthenticated: true });
-    }
+    const initialUser: UserProfileResponse = {
+      id: Number(res.userId) || 0,
+      name: resolvedName,
+      fullName: resolvedName,
+      email: res.email || '',
+      role: res.role || 'RESIDENT',
+      roles,
+      communityId: res.communityId,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      enabledModules: res.enabledModules || [],
+      permissions: [],
+    };
+
+    set({
+      user: initialUser,
+      isAuthenticated: true,
+      roles,
+      permissions: [],
+      enabledModules: initialUser.enabledModules || [],
+      activePersona: resolvePrimaryPersona(roles),
+      isAdmin,
+      isSuperAdmin,
+      isGuard,
+      isVendor,
+      isAnyAdmin,
+    });
+
+    // Background profile hydration
+    authService.getProfile()
+      .then((fullUser) => {
+        const fullRoles = computeRoles(fullUser);
+        const fullRoleSet = new Set(fullRoles);
+        set({
+          user: fullUser,
+          roles: fullRoles,
+          permissions: fullUser.permissions || [],
+          enabledModules: fullUser.enabledModules || [],
+          activePersona: resolvePrimaryPersona(fullRoles),
+          isAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('ADMIN') || fullRoleSet.has('COMMUNITY_ADMIN'),
+          isSuperAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('SUPERADMIN'),
+          isGuard: fullRoleSet.has('GUARD') || fullRoleSet.has('SECURITY_GUARD'),
+          isVendor: fullRoleSet.has('VENDOR'),
+          isAnyAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoles.some(r => r.includes('ADMIN')),
+        });
+      })
+      .catch(() => {});
   },
 
   logout: async () => {
