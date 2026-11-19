@@ -7,8 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 const CARDS = [
   { title: 'Court Subscriptions', subtitle: 'Recurring slot bookings', icon: 'calendar-outline' as const, route: '/sports-ops/subscriptions' },
   { title: 'Open Play', subtitle: 'Join or create sessions', icon: 'people-outline' as const, route: '/sports-ops/open-play' },
+  { title: 'Court Waitlist', subtitle: 'Track your waitlist position', icon: 'time-outline' as const, route: '/sports-ops/waitlist' },
+  { title: 'No-Show Deposits', subtitle: 'View held & released deposits', icon: 'wallet-outline' as const, route: '/sports-ops/deposits' },
   { title: 'Player Ratings', subtitle: 'Rate & review players', icon: 'star-outline' as const, route: '/sports-ops/ratings' },
   { title: 'Coaching Packages', subtitle: 'Enroll in coaching sessions', icon: 'school-outline' as const, route: '/sports-ops/coaching' },
+  { title: 'Referee Assignments', subtitle: 'My referee schedule', icon: 'ribbon-outline' as const, route: '/sports-ops/referees' },
+  { title: 'Tournament Sponsors', subtitle: 'View sponsors by tournament', icon: 'business-outline' as const, route: '/sports-ops/sponsors' },
+  { title: 'Merchandise', subtitle: 'Shop & order tournament merch', icon: 'bag-outline' as const, route: '/sports-ops/merchandise' },
 ];
 
 export default function SportsOpsIndex() {

@@ -81,6 +81,67 @@ export interface CoachPackageEnrollment {
   active: boolean;
 }
 
+export interface CourtSlotWaitlist {
+  id: number;
+  communityId: number;
+  bookingId: number;
+  userId: number;
+  position: number;
+  notified: boolean;
+  notifiedAt?: string;
+  expiresAt?: string;
+}
+
+export interface RefereeAssignment {
+  id: number;
+  communityId: number;
+  refereeId: number;
+  eventId: number;
+  eventType: string;
+  sport: string;
+  assignedAt: string;
+  confirmed: boolean;
+  confirmedAt?: string;
+  fee?: number;
+  notes?: string;
+}
+
+export interface TournamentSponsor {
+  id: number;
+  communityId: number;
+  tournamentId: number;
+  sponsorName: string;
+  tier?: string;
+  amount?: number;
+  status: string;
+  contactName?: string;
+  contactEmail?: string;
+  benefits?: string;
+  createdAt: string;
+}
+
+export interface TournamentMerchandise {
+  id: number;
+  tournamentId: number;
+  itemName: string;
+  description?: string;
+  price: number;
+  stockQty: number;
+  imageKey?: string;
+  isAvailable: boolean;
+}
+
+export interface MerchandiseOrder {
+  id: number;
+  merchandiseId: number;
+  userId: number;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  paymentRef?: string;
+  createdAt: string;
+}
+
 const BASE = '/api/sports-ops';
 
 export const sportsOpsService = {
@@ -94,4 +155,15 @@ export const sportsOpsService = {
   listPackages: () => apiClient.get<CoachPackage[]>(`${BASE}/coach-packages`).then(r => r.data),
   enrollPackage: (packageId: number) => apiClient.post<CoachPackageEnrollment>(`${BASE}/coach-packages/${packageId}/enroll`, {}).then(r => r.data),
   listEnrollments: () => apiClient.get<CoachPackageEnrollment[]>(`${BASE}/coach-packages/enrollments`).then(r => r.data),
+  // Waitlist
+  myWaitlist: () => apiClient.get<CourtSlotWaitlist[]>(`${BASE}/waitlist/my`).then(r => r.data),
+  // Referees
+  myRefereeAssignments: () => apiClient.get<RefereeAssignment[]>(`${BASE}/referees/my`).then(r => r.data),
+  confirmReferee: (id: number) => apiClient.put(`${BASE}/referees/${id}/confirm`, {}).then(r => r.data),
+  // Sponsors
+  listSponsors: (tournamentId: number) => apiClient.get<TournamentSponsor[]>(`${BASE}/sponsors?tournamentId=${tournamentId}`).then(r => r.data),
+  // Merchandise
+  listMerchandise: (tournamentId: number) => apiClient.get<TournamentMerchandise[]>(`${BASE}/merchandise?tournamentId=${tournamentId}`).then(r => r.data),
+  orderMerchandise: (merchandiseId: number, quantity: number) => apiClient.post<MerchandiseOrder>(`${BASE}/merchandise/${merchandiseId}/order`, { quantity }).then(r => r.data),
+  myMerchandiseOrders: () => apiClient.get<MerchandiseOrder[]>(`${BASE}/merchandise/my-orders`).then(r => r.data),
 };
