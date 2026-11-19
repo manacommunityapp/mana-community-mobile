@@ -1,164 +1,145 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, SafeAreaView,
-} from 'react-native';
-import { foodOpsService, DeliverySlotDto } from '@/services/foodOpsService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { foodOpsService, DeliverySlot, SlotStatus } from '@/services/foodOpsService';
 
-function formatDate(d: Date): string {
-  return d.toISOString().split('T')[0];
-}
-
-function dateLabel(d: Date): string {
-  const today = new Date();
-  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Tomorrow';
-  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
-const STATUS_COLOR: Record<string, string> = {
-  OPEN: '#059669',
-  FULL: '#DC2626',
-  CUTOFF_PASSED: '#6B7280',
-  CANCELLED: '#6B7280',
+const statusColor: Record<SlotStatus, { bg: string; text: string }> = {
+  OPEN: { bg: '#D1FAE5', text: '#065F46' },
+  FULL: { bg: '#FEE2E2', text: '#991B1B' },
+  CUTOFF: { bg: '#FEF3C7', text: '#92400E' },
+  CANCELLED: { bg: '#F3F4F6', text: '#6B7280' },
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  OPEN: 'Available',
-  FULL: 'Full',
-  CUTOFF_PASSED: 'Cutoff passed',
-  CANCELLED: 'Cancelled',
-};
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
 
-export default function DeliverySlotsScreen() {
-  const today = new Date();
-  const dates = [today, new Date(today.getTime() + 86400000), new Date(today.getTime() + 172800000)];
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [slots, setSlots] = useState<DeliverySlotDto[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function SlotsScreen() {
+  const router = useRouter();
+  const [date] = useState(todayStr());
+  const [slots, setSlots] = useState<DeliverySlot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [booking, setBooking] = useState<number | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    // communityId and vendorId would come from route params in production
-    foodOpsService.getDeliverySlots(0, 0, formatDate(selectedDate))
-      .then(setSlots)
-      .catch(() => setSlots([]))
-      .finally(() => setLoading(false));
-  }, [formatDate(selectedDate)]);
+  const communityId = 1;
 
-  const handleBook = (slot: DeliverySlotDto) => {
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    try {
+      setSlots(await foodOpsService.getAvailableSlots(communityId, date));
+    } catch {
+      Alert.alert('Error', 'Failed to load delivery slots');
+    } finally {
+      if (isRefresh) setRefreshing(false); else setLoading(false);
+    }
+  }, [date]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const book = async (slot: DeliverySlot) => {
     if (slot.status !== 'OPEN') return;
-    Alert.alert(
-      'Book Delivery Slot',
-      `Confirm slot: ${slot.slotStart} – ${slot.slotEnd} on ${slot.slotDate}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            setBooking(slot.id);
-            try {
-              await foodOpsService.bookSlot(slot.id);
-              Alert.alert('Booked', 'Your delivery slot has been booked.');
-              setSlots(prev => prev.map(s => s.id === slot.id ? { ...s, bookedCount: s.bookedCount + 1, status: s.bookedCount + 1 >= s.capacity ? 'FULL' : s.status } : s));
-            } catch (e: any) {
-              Alert.alert('Error', e?.response?.data?.message ?? 'Failed to book slot.');
-            } finally {
-              setBooking(null);
-            }
-          },
-        },
-      ]
-    );
+    Alert.alert('Confirm Booking', `Book slot ${slot.startTime}–${slot.endTime}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Book', onPress: async () => {
+          setBooking(slot.id);
+          try {
+            await foodOpsService.bookSlot(slot.id);
+            Alert.alert('Booked', 'Your slot has been confirmed');
+            load();
+          } catch {
+            Alert.alert('Failed', 'Could not book this slot — it may be full');
+          } finally {
+            setBooking(null);
+          }
+        }
+      },
+    ]);
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.heading}>Delivery Slots</Text>
+  if (loading) {
+    return <SafeAreaView style={styles.center}><ActivityIndicator size="large" color="#3B82F6" /></SafeAreaView>;
+  }
 
-      {/* Date selector */}
-      <View style={styles.dateRow}>
-        {dates.map(d => (
-          <TouchableOpacity
-            key={formatDate(d)}
-            style={[styles.dateChip, formatDate(d) === formatDate(selectedDate) && styles.dateChipActive]}
-            onPress={() => setSelectedDate(d)}
-          >
-            <Text style={[styles.dateChipText, formatDate(d) === formatDate(selectedDate) && styles.dateChipTextActive]}>
-              {dateLabel(d)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+          <Ionicons name="arrow-back" size={22} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Delivery Slots</Text>
+        <Text style={styles.dateLabel}>{date}</Text>
       </View>
 
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#2563EB" />
-      ) : slots.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>No slots available for this date</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
-          {slots.map(slot => {
-            const fillPct = slot.capacity > 0 ? Math.min(1, slot.bookedCount / slot.capacity) : 0;
-            const isBookable = slot.status === 'OPEN';
+      <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}>
+        {slots.length === 0 ? (
+          <Text style={styles.empty}>No slots available for today</Text>
+        ) : (
+          slots.map(slot => {
+            const sc = statusColor[slot.status];
+            const pct = slot.capacity > 0 ? (slot.bookedCount / slot.capacity) : 0;
             return (
               <View key={slot.id} style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.timeText}>{slot.slotStart} – {slot.slotEnd}</Text>
-                  <View style={[styles.badge, { backgroundColor: STATUS_COLOR[slot.status] + '22' }]}>
-                    <Text style={[styles.badgeText, { color: STATUS_COLOR[slot.status] }]}>
-                      {STATUS_LABEL[slot.status]}
-                    </Text>
+                <View style={styles.cardRow}>
+                  <View>
+                    <Text style={styles.time}>{slot.startTime} – {slot.endTime}</Text>
+                    <Text style={styles.vendor}>Vendor #{slot.vendorId}</Text>
+                  </View>
+                  <View style={[styles.badge, { backgroundColor: sc.bg }]}>
+                    <Text style={[styles.badgeText, { color: sc.text }]}>{slot.status}</Text>
                   </View>
                 </View>
-                <Text style={styles.cutoff}>Cutoff: {slot.cutoffAt}</Text>
-                {/* Availability bar */}
-                <View style={styles.barBg}>
-                  <View style={[styles.barFill, { width: `${fillPct * 100}%`, backgroundColor: fillPct > 0.8 ? '#DC2626' : '#059669' }]} />
+
+                {/* capacity bar */}
+                <View style={styles.barRow}>
+                  <Text style={styles.barLabel}>{slot.bookedCount}/{slot.capacity} booked</Text>
                 </View>
-                <Text style={styles.capText}>{slot.bookedCount}/{slot.capacity} booked</Text>
+                <View style={styles.barBg}>
+                  <View style={[styles.barFill, { width: `${Math.min(pct * 100, 100)}%` as `${number}%`, backgroundColor: pct >= 0.9 ? '#EF4444' : pct >= 0.6 ? '#F59E0B' : '#10B981' }]} />
+                </View>
+
                 <TouchableOpacity
-                  style={[styles.bookBtn, !isBookable && styles.bookBtnDisabled]}
-                  onPress={() => handleBook(slot)}
-                  disabled={!isBookable || booking === slot.id}
+                  onPress={() => book(slot)}
+                  disabled={slot.status !== 'OPEN' || booking === slot.id}
+                  style={[styles.bookBtn, slot.status !== 'OPEN' && styles.bookBtnDisabled]}
                 >
-                  {booking === slot.id
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.bookBtnText}>Book this slot</Text>
-                  }
+                  <Text style={[styles.bookBtnText, slot.status !== 'OPEN' && styles.bookBtnTextDisabled]}>
+                    {booking === slot.id ? 'Booking…' : 'Book Slot'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             );
-          })}
-        </ScrollView>
-      )}
+          })
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  heading: { fontSize: 20, fontWeight: '700', color: '#111827', paddingHorizontal: 16, paddingTop: 16 },
-  dateRow: { flexDirection: 'row', gap: 8, padding: 16 },
-  dateChip: { flex: 1, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingVertical: 8, alignItems: 'center', backgroundColor: '#fff' },
-  dateChipActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
-  dateChipText: { fontSize: 13, fontWeight: '600', color: '#374151' },
-  dateChipTextActive: { color: '#fff' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { fontSize: 15, color: '#6B7280' },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  timeText: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
-  cutoff: { fontSize: 12, color: '#6B7280', marginBottom: 10 },
-  barBg: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 999, overflow: 'hidden', marginBottom: 4 },
-  barFill: { height: 6, borderRadius: 999 },
-  capText: { fontSize: 12, color: '#6B7280', marginBottom: 12 },
-  bookBtn: { backgroundColor: '#2563EB', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
-  bookBtnDisabled: { backgroundColor: '#9CA3AF' },
-  bookBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  safe: { flex: 1, backgroundColor: '#F9FAFB' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header: { padding: 16, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  back: { marginBottom: 8 },
+  title: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  dateLabel: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  scroll: { padding: 16, gap: 12 },
+  empty: { textAlign: 'center', marginTop: 60, color: '#9CA3AF', fontSize: 15 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 2 },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  time: { fontSize: 16, fontWeight: '600', color: '#111827' },
+  vendor: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+  badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
+  badgeText: { fontSize: 11, fontWeight: '700' },
+  barRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  barLabel: { fontSize: 12, color: '#6B7280' },
+  barBg: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, marginBottom: 12 },
+  barFill: { height: 6, borderRadius: 3 },
+  bookBtn: { backgroundColor: '#3B82F6', borderRadius: 10, padding: 12, alignItems: 'center' },
+  bookBtnDisabled: { backgroundColor: '#E5E7EB' },
+  bookBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  bookBtnTextDisabled: { color: '#9CA3AF' },
 });
