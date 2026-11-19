@@ -8,6 +8,7 @@ export default function HealthcareLayout() {
       <Stack.Screen name="referrals" options={{ title: 'Referrals' }} />
       <Stack.Screen name="credentials" options={{ title: 'Provider Credentials' }} />
       <Stack.Screen name="diagnostics" options={{ title: 'Diagnostics SLA' }} />
+      <Stack.Screen name="caregiver" options={{ title: 'Caregiver Access' }} />
     </Stack>
   );
 }
