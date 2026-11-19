@@ -133,13 +133,14 @@ function SlaBreachesTab() {
       data={items}
       keyExtractor={i => String(i.id)}
       contentContainerStyle={{ padding: 16 }}
-      ListHeaderComponent={
-        items.length > 0 ? (
-          <View style={styles.alertBanner}>
-            <Ionicons name="warning-outline" size={16} color="#dc2626" />
-            <Text style={styles.alertText}>{items.length} SLA breach{items.length > 1 ? 'es' : ''} detected</Text>
-          </View>
-        ) : null
+      ListHeaderComponent={items.length > 0
+        ? () => (
+            <View style={styles.alertBanner}>
+              <Ionicons name="warning-outline" size={16} color="#dc2626" />
+              <Text style={styles.alertText}>{items.length} SLA breach{items.length > 1 ? 'es' : ''} detected</Text>
+            </View>
+          )
+        : undefined
       }
       ListEmptyComponent={
         <View style={styles.empty}>
