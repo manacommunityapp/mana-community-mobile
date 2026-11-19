@@ -36,6 +36,14 @@ const MODULES: QuickModule[] = [
     badge: '⚡ Popular',
   },
   {
+    id: 'interiors',
+    title: 'Interior Designers',
+    subtitle: 'Plan, quote & track renovation work',
+    route: '/interiors',
+    emoji: '🛋️',
+    gradient: ['#0F766E', '#14B8A6'],
+  },
+  {
     id: 'my-help',
     title: 'My Domestic Staff',
     subtitle: 'Maid, Cook, Driver & Nanny',
