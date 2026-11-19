@@ -12,6 +12,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import {
   documentService,
@@ -92,27 +93,18 @@ export function DocumentUploadSheet({
   };
 
   const handlePickFile = async () => {
-    try {
-      // Dynamically require expo-document-picker if available
-      const DocumentPicker = require('expo-document-picker');
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*', 'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-        copyToCacheDirectory: true,
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/*', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      copyToCacheDirectory: true,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      setPickedFile({
+        uri: asset.uri,
+        name: asset.name ?? 'document',
+        type: asset.mimeType ?? 'application/octet-stream',
       });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        setPickedFile({
-          uri: asset.uri,
-          name: asset.name ?? 'document',
-          type: asset.mimeType ?? 'application/octet-stream',
-        });
-      }
-    } catch {
-      Alert.alert(
-        'File Picker Unavailable',
-        'expo-document-picker is required to pick files. Please install it and rebuild.',
-      );
     }
   };
 
