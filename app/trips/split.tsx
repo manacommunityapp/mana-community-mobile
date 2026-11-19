@@ -11,7 +11,7 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -626,6 +626,22 @@ export default function TripSplitScreen() {
               <Text style={styles.settleNowText}>Settle Up</Text>
             </TouchableOpacity>
           </View>
+
+          {/* P2P UPI Collect entry point */}
+          <Link
+            href={{ pathname: '/trips/p2p', params: { tripId, tripTitle } }}
+            asChild
+          >
+            <TouchableOpacity style={styles.p2pBanner}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.p2pBannerTitle}>P2P UPI Collect</Text>
+                <Text style={styles.p2pBannerSub}>
+                  Paid for someone's trip fee? Send them a UPI collect request.
+                </Text>
+              </View>
+              <Ionicons name="phone-portrait-outline" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
+          </Link>
 
           {settlements.length === 0 ? (
             <View style={styles.emptyWrap}>
@@ -1426,6 +1442,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
+  },
+  p2pBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+  },
+  p2pBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  p2pBannerSub: {
+    fontSize: 11,
+    color: '#3B82F6',
+    marginTop: 2,
   },
   transferCard: {
     flexDirection: 'row',

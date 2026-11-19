@@ -17,6 +17,7 @@ import {
   MaintenanceBillDto,
   PaymentVerificationRequest,
 } from '@/services/maintenanceDuesService';
+import { PaymentStatusBadge } from '@/components/payment/PaymentStatusBadge';
 
 const FINANCE_HUBS = [
   { emoji: '🏦', label: 'Treasury',   color: THEME.indigo,   bg: THEME.indigoLight, route: '/finance/society-dashboard' },
@@ -326,11 +327,7 @@ export default function MaintenanceDuesScreen() {
                 <Text style={s.billTitle}>{activeBill.billNumber || activeBill.monthYear + ' Maintenance'}</Text>
                 <Text style={s.billSubtitle}>Due Date: {activeBill.dueDate ? new Date(activeBill.dueDate).toLocaleDateString() : '15th of month'}</Text>
               </View>
-              <View style={[s.billStatusPill, activeBill.status === 'PAID' ? s.pillPaid : s.pillPending]}>
-                <Text style={[s.billStatusPillText, activeBill.status === 'PAID' ? s.textPaid : s.textPending]}>
-                  {activeBill.status === 'PAID' ? 'PAID' : 'PENDING'}
-                </Text>
-              </View>
+              <PaymentStatusBadge status={activeBill.status === 'PAID' ? 'PAID' : 'PENDING'} />
             </View>
 
             <View style={s.chargesDivider} />
