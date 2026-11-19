@@ -190,6 +190,42 @@ export default function MaintenanceScreen() {
         </View>
       </View>
 
+      {/* Operations Quick Links Strip */}
+      <View style={styles.opsHubRow}>
+        <TouchableOpacity
+          style={[styles.opsHubBtn, { borderColor: '#FDE68A', backgroundColor: '#FFFBEB' }]}
+          onPress={() => router.push('/maintenance/generator')}
+        >
+          <Ionicons name="flash" size={14} color="#D97706" />
+          <View style={styles.opsHubTextBox}>
+            <Text style={[styles.opsHubTitle, { color: '#92400E' }]}>DG Ops</Text>
+            <Text style={styles.opsHubSub}>Fuel & Runs</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.opsHubBtn, { borderColor: '#BAE6FD', backgroundColor: '#F0F9FF' }]}
+          onPress={() => router.push('/maintenance/water')}
+        >
+          <Ionicons name="water" size={14} color="#0284C7" />
+          <View style={styles.opsHubTextBox}>
+            <Text style={[styles.opsHubTitle, { color: '#0369A1' }]}>Water</Text>
+            <Text style={styles.opsHubSub}>Sumps & Tanks</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.opsHubBtn, { borderColor: '#C7D2FE', backgroundColor: '#EEF2FF' }]}
+          onPress={() => router.push('/maintenance')}
+        >
+          <Ionicons name="grid" size={14} color="#4F46E5" />
+          <View style={styles.opsHubTextBox}>
+            <Text style={[styles.opsHubTitle, { color: '#3730A3' }]}>Ops Hub</Text>
+            <Text style={styles.opsHubSub}>Utilities</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* Search & Filter */}
       <View style={styles.searchBar}>
         <Ionicons name="search" size={16} color="#94A3B8" />
@@ -396,6 +432,20 @@ const styles = StyleSheet.create({
   kpiCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', ...SHADOWS.sm },
   kpiVal: { fontSize: 18, fontWeight: '800', color: '#4F46E5' },
   kpiLabel: { fontSize: 10, color: '#64748B', marginTop: 2, fontWeight: '600' },
+  opsHubRow: { flexDirection: 'row', marginHorizontal: 16, gap: 8, marginBottom: 10 },
+  opsHubBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 6,
+  },
+  opsHubTextBox: { flex: 1 },
+  opsHubTitle: { fontSize: 11, fontWeight: '800' },
+  opsHubSub: { fontSize: 9, color: '#64748B', marginTop: 1 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', marginHorizontal: 16, paddingHorizontal: 12, height: 38, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 8 },
   searchInput: { flex: 1, fontSize: 12, color: '#0F172A', marginLeft: 6 },
   filterChipRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 10 },
