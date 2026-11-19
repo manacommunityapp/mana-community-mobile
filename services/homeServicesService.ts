@@ -443,77 +443,52 @@ export const homeServicesService = {
   },
 
   /**
-   * POST /v1/home-services/bookings with hybrid fallback
+   * POST /v1/home-services/bookings
    */
   async bookWorker(data: HomeServiceBookingRequest): Promise<{ bookingId: string; status: string }> {
     const slaHours = data.slaHours || 24;
     const slaDueAt = new Date(Date.now() + slaHours * 3600000).toISOString();
-    const completionOtp = String(Math.floor(1000 + Math.random() * 9000));
 
-    try {
-      const payload = {
-        workerId: String(data.workerId),
-        categoryId: data.category,
-        packageId: data.packageId,
-        notes: data.requirementsNotes || `${data.category} request`,
-        timeSlot: data.timeSlot,
-        slaHours,
-      };
+    const payload = {
+      workerId: String(data.workerId),
+      categoryId: data.category,
+      packageId: data.packageId,
+      notes: data.requirementsNotes || `${data.category} request`,
+      timeSlot: data.timeSlot,
+      slaHours,
+    };
 
-      const res = await api.post<{ id?: string; bookingId?: string; status?: string }>(
-        '/v1/home-services/bookings',
-        payload,
-      );
+    const res = await api.post<{ id?: string; bookingId?: string; status?: string; completionOtp?: string }>(
+      '/v1/home-services/bookings',
+      payload,
+    );
 
-      const bookingId = res.data?.bookingId || res.data?.id || `BK-${Date.now()}`;
-      const status = res.data?.status || 'CONFIRMED';
-
-      LOCAL_BOOKINGS.unshift({
-        id: bookingId,
-        workerId: data.workerId,
-        providerName: data.providerName || 'Service Provider',
-        category: data.category,
-        packageId: data.packageId,
-        date: data.slotDate || new Date().toISOString().split('T')[0],
-        timeSlot: data.timeSlot,
-        status: 'CONFIRMED',
-        phone: data.phone || '+91 98451 23450',
-        issue: data.requirementsNotes || `${data.category} Service Request`,
-        slaHours,
-        slaDueAt,
-        slaBreached: false,
-        completionOtp,
-        paymentStatus: 'PENDING',
-        createdAt: new Date().toISOString(),
-      });
-
-      return { bookingId, status };
-    } catch (err) {
-      secureLog.warn('[homeServicesService] API booking failed; generating resilient local confirmation', err);
-      const bookingId = `BK-${Math.floor(1000 + Math.random() * 9000)}`;
-      const worker = FALLBACK_WORKERS.find(w => String(w.id) === String(data.workerId));
-
-      LOCAL_BOOKINGS.unshift({
-        id: bookingId,
-        workerId: data.workerId,
-        providerName: data.providerName || worker?.name || 'Service Provider',
-        category: data.category,
-        packageId: data.packageId,
-        date: data.slotDate || new Date().toISOString().split('T')[0],
-        timeSlot: data.timeSlot,
-        status: 'CONFIRMED',
-        phone: data.phone || worker?.phone || '+91 98451 23450',
-        issue: data.requirementsNotes || `${data.category} Service Request`,
-        slaHours,
-        slaDueAt,
-        slaBreached: false,
-        completionOtp,
-        paymentStatus: 'PENDING',
-        createdAt: new Date().toISOString(),
-      });
-
-      return { bookingId, status: 'CONFIRMED' };
+    const bookingId = res.data?.bookingId || res.data?.id;
+    if (!bookingId) {
+      throw new Error('Booking failed: server did not return a booking ID');
     }
+    const status = res.data?.status || 'CONFIRMED';
+
+    LOCAL_BOOKINGS.unshift({
+      id: bookingId,
+      workerId: data.workerId,
+      providerName: data.providerName || 'Service Provider',
+      category: data.category,
+      packageId: data.packageId,
+      date: data.slotDate || new Date().toISOString().split('T')[0],
+      timeSlot: data.timeSlot,
+      status: 'CONFIRMED',
+      phone: data.phone || '+91 98451 23450',
+      issue: data.requirementsNotes || `${data.category} Service Request`,
+      slaHours,
+      slaDueAt,
+      slaBreached: false,
+      completionOtp: res.data?.completionOtp || '',
+      paymentStatus: 'PENDING',
+      createdAt: new Date().toISOString(),
+    });
+
+    return { bookingId, status };
   },
 
   /**
