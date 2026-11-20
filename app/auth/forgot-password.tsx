@@ -6,22 +6,28 @@ import {
 import { useRouter } from 'expo-router';
 import { authService } from '@/services/authService';
 import { COLORS } from '@/constants/config';
+import { useRateLimitHandler } from '@/hooks/useRateLimitHandler';
+import { RateLimitBanner } from '@/components/security/RateLimitBanner';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail]   = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { rateLimitState, handleError: handleRateLimit, isLimited } = useRateLimitHandler();
 
   const handleSubmit = async () => {
     if (!email.trim()) { Alert.alert('Validation', 'Please enter your email.'); return; }
+    if (isLimited) return;
     setLoading(true);
     try {
       await authService.forgotPassword(email.trim().toLowerCase());
       Alert.alert('Email Sent', 'Check your inbox for a password reset link. It expires in 15 minutes.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch {
-      Alert.alert('Error', 'Could not send reset email. Please try again.');
+    } catch (err: unknown) {
+      if (!handleRateLimit(err)) {
+        Alert.alert('Error', 'Could not send reset email. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -49,10 +55,18 @@ export default function ForgotPasswordScreen() {
         />
       </View>
 
+      {rateLimitState && (
+        <RateLimitBanner
+          secondsRemaining={rateLimitState.secondsRemaining}
+          totalSeconds={300}
+          type={rateLimitState.type}
+        />
+      )}
+
       <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
+        style={[styles.button, (loading || isLimited) && styles.buttonDisabled]}
         onPress={handleSubmit}
-        disabled={loading}
+        disabled={loading || isLimited}
         activeOpacity={0.8}
       >
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send Reset Link</Text>}

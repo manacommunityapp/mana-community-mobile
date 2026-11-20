@@ -14,9 +14,10 @@ import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import { COLORS } from '@/constants/config';
 import { safeFormat, formatTournamentDateRange } from '@/utils/dateUtils';
 import { shareTournament } from '@/utils/sportsShare';
+import { TournamentBracketView } from '@/components/sports/TournamentBracketView';
 import type { DashboardEventCardDto } from '@/types/api';
 
-const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings'] as const;
+const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings', 'Brackets'] as const;
 type Tab = typeof TABS[number];
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -459,16 +460,25 @@ export default function TournamentDetailScreen() {
         {tab === 'Standings' && (
           <View style={scr.section}>
             {['KNOCKOUT'].includes(tournament.format) ? (
-              <View style={scr.card}>
-                <Text style={scr.cardTitle}>Bracket</Text>
-                <Text style={scr.desc}>
-                  Knockout bracket view is available once the tournament begins and matches are played.
-                  Track progress in the Schedule tab.
-                </Text>
-              </View>
+              <TournamentBracketView
+                tournamentId={Number(id)}
+                matches={matches}
+                loading={loadingMatches}
+              />
             ) : (
               <StandingsTable tournamentId={Number(id)} />
             )}
+          </View>
+        )}
+
+        {/* ── BRACKETS ── */}
+        {tab === 'Brackets' && (
+          <View style={scr.section}>
+            <TournamentBracketView
+              tournamentId={Number(id)}
+              matches={matches}
+              loading={loadingMatches}
+            />
           </View>
         )}
 
