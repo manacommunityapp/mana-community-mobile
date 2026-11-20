@@ -38,6 +38,8 @@ const CATEGORIES: Category[] = [
   { key: 'trips', label: 'Trips', icon: 'airplane', route: '/trips', color: '#1D4ED8', bgColor: '#EFF6FF' },
   { key: 'security', label: 'Security', icon: 'shield-checkmark', route: '/security', color: '#B45309', bgColor: '#FFFBEB' },
   { key: 'academy', label: 'Academy', icon: 'school', route: '/academy', color: '#7E22CE', bgColor: '#FAF5FF' },
+  { key: 'social', label: 'Social', icon: 'chatbubbles', route: '/social', color: '#0891B2', bgColor: '#ECFEFF' },
+  { key: 'devices', label: 'Devices', icon: 'hardware-chip', route: '/devices', color: '#64748B', bgColor: '#F1F5F9' },
   { key: 'more', label: 'More', icon: 'apps', route: '/more', color: '#475569', bgColor: '#F8FAFC' },
 ];
 

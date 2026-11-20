@@ -65,6 +65,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   { key: 'book', label: 'Book Facility', icon: 'calendar-outline', route: '/facilities', color: '#4F46E5' },
   { key: 'complaint', label: 'Raise Issue', icon: 'chatbubble-ellipses-outline', route: '/helpdesk', color: '#D97706' },
   { key: 'visitor', label: 'Add Visitor', icon: 'person-add-outline', route: '/security/visitor', color: '#7C3AED' },
+  { key: 'devices', label: 'Devices', icon: 'hardware-chip-outline', route: '/devices', color: '#64748B' },
 ];
 
 function QuickActionsRow() {
