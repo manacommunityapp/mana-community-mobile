@@ -21,6 +21,7 @@ interface PayOption {
 }
 
 const PAY_OPTIONS: PayOption[] = [
+  { key: 'wallet', label: 'Mana Wallet', icon: 'wallet-outline', route: '/wallet', color: '#7C3AED' },
   { key: 'dues', label: 'Pay Dues', icon: 'receipt-outline', route: '/payments', color: '#059669' },
   { key: 'bbps', label: 'Bill Pay (BBPS)', icon: 'flash-outline', route: '/bbps', color: '#D97706' },
   { key: 'upi', label: 'UPI / Transfer', icon: 'send-outline', route: '/payments/upi', color: '#4F46E5' },
