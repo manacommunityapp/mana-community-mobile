@@ -32,6 +32,9 @@ import { CommunityHighlightBanner } from '@/components/common/CommunityHighlight
 import { PostCommentSheet } from '@/components/feed/PostCommentSheet';
 import { CreatePostModal } from '@/components/feed/CreatePostModal';
 import { RichPostContent } from '@/components/feed/RichPostContent';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { SyncStatusBar } from '@/components/SyncStatusBar';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 const SCREEN_W = Dimensions.get('window').width;
 const EVENT_CARD_W = SCREEN_W * 0.62;
@@ -434,6 +437,8 @@ export default function FeedScreen() {
       }
     },
   });
+
+  const { isOnline, queueSize } = useOfflineSync();
 
   const {
     data, fetchNextPage, hasNextPage,
@@ -874,6 +879,9 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <OfflineBanner visible={!isOnline} />
+      <SyncStatusBar />
 
       {/* ── Search Bar ─────────────────────────────── */}
       {isSearchOpen && (
