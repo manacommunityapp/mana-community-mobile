@@ -2,19 +2,11 @@ import { Stack } from 'expo-router';
 
 export default function HomeServicesLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        animation: 'slide_from_right',
-      }}
-    >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="find-help" />
-      <Stack.Screen name="my-help" />
-      <Stack.Screen name="bookings" />
-      <Stack.Screen name="packages" />
-      <Stack.Screen name="jobs" />
-      <Stack.Screen name="provider-deck" />
+    <Stack>
+      <Stack.Screen name="index" options={{ title: 'Home Services' }} />
+      <Stack.Screen name="bookings" options={{ title: 'My Bookings' }} />
+      <Stack.Screen name="workers" options={{ title: 'Workers' }} />
+      <Stack.Screen name="plans" options={{ title: 'Recurring Plans' }} />
     </Stack>
   );
 }

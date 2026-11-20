@@ -3,6 +3,48 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { CONFIG } from '@/constants/config';
 
+// ── Standard API envelope types ────────────────────────────────
+export interface ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+  message: string | null;
+  correlationId: string;
+  timestamp: string;
+}
+
+export interface PageResponse<T> {
+  items: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public correlationId?: string,
+    public statusCode?: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+// Last correlationId received from the server
+let _lastCorrelationId: string | undefined;
+export function getLastCorrelationId(): string | undefined {
+  return _lastCorrelationId;
+}
+
+// Module-level communityId set by TenantProvider (commit C)
+let _communityId: number | null = null;
+export function setTenantCommunityId(id: number | null): void {
+  _communityId = id;
+}
+
 const ACCESS_TOKEN_KEY  = 'mana_access_token';
 const REFRESH_TOKEN_KEY = 'mana_refresh_token';
 const PUSH_TOKEN_KEY    = 'mana_push_token';
@@ -64,10 +106,11 @@ export function normalizeApiPath(url?: string): string | undefined {
 }
 
 function generateCorrelationId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function generateIdempotencyKey(): string {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
 }
 
 // Attach JWT on every request & normalize duplicate /api prefix
@@ -76,7 +119,18 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
   config.headers['X-Platform'] = 'mobile';
-  config.headers['X-Correlation-Id'] = generateCorrelationId();
+  config.headers['X-Correlation-ID'] = generateCorrelationId();
+
+  // Idempotency key for mutating requests
+  const method = (config.method ?? '').toUpperCase();
+  if (['POST', 'PUT', 'PATCH'].includes(method) && !config.headers['Idempotency-Key']) {
+    config.headers['Idempotency-Key'] = generateIdempotencyKey();
+  }
+
+  // Tenant context header (populated by TenantProvider)
+  if (_communityId != null) {
+    config.headers['X-Community-ID'] = String(_communityId);
+  }
 
   // Fix Double /api Prefix Bug:
   // Since baseURL is configured as `${CONFIG.API_BASE_URL}/api`, any endpoint path passed with
@@ -97,7 +151,28 @@ let refreshQueue: Array<{
 }> = [];
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Capture correlationId from response header
+    const hdr = res.headers?.['x-correlation-id'] as string | undefined;
+    if (hdr) _lastCorrelationId = hdr;
+
+    // Unwrap ApiEnvelope if present
+    const body = res.data as ApiEnvelope<unknown> | unknown;
+    if (
+      body !== null &&
+      typeof body === 'object' &&
+      'success' in (body as object) &&
+      'data' in (body as object)
+    ) {
+      const env = body as ApiEnvelope<unknown>;
+      if (env.correlationId) _lastCorrelationId = env.correlationId;
+      if (!env.success) {
+        throw new ApiError(env.message ?? 'Request failed', env.correlationId, res.status);
+      }
+      res.data = env.data;
+    }
+    return res;
+  },
   async (error: AxiosError) => {
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 

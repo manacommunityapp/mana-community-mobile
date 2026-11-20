@@ -12,12 +12,15 @@ import { useAppBack } from '@/hooks/useAppBack';
 import { getBiometricCapability, authenticateWithBiometric, BiometricCapability } from '@/hooks/useBiometricAuth';
 import { appLockService } from '@/services/appLockService';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, SPACING } from '@/constants/config';
+import { useRateLimitHandler } from '@/hooks/useRateLimitHandler';
+import { RateLimitBanner } from '@/components/security/RateLimitBanner';
 
 const SCREEN_W = Dimensions.get('window').width;
 
 export default function LoginScreen() {
   const { login, loadUser } = useAuth();
   const { goBack } = useAppBack({ fallbackRoute: '/onboarding' });
+  const { rateLimitState, handleError: handleRateLimit, isLimited } = useRateLimitHandler();
   const [identifier, setIdentifier]       = useState('');
   const [password, setPassword]           = useState('');
   const [loading, setLoading]             = useState(false);
@@ -114,15 +117,18 @@ export default function LoginScreen() {
       Alert.alert('Validation', 'Please enter a valid email address or 10-digit mobile number.');
       return;
     }
+    if (isLimited) return;
     setLoading(true);
     try {
       await login({ identifier: parsed.value, password });
     } catch (err: any) {
-      const status = err?.response?.status;
-      const msg = status === 401
-        ? (parsed.type === 'phone' ? 'Invalid mobile number or password.' : 'Invalid email or password.')
-        : 'Login failed. Please try again.';
-      Alert.alert('Login Failed', msg);
+      if (!handleRateLimit(err)) {
+        const status = err?.response?.status ?? err?.statusCode;
+        const msg = status === 401
+          ? (parsed.type === 'phone' ? 'Invalid mobile number or password.' : 'Invalid email or password.')
+          : 'Login failed. Please try again.';
+        Alert.alert('Login Failed', msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -236,11 +242,19 @@ export default function LoginScreen() {
               Forgot password?
             </Link>
 
+            {rateLimitState && (
+              <RateLimitBanner
+                secondsRemaining={rateLimitState.secondsRemaining}
+                totalSeconds={60}
+                type={rateLimitState.type}
+              />
+            )}
+
             {/* Sign In Button */}
             <TouchableOpacity
-              style={[st.button, loading && st.buttonDisabled]}
+              style={[st.button, (loading || isLimited) && st.buttonDisabled]}
               onPress={handleLogin}
-              disabled={loading}
+              disabled={loading || isLimited}
               activeOpacity={0.85}
             >
               <LinearGradient

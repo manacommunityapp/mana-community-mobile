@@ -1,4 +1,5 @@
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080/api';
+import { CONFIG } from '@/constants/config';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? CONFIG.API_BASE_URL + '/api';
 
 export type FundCategory = 'ELSS' | 'LARGE_CAP' | 'MID_CAP' | 'SMALL_CAP' | 'INDEX' | 'LIQUID' | 'HYBRID';
 
