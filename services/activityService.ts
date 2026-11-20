@@ -236,7 +236,7 @@ export async function fetchAllActivity(): Promise<ActivityItem[]> {
         category: 'SPORTS_EVENTS',
         title: `Event · ${e.title}`,
         subtitle: e.location ?? 'Community Event',
-        timestamp: e.startDate ?? e.date ?? new Date().toISOString(),
+        timestamp: e.startDate ?? new Date().toISOString(),
         status: e.isRegistered ? 'REGISTERED' : 'ATTENDED',
         icon: 'calendar-outline',
         color: '#7C3AED',
