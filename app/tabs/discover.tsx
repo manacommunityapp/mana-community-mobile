@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '@/constants/config';
+import { useAuth } from '@/hooks/useAuth';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -75,15 +76,52 @@ function CategoryTile({ item }: { item: Category }) {
 }
 
 export default function DiscoverScreen() {
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('ADMIN', 'COMMUNITY_ADMIN', 'SUPER_ADMIN');
+  const isGuard = hasRole('GUARD', 'SECURITY');
+  const isVendor = hasRole('VENDOR');
+
+  const categories = React.useMemo(() => {
+    const list: Category[] = [];
+
+    if (isAdmin) {
+      list.push(
+        { key: 'admin-console', label: 'Admin Console', icon: 'shield-checkmark', route: '/admin-role/tabs/dashboard', color: '#1E293B', bgColor: '#F1F5F9' },
+        { key: 'governance', label: 'Governance', icon: 'ribbon', route: '/governance', color: '#0F766E', bgColor: '#CCFBF1' },
+      );
+    }
+
+    if (isGuard) {
+      list.push(
+        { key: 'guard-portal', label: 'Gate Portal', icon: 'shield', route: '/guard/tabs/dashboard', color: '#B45309', bgColor: '#FEF3C7' },
+        { key: 'walk-in', label: 'Walk-In', icon: 'person-add', route: '/guard/walk-in', color: '#4338CA', bgColor: '#EEF2FF' },
+        { key: 'cctv', label: 'CCTV Live', icon: 'videocam', route: '/guard/cctv', color: '#DC2626', bgColor: '#FEE2E2' },
+      );
+    }
+
+    if (isVendor) {
+      list.push(
+        { key: 'vendor-portal', label: 'Vendor Portal', icon: 'construct', route: '/vendor/tabs/dashboard', color: '#7C3AED', bgColor: '#F5F3FF' },
+        { key: 'vendor-payouts', label: 'Payouts', icon: 'cash', route: '/vendor/settlements', color: '#059669', bgColor: '#D1FAE5' },
+      );
+    }
+
+    // Common categories
+    list.push(...CATEGORIES);
+    return list;
+  }, [isAdmin, isGuard, isVendor]);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
         <Text style={styles.title}>Discover</Text>
-        <Text style={styles.subtitle}>Everything in your community</Text>
+        <Text style={styles.subtitle}>
+          {isGuard ? 'Security & Gate Operations' : isVendor ? 'Vendor Tools & Services' : isAdmin ? 'Administration & Community' : 'Everything in your community'}
+        </Text>
       </View>
       <FlatList
-        data={CATEGORIES}
+        data={categories}
         keyExtractor={(item) => item.key}
         numColumns={NUM_COLS}
         columnWrapperStyle={styles.row}
