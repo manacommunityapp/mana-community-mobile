@@ -41,6 +41,7 @@ const CATEGORIES: Category[] = [
   { key: 'academy', label: 'Academy', icon: 'school', route: '/academy', color: '#7E22CE', bgColor: '#FAF5FF' },
   { key: 'social', label: 'Social', icon: 'chatbubbles', route: '/social', color: '#0891B2', bgColor: '#ECFEFF' },
   { key: 'devices', label: 'Devices', icon: 'hardware-chip', route: '/devices', color: '#64748B', bgColor: '#F1F5F9' },
+  { key: 'infrastructure', label: 'Infrastructure', icon: 'cellular-outline', route: '/community/iot', color: '#0369A1', bgColor: '#F0F9FF' },
   { key: 'more', label: 'More', icon: 'apps', route: '/more', color: '#475569', bgColor: '#F8FAFC' },
 ];
 
