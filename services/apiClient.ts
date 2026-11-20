@@ -109,6 +109,14 @@ function generateCorrelationId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
+function generateTraceparent(): string {
+  let traceId = '';
+  let spanId = '';
+  for (let i = 0; i < 32; i++) traceId += Math.floor(Math.random() * 16).toString(16);
+  for (let i = 0; i < 16; i++) spanId += Math.floor(Math.random() * 16).toString(16);
+  return `00-${traceId}-${spanId}-01`;
+}
+
 function generateIdempotencyKey(): string {
   return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
 }
@@ -119,7 +127,10 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
   config.headers['X-Platform'] = 'mobile';
-  config.headers['X-Correlation-ID'] = generateCorrelationId();
+  const correlationId = generateCorrelationId();
+  config.headers['X-Correlation-ID'] = correlationId;
+  config.headers['X-Correlation-Id'] = correlationId;
+  config.headers['traceparent'] = generateTraceparent();
 
   // Idempotency key for mutating requests
   const method = (config.method ?? '').toUpperCase();
