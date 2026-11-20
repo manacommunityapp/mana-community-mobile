@@ -77,7 +77,7 @@ function CategoryTile({ item }: { item: Category }) {
 export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
         <Text style={styles.title}>Discover</Text>
         <Text style={styles.subtitle}>Everything in your community</Text>
