@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { chatService } from '@/services/chatService';
+import { notificationService } from '@/services/notificationService';
 import { COLORS, RADIUS, SHADOWS, FONTS } from '@/constants/config';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
@@ -46,13 +46,11 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
-  const { data: conversations = [] } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: chatService.getConversations,
-    refetchInterval: 15_000,
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => notificationService.getUnreadCount().catch(() => 0),
+    refetchInterval: 30_000,
   });
-
-  const chatUnreadCount = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   return (
     <Tabs
@@ -68,64 +66,59 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="feed"
         options={{
-          tabBarAccessibilityLabel: 'Home feed',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="home-outline" iconFocused="home" label="Home" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="marketplace"
-        options={{
-          tabBarAccessibilityLabel: 'Marketplace',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="storefront-outline" iconFocused="storefront" label="Shop" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="services"
-        options={{
-          tabBarAccessibilityLabel: 'Home services',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="construct-outline" iconFocused="construct" label="Services" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="events"
-        options={{
-          tabBarAccessibilityLabel: 'Events calendar',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="calendar-outline" iconFocused="calendar" label="Events" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          tabBarAccessibilityLabel: chatUnreadCount > 0 ? `Chat, ${chatUnreadCount} unread` : 'Chat',
+          tabBarAccessibilityLabel: unreadCount > 0 ? `Home, ${unreadCount} notifications` : 'Home',
           tabBarIcon: ({ focused }) => (
             <TabIcon
-              icon="chatbubbles-outline"
-              iconFocused="chatbubbles"
-              label="Chat"
+              icon="home-outline"
+              iconFocused="home"
+              label="Home"
               focused={focused}
-              badgeCount={chatUnreadCount}
+              badgeCount={unreadCount}
             />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="discover"
+        options={{
+          tabBarAccessibilityLabel: 'Discover',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="grid-outline" iconFocused="grid" label="Discover" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="pay"
+        options={{
+          tabBarAccessibilityLabel: 'Pay',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="card-outline" iconFocused="card" label="Pay" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          tabBarAccessibilityLabel: 'Bookings',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="calendar-outline" iconFocused="calendar" label="Bookings" focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          href: null,
-          tabBarAccessibilityLabel: 'Profile',
+          tabBarAccessibilityLabel: 'My Profile',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="person-outline" iconFocused="person" label="Profile" focused={focused} />
+            <TabIcon icon="person-circle-outline" iconFocused="person-circle" label="My Profile" focused={focused} />
           ),
         }}
       />
+      {/* Hidden screens — accessible via deep link / router.push */}
+      <Tabs.Screen name="marketplace" options={{ href: null }} />
+      <Tabs.Screen name="services" options={{ href: null }} />
+      <Tabs.Screen name="events" options={{ href: null }} />
+      <Tabs.Screen name="chat" options={{ href: null }} />
       <Tabs.Screen name="sports" options={{ href: null }} />
     </Tabs>
   );
