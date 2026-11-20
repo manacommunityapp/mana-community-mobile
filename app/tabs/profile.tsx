@@ -1223,6 +1223,14 @@ export default function ProfileScreen() {
             iconBg="#D1FAE5"
           />
           <MenuItem
+            icon="ribbon-outline"
+            label="Reputation & Identity"
+            sublabel="Community score, badges and moving token"
+            onPress={() => router.push('/profile/reputation')}
+            iconColor="#6366F1"
+            iconBg="#EEF2FF"
+          />
+          <MenuItem
             icon="shield-checkmark-outline"
             label="Privacy & GDPR Settings"
             sublabel="Directory visibility, data export & erasure"

@@ -20,6 +20,7 @@ import type { PostDto, EventDto } from '@/types/api';
 import type { SocietyInvoiceDto } from '@/services/societyFinanceService';
 import type { FacilityBookingDto } from '@/services/facilityService';
 import type { VisitorDto } from '@/services/visitorService';
+import { insightsService, CommunityInsight } from '@/services/insightsService';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -293,6 +294,45 @@ function FeedSnippetCard({ post }: { post: PostDto }) {
   );
 }
 
+// ─── Community Health Card ────────────────────────────────────────────────────
+
+function CommunityHealthCard() {
+  const router = useRouter();
+  const { data: insights } = useQuery<CommunityInsight[]>({
+    queryKey: ['insights-home'],
+    queryFn: () => insightsService.getActiveInsights(1),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const actionable = (insights ?? []).filter((i) => i.severity !== 'INFO').slice(0, 2);
+  const allClear = actionable.length === 0;
+
+  return (
+    <TouchableOpacity
+      style={[styles.healthCard, allClear && styles.healthCardGreen]}
+      onPress={() => router.push('/community/insights' as any)}
+      activeOpacity={0.8}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: allClear ? 0 : 8 }}>
+        <Ionicons
+          name={allClear ? 'checkmark-circle' : 'pulse'}
+          size={18}
+          color={allClear ? '#10B981' : '#F59E0B'}
+        />
+        <Text style={[styles.healthTitle, { color: allClear ? '#065F46' : '#92400E' }]}>
+          {allClear ? 'Community is healthy' : 'Community Health'}
+        </Text>
+        <Ionicons name="chevron-forward" size={14} color="#9CA3AF" style={{ marginLeft: 'auto' as any }} />
+      </View>
+      {!allClear && actionable.map((ins) => (
+        <Text key={ins.id} style={styles.healthInsight} numberOfLines={1}>
+          {'•'} {ins.title}
+        </Text>
+      ))}
+    </TouchableOpacity>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -433,6 +473,9 @@ export default function HomeScreen() {
             </ScrollView>
           </>
         )}
+
+        {/* 6b · Community Health */}
+        <CommunityHealthCard />
 
         {/* 7 · Family Activity (role-guarded) */}
         {isResident && (
@@ -576,4 +619,8 @@ const styles = StyleSheet.create({
   feedFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 },
   feedMeta: { fontSize: 12, color: COLORS.textMuted, marginRight: 8, fontFamily: FONTS.regular },
   divider: { height: 1, backgroundColor: THEME.border, marginHorizontal: 14 },
+  healthCard: { backgroundColor: '#FFFBEB', borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 12, borderWidth: 1, borderColor: '#FDE68A' },
+  healthCardGreen: { backgroundColor: '#ECFDF5', borderColor: '#6EE7B7' },
+  healthTitle: { fontSize: 14, fontWeight: '600', marginLeft: 6 },
+  healthInsight: { fontSize: 12, color: '#78350F', marginTop: 2 },
 });
