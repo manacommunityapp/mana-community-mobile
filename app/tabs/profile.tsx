@@ -1191,6 +1191,14 @@ export default function ProfileScreen() {
             badge={unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined}
           />
           <MenuItem
+            icon="home-outline"
+            label="My Household"
+            sublabel="Flat, family members and vehicles in one place"
+            onPress={() => router.push('/household')}
+            iconColor="#0D9488"
+            iconBg="#CCFBF1"
+          />
+          <MenuItem
             icon="people-outline"
             label="Family Members"
             sublabel="Register family so security knows who can enter"
