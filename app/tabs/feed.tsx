@@ -70,9 +70,42 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 function QuickActionsRow() {
   const router = useRouter();
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('ADMIN', 'COMMUNITY_ADMIN', 'SUPER_ADMIN');
+  const isGuard = hasRole('GUARD', 'SECURITY');
+  const isVendor = hasRole('VENDOR');
+
+  const actions = React.useMemo<QuickAction[]>(() => {
+    if (isGuard) {
+      return [
+        { key: 'walkin', label: 'Walk-In', icon: 'person-add-outline', route: '/guard/walk-in', color: '#4F46E5' },
+        { key: 'handover', label: 'Handover', icon: 'qr-code-outline', route: '/guard/handover', color: '#059669' },
+        { key: 'cctv', label: 'CCTV Live', icon: 'videocam-outline', route: '/guard/cctv', color: '#DC2626' },
+        { key: 'passes', label: 'Gate Passes', icon: 'shield-outline', route: '/guard/tabs/dashboard', color: '#7C3AED' },
+      ];
+    }
+    if (isVendor) {
+      return [
+        { key: 'jobs', label: 'My Jobs', icon: 'briefcase-outline', route: '/vendor/tabs/dashboard', color: '#4F46E5' },
+        { key: 'settlements', label: 'Payouts', icon: 'cash-outline', route: '/vendor/settlements', color: '#059669' },
+        { key: 'inventory', label: 'Inventory', icon: 'cube-outline', route: '/vendor/inventory', color: '#D97706' },
+        { key: 'availability', label: 'Availability', icon: 'time-outline', route: '/vendor/availability', color: '#7C3AED' },
+      ];
+    }
+    if (isAdmin) {
+      return [
+        { key: 'admin', label: 'Admin Hub', icon: 'shield-checkmark-outline', route: '/admin-role/tabs/dashboard', color: '#1E293B' },
+        { key: 'dues', label: 'Dues & Bills', icon: 'card-outline', route: '/payments', color: '#059669' },
+        { key: 'broadcast', label: 'Notices', icon: 'megaphone-outline', route: '/notices', color: '#D97706' },
+        { key: 'gate', label: 'Visitors', icon: 'people-outline', route: '/security', color: '#7C3AED' },
+      ];
+    }
+    return QUICK_ACTIONS;
+  }, [isAdmin, isGuard, isVendor]);
+
   return (
     <View style={styles.quickActionsRow}>
-      {QUICK_ACTIONS.map((action) => (
+      {actions.map((action) => (
         <Pressable
           key={action.key}
           onPress={() => router.push(action.route as any)}
