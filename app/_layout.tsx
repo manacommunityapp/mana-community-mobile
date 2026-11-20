@@ -216,6 +216,7 @@ function RootLayout() {
             <Stack.Screen name="procurement" />
             <Stack.Screen name="amenity" />
             <Stack.Screen name="payment-result" />
+            <Stack.Screen name="privacy" />
           </Stack>
         </QueryClientProvider>
         </TenantProvider>

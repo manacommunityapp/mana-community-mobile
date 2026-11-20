@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { healthcareService, DiagnosticsSla } from '../../services/healthcareService';
 import { healthcareOpsService, DiagnosticsOrderDto, DiagnosticsStatus } from '../../services/healthcareOpsService';
+import { ConsentGate } from '@/components/privacy/ConsentGate';
 
 const PLACEHOLDER_PATIENT_ID = 1;
 
@@ -177,7 +178,7 @@ function SlaBreachesTab() {
 
 type Tab = 'orders' | 'breaches';
 
-export default function DiagnosticsScreen() {
+function DiagnosticsContent() {
   const [tab, setTab] = useState<Tab>('orders');
 
   return (
@@ -201,6 +202,18 @@ export default function DiagnosticsScreen() {
         {tab === 'orders' ? <MyOrdersTab /> : <SlaBreachesTab />}
       </View>
     </SafeAreaView>
+  );
+}
+
+export default function DiagnosticsScreen() {
+  return (
+    <ConsentGate
+      purpose="HEALTH_TREATMENT"
+      purposeLabel="Health Treatment"
+      description="Access to your diagnostic orders and lab results requires consent to use your health data for treatment purposes."
+    >
+      <DiagnosticsContent />
+    </ConsentGate>
   );
 }
 

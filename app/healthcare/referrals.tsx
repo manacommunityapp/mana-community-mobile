@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { healthcareService, Referral } from '../../services/healthcareService';
+import { ConsentGate } from '@/components/privacy/ConsentGate';
 
 const URGENCY_COLORS: Record<string, { bg: string; text: string }> = {
   URGENT: { bg: '#fef2f2', text: '#dc2626' },
@@ -82,7 +83,7 @@ function ReferralTimeline({ status, issuedAt, acceptedAt, completedAt }: {
   );
 }
 
-export default function ReferralsScreen() {
+function ReferralsContent() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -138,6 +139,18 @@ export default function ReferralsScreen() {
         }}
       />
     </SafeAreaView>
+  );
+}
+
+export default function ReferralsScreen() {
+  return (
+    <ConsentGate
+      purpose="HEALTH_TREATMENT"
+      purposeLabel="Health Treatment"
+      description="Access to your specialist referrals requires consent to use your health data for treatment purposes."
+    >
+      <ReferralsContent />
+    </ConsentGate>
   );
 }
 
