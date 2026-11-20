@@ -29,6 +29,7 @@ import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { getPortalForRole } from '@/hooks/useRoleSwitcher';
 import { useAppBiometrics } from '@/hooks/useAppBiometrics';
 import { BiometricLockModal } from '@/components/security/BiometricLockModal';
+import { TenantProvider } from '@/context/TenantContext';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
@@ -132,6 +133,7 @@ function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <TenantProvider>
         <QueryClientProvider client={queryClient}>
           <AuthGuard />
           <StatusBar style="auto" />
@@ -214,6 +216,7 @@ function RootLayout() {
             <Stack.Screen name="payment-result" />
           </Stack>
         </QueryClientProvider>
+        </TenantProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
