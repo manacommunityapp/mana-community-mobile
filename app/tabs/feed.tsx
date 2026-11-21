@@ -834,15 +834,13 @@ export default function FeedScreen() {
             </View>
           )}
           <TouchableOpacity
-            style={[styles.headerIconBtn, isSearchOpen && styles.headerIconBtnActive]}
-            onPress={() => {
-              setIsSearchOpen((prev) => !prev);
-              if (isSearchOpen) setSearchQuery('');
-            }}
+            style={styles.headerIconBtn}
+            onPress={() => router.push('/search')}
             activeOpacity={0.7}
             hitSlop={8}
+            accessibilityLabel="Global search"
           >
-            <Text style={styles.headerIconEmoji}>{isSearchOpen ? '✕' : '🔍'}</Text>
+            <Ionicons name="search-outline" size={18} color={THEME.textPrimary} />
           </TouchableOpacity>
 
           <TouchableOpacity
