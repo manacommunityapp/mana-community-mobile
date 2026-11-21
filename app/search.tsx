@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { globalSearch, GlobalSearchResult } from '@/services/searchService';
+import { globalSearch, isAbortError, GlobalSearchResult } from '@/services/searchService';
 import { COLORS, RADIUS, SHADOWS, FONTS } from '@/constants/config';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
@@ -30,6 +30,42 @@ const TYPE_META: Record<
   NOTICE:      { icon: 'megaphone-outline', label: 'Notice',      color: '#2563EB', bg: '#DBEAFE' },
   VISITOR:     { icon: 'home-outline',      label: 'Visitor',     color: '#7C3AED', bg: '#EDE9FE' },
 };
+
+// ── Navigation targets ────────────────────────────────────────
+// SECURITY: the route is derived locally from the result's `type` and `id`.
+// The `url` the backend sends is never fed to the router: a leading-slash
+// check does not stop `//evil.com` (protocol-relative, navigates off-origin
+// on web) nor `/admin/...` or another tenant's screens. Any result whose
+// `type` is not in this map is simply not tappable.
+//
+// Routes that exist in this app's `app/` tree:
+//   EVENT  -> app/events/[id].tsx          (detail screen, takes the id)
+// Types with no detail screen fall back to the closest existing list screen
+// and the id is dropped:
+//   RESIDENT    -> app/community/directory.tsx
+//   MAINTENANCE -> app/helpdesk/index.tsx
+//   NOTICE      -> app/notices/index.tsx
+//   VISITOR     -> app/visitors/index.tsx
+const RESULT_ROUTES: Record<
+  GlobalSearchResult['type'],
+  (id: GlobalSearchResult['id']) => string
+> = {
+  EVENT:       (id) => `/events/${encodeURIComponent(String(id))}`,
+  RESIDENT:    () => '/community/directory',
+  MAINTENANCE: () => '/helpdesk',
+  NOTICE:      () => '/notices',
+  VISITOR:     () => '/visitors',
+};
+
+function routeForResult(item: GlobalSearchResult): string | null {
+  // `item.type` is server-supplied, so verify the map really owns the key and
+  // that the value is a builder (guards against keys like `__proto__`).
+  if (!Object.prototype.hasOwnProperty.call(RESULT_ROUTES, item.type)) return null;
+  const build = RESULT_ROUTES[item.type];
+  if (typeof build !== 'function') return null;
+  if (item.id === null || item.id === undefined) return null;
+  return build(item.id);
+}
 
 // ── Result item ───────────────────────────────────────────────
 function ResultItem({
@@ -70,6 +106,12 @@ export default function SearchScreen() {
   const [cachedResults, setCachedResults] = useState<GlobalSearchResult[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  // Monotonically increasing id of the most recently *started* request, plus
+  // the controller for the request still in flight. Together they make sure a
+  // slow response from an older query can neither overwrite fresher results
+  // nor clear the spinner belonging to the request that is still running.
+  const requestIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Auto-focus on mount
   useEffect(() => {
@@ -78,19 +120,35 @@ export default function SearchScreen() {
   }, []);
 
   const runSearch = useCallback(async (q: string) => {
+    // Cancel whatever is in flight: its response is no longer wanted.
+    abortRef.current?.abort();
+    abortRef.current = null;
+    const requestId = ++requestIdRef.current;
+
     if (!q.trim()) {
       setResults([]);
       setError(null);
+      setLoading(false);
       return;
     }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
     setOffline(false);
     try {
-      const data = await globalSearch(q);
+      const data = await globalSearch(q, 20, controller.signal);
+      // A newer request has started since: drop this (stale) response.
+      if (requestId !== requestIdRef.current) return;
       setResults(data);
       if (data.length > 0) setCachedResults(data);
     } catch (err: unknown) {
+      // Swallow cancellation specifically; it is the expected outcome for a
+      // request we aborted ourselves. Everything else still surfaces.
+      if (isAbortError(err)) return;
+      if (requestId !== requestIdRef.current) return;
       // Detect offline vs server error heuristically
       const msg = err instanceof Error ? err.message : String(err);
       const isNetworkErr =
@@ -105,7 +163,11 @@ export default function SearchScreen() {
       }
       setResults([]);
     } finally {
-      setLoading(false);
+      // Only the current request owns the spinner.
+      if (requestId === requestIdRef.current) {
+        if (abortRef.current === controller) abortRef.current = null;
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -121,15 +183,20 @@ export default function SearchScreen() {
   useEffect(
     () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      // Invalidate any in-flight request and abort it on unmount.
+      requestIdRef.current += 1;
+      abortRef.current?.abort();
+      abortRef.current = null;
     },
     [],
   );
 
   const handleResultPress = useCallback(
     (item: GlobalSearchResult) => {
-      if (item.url?.startsWith('/')) {
-        router.push(item.url as never);
-      }
+      // Route is derived from `item.type` / `item.id` — see RESULT_ROUTES.
+      // `item.url` from the backend is deliberately ignored.
+      const route = routeForResult(item);
+      if (route) router.push(route as never);
     },
     [router],
   );

@@ -143,7 +143,10 @@ export default function MaintenanceDuesScreen() {
       );
     },
     onError: (err: any) => {
-      Alert.alert('Payment Error', err?.message || 'Failed to initiate payment.');
+      Alert.alert(
+        'Payment Error',
+        `${err?.message || 'Failed to initiate payment.'}\n\nNo payment order was created. Please try again when you are back online.`
+      );
     },
   });
 
@@ -158,7 +161,11 @@ export default function MaintenanceDuesScreen() {
       Alert.alert('Payment Successful', 'Bill cleared using Advance Wallet balance.');
     },
     onError: (err: any) => {
-      Alert.alert('Wallet Payment Failed', err?.message || 'Insufficient wallet balance or error.');
+      queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
+      Alert.alert(
+        'Wallet Payment Failed',
+        `${err?.message || 'The server did not confirm this payment.'}\n\nNothing has been debited and the bill is still outstanding. Please check your connection and try again.`
+      );
     },
   });
 
@@ -171,7 +178,10 @@ export default function MaintenanceDuesScreen() {
       Alert.alert('Payment Verified', 'Your maintenance payment has been successfully recorded.');
     },
     onError: (err: any) => {
-      Alert.alert('Verification Failed', err?.message || 'Payment could not be verified.');
+      Alert.alert(
+        'Verification Failed',
+        `${err?.message || 'Payment could not be verified.'}\n\nThis payment is NOT confirmed and no receipt has been issued. If money was debited, contact the society office before paying again.`
+      );
     },
   });
 
@@ -198,6 +208,10 @@ export default function MaintenanceDuesScreen() {
         setReceiptModalBill(bill);
       }
     } catch {
+      Alert.alert(
+        'Receipt Unavailable',
+        'The official receipt could not be fetched from the server. Showing the bill details on record instead.'
+      );
       setReceiptModalBill(bill);
     }
   };

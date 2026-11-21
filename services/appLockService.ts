@@ -16,6 +16,33 @@ const store = Platform.OS === 'web' ? webStore : SecureStore;
 
 export type BiometricType = 'face' | 'fingerprint' | 'iris' | 'none';
 
+/**
+ * Length-independent equality. A plain `===` on strings short-circuits on the
+ * first differing character and on a length mismatch, which leaks information
+ * about the stored secret through timing. This compares every position of the
+ * longer input and folds the length difference into the same accumulator, so
+ * the work done does not depend on where (or whether) the inputs diverge.
+ */
+function constantTimeEquals(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) {
+    // charCodeAt past the end yields NaN; `|| 0` normalises it to a real code.
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+// TODO(security, blocked): the PIN is still written to storage verbatim, and on
+// web `webStore` above falls back to `localStorage`, where any injected script
+// can read it. The fix is a salted SHA-256 digest (random salt from
+// `Crypto.getRandomBytesAsync`, digest via
+// `Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, salt + pin)`),
+// stored as `v1:<salt>:<digest>` and compared with `constantTimeEquals` above.
+// That requires the `expo-crypto` package, which is NOT currently a dependency
+// of this project; adding it is out of scope for this change. Until it is
+// installed, do not treat this PIN as a confidentiality boundary.
+
 export const appLockService = {
   async isAppLockEnabled(): Promise<boolean> {
     try {
@@ -63,7 +90,7 @@ export const appLockService = {
     try {
       const savedPin = await store.getItemAsync(APP_LOCK_PIN_KEY);
       if (!savedPin) return false;
-      return savedPin === enteredPin;
+      return constantTimeEquals(savedPin, enteredPin);
     } catch {
       return false;
     }

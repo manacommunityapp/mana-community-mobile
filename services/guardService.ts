@@ -301,21 +301,14 @@ export const guardService = {
   },
 
   triggerSos: async (payload: { type: string; location?: string; notes?: string }): Promise<{ id: number; status: string }> => {
-    try {
-      const res = await api.post('/emergency/sos', { incidentType: payload.type, location: payload.location, description: payload.notes });
-      return res.data;
-    } catch {
-      return { id: Date.now(), status: 'ACTIVE' };
-    }
+    // Server-owned incident. A failure here means no SOS exists — let it propagate.
+    const res = await api.post('/emergency/sos', { incidentType: payload.type, location: payload.location, description: payload.notes });
+    return res.data;
   },
 
   resolveSos: async (id: number): Promise<boolean> => {
-    try {
-      await api.post(`/emergency/sos/${id}/resolve`);
-      return true;
-    } catch {
-      return true;
-    }
+    await api.post(`/emergency/sos/${id}/resolve`);
+    return true;
   },
 
   startPatrolSession: async (): Promise<PatrolSession> => {

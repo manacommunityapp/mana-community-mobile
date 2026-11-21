@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -37,11 +37,22 @@ export default function GroupBuyCheckoutScreen() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [pendingGroupOrderId, setPendingGroupOrderId] = useState<string | null>(null);
 
+  // ── Server-priced amount ─────────────────────────────────────────────────────
+  // SECURITY: the authoritative price is whatever the backend returns when the
+  // order is created from (dealId, quantity). Until it answers we only have the
+  // local `pricing` estimate below, which is for display and must never be sent
+  // as the payable amount.
+  const [serverQuote, setServerQuote] = useState<
+    { total: number; savings: number; unitPrice: number } | null
+  >(null);
+
   const { data: deal, isLoading } = useQuery({
     queryKey: ['group-deal', id],
     queryFn: () => groupBuyingService.getDealById(id || 'd1'),
   });
 
+  // ESTIMATE ONLY. Shown optimistically before the server prices the order;
+  // never passed to the payment gateway. See `serverQuote` / handlePlaceOrder.
   const pricing = useMemo(() => {
     if (!deal) return { unitPrice: 0, mrp: 0, total: 0, totalMrp: 0, savings: 0, savingsPct: 0, currentTierLabel: '' };
 
@@ -68,6 +79,17 @@ export default function GroupBuyCheckoutScreen() {
     };
   }, [deal, quantity]);
 
+  // Any change to the inputs the server priced from invalidates the quote.
+  useEffect(() => {
+    setServerQuote(null);
+  }, [quantity, deal?.id]);
+
+  // What the UI shows: the server amount once known, otherwise the estimate.
+  const isEstimate = serverQuote === null;
+  const displayTotal = serverQuote?.total ?? pricing.total;
+  const displaySavings = serverQuote?.savings ?? pricing.savings;
+  const displayUnitPrice = serverQuote?.unitPrice ?? pricing.unitPrice;
+
   const handlePlaceOrder = async () => {
     if (!deal) return;
     setSubmitting(true);
@@ -92,11 +114,42 @@ export default function GroupBuyCheckoutScreen() {
 
       setPendingGroupOrderId(order.id);
 
-      // Step 2: create Cashfree payment order linked to the CommerceOrder
+      // The join request sends only (dealId, quantity, delivery choice, notes) —
+      // no amount — so the order the backend just created is priced entirely
+      // server-side. Take the payable amount from that response; never from the
+      // on-device `pricing` estimate, which a patched bundle could rewrite.
+      const serverAmount = [order.finalAmount, order.total, order.totalCommittedAmount].find(
+        (v): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0,
+      );
+
+      if (serverAmount === undefined) {
+        Alert.alert(
+          'Error',
+          'Could not confirm the payable amount with the server. Please try again.',
+        );
+        return;
+      }
+
+      setServerQuote({
+        total: serverAmount,
+        savings:
+          typeof order.savings === 'number' && Number.isFinite(order.savings)
+            ? order.savings
+            : pricing.savings,
+        unitPrice:
+          typeof order.unitPrice === 'number' && order.unitPrice > 0
+            ? order.unitPrice
+            : pricing.unitPrice,
+      });
+
+      // Step 2: create Cashfree payment order linked to the CommerceOrder.
+      // `referenceId` is the server-side CommerceOrder id, so the backend can
+      // (and must) re-derive / validate the amount from it rather than trusting
+      // the `amount` field this request still has to carry.
       setPaymentStatus('creating');
       setPaymentModalVisible(true);
       const cfOrder = await paymentService.createOrder({
-        amount: pricing.total,
+        amount: serverAmount,
         referenceType: 'GROUP_BUY_ORDER',
         referenceId: order.commerceOrderId,
         description: `Group Buy: ${deal.title} × ${quantity}`,
@@ -131,7 +184,7 @@ export default function GroupBuyCheckoutScreen() {
           orderId: pendingGroupOrderId,
           dealId: String(deal?.id || id),
           qty: String(quantity),
-          savings: String(pricing.savings),
+          savings: String(serverQuote?.savings ?? pricing.savings),
           dealTitle: deal?.title || '',
           nextUnits: String(deal?.nextTierUnitsNeeded ?? 0),
           nextPrice: String(deal?.nextTierPrice ?? 0),
@@ -143,7 +196,7 @@ export default function GroupBuyCheckoutScreen() {
       setCashfreeOrder(null);
       setPaymentError(null);
     }
-  }, [paymentStatus, pendingGroupOrderId, router, deal, id, quantity, pricing]);
+  }, [paymentStatus, pendingGroupOrderId, router, deal, id, quantity, pricing, serverQuote]);
 
   if (isLoading || !deal) {
     return (
@@ -169,9 +222,11 @@ export default function GroupBuyCheckoutScreen() {
 
           <View style={s.pricingRow}>
             <View>
-              <Text style={s.unitPriceLabel}>Locked Group Rate</Text>
+              <Text style={s.unitPriceLabel}>
+                {isEstimate ? 'Indicative Group Rate' : 'Locked Group Rate'}
+              </Text>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-                <Text style={s.currentPrice}>₹{pricing.unitPrice}</Text>
+                <Text style={s.currentPrice}>₹{displayUnitPrice}</Text>
                 <Text style={s.mrpPrice}>₹{deal.mrp}</Text>
               </View>
             </View>
@@ -205,11 +260,11 @@ export default function GroupBuyCheckoutScreen() {
             </TouchableOpacity>
           </View>
 
-          {pricing.savings > 0 && (
+          {displaySavings > 0 && (
             <View style={s.savingsCallout}>
               <Ionicons name="trending-down" size={18} color="#059669" />
               <Text style={s.savingsCalloutText}>
-                You save ₹{pricing.savings} ({pricing.savingsPct}% OFF MRP) with society pool!
+                You save ₹{displaySavings} ({pricing.savingsPct}% OFF MRP) with society pool!
               </Text>
             </View>
           )}
@@ -338,23 +393,31 @@ export default function GroupBuyCheckoutScreen() {
 
         {/* Price Breakdown */}
         <View style={s.sectionCard}>
-          <Text style={s.sectionTitle}>Price Breakdown</Text>
+          <Text style={s.sectionTitle}>
+            {isEstimate ? 'Price Breakdown (Estimate)' : 'Price Breakdown'}
+          </Text>
           <View style={s.breakdownRow}>
             <Text style={s.breakdownLabel}>MRP ({quantity} units)</Text>
             <Text style={s.breakdownValue}>₹{pricing.totalMrp.toLocaleString()}</Text>
           </View>
           <View style={s.breakdownRow}>
             <Text style={s.breakdownLabel}>Community Wholesale Discount</Text>
-            <Text style={[s.breakdownValue, { color: '#059669' }]}>- ₹{pricing.savings.toLocaleString()}</Text>
+            <Text style={[s.breakdownValue, { color: '#059669' }]}>- ₹{displaySavings.toLocaleString()}</Text>
           </View>
           <View style={s.breakdownRow}>
             <Text style={s.breakdownLabel}>Society Handling / Delivery</Text>
             <Text style={[s.breakdownValue, { color: '#059669' }]}>FREE</Text>
           </View>
           <View style={[s.breakdownRow, s.breakdownTotal]}>
-            <Text style={s.totalLabel}>Total Payable</Text>
-            <Text style={s.totalValue}>₹{pricing.total.toLocaleString()}</Text>
+            <Text style={s.totalLabel}>{isEstimate ? 'Estimated Total' : 'Total Payable'}</Text>
+            <Text style={s.totalValue}>₹{displayTotal.toLocaleString()}</Text>
           </View>
+          {isEstimate && (
+            <Text style={s.estimateNote}>
+              Estimated from the current group rate. The final payable amount is confirmed by
+              Mana when you place the order.
+            </Text>
+          )}
         </View>
 
         {/* Action Button */}
@@ -370,7 +433,7 @@ export default function GroupBuyCheckoutScreen() {
             <>
               <Ionicons name="lock-closed-outline" size={20} color="#fff" />
               <Text style={s.confirmBtnText}>
-                {paymentMethod === 'ESCROW_HOLD' ? 'Authorize Escrow Hold' : 'Pay & Lock Group Price'} • ₹{pricing.total.toLocaleString()}
+                {paymentMethod === 'ESCROW_HOLD' ? 'Authorize Escrow Hold' : 'Pay & Lock Group Price'} • {isEstimate ? '~' : ''}₹{displayTotal.toLocaleString()}
               </Text>
             </>
           )}
@@ -546,6 +609,7 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   totalLabel: { fontSize: 16, fontWeight: '800', color: COLORS.text },
+  estimateNote: { fontSize: 11, color: COLORS.textMuted, lineHeight: 15, marginTop: 2 },
   totalValue: { fontSize: 18, fontWeight: '900', color: COLORS.primary },
   confirmBtn: {
     flexDirection: 'row',

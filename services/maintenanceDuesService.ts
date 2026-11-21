@@ -57,7 +57,7 @@ const FALLBACK_HISTORY_BILLS: MaintenanceBillDto[] = [];
 
 let LOCAL_PENDING_BILLS: MaintenanceBillDto[] = [];
 let LOCAL_HISTORY_BILLS: MaintenanceBillDto[] = [];
-let LOCAL_WALLET_BALANCE = 0;
+
 export const maintenanceDuesService = {
   /**
    * GET /finance/maintenance/bills/pending with hybrid fallback
@@ -89,45 +89,29 @@ export const maintenanceDuesService = {
    * POST /finance/maintenance/pay/{billId} with hybrid fallback
    */
   async initiatePayment(billId: string): Promise<PaymentInitiationResponse> {
-    try {
-      const res = await api.post<PaymentInitiationResponse>(`/finance/maintenance/pay/${billId}`);
-      if (res.data?.orderId) return res.data;
-    } catch (err) {
-      secureLog.warn(`[maintenanceDuesService] Payment initiate API unavailable, generating local token`, err);
+    // Order ids, amounts and gateway keys are server-authoritative. If the server cannot
+    // be reached, there is no order — fail loudly rather than mint one on the client.
+    const res = await api.post<PaymentInitiationResponse>(`/finance/maintenance/pay/${billId}`);
+    if (!res.data?.orderId) {
+      throw new Error('Payment could not be initiated: the server did not return an order.');
     }
-
-    const bill = LOCAL_PENDING_BILLS.find(b => b.id === billId) || LOCAL_PENDING_BILLS[0];
-    return {
-      orderId: `order_mana_${Date.now()}`,
-      amount: bill ? bill.totalAmount : 5550,
-      key: 'rzp_test_mana_fallback',
-      currency: 'INR',
-    };
+    return res.data;
   },
 
   /**
    * POST /finance/maintenance/verify with hybrid fallback
    */
   async verifyPayment(payload: PaymentVerificationRequest): Promise<PaymentVerificationResponse> {
-    const recNum = `REC-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    try {
-      const res = await api.post<PaymentVerificationResponse>('/finance/maintenance/verify', payload);
-      if (res.data?.success) {
-        this.settleLocalBill(payload.billId, payload.method, res.data.receiptNumber || recNum);
-        return res.data;
-      }
-    } catch (err) {
-      secureLog.warn('[maintenanceDuesService] Server verification failed, completing local settlement buffer', err);
+    // Only the server can confirm a payment and issue a receipt number. Any failure here
+    // propagates — we never invent a receipt for an unverified payment.
+    const res = await api.post<PaymentVerificationResponse>('/finance/maintenance/verify', payload);
+    if (!res.data?.success) {
+      throw new Error(res.data?.message || 'Payment could not be verified by the server.');
     }
-
-    this.settleLocalBill(payload.billId, payload.method, recNum);
-    return {
-      success: true,
-      receiptNumber: recNum,
-      paidAt: new Date().toISOString(),
-      message: 'Maintenance payment settled successfully.',
-    };
+    if (res.data.receiptNumber) {
+      this.settleLocalBill(payload.billId, payload.method, res.data.receiptNumber);
+    }
+    return res.data;
   },
 
   /**
@@ -153,56 +137,41 @@ export const maintenanceDuesService = {
    * GET /finance/wallet/balance with hybrid fallback
    */
   async getWalletBalance(): Promise<WalletBalanceResponse> {
-    try {
-      const res = await api.get<WalletBalanceResponse>('/finance/wallet/balance');
-      if (res.data && typeof res.data.balance === 'number') {
-        return res.data;
-      }
-    } catch (err) {
-      secureLog.warn('[maintenanceDuesService] Backend wallet unavailable, using local balance', err);
+    // The wallet balance is server-authoritative; there is no local mirror to fall back on.
+    const res = await api.get<WalletBalanceResponse>('/finance/wallet/balance');
+    if (!res.data || typeof res.data.balance !== 'number') {
+      throw new Error('Wallet balance unavailable.');
     }
-    return { balance: LOCAL_WALLET_BALANCE, currency: 'INR' };
+    return res.data;
   },
 
   /**
    * POST /finance/maintenance/pay-wallet with hybrid fallback
    */
   async payWithWallet(billId: string, amount: number): Promise<{ success: boolean; newBalance: number; receiptNumber?: string }> {
-    const recNum = `REC-WAL-${Date.now()}`;
-
-    try {
-      const res = await api.post<{ success: boolean; newBalance: number; receiptNumber?: string }>('/finance/maintenance/pay-wallet', {
-        billId,
-        amount,
-      });
-      if (res.data?.success) {
-        LOCAL_WALLET_BALANCE = res.data.newBalance;
-        this.settleLocalBill(billId, 'WALLET', res.data.receiptNumber || recNum);
-        return res.data;
-      }
-    } catch (err) {
-      secureLog.warn(`[maintenanceDuesService] Server wallet payment unavailable, processing local settlement`, err);
+    // The wallet is debited server-side only. No local balance mutation, no local receipt.
+    const res = await api.post<{ success: boolean; newBalance: number; receiptNumber?: string }>('/finance/maintenance/pay-wallet', {
+      billId,
+      amount,
+    });
+    if (!res.data?.success) {
+      throw new Error('Wallet payment was not confirmed by the server.');
     }
-
-    LOCAL_WALLET_BALANCE = Math.max(0, LOCAL_WALLET_BALANCE - amount);
-    this.settleLocalBill(billId, 'WALLET', recNum);
-    return {
-      success: true,
-      newBalance: LOCAL_WALLET_BALANCE,
-      receiptNumber: recNum,
-    };
+    if (res.data.receiptNumber) {
+      this.settleLocalBill(billId, 'WALLET', res.data.receiptNumber);
+    }
+    return res.data;
   },
 
   /**
    * GET /finance/maintenance/bills/{id}/receipt with hybrid fallback
    */
   async downloadReceipt(billId: string): Promise<{ downloadUrl: string }> {
-    try {
-      const res = await api.get<{ downloadUrl: string }>(`/finance/maintenance/bills/${billId}/receipt`);
-      if (res.data?.downloadUrl) return res.data;
-    } catch (err) {
-      secureLog.warn(`[maintenanceDuesService] Receipt download API failed, returning fallback certificate`, err);
+    // Only the server can hand out an official receipt URL. Never synthesize one.
+    const res = await api.get<{ downloadUrl: string }>(`/finance/maintenance/bills/${billId}/receipt`);
+    if (!res.data?.downloadUrl) {
+      throw new Error('Official receipt is not available for this bill.');
     }
-    return { downloadUrl: `https://society.storage/receipts/MB-${billId}-official.pdf` };
+    return res.data;
   },
 };

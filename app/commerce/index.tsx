@@ -9,6 +9,7 @@ import {
   RefreshControl,
   TextInput,
   Modal,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -39,6 +40,8 @@ export default function ManaCommerceScreen() {
     queryFn: commerceCoreService.getMyOrders,
   });
 
+  const [verifyError, setVerifyError] = useState('');
+
   const verifyMutation = useMutation({
     mutationFn: commerceCoreService.verifyHandover,
     onSuccess: (res) => {
@@ -46,7 +49,14 @@ export default function ManaCommerceScreen() {
       setShowVerifyModal(false);
       setOrderNum('');
       setPin('');
-      alert(res.message);
+      setVerifyError('');
+      Alert.alert('Handover Verified', res.message || 'The server recorded this handover.');
+    },
+    onError: (err: any) => {
+      // Not verified by the server — the goods must NOT be released.
+      setVerifyError(
+        `${err?.message || 'Handover could not be verified.'} Do NOT release the goods until this is confirmed.`
+      );
     },
   });
 
@@ -171,14 +181,27 @@ export default function ManaCommerceScreen() {
               placeholderTextColor="#94A3B8"
             />
 
+            {!!verifyError && (
+              <View style={styles.verifyErrorBox}>
+                <Ionicons name="close-circle" size={16} color="#B91C1C" />
+                <Text style={styles.verifyErrorText}>{verifyError}</Text>
+              </View>
+            )}
+
             <TouchableOpacity
               style={styles.submitBtn}
-              onPress={() => verifyMutation.mutate({ orderNumber: orderNum, enteredOtp: pin })}
+              disabled={verifyMutation.isPending}
+              onPress={() => {
+                setVerifyError('');
+                verifyMutation.mutate({ orderNumber: orderNum, enteredOtp: pin });
+              }}
             >
-              <Text style={styles.submitBtnText}>Verify & Complete</Text>
+              <Text style={styles.submitBtnText}>
+                {verifyMutation.isPending ? 'Verifying…' : 'Verify & Complete'}
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowVerifyModal(false)}>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => { setVerifyError(''); setShowVerifyModal(false); }}>
               <Text style={styles.closeBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -203,6 +226,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   badgeText: { color: '#A7F3D0', fontSize: 10, fontWeight: '700' },
+  verifyErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: RADIUS.sm,
+    padding: 10,
+    marginBottom: 10,
+  },
+  verifyErrorText: { flex: 1, fontSize: 12, color: '#B91C1C', fontWeight: '700', lineHeight: 16 },
   bannerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
   bannerSub: { color: '#6EE7B7', fontSize: 12, marginTop: 2, marginBottom: 10 },
   verifyBtn: {

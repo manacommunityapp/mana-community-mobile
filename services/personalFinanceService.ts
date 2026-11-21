@@ -20,6 +20,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PENDING_BILLS_KEY = '@mana/pendingMarkBillPaid';
 
+/**
+ * Thrown when a write could not reach the server but was persisted to the offline retry
+ * queue. The operation is NOT confirmed — callers must render a "pending confirmation"
+ * state, never a success state.
+ */
+export class OfflineQueuedError extends Error {
+  readonly code = 'OFFLINE_QUEUED';
+  constructor(message = 'OFFLINE_QUEUED') {
+    super(message);
+    this.name = 'OfflineQueuedError';
+  }
+}
+
+export function isOfflineQueuedError(err: unknown): err is OfflineQueuedError {
+  return err instanceof OfflineQueuedError || (err as { code?: string })?.code === 'OFFLINE_QUEUED';
+}
+
 /** Queue a bill-paid operation so it retries on next app open */
 async function queueMarkBillPaid(id: string): Promise<void> {
   try {
@@ -1192,9 +1209,12 @@ export const personalFinanceService = {
         // try next path
       }
     }
-    // All paths failed — queue for retry on next online session
+    // All paths failed — queue for retry on next online session, then surface the
+    // failure. The server has NOT recorded this payment, so the caller must not
+    // treat it as done.
     secureLog.warn('[personalFinanceService] markBillPaid: offline, queuing for later retry');
     await queueMarkBillPaid(id);
+    throw new OfflineQueuedError('Bill payment queued — not yet confirmed by the server.');
   },
 
   // ── Installments & Loans (P3) ───────────────────────────────────────────────
