@@ -109,7 +109,7 @@ export default function ManaCalendarScreen() {
       <ScrollView
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={[COLORS.primary]} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { void refetch(); }} colors={[COLORS.primary]} />}
       >
         {isLoading ? (
           <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />

@@ -38,6 +38,8 @@ export const COLORS = {
   surface:      "#FFFFFF",  // white card
   surfaceAlt:   "#F8FAFC",  // soft slate surface
   surfaceCard:  "#FFFFFF",  // card surface
+  white:        "#FFFFFF",  // alias for surface
+  card:         "#FFFFFF",  // alias for surfaceCard
   border:       "rgba(99, 102, 241, 0.14)",  // refined border
   borderLight:  "rgba(99, 102, 241, 0.08)",  // subtle border
   borderSlate:  "#EBEFF2",  // hairline border
@@ -139,7 +141,14 @@ export const FONTS = {
   regular:        "DMSans-Regular",
   medium:         "DMSans-Medium",
   semiBold:       "DMSans-SemiBold",
+  semibold:       "DMSans-SemiBold",  // alias (case-insensitive compat)
   bold:           "DMSans-Bold",
+  // Typography scale objects — use as spreads in StyleSheet: { ...FONTS.sm, color: X }
+  xs:   { fontSize: 11, lineHeight: 16 },
+  sm:   { fontSize: 13, lineHeight: 18 },
+  base: { fontSize: 15, lineHeight: 22 },
+  body: { fontSize: 14, lineHeight: 20 },
+  heading: { fontSize: 18, lineHeight: 26 },
 } as const;
 
 // ── Typography Scale ──────────────────────────────────────────
@@ -207,6 +216,7 @@ export const THEME = {
   text:         "#0F172A",
   muted:        "#64748B",
   primary:      "#4F46E5",
+  card:         "#FFFFFF",  // card surface alias
 } as const;
 
 export const SHADOWS = {
@@ -265,6 +275,21 @@ export const SHADOWS = {
     shadowOpacity: 0.30,
     shadowRadius: 12,
     elevation: 5,
+  },
+  // Aliases
+  small: {
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  xs: {
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
 } as const;
 

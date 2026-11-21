@@ -139,7 +139,7 @@ function OpenShiftsTab({ orgId }: { orgId: number }) {
         data={listings}
         keyExtractor={i => String(i.id)}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No shift listings yet</Text>
@@ -382,7 +382,7 @@ function MyBoardTab() {
             data={openListings}
             keyExtractor={i => String(i.id)}
             contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={false} onRefresh={refetchBrowse} tintColor={COLORS.primary} />}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void refetchBrowse(); }} tintColor={COLORS.primary} />}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Text style={styles.emptyText}>No open shifts available</Text>
@@ -437,7 +437,7 @@ function MyBoardTab() {
             data={myApps}
             keyExtractor={a => String(a.id)}
             contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={false} onRefresh={refetchApps} tintColor={COLORS.primary} />}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void refetchApps(); }} tintColor={COLORS.primary} />}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Text style={styles.emptyText}>No applications yet</Text>

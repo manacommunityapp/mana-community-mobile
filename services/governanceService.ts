@@ -99,7 +99,9 @@ const MOCK_STATS: GovernanceStatsDto = {
   openVotes: 0,
   upcomingMeetings: 0,
   passedResolutions: 0,
-  communityQuorumRate: 0,
+  actionItemsOpen: 0,
+  myMeetingsAttended: 0,
+  myVotesRecorded: 0,
 };
 
 const MOCK_MEETINGS: MeetingDto[] = [];

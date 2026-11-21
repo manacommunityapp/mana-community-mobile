@@ -24,7 +24,7 @@ export default function LogMealScreen() {
   const [result, setResult] = useState<AiMealAnalysisResponse | null>(null);
   const [items, setItems] = useState<MealItemDto[]>([]);
   const [saving, setSaving] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 
   const handleAnalyze = async () => {
     if (!inputText.trim()) return;

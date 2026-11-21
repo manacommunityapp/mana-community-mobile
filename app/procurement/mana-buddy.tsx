@@ -28,7 +28,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 export default function ManaBuddy() {
   const router = useRouter();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   const [text, setText] = useState('');
   const [draft, setDraft] = useState<BuddyRFQDraft | null>(null);
 

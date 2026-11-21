@@ -26,6 +26,10 @@ jest.mock('@/services/apiClient', () => ({
 
 function makeOffer(overrides: Record<string, any> = {}) {
   return {
+    id: 'offer-1',
+    demandId: 'demand-1',
+    status: 'PENDING' as const,
+    createdAt: new Date().toISOString(),
     vendorId: 'vnd-1',
     vendorName: 'Test Vendor',
     pricePerUnit: 500,

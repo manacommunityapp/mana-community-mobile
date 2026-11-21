@@ -36,7 +36,7 @@ export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 
   const [commentText, setCommentText] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'post' | 'comment'; id: number } | null>(null);
@@ -227,7 +227,7 @@ export default function PostDetailScreen() {
                 <View style={s.noComments}>
                   <Text style={s.noCommentsText}>No comments yet. Be the first to reply!</Text>
                 </View>
-              ) : null
+              ) : undefined
             }
             contentContainerStyle={s.listContent}
             showsVerticalScrollIndicator={false}

@@ -170,6 +170,18 @@ export interface CreateJobPostRequest {
   shiftPreference: string;
 }
 
+export interface BookWorkerRequest {
+  workerId?: number;
+  category: string;
+  issue?: string;
+  scheduledAt?: string;
+  timeSlot?: string;
+  flatNumber?: string;
+  providerName?: string;
+  slotDate?: string;
+  requirementsNotes?: string;
+}
+
 const FALLBACK_WORKERS: HomeHelpWorkerDto[] = [
   {
     id: 'w-1',

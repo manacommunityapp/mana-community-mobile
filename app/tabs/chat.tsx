@@ -292,7 +292,7 @@ export default function ChatScreen() {
                   <Text style={st.aiArrow}>›</Text>
                 </LinearGradient>
               </TouchableOpacity>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={st.empty}>

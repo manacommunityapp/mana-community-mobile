@@ -23,7 +23,7 @@ interface WorkerGatePassModalProps {
 export function WorkerGatePassModal({ visible, staff, onClose }: WorkerGatePassModalProps) {
   if (!staff) return null;
 
-  const qrToken = `MANA-PASS-${staff.id.toUpperCase()}-2026`;
+  const qrToken = `MANA-PASS-${String(staff.id).toUpperCase()}-2026`;
 
   const handleSharePass = async () => {
     try {

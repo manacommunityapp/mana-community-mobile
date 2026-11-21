@@ -381,7 +381,7 @@ export default function GroupBuyCheckoutScreen() {
 
       <PaymentModal
         visible={paymentModalVisible}
-        order={cashfreeOrder}
+        order={cashfreeOrder as unknown as CashfreeOrderResponse | null}
         status={paymentStatus}
         error={paymentError}
         onDismiss={handlePaymentDismiss}

@@ -35,7 +35,7 @@ const SLIDES = [
 
 export default function TourScreen() {
   const router   = useRouter();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {

@@ -139,7 +139,7 @@ export default function InstructorHubScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
       >
         {/* ── Top Instructor Profile Card ──────────────────────────────── */}
         <View style={styles.hostCard}>

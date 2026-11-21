@@ -16,6 +16,54 @@ export interface PersonalReceiptDto {
 
 import api from './apiClient';
 import { secureLog } from '@/security';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PENDING_BILLS_KEY = '@mana/pendingMarkBillPaid';
+
+/** Queue a bill-paid operation so it retries on next app open */
+async function queueMarkBillPaid(id: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_BILLS_KEY);
+    const queue: string[] = raw ? JSON.parse(raw) : [];
+    if (!queue.includes(id)) {
+      queue.push(id);
+      await AsyncStorage.setItem(PENDING_BILLS_KEY, JSON.stringify(queue));
+    }
+  } catch {
+    // AsyncStorage unavailable — log and continue
+    secureLog.warn('[personalFinanceService] queueMarkBillPaid: could not persist to AsyncStorage');
+  }
+}
+
+/** Retry any queued mark-paid operations. Call on app resume / network reconnect. */
+export async function flushPendingMarkBillPaid(): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_BILLS_KEY);
+    if (!raw) return;
+    const queue: string[] = JSON.parse(raw);
+    const failed: string[] = [];
+    for (const id of queue) {
+      let sent = false;
+      for (const path of [`/api/v1/personal-finance/bills/${id}/mark-paid`, `/personal-finance/bills/${id}/mark-paid`]) {
+        try {
+          await api.post(path, {});
+          sent = true;
+          break;
+        } catch {
+          // try next path
+        }
+      }
+      if (!sent) failed.push(id);
+    }
+    if (failed.length > 0) {
+      await AsyncStorage.setItem(PENDING_BILLS_KEY, JSON.stringify(failed));
+    } else {
+      await AsyncStorage.removeItem(PENDING_BILLS_KEY);
+    }
+  } catch {
+    secureLog.warn('[personalFinanceService] flushPendingMarkBillPaid: error processing queue');
+  }
+}
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -1141,10 +1189,12 @@ export const personalFinanceService = {
         await api.post(path, {});
         return;
       } catch {
-        // try next
+        // try next path
       }
     }
-    secureLog.warn('[personalFinanceService] markBillPaid: offline, bill not updated on server');
+    // All paths failed — queue for retry on next online session
+    secureLog.warn('[personalFinanceService] markBillPaid: offline, queuing for later retry');
+    await queueMarkBillPaid(id);
   },
 
   // ── Installments & Loans (P3) ───────────────────────────────────────────────

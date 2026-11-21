@@ -49,7 +49,7 @@ export function SubscriptionModal({
     setSubmitting(true);
     try {
       await homeServicesService.bookWorker({
-        workerId: 'worker-sub-1',
+        workerId: 1,
         category: type === 'CAR_WASH' ? 'VEHICLE_CLEANING' : type === 'IRONING' ? 'IRONING' : 'MAID',
         slotDate: new Date().toISOString().split('T')[0],
         timeSlot,

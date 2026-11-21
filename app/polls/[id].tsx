@@ -302,7 +302,7 @@ const s = StyleSheet.create({
   sendBtn:            { backgroundColor: COLORS.primary, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10 },
   sendBtnDisabled:    { backgroundColor: COLORS.border },
   sendBtnText:        { color: '#fff', fontWeight: '700', fontSize: 13 },
-  overlay:            { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  overlay:            { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
   confirmSheet:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.surface, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, paddingBottom: 36, gap: 12 },
   sheetHandle:        { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 8 },
   confirmTitle:       { fontSize: 18, fontWeight: '800', color: COLORS.text, textAlign: 'center' },

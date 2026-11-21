@@ -101,7 +101,7 @@ export default function AssetAuditScreen() {
         data={filteredLogs}
         keyExtractor={item => String(item.id)}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { void refetch(); }} colors={['#4F46E5']} />}
         renderItem={({ item }) => {
           const hasVariance = item.variance !== 0;
 

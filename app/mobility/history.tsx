@@ -233,7 +233,7 @@ export default function HistoryScreen() {
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => <TripCard trip={item} />}
           contentContainerStyle={s.list}
-          onRefresh={refetch}
+          onRefresh={() => { void refetch(); }}
           refreshing={isRefetching}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={

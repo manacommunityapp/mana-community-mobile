@@ -63,7 +63,7 @@ const SHOWCASE_ITEMS = [
 export default function WelcomeScreen() {
   const router = useRouter();
   const [activeSlide, setActiveSlide] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -102,7 +102,7 @@ export default function WelcomeScreen() {
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" />
 
       {/* Signature Deep Royal Indigo Full-Bleed Gradient */}
       <LinearGradient

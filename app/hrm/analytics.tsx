@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -62,7 +63,7 @@ export default function HrmAnalyticsScreen() {
         <View style={s.statRow}>
           <StatCard label="Total" value={dashboard?.totalEmployees ?? 0} icon="people-outline" color={COLORS.primary} />
           <StatCard label="Active" value={dashboard?.activeEmployees ?? 0} icon="checkmark-circle-outline" color={COLORS.success} />
-          <StatCard label="Inactive" value={dashboard?.inactiveEmployees ?? 0} icon="close-circle-outline" color={COLORS.error} />
+          <StatCard label="Total" value={dashboard?.totalEmployees ?? 0} icon="people-outline" color={COLORS.textMuted} />
         </View>
 
         <View style={[s.card, SHADOWS.sm]}>

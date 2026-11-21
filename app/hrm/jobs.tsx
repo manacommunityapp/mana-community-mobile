@@ -24,6 +24,7 @@ const APP_STATUS_COLOR: Record<JobApplicationStatus, { bg: string; text: string 
 const EMP_TYPE_SHORT: Record<EmploymentType, string> = {
   FULL_TIME: 'Full-time', PART_TIME: 'Part-time',
   CONTRACT: 'Contract', INTERNSHIP: 'Intern', GIG: 'Gig',
+  INTERN: 'Intern', TEMPORARY: 'Temporary',
 };
 
 function fmtSalary(min?: number, max?: number) {
@@ -193,7 +194,7 @@ export default function JobsScreen() {
               keyExtractor={(i) => String(i.id)}
               renderItem={renderJob}
               contentContainerStyle={styles.list}
-              refreshControl={<RefreshControl refreshing={jobsQ.isFetching} onRefresh={() => jobsQ.refetch()} />}
+              refreshControl={<RefreshControl refreshing={jobsQ.isFetching} onRefresh={() => { void jobsQ.refetch(); }} />}
               ListEmptyComponent={<Text style={styles.empty}>No jobs found{search ? ` for "${search}"` : ''}.</Text>}
             />
           )}
@@ -209,7 +210,7 @@ export default function JobsScreen() {
             keyExtractor={(i) => String(i.id)}
             renderItem={renderApp}
             contentContainerStyle={styles.list}
-            refreshControl={<RefreshControl refreshing={myAppsQ.isFetching} onRefresh={() => myAppsQ.refetch()} />}
+            refreshControl={<RefreshControl refreshing={myAppsQ.isFetching} onRefresh={() => { void myAppsQ.refetch(); }} />}
             ListEmptyComponent={<Text style={styles.empty}>No applications yet.</Text>}
           />
         )

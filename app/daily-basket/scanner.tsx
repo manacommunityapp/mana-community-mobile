@@ -194,7 +194,7 @@ export default function RunnerDeliveryScannerScreen() {
               >
                 <Text
                   style={[
-                    styles.statusBadgeText,
+                    styles.statusBadge,
                     verifiedSuccess || activeOrder.status === 'DELIVERED'
                       ? styles.statusDeliveredText
                       : styles.statusPendingText,

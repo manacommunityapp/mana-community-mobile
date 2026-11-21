@@ -241,7 +241,7 @@ function ChatBubble({ message }: { message: BuddyMessage }) {
 export default function BuddyScreen() {
   const router = useRouter();
   const qc = useQueryClient();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   const chatScrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
 
   const [selectedInterests, setSelectedInterests] = useState<InterestTag[]>([]);
