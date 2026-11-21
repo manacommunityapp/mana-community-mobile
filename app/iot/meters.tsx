@@ -57,7 +57,10 @@ export default function SmartMetersScreen() {
       );
       loadData();
     } catch {
-      Alert.alert('Error', 'Pulse ingestion failed');
+      Alert.alert(
+        'Pulse Not Ingested',
+        'The server did not confirm this pulse, so no meter reading was recorded. Billing is unchanged.'
+      );
     } finally {
       setSimulatingId(null);
     }

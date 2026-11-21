@@ -1268,15 +1268,9 @@ export const personalFinanceService = {
         // try next
       }
     }
-    const inst = LOCAL_INSTALLMENTS.find(i => i.id === id);
-    if (inst && inst.remainingTenorMonths > 0) {
-      inst.remainingTenorMonths -= 1;
-      inst.paidAmount += (amount || inst.monthlyEmi);
-      inst.remainingAmount = Math.max(0, inst.totalAmount - inst.paidAmount);
-      inst.percentPaid = Math.round(((inst.totalTenorMonths - inst.remainingTenorMonths) / inst.totalTenorMonths) * 100);
-      if (inst.remainingTenorMonths === 0) inst.status = 'COMPLETED';
-    }
-    return inst!;
+    // An EMI payment is only real once the server records it. Do not advance the local
+    // amortization schedule or report a debit that never happened.
+    throw new Error('EMI payment could not be recorded — the server is unreachable. Nothing was debited.');
   },
 
   deleteInstallment: async (id: string): Promise<void> => {

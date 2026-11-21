@@ -679,34 +679,28 @@ export const parkingService = {
   },
 
   async startEVCharging(stationId: string | number, vehicleNumber?: string): Promise<EVChargingSessionDto> {
-    try {
-      const res = await api.post<EVChargingSessionDto>('/parking/ev/start', { stationId, vehicleNumber });
-      return res.data;
-    } catch {
-      return FALLBACK_ACTIVE_EV_SESSION;
-    }
+    // Only the charger/server can open a session. A failure propagates rather than
+    // showing a fabricated live session for a relay that was never engaged.
+    const res = await api.post<EVChargingSessionDto>('/parking/ev/start', { stationId, vehicleNumber });
+    return res.data;
   },
 
   async stopEVCharging(sessionId?: string): Promise<{ success: boolean; message: string; summary: { energyDeliveredKWh: number; totalCostINR: number; co2SavedKg: number } }> {
-    try {
-      const res = await api.post('/parking/ev/stop', { sessionId });
-      return res.data;
-    } catch {
-      return {
-        success: true,
-        message: 'Charging session stopped successfully',
-        summary: { energyDeliveredKWh: 14.5, totalCostINR: 174, co2SavedKg: 11.2 },
-      };
+    // The billed summary (kWh and cost) is metered server-side — never fabricated.
+    const res = await api.post('/parking/ev/stop', { sessionId });
+    if (!res.data?.summary) {
+      throw new Error('Charging session could not be stopped: no metered summary returned.');
     }
+    return res.data;
   },
 
   async bookEVStation(req: EVBookingRequest): Promise<{ success: boolean; bookingCode: string }> {
-    try {
-      const res = await api.post('/parking/ev/book', req);
-      return res.data;
-    } catch {
-      return { success: true, bookingCode: 'EV-' + Math.floor(1000 + Math.random() * 9000) };
+    // Booking codes are server-issued; a client-minted code would be rejected at the bay.
+    const res = await api.post('/parking/ev/book', req);
+    if (!res.data?.bookingCode) {
+      throw new Error('Bay reservation failed: the server did not return a booking code.');
     }
+    return res.data;
   },
 
   async getActiveEVSession(): Promise<EVChargingSessionDto | null> {

@@ -113,11 +113,11 @@ export const smartMeterService = {
   },
 
   async simulatePulseIngestion(meterId: number, pulseCount: number): Promise<{ success: boolean; newReading: number }> {
-    try {
-      const res = await api.post(`/v1/iot/meters/${meterId}/pulse`, { pulseCount });
-      return res.data;
-    } catch {
-      return { success: true, newReading: 1520.4 };
+    // Meter readings drive billing — only the server may produce one.
+    const res = await api.post(`/v1/iot/meters/${meterId}/pulse`, { pulseCount });
+    if (typeof res.data?.newReading !== 'number') {
+      throw new Error('Pulse ingestion was not confirmed by the server.');
     }
+    return res.data;
   },
 };
