@@ -25,7 +25,6 @@
         "backgroundColor": "#4F46E5"
       },
       "package": "com.manacommunity.mobile",
-      "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -68,7 +67,12 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@sentry/react-native/expo",
+      [
+        "@sentry/react-native/expo",
+        {
+          "disableAutoUpload": true
+        }
+      ],
       [
         "expo-notifications",
         {
