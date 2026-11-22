@@ -4,9 +4,11 @@ import type { PostDto, CommentDto, CreatePostRequest, PageResponse } from '@/typ
 const EMPTY_PAGE: PageResponse<any> = { content: [], totalElements: 0, totalPages: 0, page: 0, number: 0, size: 20 };
 
 export const feedService = {
-  async getPosts(page = 0, size = 20): Promise<PageResponse<PostDto>> {
+  async getPosts(page = 0, size = 20, type?: string): Promise<PageResponse<PostDto>> {
     try {
-      const res = await api.get<any>('/posts', { params: { page, size } });
+      const params: Record<string, any> = { page, size };
+      if (type && type !== 'ALL') params.type = type;
+      const res = await api.get<any>('/posts', { params });
       const raw = res.data;
       if (Array.isArray(raw)) {
         return { content: raw, totalElements: raw.length, totalPages: 1, page, number: page, size };
