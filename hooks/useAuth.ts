@@ -254,116 +254,148 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   login: async (data) => {
-    const loginRes = await authService.login(data);
-    if (loginRes?.communityId != null) {
-      setTenantCommunityId(loginRes.communityId);
+    const res = await authService.login(data);
+    if (res?.communityId != null) {
+      setTenantCommunityId(res.communityId);
     }
-    try {
-      let user = await authService.getProfile();
-      user = await enrichUserProfile(user, loginRes?.communityId, loginRes?.enabledModules);
+    const resolvedName = res.fullName || res.userId || 'Neighbor';
+    const roles = (res as any)?.roles && (res as any).roles.length > 0
+      ? (res as any).roles
+      : (res.role ? [res.role.toUpperCase()] : ['RESIDENT']);
+    const roleSet = new Set(roles);
+    const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
+    const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
+    const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
+    const isVendor = roleSet.has('VENDOR');
+    const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
 
-      const roles = computeRoles(user);
-      const roleSet = new Set(roles);
-      const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
-      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
-      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
-      const isVendor = roleSet.has('VENDOR');
-      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+    const initialUser: UserProfileResponse = {
+      id: Number(res.userId) || 0,
+      name: resolvedName,
+      fullName: resolvedName,
+      email: res.email || '',
+      role: res.role || 'RESIDENT',
+      roles,
+      communityId: res.communityId,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      enabledModules: res.enabledModules || [],
+      permissions: res.permissions || [],
+    };
 
-      setTenantCommunityId(user.communityId ?? null);
+    set({
+      user: initialUser,
+      isAuthenticated: true,
+      isLoading: false,
+      roles,
+      permissions: initialUser.permissions || [],
+      enabledModules: initialUser.enabledModules || [],
+      activePersona: resolvePrimaryPersona(roles),
+      isAdmin,
+      isSuperAdmin,
+      isGuard,
+      isVendor,
+      isAnyAdmin,
+    });
 
-      set({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-        roles,
-        permissions: (user.permissions && user.permissions.length > 0) ? user.permissions : (loginRes?.permissions || []),
-        enabledModules: user.enabledModules || loginRes?.enabledModules || [],
-        activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
-        isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
+    // Background profile hydration with community enrichment
+    authService.getProfile()
+      .then(async (fullUser) => {
+        const enrichedUser = await enrichUserProfile(fullUser, res.communityId, res.enabledModules);
+        const fullRoles = computeRoles(enrichedUser);
+        const fullRoleSet = new Set(fullRoles);
+        setTenantCommunityId(enrichedUser.communityId ?? null);
+        set({
+          user: enrichedUser,
+          roles: fullRoles,
+          permissions: (enrichedUser.permissions && enrichedUser.permissions.length > 0) ? enrichedUser.permissions : (res.permissions || []),
+          enabledModules: enrichedUser.enabledModules || res.enabledModules || [],
+          activePersona: resolvePrimaryPersona(fullRoles),
+          isAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('ADMIN') || fullRoleSet.has('COMMUNITY_ADMIN'),
+          isSuperAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('SUPERADMIN'),
+          isGuard: fullRoleSet.has('GUARD') || fullRoleSet.has('SECURITY_GUARD'),
+          isVendor: fullRoleSet.has('VENDOR'),
+          isAnyAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoles.some(r => r.includes('ADMIN')),
+        });
+      })
+      .catch(async () => {
+        const enriched = await enrichUserProfile(initialUser, res.communityId, res.enabledModules);
+        setTenantCommunityId(enriched.communityId ?? null);
+        set({ user: enriched });
       });
-    } catch {
-      const fallbackUser: UserProfileResponse = {
-        id: Number(loginRes?.userId) || 0,
-        fullName: loginRes?.fullName,
-        name: loginRes?.fullName || 'Resident',
-        email: loginRes?.email || '',
-        role: loginRes?.role || 'RESIDENT',
-        roles: (loginRes as any)?.roles || [loginRes?.role || 'RESIDENT'],
-        communityId: loginRes?.communityId,
-        enabledModules: loginRes?.enabledModules || [],
-        permissions: (loginRes as any)?.permissions || [],
-        status: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-      };
-      const user = await enrichUserProfile(fallbackUser, loginRes?.communityId, loginRes?.enabledModules);
-      const roles = computeRoles(user);
-      const roleSet = new Set(roles);
-      const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
-      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
-      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
-      const isVendor = roleSet.has('VENDOR');
-      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
-
-      setTenantCommunityId(user.communityId ?? null);
-
-      set({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-        roles,
-        permissions: user.permissions || [],
-        enabledModules: user.enabledModules || [],
-        activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
-        isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
-      });
-    }
   },
 
   register: async (data) => {
-    const regRes = await authService.register(data);
-    if (regRes?.communityId != null) {
-      setTenantCommunityId(regRes.communityId);
+    const res = await authService.register(data);
+    if (res?.communityId != null) {
+      setTenantCommunityId(res.communityId);
     }
-    try {
-      let user = await authService.getProfile();
-      user = await enrichUserProfile(user, regRes?.communityId, regRes?.enabledModules);
+    const resolvedName = res.fullName || res.userId || 'Neighbor';
+    const roles = (res as any)?.roles && (res as any).roles.length > 0
+      ? (res as any).roles
+      : (res.role ? [res.role.toUpperCase()] : ['RESIDENT']);
+    const roleSet = new Set(roles);
+    const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
+    const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
+    const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
+    const isVendor = roleSet.has('VENDOR');
+    const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
 
-      const roles = computeRoles(user);
-      const roleSet = new Set(roles);
-      const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
-      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
-      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
-      const isVendor = roleSet.has('VENDOR');
-      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+    const initialUser: UserProfileResponse = {
+      id: Number(res.userId) || 0,
+      name: resolvedName,
+      fullName: resolvedName,
+      email: res.email || '',
+      role: res.role || 'RESIDENT',
+      roles,
+      communityId: res.communityId,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      enabledModules: res.enabledModules || [],
+      permissions: res.permissions || [],
+    };
 
-      setTenantCommunityId(user.communityId ?? null);
+    set({
+      user: initialUser,
+      isAuthenticated: true,
+      isLoading: false,
+      roles,
+      permissions: initialUser.permissions || [],
+      enabledModules: initialUser.enabledModules || [],
+      activePersona: resolvePrimaryPersona(roles),
+      isAdmin,
+      isSuperAdmin,
+      isGuard,
+      isVendor,
+      isAnyAdmin,
+    });
 
-      set({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-        roles,
-        permissions: (user.permissions && user.permissions.length > 0) ? user.permissions : (regRes?.permissions || []),
-        enabledModules: user.enabledModules || regRes?.enabledModules || [],
-        activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
-        isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
+    // Background profile hydration with community enrichment
+    authService.getProfile()
+      .then(async (fullUser) => {
+        const enrichedUser = await enrichUserProfile(fullUser, res.communityId, res.enabledModules);
+        const fullRoles = computeRoles(enrichedUser);
+        const fullRoleSet = new Set(fullRoles);
+        setTenantCommunityId(enrichedUser.communityId ?? null);
+        set({
+          user: enrichedUser,
+          roles: fullRoles,
+          permissions: (enrichedUser.permissions && enrichedUser.permissions.length > 0) ? enrichedUser.permissions : (res.permissions || []),
+          enabledModules: enrichedUser.enabledModules || res.enabledModules || [],
+          activePersona: resolvePrimaryPersona(fullRoles),
+          isAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('ADMIN') || fullRoleSet.has('COMMUNITY_ADMIN'),
+          isSuperAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('SUPERADMIN'),
+          isGuard: fullRoleSet.has('GUARD') || fullRoleSet.has('SECURITY_GUARD'),
+          isVendor: fullRoleSet.has('VENDOR'),
+          isAnyAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoles.some(r => r.includes('ADMIN')),
+        });
+      })
+      .catch(async () => {
+        const enriched = await enrichUserProfile(initialUser, res.communityId, res.enabledModules);
+        setTenantCommunityId(enriched.communityId ?? null);
+        set({ user: enriched });
       });
-    } catch {
-      set({ isAuthenticated: true, isLoading: false });
-    }
+  },
   },
 
   logout: async () => {
