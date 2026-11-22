@@ -9,11 +9,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppBack } from '@/hooks/useAppBack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SHADOWS, RADIUS, GRADIENTS } from '@/constants/config';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterScreen() {
+  const insets = useSafeAreaInsets();
   const { register } = useAuth();
   const { goBack } = useAppBack({ fallbackRoute: '/onboarding' });
   const [form, setForm] = useState({
@@ -78,7 +80,13 @@ export default function RegisterScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: Math.max(insets.top + 14, Platform.OS === 'ios' ? 56 : 40) },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity

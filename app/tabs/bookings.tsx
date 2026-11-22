@@ -1,8 +1,9 @@
 import React from 'react';
 import {
   View, Text, FlatList, Pressable, StyleSheet,
-  ActivityIndicator, SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -107,7 +108,7 @@ export default function BookingsScreen() {
   const hasAny = upcoming.length > 0 || myEvents.length > 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Bookings</Text>
         <Text style={styles.subtitle}>Your reservations & registrations</Text>

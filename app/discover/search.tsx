@@ -1,8 +1,9 @@
 import React, { useRef } from 'react';
 import {
   View, Text, TextInput, FlatList, ActivityIndicator,
-  TouchableOpacity, StyleSheet, SafeAreaView, ScrollView,
+  TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SearchResultCard } from '@/components/discover/SearchResultCard';
 import { ModuleFilterChips } from '@/components/discover/ModuleFilterChips';
@@ -50,7 +51,7 @@ export default function ManaDiscoverScreen() {
   const showResults = query.trim().length > 0;
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top']}>
       {/* Search bar */}
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>

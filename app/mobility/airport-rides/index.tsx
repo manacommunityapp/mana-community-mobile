@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, SafeAreaView, ScrollView, StyleSheet,
+  ActivityIndicator, Alert, FlatList, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -50,7 +51,7 @@ export default function AirportRidesScreen() {
   const results = useMemo(() => search.data?.content ?? [], [search.data]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}><TouchableOpacity onPress={() => router.back()}><Ionicons name="arrow-back" size={22} color="#0F172A" /></TouchableOpacity><View style={{ flex: 1, marginLeft: 14 }}><Text style={styles.title}>Airport Rides</Text><Text style={styles.subtitle}>Share a safe ride with verified neighbours</Text></View><TouchableOpacity onPress={() => router.push('/mobility/airport-rides/create' as any)}><Ionicons name="add-circle" size={28} color="#2563EB" /></TouchableOpacity></View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.directionRow}><TouchableOpacity style={[styles.direction, direction === 'TO_AIRPORT' && styles.directionSelected]} onPress={() => setDirection('TO_AIRPORT')}><Ionicons name="airplane" size={18} color={direction === 'TO_AIRPORT' ? '#fff' : '#2563EB'} /><Text style={[styles.directionText, direction === 'TO_AIRPORT' && styles.selectedText]}>Going to airport</Text></TouchableOpacity><TouchableOpacity style={[styles.direction, direction === 'FROM_AIRPORT' && styles.directionSelected]} onPress={() => setDirection('FROM_AIRPORT')}><Ionicons name="home" size={18} color={direction === 'FROM_AIRPORT' ? '#fff' : '#2563EB'} /><Text style={[styles.directionText, direction === 'FROM_AIRPORT' && styles.selectedText]}>Coming from airport</Text></TouchableOpacity></View>

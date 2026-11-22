@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppBack } from '@/hooks/useAppBack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getBiometricCapability, authenticateWithBiometric, BiometricCapability } from '@/hooks/useBiometricAuth';
 import { appLockService } from '@/services/appLockService';
 import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, SPACING } from '@/constants/config';
@@ -18,6 +19,7 @@ import { RateLimitBanner } from '@/components/security/RateLimitBanner';
 const SCREEN_W = Dimensions.get('window').width;
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const { login, loadUser } = useAuth();
   const { goBack } = useAppBack({ fallbackRoute: '/onboarding' });
   const { rateLimitState, handleError: handleRateLimit, isLimited } = useRateLimitHandler();
@@ -151,7 +153,7 @@ export default function LoginScreen() {
           colors={['#1E1B4B', '#312E81', '#4F46E5']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={st.hero}
+          style={[st.hero, { paddingTop: Math.max(insets.top + 24, Platform.OS === 'ios' ? 76 : 56) }]}
         >
           {/* Decorative elements */}
           <View style={st.decCircle1} />
@@ -160,7 +162,7 @@ export default function LoginScreen() {
 
           {/* Back button */}
           <TouchableOpacity
-            style={st.heroBackBtn}
+            style={[st.heroBackBtn, { top: Math.max(insets.top + 10, Platform.OS === 'ios' ? 50 : 34) }]}
             onPress={goBack}
             hitSlop={8}
             activeOpacity={0.8}

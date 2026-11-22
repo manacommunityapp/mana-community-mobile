@@ -16,6 +16,7 @@ import { eventService } from '@/services/eventService';
 import { facilityService } from '@/services/facilityService';
 import { societyFinanceService } from '@/services/societyFinanceService';
 import { visitorService } from '@/services/visitorService';
+import { notificationService } from '@/services/notificationService';
 import type { PostDto, EventDto } from '@/types/api';
 import type { SocietyInvoiceDto } from '@/services/societyFinanceService';
 import type { FacilityBookingDto } from '@/services/facilityService';
@@ -383,6 +384,12 @@ export default function HomeScreen() {
     enabled: (isResident || isAdmin) && hasModule('VISITORS'),
   });
 
+  const { data: unreadNotifsCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => notificationService.getUnreadCount().catch(() => 0),
+    refetchInterval: 30_000,
+  });
+
   const allPosts = feedPage?.content ?? [];
   const announcements = allPosts.filter((p) => p.type === 'announcement' || p.official);
   const feedSnippet = allPosts.filter((p) => p.type !== 'announcement').slice(0, 3);
@@ -396,6 +403,7 @@ export default function HomeScreen() {
     qc.invalidateQueries({ queryKey: ['home-bookings'] });
     qc.invalidateQueries({ queryKey: ['home-invoices-overdue'] });
     qc.invalidateQueries({ queryKey: ['home-visitors-today'] });
+    qc.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
   }, [qc]);
 
   if (feedLoading) {
@@ -421,6 +429,13 @@ export default function HomeScreen() {
           style={styles.notifBtn}
         >
           <Ionicons name="notifications-outline" size={24} color={COLORS.text ?? '#1E293B'} />
+          {unreadNotifsCount > 0 && (
+            <View style={styles.notifBadge}>
+              <Text style={styles.notifBadgeText}>
+                {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -539,7 +554,32 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: 18, fontWeight: '700', color: COLORS.text ?? '#1E293B', fontFamily: FONTS.bold },
   greetingSub: { fontSize: 13, color: COLORS.textMuted, marginTop: 1, fontFamily: FONTS.regular },
-  notifBtn: { padding: 6 },
+  notifBtn: {
+    padding: 6,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.full,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: COLORS.surface,
+  },
+  notifBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
+    fontFamily: FONTS.bold,
+  },
   scrollContent: { paddingHorizontal: 16, paddingTop: 12 },
   bottomPad: { height: 20 },
 

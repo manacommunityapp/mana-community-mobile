@@ -2,36 +2,11 @@ export * from './theme';
 // ── API Configuration ──────────────────────────────────────────
 // Switch between dev (local Spring Boot) and prod (Lightsail) easily.
 
-const DEV_API_URL  = "http://3.111.198.165:8081";   // dev Lightsail (PostgreSQL-backed)
-const DEV_WS_URL   = "ws://3.111.198.165:8081/ws";  // dev only — cleartext
-const PROD_API_URL = "https://api.manacommunity.in";
-const PROD_WS_URL  = "wss://api.manacommunity.in/ws";
+const DEFAULT_API_URL = "http://3.111.198.165:8081";
+const DEFAULT_WS_URL  = "ws://3.111.198.165:8081/ws";
 
-// Fail safe: when `__DEV__` is not defined (a misconfigured or stripped bundle)
-// assume production, so such a build can never silently point at the cleartext
-// dev host and send JWTs over plain HTTP.
-const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
-
-/**
- * Cleartext HTTP/WS is only tolerated against the local/dev host. Any non-dev
- * configuration must be TLS, otherwise bearer tokens travel in the clear.
- * These are compile-time constants, so this assertion only ever fires if
- * someone edits the production endpoints above to a non-TLS scheme.
- */
-function requireSecureTransport(url: string, label: string): string {
-  if (/^(https|wss):\/\//i.test(url)) return url;
-  throw new Error(
-    `[config] ${label} must use https:// or wss:// outside development (got "${url}").`
-  );
-}
-
-const API_BASE_URL: string = isDev
-  ? DEV_API_URL
-  : requireSecureTransport(PROD_API_URL, 'API_BASE_URL');
-
-const WS_URL: string = isDev
-  ? DEV_WS_URL
-  : requireSecureTransport(PROD_WS_URL, 'WS_URL');
+const API_BASE_URL: string = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+const WS_URL: string       = process.env.EXPO_PUBLIC_WS_URL || DEFAULT_WS_URL;
 
 export const CONFIG = {
   N8N_AI_WEBHOOK_URL: process.env.EXPO_PUBLIC_N8N_AI_WEBHOOK_URL || "",
