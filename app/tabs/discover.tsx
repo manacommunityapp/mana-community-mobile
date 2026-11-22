@@ -29,6 +29,9 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   { key: 'community', label: 'Community', icon: 'people', route: '/community', color: '#4F46E5', bgColor: '#EEF2FF' },
+  { key: 'ev-charging', label: 'EV Charging', icon: 'flash', route: '/parking/ev-charging', color: '#10B981', bgColor: '#ECFDF5' },
+  { key: 'ai-concierge', label: 'AI Concierge', icon: 'sparkles', route: '/ai-chat', color: '#8B5CF6', bgColor: '#F5F3FF' },
+  { key: 'emergency', label: 'Emergency SOS', icon: 'alert-circle', route: '/emergency', color: '#EF4444', bgColor: '#FEF2F2' },
   { key: 'events', label: 'Events', icon: 'calendar', route: '/events', color: '#059669', bgColor: '#ECFDF5' },
   { key: 'sports', label: 'Sports', icon: 'football', route: '/sports', color: '#D97706', bgColor: '#FFFBEB' },
   { key: 'marketplace', label: 'Marketplace', icon: 'storefront', route: '/marketplace', color: '#7C3AED', bgColor: '#F5F3FF' },
@@ -36,6 +39,8 @@ const CATEGORIES: Category[] = [
   { key: 'health', label: 'Health', icon: 'heart', route: '/health', color: '#BE185D', bgColor: '#FDF2F8' },
   { key: 'services', label: 'Services', icon: 'construct', route: '/services', color: '#0369A1', bgColor: '#F0F9FF' },
   { key: 'rides', label: 'Rides', icon: 'car', route: '/commute', color: '#0D9488', bgColor: '#F0FDFA' },
+  { key: 'school-bus', label: 'School Bus', icon: 'bus', route: '/school-bus', color: '#F59E0B', bgColor: '#FFFBEB' },
+  { key: 'bbps', label: 'Bills & BBPS', icon: 'card', route: '/bbps', color: '#0284C7', bgColor: '#F0F9FF' },
   { key: 'trips', label: 'Trips', icon: 'airplane', route: '/trips', color: '#1D4ED8', bgColor: '#EFF6FF' },
   { key: 'security', label: 'Security', icon: 'shield-checkmark', route: '/security', color: '#B45309', bgColor: '#FFFBEB' },
   { key: 'academy', label: 'Academy', icon: 'school', route: '/academy', color: '#7E22CE', bgColor: '#FAF5FF' },

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { homeServicesService, HsBooking } from '../../services/homeServicesService';
 
 const STATUS_COLORS: Record<string, [string, string]> = {
@@ -14,6 +16,7 @@ const STATUS_COLORS: Record<string, [string, string]> = {
 };
 
 export default function Bookings() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<HsBooking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,6 +44,7 @@ export default function Bookings() {
         renderItem={({ item: b }) => {
           const [bg, tc] = STATUS_COLORS[b.status] || ['#f1f5f9', '#64748b'];
           const canCancel = !['WORK_DONE','COMPLETED','CANCELLED'].includes(b.status);
+          const canTrack = b.status !== 'CANCELLED';
           return (
             <View style={styles.card}>
               <View style={styles.top}>
@@ -54,11 +58,23 @@ export default function Bookings() {
                   <Text style={[styles.badgeText, { color: tc }]}>{b.status.replace(/_/g, ' ')}</Text>
                 </View>
               </View>
-              {canCancel && (
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => cancel(b.id, b.category)}>
-                  <Text style={styles.cancelText}>Cancel Booking</Text>
-                </TouchableOpacity>
-              )}
+
+              <View style={styles.actionsRow}>
+                {canTrack && (
+                  <TouchableOpacity
+                    style={styles.trackBtn}
+                    onPress={() => router.push(`/home-services/tracking/${b.id}` as any)}
+                  >
+                    <Ionicons name="navigate" size={14} color="#FFFFFF" style={{ marginRight: 5 }} />
+                    <Text style={styles.trackText}>Track Live &amp; OTP</Text>
+                  </TouchableOpacity>
+                )}
+                {canCancel && (
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => cancel(b.id, b.category)}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           );
         }}
@@ -77,7 +93,10 @@ const styles = StyleSheet.create({
   price: { fontSize: 13, fontWeight: '600', color: '#1e293b', marginTop: 4 },
   badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, marginLeft: 10 },
   badgeText: { fontSize: 11, fontWeight: '700' },
-  cancelBtn: { marginTop: 10, backgroundColor: '#fef2f2', borderRadius: 8, padding: 8, alignItems: 'center' },
-  cancelText: { color: '#dc2626', fontWeight: '700', fontSize: 13 },
+  actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center' },
+  trackBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2563eb', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10 },
+  trackText: { color: '#ffffff', fontWeight: '700', fontSize: 12 },
+  cancelBtn: { backgroundColor: '#fef2f2', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, alignItems: 'center' },
+  cancelText: { color: '#dc2626', fontWeight: '700', fontSize: 12 },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 60, fontSize: 15 },
 });

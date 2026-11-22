@@ -68,7 +68,7 @@ describe('Offers & Deals - Mobile 8-Stage Lifecycle Test Suite', () => {
       counterPin: '4821',
       qrPayload: 'MANADEAL:off-1:user-sandeep:MANA-GF-8842:4821',
       status: 'ACTIVE',
-      validUntil: '2026-10-31',
+      validUntil: '2027-10-31',
       redeemedAt: null,
     };
 
