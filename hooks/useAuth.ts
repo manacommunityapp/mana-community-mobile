@@ -267,7 +267,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
     const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
     const isVendor = roleSet.has('VENDOR');
-    const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+    const isAnyAdmin = isSuperAdmin || roles.some((r: string) => r.includes('ADMIN'));
 
     const initialUser: UserProfileResponse = {
       id: Number(res.userId) || 0,
@@ -339,7 +339,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
     const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
     const isVendor = roleSet.has('VENDOR');
-    const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+    const isAnyAdmin = isSuperAdmin || roles.some((r: string) => r.includes('ADMIN'));
 
     const initialUser: UserProfileResponse = {
       id: Number(res.userId) || 0,

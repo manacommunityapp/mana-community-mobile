@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, Pressable, TouchableOpacity,
   StyleSheet, RefreshControl, ActivityIndicator, Platform,
@@ -22,6 +22,7 @@ import type { SocietyInvoiceDto } from '@/services/societyFinanceService';
 import type { FacilityBookingDto } from '@/services/facilityService';
 import type { VisitorDto } from '@/services/visitorService';
 import { insightsService, CommunityInsight } from '@/services/insightsService';
+import { CreatePostModal } from '@/components/feed/CreatePostModal';
 
 import { QuickActions } from '@/components/common/QuickActions';
 
@@ -344,6 +345,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { user, hasRole, hasModule } = useAuth();
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const isAdmin = hasRole('ADMIN', 'COMMUNITY_ADMIN', 'SUPER_ADMIN');
   const isResident = hasRole('RESIDENT', 'OWNER', 'TENANT');
   const isGuard = hasRole('GUARD', 'SECURITY');
@@ -491,7 +493,7 @@ export default function HomeScreen() {
         {/* 6 · Announcements */}
         {announcements.length > 0 && (
           <>
-            <SectionHeader title="Announcements" onSeeAll={() => router.push('/community' as any)} />
+            <SectionHeader title="Announcements" onSeeAll={() => router.push('/community/feed' as any)} />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -516,25 +518,51 @@ export default function HomeScreen() {
         )}
 
         {/* 8 · Community Feed Snippet */}
-        {feedSnippet.length > 0 && (
+        {hasModule('COMMUNITY_FEED') && (
           <>
             <SectionHeader
               title="Community Feed"
-              onSeeAll={() => router.push('/community' as any)}
+              onSeeAll={() => router.push('/community/feed' as any)}
             />
-            <View style={styles.card}>
-              {feedSnippet.map((post, idx) => (
-                <View key={post.id}>
-                  {idx > 0 && <View style={styles.divider} />}
-                  <FeedSnippetCard post={post} />
-                </View>
-              ))}
-            </View>
+            {feedSnippet.length > 0 ? (
+              <View style={styles.card}>
+                {feedSnippet.map((post, idx) => (
+                  <View key={post.id}>
+                    {idx > 0 && <View style={styles.divider} />}
+                    <FeedSnippetCard post={post} />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={[styles.card, styles.emptyFeedCard]}>
+                <Ionicons name="chatbubbles-outline" size={32} color="#4F46E5" style={{ marginBottom: 6 }} />
+                <Text style={styles.emptyFeedTitle}>No posts yet in your community</Text>
+                <Text style={styles.emptyFeedSub}>
+                  Share an update, recommendation, or ask your neighbors a question.
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyFeedBtn}
+                  onPress={() => setShowCreatePostModal(true)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="create-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.emptyFeedBtnText}>Create Post</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
 
         <View style={styles.bottomPad} />
       </ScrollView>
+
+      <CreatePostModal
+        visible={showCreatePostModal}
+        onClose={() => {
+          setShowCreatePostModal(false);
+          onRefresh();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -678,4 +706,41 @@ const styles = StyleSheet.create({
   healthCardGreen: { backgroundColor: '#ECFDF5', borderColor: '#6EE7B7' },
   healthTitle: { fontSize: 14, fontWeight: '600', marginLeft: 6 },
   healthInsight: { fontSize: 12, color: '#78350F', marginTop: 2 },
+  emptyFeedCard: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  emptyFeedTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text ?? '#1E293B',
+    marginBottom: 4,
+    fontFamily: FONTS.semiBold,
+  },
+  emptyFeedSub: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 14,
+    paddingHorizontal: 12,
+    fontFamily: FONTS.regular,
+  },
+  emptyFeedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: RADIUS.full,
+    ...SHADOWS.sm,
+  },
+  emptyFeedBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: FONTS.semiBold,
+  },
 });

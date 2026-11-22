@@ -250,7 +250,57 @@ export default function SportsHubScreen() {
 
   // Open Tournaments and filtered categories based on selectedSport
   const openTournamentsWithFilteredEvents = useMemo(() => {
-    return openTournamentsDash
+    let baseList = openTournamentsDash;
+    if ((!baseList || baseList.length === 0) && tournamentsPage?.content?.length) {
+      baseList = tournamentsPage.content.map((t: any) => ({
+        id: t.id,
+        name: t.name || t.title || 'Tournament',
+        bannerImage: t.bannerImage || null,
+        eventDateStart: t.eventDateStart || t.startDate || null,
+        eventDateEnd: t.eventDateEnd || t.endDate || null,
+        registrationStatus: t.registrationStatus || t.status || 'REGISTRATION_OPEN',
+        communityId: t.communityId || null,
+        communityName: t.communityName || null,
+        events: ((t.events || t.sportsEvents || []).length > 0
+          ? (t.events || t.sportsEvents)
+          : [
+              {
+                id: t.id,
+                name: t.name || 'Tournament Event',
+                eventDateStart: t.eventDateStart || t.startDate,
+                eventDateEnd: t.eventDateEnd || t.endDate,
+                sportName: t.sport || t.sportType || 'Sports',
+                categoryName: t.category || '',
+                venueName: t.venue?.name || t.venueName || '',
+                maxParticipants: t.maxParticipants ?? null,
+                registeredCount: t.registeredCount ?? 0,
+                registrationStatus: t.status || 'REGISTRATION_OPEN',
+                auctionStatus: null,
+                teamSport: false,
+                myRegistrationId: null,
+                myRegistrationStatus: null,
+              },
+            ]
+        ).map((ev: any) => ({
+          id: ev.id,
+          name: ev.name || t.name,
+          eventDateStart: ev.eventDateStart || t.eventDateStart,
+          eventDateEnd: ev.eventDateEnd || t.eventDateEnd,
+          sportName: ev.sport?.name || ev.sportName || t.sport || t.name,
+          categoryName: ev.categories?.[0]?.name || ev.categoryName || '',
+          venueName: ev.venue?.name || ev.venueName || '',
+          maxParticipants: ev.maxParticipants ?? null,
+          registeredCount: ev.registeredCount ?? 0,
+          registrationStatus: ev.status || ev.registrationStatus || t.registrationStatus || 'REGISTRATION_OPEN',
+          auctionStatus: ev.auctionStatus || null,
+          teamSport: (ev.minPlayers && ev.minPlayers > 1) || false,
+          myRegistrationId: null,
+          myRegistrationStatus: null,
+        })),
+      })) as any;
+    }
+
+    return (baseList || [])
       .map((t) => {
         const events = (t.events || []).filter((ev) => {
           if (selectedSport === 'ALL') return true;
@@ -259,8 +309,8 @@ export default function SportsHubScreen() {
         });
         return { ...t, filteredEvents: events };
       })
-      .filter((t) => t.filteredEvents.length > 0 || (selectedSport === 'ALL' && (t.events || []).length > 0));
-  }, [openTournamentsDash, selectedSport]);
+      .filter((t) => t.filteredEvents.length > 0 || (selectedSport === 'ALL' && (t.events || []).length > 0) || (selectedSport === 'ALL' && t.name));
+  }, [openTournamentsDash, tournamentsPage, selectedSport]);
 
   const totalOpenEventsCount = useMemo(() => {
     return openTournamentsWithFilteredEvents.reduce(

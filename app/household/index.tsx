@@ -96,7 +96,7 @@ export default function HouseholdScreen() {
     <SafeAreaView style={s.root} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Flat Info */}

@@ -121,6 +121,7 @@ export const THEMES = {
 export const GRADIENTS = {
   primary:     ["#4F46E5", "#6366F1"] as const,
   primaryDeep: ["#3730A3", "#4F46E5"] as const,
+  brandAvatar: ["#4F46E5", "#6366F1"] as const,
   hero:        ["#312E81", "#4338CA", "#4F46E5"] as const,
   warm:        ["#F59E0B", "#D97706"] as const,
   success:     ["#059669", "#10B981"] as const,
@@ -262,6 +263,20 @@ export const SHADOWS = {
     shadowOpacity: 0.30,
     shadowRadius: 14,
     elevation: 6,
+  },
+  buttonGlow: {
+    shadowColor: "#4F46E5",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  authCard: {
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 28,
+    elevation: 8,
   },
   glowTeal: {
     shadowColor: "#0D9488",

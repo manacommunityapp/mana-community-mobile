@@ -18,6 +18,7 @@ import { unifiedPaymentService, type PaymentOrder } from '@/services/unifiedPaym
 import { useCheckoutOptions } from '@/hooks/useCheckoutOptions';
 import { PaymentGatewaySelector } from '@/components/payment/PaymentGatewaySelector';
 import { PaymentModal } from '@/components/payment/PaymentModal';
+import type { CashfreeOrderResponse } from '@/services/paymentService';
 import type { GroupDealDto } from '@/types/groupBuying';
 
 export default function GroupBuyCheckoutScreen() {
@@ -334,7 +335,7 @@ export default function GroupBuyCheckoutScreen() {
             <PaymentGatewaySelector
               options={checkoutOptions}
               selectedGateway={selectedGateway || checkoutOptions.defaultGateway}
-              onChange={(gw) => setSelectedGateway(gw)}
+              onChange={(gw: string) => setSelectedGateway(gw)}
             />
           )}
 
