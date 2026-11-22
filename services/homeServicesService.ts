@@ -1,114 +1,35 @@
-import api from './apiClient';
-import { secureLog } from '@/security';
+import apiClient from './apiClient';
 
-export interface HomeHelpWorkerDto {
-  id: string | number;
+const BASE = '/api/home-services';
+
+export interface HsWorker {
+  id: number;
   name: string;
-  category: 'PLUMBING' | 'ELECTRICAL' | 'CLEANING' | 'APPLIANCE' | 'CARPENTRY' | 'PAINTING' | 'MAID' | 'PEST_CONTROL' | 'COOK' | 'DRIVER' | 'BABYSITTER' | 'GARDENER' | string;
-  phone: string;
-  rating: number;
-  reviewCount: number;
-  priceRange?: string;
-  verified: boolean;
-  available: boolean;
-  statusText?: string;
-  speciality?: string;
-  experience?: string;
-  flatsServed?: number;
-  workingInTowers?: string;
-  workingInFlats?: string[];
-  badge?: string;
-  avatarUrl?: string;
-  monthlyRate?: number;
-  dailyRate?: number;
-  availability?: 'AVAILABLE' | 'BUSY' | 'ON_LEAVE';
-}
-
-export interface HomeServiceCategoryDto {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  icon?: string;
-}
-
-export interface HomeServiceBookingDto {
-  id: string;
-  workerId?: string | number;
-  providerName: string;
-  category: string;
-  packageId?: string;
-  date: string;
-  timeSlot: string;
-  status: 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  phone: string;
-  issue: string;
-  slaHours?: number;
-  slaDueAt?: string;
-  slaBreached?: boolean;
-  completionOtp?: string;
-  completedAt?: string;
-  paymentStatus?: string;
-  paymentTransactionId?: string;
-  paidAt?: string;
-  createdAt?: string;
-  vehicleNumber?: string;
-  beforePhotoUrl?: string;
-  afterPhotoUrl?: string;
-  rating?: number;
-  reviewComment?: string;
-}
-
-export interface HomeServiceBookingRequest {
-  workerId: string | number;
-  providerName?: string;
   phone?: string;
-  category: string;
-  packageId?: string;
-  slotDate: string;
-  timeSlot: string;
-  slaHours?: number;
-  requirementsNotes?: string;
+  rating?: number;
+  totalJobs: number;
+  isActive: boolean;
 }
 
-// ── Domestic Staff Types ────────────────────────────────────────
-
-export type StaffRole = 'MAID' | 'COOK' | 'DRIVER' | 'NANNY' | 'GARDENER' | 'WATCHMAN' | 'HELPER';
-export type AttendanceStatus = 'CHECKED_IN' | 'CHECKED_OUT' | 'ABSENT' | 'ON_LEAVE' | 'NOT_MARKED';
-
-export interface DomesticStaffDto {
-  id: string;
+export interface HsServicePackage {
+  id: number;
   name: string;
-  role: StaffRole;
-  phone: string;
-  photo?: string;
-  verified: boolean;
-  policeVerified: boolean;
-  aadhaarOnFile: boolean;
-  rating: number;
-  reviewCount: number;
-  experience: string;
-  monthlySalary: number;
-  workingFlats: string[];
-  workingTowers: string;
-  shiftTime: string;
-  joiningDate: string;
-  status: 'ACTIVE' | 'ON_LEAVE' | 'TERMINATED';
+  category: string;
+  durationMinutes: number;
+  basePrice: number;
 }
 
-export interface StaffAttendanceDto {
-  id: string;
-  staffId: string;
-  staffName: string;
-  role: StaffRole;
-  date: string;
-  checkInTime?: string;
-  checkInGate?: string;
-  checkOutTime?: string;
-  checkOutGate?: string;
-  status: AttendanceStatus;
-  markedBy?: string;
-  photoUrl?: string;
+export interface HsBooking {
+  id: number;
+  category: string;
+  bookingType: string;
+  scheduledAt?: string;
+  status: string;
+  flatNumber?: string;
+  description?: string;
+  quotedPrice?: number;
+  finalPrice?: number;
+  createdAt: string;
 }
 
 export interface StaffAttendanceSummary {
@@ -431,390 +352,31 @@ function mapBookingEntityToDto(b: any): HomeServiceBookingDto {
   };
 }
 
+export interface HsRecurringPlan {
+  id: number;
+  category: string;
+  frequency: string;
+  nextServiceDate: string;
+  status: string;
+}
+
 export const homeServicesService = {
-  /**
-   * GET /v1/home-services/workers with hybrid fallback
-   */
-  async getWorkers(category?: string): Promise<HomeHelpWorkerDto[]> {
-    try {
-      const res = await api.get('/v1/home-services/workers', {
-        params: category && category !== 'ALL' ? { category } : undefined,
-      });
-      const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
-      if (list.length > 0) {
-        return list.map(mapWorkerEntityToDto);
-      }
-    } catch (err) {
-      secureLog.warn('[homeServicesService] Backend workers unavailable, using hybrid fallback', err);
-    }
-
-    if (category && category !== 'ALL') {
-      return FALLBACK_WORKERS.filter(w => w.category.toUpperCase() === category.toUpperCase());
-    }
-    return FALLBACK_WORKERS;
-  },
-
-  /**
-   * POST /v1/home-services/bookings with hybrid fallback
-   */
-  async bookWorker(data: HomeServiceBookingRequest): Promise<{ bookingId: string; status: string }> {
-    const slaHours = data.slaHours || 24;
-    const slaDueAt = new Date(Date.now() + slaHours * 3600000).toISOString();
-    const completionOtp = String(Math.floor(1000 + Math.random() * 9000));
-
-    try {
-      const payload = {
-        workerId: String(data.workerId),
-        categoryId: data.category,
-        packageId: data.packageId,
-        notes: data.requirementsNotes || `${data.category} request`,
-        timeSlot: data.timeSlot,
-        slaHours,
-      };
-
-      const res = await api.post<{ id?: string; bookingId?: string; status?: string }>(
-        '/v1/home-services/bookings',
-        payload,
-      );
-
-      const bookingId = res.data?.bookingId || res.data?.id || `BK-${Date.now()}`;
-      const status = res.data?.status || 'CONFIRMED';
-
-      LOCAL_BOOKINGS.unshift({
-        id: bookingId,
-        workerId: data.workerId,
-        providerName: data.providerName || 'Service Provider',
-        category: data.category,
-        packageId: data.packageId,
-        date: data.slotDate || new Date().toISOString().split('T')[0],
-        timeSlot: data.timeSlot,
-        status: 'CONFIRMED',
-        phone: data.phone || '+91 98451 23450',
-        issue: data.requirementsNotes || `${data.category} Service Request`,
-        slaHours,
-        slaDueAt,
-        slaBreached: false,
-        completionOtp,
-        paymentStatus: 'PENDING',
-        createdAt: new Date().toISOString(),
-      });
-
-      return { bookingId, status };
-    } catch (err) {
-      secureLog.warn('[homeServicesService] API booking failed; generating resilient local confirmation', err);
-      const bookingId = `BK-${Math.floor(1000 + Math.random() * 9000)}`;
-      const worker = FALLBACK_WORKERS.find(w => String(w.id) === String(data.workerId));
-
-      LOCAL_BOOKINGS.unshift({
-        id: bookingId,
-        workerId: data.workerId,
-        providerName: data.providerName || worker?.name || 'Service Provider',
-        category: data.category,
-        packageId: data.packageId,
-        date: data.slotDate || new Date().toISOString().split('T')[0],
-        timeSlot: data.timeSlot,
-        status: 'CONFIRMED',
-        phone: data.phone || worker?.phone || '+91 98451 23450',
-        issue: data.requirementsNotes || `${data.category} Service Request`,
-        slaHours,
-        slaDueAt,
-        slaBreached: false,
-        completionOtp,
-        paymentStatus: 'PENDING',
-        createdAt: new Date().toISOString(),
-      });
-
-      return { bookingId, status: 'CONFIRMED' };
-    }
-  },
-
-  /**
-   * GET /v1/home-services/bookings/mine with hybrid fallback
-   */
-  async getMyBookings(): Promise<HomeServiceBookingDto[]> {
-    try {
-      const res = await api.get('/v1/home-services/bookings/mine');
-      const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
-      if (list.length > 0) {
-        return list.map(mapBookingEntityToDto);
-      }
-    } catch (err) {
-      secureLog.warn('[homeServicesService] Failed to load bookings from API, using local buffer', err);
-    }
-    return [...LOCAL_BOOKINGS];
-  },
-
-  /**
-   * GET /v1/home-services/categories with hybrid fallback
-   */
-  async getCategories(): Promise<HomeServiceCategoryDto[]> {
-    try {
-      const res = await api.get('/v1/home-services/categories');
-      const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
-      if (list.length > 0) {
-        return list.map((c: any) => ({
-          id: String(c.id),
-          name: c.name,
-          code: (c.code || c.name || '').toUpperCase(),
-          description: c.description,
-          icon: c.icon,
-        }));
-      }
-    } catch (err) {
-      secureLog.warn('[homeServicesService] Failed to load categories from API, using fallback', err);
-    }
-    return FALLBACK_CATEGORIES;
-  },
-
-  /**
-   * PATCH /v1/home-services/bookings/{id}/status with hybrid fallback
-   */
-  // ── Domestic Staff Directory ────────────────────────────────────
-  async getDomesticStaff(role?: StaffRole): Promise<DomesticStaffDto[]> {
-    try {
-      const res = await api.get<DomesticStaffDto[]>('/v1/home-services/domestic-staff', {
-        params: role ? { role } : {},
-      });
-      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
-
-    try {
-      const res = await api.get<DomesticStaffDto[]>('/home-services/staff', {
-        params: role ? { role } : {},
-      });
-      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
-
-    return role ? FALLBACK_DOMESTIC_STAFF.filter((s) => s.role === role) : FALLBACK_DOMESTIC_STAFF;
-  },
-
-  // ── Staff Attendance ──────────────────────────────────────────
-  async getStaffAttendance(date?: string): Promise<StaffAttendanceDto[]> {
-    try {
-      const res = await api.get<StaffAttendanceDto[]>('/v1/home-services/attendance', {
-        params: date ? { date } : {},
-      });
-      if (Array.isArray(res.data)) return res.data;
-    } catch {}
-
-    try {
-      const res = await api.get<StaffAttendanceDto[]>('/home-services/staff/attendance', {
-        params: date ? { date } : {},
-      });
-      if (Array.isArray(res.data)) return res.data;
-    } catch {}
-
-    return FALLBACK_ATTENDANCE;
-  },
-
-  async getStaffMonthlyAttendance(staffId: string, year: number, month: number): Promise<StaffMonthlyAttendanceDto> {
-    try {
-      const res = await api.get<StaffMonthlyAttendanceDto>(
-        `/v1/home-services/attendance/monthly/${staffId}`,
-        { params: { year, month } },
-      );
-      if (res.data?.days?.length) return res.data;
-    } catch {}
-
-    const staff = FALLBACK_DOMESTIC_STAFF.find(s => s.id === staffId);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const seed = staffId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    const days: StaffMonthlyAttendanceDto['days'] = [];
-    let present = 0, absent = 0, onLeave = 0, notMarked = 0;
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dayOfWeek = new Date(year, month - 1, d).getDay();
-      const hash = (seed * d * 31 + d * 17) % 100;
-      let status: AttendanceStatus;
-
-      if (dayOfWeek === 0) {
-        status = hash < 30 ? 'CHECKED_IN' : 'ABSENT';
-      } else if (hash < 72) {
-        status = 'CHECKED_IN'; present++;
-      } else if (hash < 82) {
-        status = 'ABSENT'; absent++;
-      } else if (hash < 92) {
-        status = 'ON_LEAVE'; onLeave++;
-      } else {
-        status = 'NOT_MARKED'; notMarked++;
-      }
-
-      const checkInHour = 6 + (seed % 3);
-      const checkInMin = (d * 7 + seed) % 60;
-      days.push({
-        day: d,
-        status,
-        checkInTime: status === 'CHECKED_IN' ? `${checkInHour}:${String(checkInMin).padStart(2, '0')} AM` : undefined,
-      });
-    }
-
-    return {
-      staffId,
-      staffName: staff?.name || 'Staff Member',
-      month,
-      year,
-      days,
-      summary: { present, absent, onLeave, notMarked },
-    };
-  },
-
-  async getAttendanceSummary(): Promise<StaffAttendanceSummary> {
-    try {
-      const res = await api.get<StaffAttendanceSummary>('/v1/home-services/attendance/summary');
-      if (res.data) return res.data;
-    } catch {}
-
-    return FALLBACK_ATTENDANCE_SUMMARY;
-  },
-
-  // ── Service Packages & Salary ─────────────────────────────────
-  async getServicePackages(): Promise<ServicePackageDto[]> {
-    try {
-      const res = await api.get<ServicePackageDto[]>('/v1/home-services/packages');
-      if (Array.isArray(res.data)) return res.data;
-    } catch {}
-
-    try {
-      const res = await api.get<ServicePackageDto[]>('/home-services/packages/mine');
-      if (Array.isArray(res.data)) return res.data;
-    } catch {}
-
-    return FALLBACK_PACKAGES;
-  },
-
-  // ── Job Requirements Board ────────────────────────────────────
-  async getJobPosts(): Promise<StaffJobPostDto[]> {
-    try {
-      const res = await api.get<StaffJobPostDto[]>('/v1/home-services/jobs');
-      if (Array.isArray(res.data)) return res.data;
-    } catch {}
-
-    try {
-      const res = await api.get<StaffJobPostDto[]>('/home-services/job-board');
-      if (Array.isArray(res.data)) return res.data;
-    } catch {}
-
-    return FALLBACK_JOB_POSTS;
-  },
-
-  async createJobPost(data: CreateJobPostRequest): Promise<StaffJobPostDto> {
-    try {
-      const res = await api.post<StaffJobPostDto>('/v1/home-services/jobs', data);
-      return res.data;
-    } catch {
-      const res = await api.post<StaffJobPostDto>('/home-services/job-board', data);
-      return res.data;
-    }
-  },
-
-  async cancelBooking(bookingId: string): Promise<{ success: boolean }> {
-    try {
-      await api.patch(`/v1/home-services/bookings/${bookingId}/status`, null, {
-        params: { status: 'CANCELLED' },
-      });
-    } catch (err) {
-      secureLog.warn(`[homeServicesService] API cancelBooking failed, updating local state for ${bookingId}`, err);
-    }
-
-    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
-    if (found) {
-      found.status = 'CANCELLED';
-    }
-    return { success: true };
-  },
-
-  async completeBookingWithOtp(bookingId: string, otp: string): Promise<HomeServiceBookingDto> {
-    try {
-      const res = await api.post(`/v1/home-services/bookings/${bookingId}/complete-otp`, null, {
-        params: { otp },
-      });
-      if (res.data) return mapBookingEntityToDto(res.data);
-    } catch (err) {
-      secureLog.warn(`[homeServicesService] API complete-otp failed for ${bookingId}, updating local state`, err);
-    }
-
-    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
-    if (!found) throw new Error("Booking not found");
-    if (found.completionOtp && found.completionOtp.trim() !== otp.trim()) {
-      throw new Error("Invalid completion OTP");
-    }
-    found.status = 'COMPLETED';
-    found.completedAt = new Date().toISOString();
-    if (found.slaDueAt && new Date() > new Date(found.slaDueAt)) {
-      found.slaBreached = true;
-    }
-    return found;
-  },
-
-  async payBooking(bookingId: string, transactionId?: string): Promise<HomeServiceBookingDto> {
-    const txnId = transactionId || `TXN-${Date.now()}`;
-    try {
-      const res = await api.post(`/v1/home-services/bookings/${bookingId}/pay`, null, {
-        params: { transactionId: txnId },
-      });
-      if (res.data) return mapBookingEntityToDto(res.data);
-    } catch (err) {
-      secureLog.warn(`[homeServicesService] API pay failed for ${bookingId}, updating local state`, err);
-    }
-
-    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
-    if (!found) throw new Error("Booking not found");
-    found.paymentStatus = 'PAID';
-    found.paymentTransactionId = txnId;
-    found.paidAt = new Date().toISOString();
-    return found;
-  },
-
-  async updateWorkerVerification(workerId: string, verificationStatus: string): Promise<boolean> {
-    try {
-      await api.patch(`/v1/home-services/workers/${workerId}/verification`, null, {
-        params: { status: verificationStatus },
-      });
-      return true;
-    } catch (err) {
-      secureLog.warn(`[homeServicesService] API update verification failed for ${workerId}`, err);
-    }
-    const worker = FALLBACK_WORKERS.find(w => String(w.id) === String(workerId));
-    if (worker) {
-      worker.verified = verificationStatus === 'VERIFIED';
-    }
-    return true;
-  },
-
-  async completeJobWithProof(bookingId: string, params: { otp: string; beforePhotoUrl?: string; afterPhotoUrl?: string }): Promise<HomeServiceBookingDto> {
-    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
-    if (!found) throw new Error("Booking not found");
-    if (found.completionOtp && found.completionOtp.trim() !== params.otp.trim()) {
-      throw new Error("Invalid completion PIN/OTP");
-    }
-    found.status = 'COMPLETED';
-    found.completedAt = new Date().toISOString();
-    found.beforePhotoUrl = params.beforePhotoUrl;
-    found.afterPhotoUrl = params.afterPhotoUrl;
-    return found;
-  },
-
-  async rateBooking(bookingId: string, rating: number, comment?: string): Promise<HomeServiceBookingDto> {
-    const found = LOCAL_BOOKINGS.find(b => b.id === bookingId);
-    if (!found) throw new Error("Booking not found");
-    found.rating = rating;
-    found.reviewComment = comment;
-    return found;
-  },
-
-  async getGatePassForStaff(staffId: string) {
-    const staff = FALLBACK_DOMESTIC_STAFF.find(s => s.id === staffId);
-    return {
-      passId: `GP-${staffId}-${Date.now().toString().slice(-4)}`,
-      staffId,
-      staffName: staff?.name || 'Staff Member',
-      role: staff?.role || 'HELPER',
-      phone: staff?.phone || '',
-      qrToken: `GP-QR-${staffId}-MANA-2026`,
-      allowedTowers: ['Tower A', 'Tower B', 'Tower C', 'Clubhouse'],
-      policeVerified: staff?.policeVerified ?? true,
-      validUntil: '31 Dec 2026',
-      issuedBy: 'Mana Security Administration',
-    };
-  },
+  listWorkers: (category?: string) =>
+    apiClient.get<HsWorker[]>(`${BASE}/workers${category ? `?category=${category}` : ''}`).then(r => r.data),
+  listPackages: (category?: string) =>
+    apiClient.get<HsServicePackage[]>(`${BASE}/packages${category ? `?category=${category}` : ''}`).then(r => r.data),
+  createBooking: (data: Partial<HsBooking>) =>
+    apiClient.post<HsBooking>(`${BASE}/bookings`, data).then(r => r.data),
+  myBookings: () =>
+    apiClient.get<HsBooking[]>(`${BASE}/bookings/my`).then(r => r.data),
+  cancelBooking: (id: number) =>
+    apiClient.delete<HsBooking>(`${BASE}/bookings/${id}`).then(r => r.data),
+  myPlans: () =>
+    apiClient.get<HsRecurringPlan[]>(`${BASE}/plans/my`).then(r => r.data),
+  createPlan: (data: Partial<HsRecurringPlan>) =>
+    apiClient.post<HsRecurringPlan>(`${BASE}/plans`, data).then(r => r.data),
+  pausePlan: (id: number) =>
+    apiClient.put<HsRecurringPlan>(`${BASE}/plans/${id}/pause`, {}).then(r => r.data),
+  cancelPlan: (id: number) =>
+    apiClient.delete<HsRecurringPlan>(`${BASE}/plans/${id}`).then(r => r.data),
 };

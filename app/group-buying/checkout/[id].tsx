@@ -14,7 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { groupBuyingService } from '@/services/groupBuyingService';
-import { paymentService, type CashfreeOrderResponse } from '@/services/paymentService';
+import { unifiedPaymentService, type PaymentOrder } from '@/services/unifiedPaymentService';
+import { useCheckoutOptions } from '@/hooks/useCheckoutOptions';
+import { PaymentGatewaySelector } from '@/components/payment/PaymentGatewaySelector';
 import { PaymentModal } from '@/components/payment/PaymentModal';
 import type { GroupDealDto } from '@/types/groupBuying';
 
@@ -31,9 +33,12 @@ export default function GroupBuyCheckoutScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   // ── Payment modal state ──────────────────────────────────────────────────────
+  const { options: checkoutOptions } = useCheckoutOptions();
+  const [selectedGateway, setSelectedGateway] = useState<string>('');
+
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'creating' | 'checkout' | 'verifying' | 'success' | 'failed'>('idle');
-  const [cashfreeOrder, setCashfreeOrder] = useState<CashfreeOrderResponse | null>(null);
+  const [cashfreeOrder, setCashfreeOrder] = useState<PaymentOrder | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [pendingGroupOrderId, setPendingGroupOrderId] = useState<string | null>(null);
 
@@ -142,19 +147,18 @@ export default function GroupBuyCheckoutScreen() {
             : pricing.unitPrice,
       });
 
-      // Step 2: create Cashfree payment order linked to the CommerceOrder.
-      // `referenceId` is the server-side CommerceOrder id, so the backend can
-      // (and must) re-derive / validate the amount from it rather than trusting
-      // the `amount` field this request still has to carry.
+      // Step 2: create a unified payment order before launching PG SDK
       setPaymentStatus('creating');
       setPaymentModalVisible(true);
-      const cfOrder = await paymentService.createOrder({
-        amount: serverAmount,
-        referenceType: 'GROUP_BUY_ORDER',
+      const gateway = selectedGateway || checkoutOptions?.defaultGateway || 'CASHFREE';
+      const unifiedOrder = await unifiedPaymentService.createOrder({
+        referenceType: 'MARKETPLACE_ORDER',
         referenceId: order.commerceOrderId,
-        description: `Group Buy: ${deal.title} × ${quantity}`,
+        gateway: gateway as any,
+        communityId: 0, // resolved server-side from JWT
+        amount: serverAmount,
       });
-      setCashfreeOrder(cfOrder);
+      setCashfreeOrder(unifiedOrder);
       setPaymentStatus('checkout');
     } catch (err: any) {
       setPaymentStatus('failed');
@@ -164,11 +168,16 @@ export default function GroupBuyCheckoutScreen() {
     }
   };
 
-  const handleVerify = useCallback(async (manaOrderId: string) => {
+  const handleVerify = useCallback(async (orderId: string) => {
     setPaymentStatus('verifying');
     try {
-      await paymentService.verifyPayment(manaOrderId);
-      setPaymentStatus('success');
+      const verified = await unifiedPaymentService.verifyPayment(Number(orderId));
+      if (verified.status === 'SUCCESS') {
+        setPaymentStatus('success');
+      } else {
+        setPaymentStatus('failed');
+        setPaymentError(verified.failureReason ?? 'Payment not confirmed. If amount was debited, please contact support.');
+      }
     } catch {
       setPaymentStatus('failed');
       setPaymentError('Payment verification failed. If amount was debited, please contact support.');
@@ -317,9 +326,17 @@ export default function GroupBuyCheckoutScreen() {
           )}
         </View>
 
-        {/* Payment & Escrow Method */}
+        {/* Payment Method */}
         <View style={s.sectionCard}>
-          <Text style={s.sectionTitle}>Payment & Escrow Protection</Text>
+          <Text style={s.sectionTitle}>Payment Method</Text>
+
+          {checkoutOptions && (
+            <PaymentGatewaySelector
+              options={checkoutOptions}
+              selectedGateway={selectedGateway || checkoutOptions.defaultGateway}
+              onChange={(gw) => setSelectedGateway(gw)}
+            />
+          )}
 
           <TouchableOpacity
             style={[s.optionCard, paymentMethod === 'UPI' && s.optionCardActive]}

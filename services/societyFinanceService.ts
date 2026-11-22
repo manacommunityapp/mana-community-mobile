@@ -1,5 +1,4 @@
 import api from './apiClient';
-import { secureLog } from '@/security';
 
 // ─── DTOs & Interfaces ────────────────────────────────────────────────────────
 
@@ -364,29 +363,7 @@ export const societyFinanceService = {
         // try next
       }
     }
-    const subtotal = dto.lineItems.reduce((s, it) => s + it.amount, 0);
-    const taxAmount = Math.round(subtotal * 0.18);
-    const newInv: SocietyInvoiceDto = {
-      id: `inv-${Date.now()}`,
-      invoiceNumber: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      unitNumber: dto.unitNumber,
-      residentName: dto.residentName,
-      residentEmail: dto.residentEmail,
-      residentPhone: dto.residentPhone,
-      issueDate: dto.issueDate,
-      dueDate: dto.dueDate,
-      subtotal,
-      taxAmount,
-      discountAmount: 0,
-      totalAmount: subtotal + taxAmount,
-      paidAmount: 0,
-      balanceDue: subtotal + taxAmount,
-      status: 'SENT',
-      notes: dto.notes,
-      lineItems: dto.lineItems,
-    };
-    FALLBACK_INVOICES.unshift(newInv);
-    return newInv;
+    throw new Error('Invoice creation failed: backend unavailable. The invoice was not recorded.');
   },
 
   // Vendors & TDS
@@ -406,28 +383,7 @@ export const societyFinanceService = {
         // try next
       }
     }
-    const newVen: SocietyVendorDto = {
-      id: `ven-${Date.now()}`,
-      vendorName: dto.vendorName,
-      category: dto.category,
-      contactPerson: dto.contactPerson,
-      phone: dto.phone,
-      email: dto.email,
-      gstin: dto.gstin,
-      panNumber: dto.panNumber,
-      bankName: dto.bankName,
-      accountNumber: dto.accountNumber,
-      ifscCode: dto.ifscCode,
-      tdsSection: dto.tdsSection,
-      tdsRate: dto.tdsRate,
-      totalBilled: 0,
-      totalPaid: 0,
-      outstandingBalance: 0,
-      isActive: true,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    FALLBACK_VENDORS.unshift(newVen);
-    return newVen;
+    throw new Error('Vendor creation failed: backend unavailable. The vendor was not saved.');
   },
 
   // Expenses & 3-Tier Approvals
@@ -442,7 +398,7 @@ export const societyFinanceService = {
     );
   },
 
-  createExpenseVoucher: async (dto: CreateSocietyExpenseDto, userName: string): Promise<SocietyExpenseDto> => {
+  createExpenseVoucher: async (dto: CreateSocietyExpenseDto, _userName: string): Promise<SocietyExpenseDto> => {
     for (const path of ['/api/finance/expenses', '/api/v1/finance/expenses']) {
       try {
         const { data } = await api.post<SocietyExpenseDto>(path, dto);
@@ -451,29 +407,10 @@ export const societyFinanceService = {
         // try next
       }
     }
-    const ven = FALLBACK_VENDORS.find(v => v.id === dto.vendorId);
-    const newExp: SocietyExpenseDto = {
-      id: `exp-${Date.now()}`,
-      voucherNumber: `VCH-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      category: dto.category,
-      title: dto.title,
-      description: dto.description,
-      amount: dto.amount,
-      accountId: dto.accountId,
-      accountName: 'Operating Account (HDFC)',
-      vendorId: dto.vendorId,
-      vendorName: ven?.vendorName,
-      status: 'PENDING_CHECKER',
-      makerName: userName || 'Accountant',
-      makerDate: new Date().toISOString().split('T')[0],
-      receiptUrl: dto.receiptUrl,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    FALLBACK_EXPENSES.unshift(newExp);
-    return newExp;
+    throw new Error('Expense voucher creation failed: backend unavailable. The voucher was not recorded.');
   },
 
-  checkerVerifyExpense: async (expenseId: string, checkerName: string, notes: string): Promise<SocietyExpenseDto> => {
+  checkerVerifyExpense: async (expenseId: string, _checkerName: string, notes: string): Promise<SocietyExpenseDto> => {
     for (const path of [`/api/finance/expenses/${expenseId}/verify`, `/api/v1/finance/expenses/${expenseId}/verify`]) {
       try {
         const { data } = await api.put<SocietyExpenseDto>(path, { notes });
@@ -482,17 +419,10 @@ export const societyFinanceService = {
         // try next
       }
     }
-    const exp = FALLBACK_EXPENSES.find(e => e.id === expenseId);
-    if (exp) {
-      exp.status = 'PENDING_APPROVER';
-      exp.checkerName = checkerName;
-      exp.checkerDate = new Date().toISOString().split('T')[0];
-      exp.checkerNotes = notes;
-    }
-    return exp!;
+    throw new Error('Expense verification failed: backend unavailable. The approval was not recorded.');
   },
 
-  approverSignOffExpense: async (expenseId: string, approverName: string, notes: string): Promise<SocietyExpenseDto> => {
+  approverSignOffExpense: async (expenseId: string, _approverName: string, notes: string): Promise<SocietyExpenseDto> => {
     for (const path of [`/api/finance/expenses/${expenseId}/approve`, `/api/v1/finance/expenses/${expenseId}/approve`]) {
       try {
         const { data } = await api.put<SocietyExpenseDto>(path, { notes });
@@ -501,14 +431,7 @@ export const societyFinanceService = {
         // try next
       }
     }
-    const exp = FALLBACK_EXPENSES.find(e => e.id === expenseId);
-    if (exp) {
-      exp.status = 'APPROVED';
-      exp.approverName = approverName;
-      exp.approverDate = new Date().toISOString().split('T')[0];
-      exp.approverNotes = notes;
-    }
-    return exp!;
+    throw new Error('Expense sign-off failed: backend unavailable. The approval was not recorded.');
   },
 
   disburseExpense: async (expenseId: string, utr: string, method: string): Promise<SocietyExpenseDto> => {
@@ -520,13 +443,7 @@ export const societyFinanceService = {
         // try next
       }
     }
-    const exp = FALLBACK_EXPENSES.find(e => e.id === expenseId);
-    if (exp) {
-      exp.status = 'PAID';
-      exp.utrReference = utr;
-      exp.paymentMethod = method;
-    }
-    return exp!;
+    throw new Error('Expense disbursement failed: backend unavailable. The payment was not recorded.');
   },
 
   // Chart of Accounts & General Ledger
@@ -615,47 +532,7 @@ export const societyFinanceService = {
         // try next
       }
     }
-    // Local fallback: mutate the invoice and create a GL pair
-    const inv = FALLBACK_INVOICES.find(i => i.id === dto.invoiceId);
-    if (!inv) throw new Error('Invoice not found');
-
-    const newPaid = Math.min(inv.paidAmount + dto.amount, inv.totalAmount);
-    inv.paidAmount = newPaid;
-    inv.balanceDue = inv.totalAmount - newPaid;
-    inv.status = inv.balanceDue <= 0 ? 'PAID' : inv.status;
-    if (inv.balanceDue <= 0) inv.paidAt = dto.paymentDate;
-    inv.paymentReference = dto.referenceNumber;
-
-    const voucherNo = `RCP-${Date.now()}`;
-    const glDr: GeneralLedgerEntryDto = {
-      id: `gle-dr-${Date.now()}`,
-      entryDate: dto.paymentDate,
-      voucherNumber: voucherNo,
-      accountCode: '1010',
-      accountName: 'Operating Bank Account (HDFC)',
-      debit: dto.amount,
-      credit: 0,
-      description: `Payment received: ${inv.invoiceNumber} (${inv.unitNumber} ${inv.residentName})`,
-      referenceType: 'INVOICE',
-      referenceId: inv.id,
-    };
-    const glCr: GeneralLedgerEntryDto = {
-      id: `gle-cr-${Date.now() + 1}`,
-      entryDate: dto.paymentDate,
-      voucherNumber: voucherNo,
-      accountCode: '3010',
-      accountName: 'Monthly Maintenance Collections',
-      debit: 0,
-      credit: dto.amount,
-      description: `Invoice cleared: ${inv.invoiceNumber}`,
-      referenceType: 'INVOICE',
-      referenceId: inv.id,
-    };
-    FALLBACK_LEDGER_ENTRIES.unshift(glCr);
-    FALLBACK_LEDGER_ENTRIES.unshift(glDr);
-    secureLog.info('GL auto-posted on invoice payment', { voucher: voucherNo, amount: dto.amount });
-
-    return { invoice: inv, glEntry: glDr };
+    throw new Error('Payment recording failed: backend unavailable. The payment was not posted to the ledger.');
   },
 
   // ── Vendor Bills (Payables lifecycle — Vyapar Bills module) ──
@@ -679,32 +556,7 @@ export const societyFinanceService = {
         // try next
       }
     }
-    const vendor = FALLBACK_VENDORS.find(v => v.id === dto.vendorId);
-    const gross = dto.lineItems.reduce((s, it) => s + it.amount, 0);
-    const gst = Math.round(gross * (dto.lineItems[0]?.gstRate ?? 18) / 100);
-    const tds = Math.round(gross * dto.tdsRate / 100);
-    const newBill: SocietyVendorBillFullDto = {
-      id: `vb-${Date.now()}`,
-      billNumber: dto.billNumber,
-      vendorId: dto.vendorId,
-      vendorName: vendor?.vendorName ?? 'Unknown Vendor',
-      vendorGstin: vendor?.gstin,
-      billDate: dto.billDate,
-      dueDate: dto.dueDate,
-      description: dto.description,
-      lineItems: dto.lineItems,
-      grossAmount: gross,
-      gstAmount: gst,
-      tdsDeducted: tds,
-      netPayable: gross + gst - tds,
-      paidAmount: 0,
-      balanceDue: gross + gst - tds,
-      status: 'RECEIVED',
-      agingDays: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    FALLBACK_VENDOR_BILLS.unshift(newBill);
-    return newBill;
+    throw new Error('Vendor bill creation failed: backend unavailable. The bill was not recorded.');
   },
 
   approveVendorBill: async (billId: string, approverName: string): Promise<SocietyVendorBillFullDto> => {
@@ -714,12 +566,7 @@ export const societyFinanceService = {
         return data;
       } catch {}
     }
-    const bill = FALLBACK_VENDOR_BILLS.find(b => b.id === billId);
-    if (!bill) throw new Error('Bill not found');
-    bill.status = 'APPROVED';
-    bill.approvedBy = approverName;
-    bill.approvedAt = new Date().toISOString().split('T')[0];
-    return bill;
+    throw new Error('Vendor bill approval failed: backend unavailable. The approval was not recorded.');
   },
 
   payVendorBill: async (dto: PayVendorBillDto): Promise<SocietyVendorBillFullDto> => {
@@ -729,44 +576,6 @@ export const societyFinanceService = {
         return data;
       } catch {}
     }
-    const bill = FALLBACK_VENDOR_BILLS.find(b => b.id === dto.billId);
-    if (!bill) throw new Error('Bill not found');
-
-    const newPaid = Math.min(bill.paidAmount + dto.amount, bill.netPayable);
-    bill.paidAmount = newPaid;
-    bill.balanceDue = bill.netPayable - newPaid;
-    bill.status = bill.balanceDue <= 0 ? 'PAID' : 'PARTIALLY_PAID';
-    bill.paymentUtr = dto.utrReference;
-    bill.paymentDate = dto.paymentDate;
-    bill.paymentMethod = dto.paymentMethod;
-
-    // Auto-post GL: Dr Accounts Payable / Cr Bank
-    const voucherNo = `VPY-${Date.now()}`;
-    FALLBACK_LEDGER_ENTRIES.unshift({
-      id: `gle-vp-dr-${Date.now()}`,
-      entryDate: dto.paymentDate,
-      voucherNumber: voucherNo,
-      accountCode: '2030',
-      accountName: 'Vendor Payables',
-      debit: dto.amount,
-      credit: 0,
-      description: `Vendor payment: ${bill.billNumber} (${bill.vendorName})`,
-      referenceType: 'VENDOR_BILL',
-      referenceId: bill.id,
-    });
-    FALLBACK_LEDGER_ENTRIES.unshift({
-      id: `gle-vp-cr-${Date.now() + 1}`,
-      entryDate: dto.paymentDate,
-      voucherNumber: voucherNo,
-      accountCode: '1010',
-      accountName: 'Operating Bank Account (HDFC)',
-      debit: 0,
-      credit: dto.amount,
-      description: `Bank disbursement: ${bill.billNumber}`,
-      referenceType: 'VENDOR_BILL',
-      referenceId: bill.id,
-    });
-    secureLog.info('GL auto-posted on vendor bill payment', { voucher: voucherNo, amount: dto.amount });
-    return bill;
+    throw new Error('Vendor bill payment failed: backend unavailable. The payment was not posted to the ledger.');
   },
 };

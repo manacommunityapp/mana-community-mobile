@@ -244,15 +244,51 @@ function PostCard({
       authorPhotoUri.startsWith('file://') ||
       authorPhotoUri.startsWith('data:'));
 
+  const updateFeedPostInCache = useCallback((postId: number, updater: (p: PostDto) => PostDto) => {
+    qc.setQueryData(['feed'], (old: any) => {
+      if (!old || !old.pages) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page: any) => ({
+          ...page,
+          content: (page.content || []).map((p: PostDto) => (p.id === postId ? updater(p) : p)),
+        })),
+      };
+    });
+  }, [qc]);
+
   const likeMutation = useMutation({
     mutationFn: () => feedService.likePost(post.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['feed'] }),
+    onMutate: async () => {
+      updateFeedPostInCache(post.id, (p) => {
+        const nextLiked = !p.liked;
+        const currentCount = p.likeCount ?? p.likesCount ?? 0;
+        return {
+          ...p,
+          liked: nextLiked,
+          likeCount: nextLiked ? currentCount + 1 : Math.max(0, currentCount - 1),
+          likesCount: nextLiked ? currentCount + 1 : Math.max(0, currentCount - 1),
+        };
+      });
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ['feed'] });
+    },
   });
 
   const bookmarkMutation = useMutation({
     mutationFn: () => feedService.toggleBookmark(post.id),
-    onMutate: () => setIsBookmarked((prev) => !prev),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['feed'] }),
+    onMutate: async () => {
+      setIsBookmarked((prev) => !prev);
+      updateFeedPostInCache(post.id, (p) => ({
+        ...p,
+        bookmarked: !p.bookmarked,
+      }));
+    },
+    onError: () => {
+      setIsBookmarked((prev) => !prev);
+      qc.invalidateQueries({ queryKey: ['feed'] });
+    },
   });
 
   const handleShare = async () => {
@@ -450,23 +486,25 @@ export default function FeedScreen() {
     queryKey: ['notifications-count'],
     queryFn: notificationService.getUnreadCount,
     refetchInterval: 30_000,
+    staleTime: 30_000,
   });
 
   const { data: upcomingEvents = [] } = useQuery<EventDto[]>({
     queryKey: ['events', 'upcoming-home'],
     queryFn: () => eventService.getUpcomingEvents(),
+    staleTime: 120_000,
   });
 
   const { data: activePollsPage } = useQuery({
     queryKey: ['polls', 'active-count'],
     queryFn: () => pollService.getPolls('ACTIVE', 0),
-    staleTime: 60_000,
+    staleTime: 120_000,
   });
 
   const { data: openTickets = [] } = useQuery({
     queryKey: ['helpdesk', 'open-count'],
     queryFn: () => smartHelpdeskService.getTickets('OPEN'),
-    staleTime: 60_000,
+    staleTime: 120_000,
   });
 
   const allPosts = useMemo(() => data?.pages.flatMap((p) => p.content) ?? [], [data]);
@@ -910,6 +948,10 @@ export default function FeedScreen() {
           ListHeaderComponent={ListHeader}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />
           }

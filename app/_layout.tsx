@@ -210,6 +210,8 @@ function RootLayout() {
             <Stack.Screen name="calendar" />
             <Stack.Screen name="healthguard" />
             <Stack.Screen name="procurement" />
+            <Stack.Screen name="amenity" />
+            <Stack.Screen name="payment-result" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
