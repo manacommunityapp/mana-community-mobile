@@ -25,6 +25,7 @@
         "backgroundColor": "#2A024A"
       },
       "package": "com.manacommunity.mobile",
+      "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
