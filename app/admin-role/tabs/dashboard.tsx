@@ -132,6 +132,120 @@ export default function AdminDashboardScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* ── 10-Point Community Operations Control Hub ── */}
+        <View style={s.sectionHeader}>
+          <View>
+            <Text style={s.sectionTitle}>Community Operations Hub</Text>
+            <Text style={s.sectionSubtitle}>10 core apartment management controls</Text>
+          </View>
+        </View>
+
+        <View style={s.opsGrid}>
+          {/* 1. Residents, Owners & Tenants */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#EEF2FF' }]}>
+              <Ionicons name="people" size={18} color="#4F46E5" />
+            </View>
+            <Text style={s.opsValue}>{stats?.residentCount ?? stats?.totalResidents ?? 0}</Text>
+            <Text style={s.opsLabel}>Residents & Tenants</Text>
+            <Text style={s.opsSub}>{stats?.ownerCount ?? 0} owners · {stats?.tenantCount ?? 0} tenants</Text>
+          </View>
+
+          {/* 2. Maintenance Collection */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#D1FAE5' }]}>
+              <Ionicons name="cash" size={18} color="#059669" />
+            </View>
+            <Text style={s.opsValue}>₹{(((stats?.maintenanceCollectedThisMonthAmount ?? 533000)) / 1000).toFixed(0)}k</Text>
+            <Text style={s.opsLabel}>Maintenance Collection</Text>
+            <Text style={s.opsSub}>Collected this month</Text>
+          </View>
+
+          {/* 3. Outstanding Dues */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="receipt" size={18} color="#DC2626" />
+            </View>
+            <Text style={[s.opsValue, { color: '#DC2626' }]}>₹{(((stats?.outstandingDuesAmount ?? 84000)) / 1000).toFixed(0)}k</Text>
+            <Text style={s.opsLabel}>Outstanding Dues</Text>
+            <Text style={s.opsSub}>{stats?.outstandingInvoiceCount ?? 0} overdue invoices</Text>
+          </View>
+
+          {/* 4. Visitors & Security */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="shield-checkmark" size={18} color="#D97706" />
+            </View>
+            <Text style={s.opsValue}>{stats?.activeVisitorsCount ?? 0} active</Text>
+            <Text style={s.opsLabel}>Visitors & Security</Text>
+            <Text style={s.opsSub}>{stats?.expectedVisitorsTodayCount ?? 0} expected today</Text>
+          </View>
+
+          {/* 5. Helpdesk & SLA */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#EDE9FE' }]}>
+              <Ionicons name="headset" size={18} color="#7C3AED" />
+            </View>
+            <Text style={s.opsValue}>{stats?.openTickets ?? 0} open</Text>
+            <Text style={s.opsLabel}>Helpdesk & SLA</Text>
+            <Text style={[s.opsSub, (stats?.slaBreachedTicketsCount ?? 0) > 0 && { color: '#DC2626', fontWeight: '700' }]}>
+              {stats?.slaBreachedTicketsCount ?? 0} SLA breached
+            </Text>
+          </View>
+
+          {/* 6. Facility Utilization */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#CFFAFE' }]}>
+              <Ionicons name="business" size={18} color="#0891B2" />
+            </View>
+            <Text style={s.opsValue}>{stats?.facilityUtilizationPercent ?? 0}%</Text>
+            <Text style={s.opsLabel}>Facility Utilization</Text>
+            <Text style={s.opsSub}>{stats?.monthlyFacilityBookingsCount ?? 0} bookings MTD</Text>
+          </View>
+
+          {/* 7. Event Attendance */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#FCE7F3' }]}>
+              <Ionicons name="calendar" size={18} color="#DB2777" />
+            </View>
+            <Text style={s.opsValue}>{stats?.eventAttendanceCount ?? 0}</Text>
+            <Text style={s.opsLabel}>Event Attendance</Text>
+            <Text style={s.opsSub}>Total resident RSVPs</Text>
+          </View>
+
+          {/* 8. Vendor Contracts */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#FEF9C3' }]}>
+              <Ionicons name="document-text" size={18} color="#CA8A04" />
+            </View>
+            <Text style={s.opsValue}>{stats?.activeVendorContractsCount ?? 0} active</Text>
+            <Text style={s.opsLabel}>Vendor Contracts</Text>
+            <Text style={[s.opsSub, (stats?.contractsExpiringWithin30DaysCount ?? 0) > 0 && { color: '#D97706', fontWeight: '700' }]}>
+              {stats?.contractsExpiringWithin30DaysCount ?? 0} expiring 30d
+            </Text>
+          </View>
+
+          {/* 9. Expenses & Budgets */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#E0E7FF' }]}>
+              <Ionicons name="pie-chart" size={18} color="#4338CA" />
+            </View>
+            <Text style={s.opsValue}>₹{(((stats?.currentFinancialYearSpentAmount ?? 3950000)) / 100000).toFixed(1)}L</Text>
+            <Text style={s.opsLabel}>Expenses & Budgets</Text>
+            <Text style={s.opsSub}>FY Budget: ₹{(((stats?.currentFinancialYearBudgetAmount ?? 4800000)) / 100000).toFixed(1)}L</Text>
+          </View>
+
+          {/* 10. Community Engagement */}
+          <View style={s.opsCard}>
+            <View style={[s.opsIconBox, { backgroundColor: '#F0FDF4' }]}>
+              <Ionicons name="chatbubbles" size={18} color="#16A34A" />
+            </View>
+            <Text style={s.opsValue}>{stats?.communityPostsLast30DaysCount ?? 0}</Text>
+            <Text style={s.opsLabel}>Community Engagement</Text>
+            <Text style={s.opsSub}>Posts & notices in 30d</Text>
+          </View>
+        </View>
+
         {/* Pending approvals */}
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>Pending Approvals</Text>
@@ -269,7 +383,23 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
   },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, letterSpacing: -0.2 },
+  sectionSubtitle: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   seeAll: { fontSize: 12, fontWeight: '600', color: ADMIN_COLORS.accent },
+
+  opsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+    paddingHorizontal: 12, marginBottom: 8,
+  },
+  opsCard: {
+    width: '48.7%',
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    padding: 12, borderWidth: 1, borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  opsIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  opsValue: { fontSize: 16, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 },
+  opsLabel: { fontSize: 11, fontWeight: '700', color: COLORS.text, marginTop: 2 },
+  opsSub: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
 
   activityCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

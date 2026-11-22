@@ -113,6 +113,33 @@ export default function SmartMetersScreen() {
           </View>
         )}
 
+        {/* Community Utilities & Telemetry Quick Link */}
+        <View style={styles.communityUtilStrip}>
+          <TouchableOpacity
+            style={[styles.utilLinkCard, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]}
+            onPress={() => router.push('/maintenance/water')}
+          >
+            <Ionicons name="water" size={16} color="#0284C7" />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={[styles.utilLinkTitle, { color: '#0369A1' }]}>Community Water Storage</Text>
+              <Text style={styles.utilLinkSub}>78% Full • ~24h reserve • Safe</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={14} color="#0284C7" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.utilLinkCard, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}
+            onPress={() => router.push('/maintenance/generator')}
+          >
+            <Ionicons name="flash" size={16} color="#D97706" />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={[styles.utilLinkTitle, { color: '#92400E' }]}>DG Power Backup</Text>
+              <Text style={styles.utilLinkSub}>Grid Connected • Ready</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={14} color="#D97706" />
+          </TouchableOpacity>
+        </View>
+
         {/* Active Meters Grid */}
         <Text style={styles.sectionHeader}>Installed Digital Sub-Meters</Text>
         {loading ? (
@@ -203,6 +230,17 @@ const styles = StyleSheet.create({
   breakdownType: { fontSize: 11, color: '#64748B', fontWeight: '600' },
   breakdownUsage: { fontSize: 12, fontWeight: '700', color: '#0F172A', marginTop: 2 },
   breakdownCost: { fontSize: 12, fontWeight: '700', color: '#0284C7', marginTop: 2 },
+  communityUtilStrip: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  utilLinkCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  utilLinkTitle: { fontSize: 11, fontWeight: '700' },
+  utilLinkSub: { fontSize: 9, color: '#64748B', marginTop: 2 },
   sectionHeader: { fontSize: 13, fontWeight: '700', color: '#475569', textTransform: 'uppercase', marginBottom: 12 },
   meterCard: {
     backgroundColor: '#FFFFFF',

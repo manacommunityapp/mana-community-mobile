@@ -10,6 +10,7 @@ import {
   CaregiverConsentDto,
   GrantCaregiverConsentRequest,
 } from '../../services/healthcareOpsService';
+import { ConsentGate } from '@/components/privacy/ConsentGate';
 
 const PLACEHOLDER_PATIENT_ID = 1; // replaced with auth context in production
 
@@ -30,7 +31,7 @@ function PermissionToggle({
   );
 }
 
-export default function CaregiverScreen() {
+function CaregiverContent() {
   const [consents, setConsents] = useState<CaregiverConsentDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -235,6 +236,18 @@ export default function CaregiverScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+export default function CaregiverScreen() {
+  return (
+    <ConsentGate
+      purpose="HEALTH_TREATMENT"
+      purposeLabel="Health Treatment"
+      description="Managing caregiver access to your health records requires consent to share your health data for treatment purposes."
+    >
+      <CaregiverContent />
+    </ConsentGate>
   );
 }
 

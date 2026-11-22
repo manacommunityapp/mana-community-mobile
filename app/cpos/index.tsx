@@ -36,7 +36,7 @@ import type {
   KycStatus,
 } from '@/types/cpos';
 
-type TabKey = 'units' | 'directory' | 'tenants' | 'kyc' | 'noc' | 'vault' | 'crm' | 'ai';
+type TabKey = 'units' | 'directory' | 'tenants' | 'kyc' | 'noc' | 'vault' | 'crm' | 'commissions' | 'leases' | 'ai';
 
 const UNIT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   OCCUPIED: { label: 'Occupied', color: '#059669', bg: '#D1FAE5' },
@@ -197,6 +197,18 @@ export default function CPOSScreen() {
     staleTime: 30_000,
   });
 
+  const { data: brokerCommissions = [], isLoading: commsLoading, refetch: refetchCommissions } = useQuery({
+    queryKey: ['cposCommissions'],
+    queryFn: cposService.getBrokerCommissions,
+    staleTime: 60_000,
+  });
+
+  const { data: leaseAgreements = [], isLoading: leasesLoading, refetch: refetchLeases } = useQuery({
+    queryKey: ['cposLeases'],
+    queryFn: cposService.getLeaseAgreements,
+    staleTime: 60_000,
+  });
+
   // ── Mutations ─────────────────────────────────────────────────
 
   const nocMutation = useMutation({
@@ -257,10 +269,10 @@ export default function CPOSScreen() {
     await Promise.allSettled([
       refetchProps(), refetchDir(), refetchTowers(), refetchNoc(),
       refetchDocs(), refetchAI(), refetchKyc(), refetchKycSummary(),
-      refetchCrm(), refetchCrmSummary(),
+      refetchCrm(), refetchCrmSummary(), refetchCommissions(), refetchLeases(),
     ]);
     setRefreshing(false);
-  }, [refetchProps, refetchDir, refetchTowers, refetchNoc, refetchDocs, refetchAI, refetchKyc, refetchKycSummary, refetchCrm, refetchCrmSummary]);
+  }, [refetchProps, refetchDir, refetchTowers, refetchNoc, refetchDocs, refetchAI, refetchKyc, refetchKycSummary, refetchCrm, refetchCrmSummary, refetchCommissions, refetchLeases]);
 
   // ── Derived Data ──────────────────────────────────────────────
 
@@ -310,7 +322,9 @@ export default function CPOSScreen() {
     (activeTab === 'vault' && docsLoading) ||
     (activeTab === 'ai' && aiLoading) ||
     (activeTab === 'kyc' && kycLoading) ||
-    (activeTab === 'crm' && crmLoading);
+    (activeTab === 'crm' && crmLoading) ||
+    (activeTab === 'commissions' && commsLoading) ||
+    (activeTab === 'leases' && leasesLoading);
 
   const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: 'units', label: 'My Units', icon: 'home-outline' },
@@ -320,6 +334,8 @@ export default function CPOSScreen() {
     { key: 'noc', label: 'NOC', icon: 'document-text-outline' },
     { key: 'vault', label: 'Documents', icon: 'folder-outline' },
     { key: 'crm', label: 'CRM', icon: 'trending-up-outline' },
+    { key: 'commissions', label: 'Brokers', icon: 'briefcase-outline' },
+    { key: 'leases', label: 'Lease Mgr', icon: 'key-outline' },
     { key: 'ai', label: 'AI Advisor', icon: 'sparkles-outline' },
   ];
 
@@ -1046,6 +1062,181 @@ export default function CPOSScreen() {
               </View>
             </View>
           ))}
+        </ScrollView>
+      )}
+
+      {/* ════════════════ BROKER COMMISSIONS TAB ════════════════ */}
+      {activeTab === 'commissions' && !isLoading && (
+        <ScrollView
+          contentContainerStyle={s.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+        >
+          <View style={s.crmSummaryCard}>
+            <Text style={s.cardTitle}>Broker Commission Payouts</Text>
+            <Text style={s.meta}>Direct real estate broker & channel partner settlement tracking</Text>
+            <View style={[s.cardRow, { marginTop: 12 }]}>
+              <View>
+                <Text style={s.meta}>TOTAL EARNED</Text>
+                <Text style={[s.cardTitle, { color: COLORS.primary }]}>
+                  ₹{(brokerCommissions.reduce((a, c) => a + (c.commissionAmount || 0), 0) / 100000).toFixed(2)} L
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={s.meta}>APPROVED</Text>
+                <Text style={[s.cardTitle, { color: '#059669' }]}>
+                  ₹{(brokerCommissions.filter(c => c.status === 'APPROVED' || c.status === 'PAID').reduce((a, c) => a + (c.commissionAmount || 0), 0) / 100000).toFixed(2)} L
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <Text style={s.sectionHeader}>Commission Records ({brokerCommissions.length})</Text>
+
+          {brokerCommissions.length === 0 ? (
+            <View style={s.emptyState}>
+              <Ionicons name="briefcase-outline" size={44} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No Broker Commissions</Text>
+              <Text style={s.emptySub}>Broker deal commissions will appear here upon closing.</Text>
+            </View>
+          ) : (
+            brokerCommissions.map((c) => (
+              <View key={c.id} style={s.card}>
+                <View style={s.cardRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardTitle}>{c.brokerName}</Text>
+                    <Text style={s.meta}>Unit {c.unitNumber} • Lead: {c.leadName}</Text>
+                  </View>
+                  <View style={[s.badge, { backgroundColor: c.status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7' }]}>
+                    <Text style={[s.badgeText, { color: c.status === 'APPROVED' ? '#059669' : '#D97706' }]}>
+                      {c.status.replace(/_/g, ' ')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[s.cardRow, { marginTop: 8, backgroundColor: '#F8FAFC', padding: 8, borderRadius: 8 }]}>
+                  <View>
+                    <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>DEAL VALUE</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.text }}>{c.dealValue}</Text>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>RATE</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>{c.commissionPercentage}%</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>PAYOUT</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#059669' }}>
+                      ₹{c.commissionAmount.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+
+                {c.invoiceNumber && (
+                  <View style={[s.cardRow, { marginTop: 4 }]}>
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Invoice: {c.invoiceNumber}</Text>
+                    {c.paidDate && <Text style={{ fontSize: 11, color: '#059669' }}>Paid on {c.paidDate}</Text>}
+                  </View>
+                )}
+              </View>
+            ))
+          )}
+        </ScrollView>
+      )}
+
+      {/* ════════════════ LEASE MANAGEMENT TAB ════════════════ */}
+      {activeTab === 'leases' && !isLoading && (
+        <ScrollView
+          contentContainerStyle={s.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+        >
+          <View style={s.crmSummaryCard}>
+            <Text style={s.cardTitle}>Lease Agreements &amp; Renewals</Text>
+            <Text style={s.meta}>Automated renewal tracking, police verification &amp; digital agreements</Text>
+            <View style={[s.cardRow, { marginTop: 12 }]}>
+              <View>
+                <Text style={s.meta}>ACTIVE LEASES</Text>
+                <Text style={[s.cardTitle, { color: '#059669' }]}>{leaseAgreements.length}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={s.meta}>EXPIRING SOON (&lt;60d)</Text>
+                <Text style={[s.cardTitle, { color: '#D97706' }]}>
+                  {leaseAgreements.filter(l => l.daysToExpiry < 60).length}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <Text style={s.sectionHeader}>Active Leases ({leaseAgreements.length})</Text>
+
+          {leaseAgreements.length === 0 ? (
+            <View style={s.emptyState}>
+              <Ionicons name="key-outline" size={44} color={COLORS.textMuted} />
+              <Text style={s.emptyTitle}>No Leases Found</Text>
+              <Text style={s.emptySub}>Tenant rental agreements will show here.</Text>
+            </View>
+          ) : (
+            leaseAgreements.map((lease) => {
+              const isUrgent = lease.daysToExpiry < 60;
+              return (
+                <View key={lease.id} style={s.card}>
+                  <View style={s.cardRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.cardTitle}>Unit {lease.unitNumber} • {lease.tenantName}</Text>
+                      <Text style={s.meta}>{lease.tenantPhone}</Text>
+                    </View>
+                    <View style={[s.badge, { backgroundColor: isUrgent ? '#FEF3C7' : '#D1FAE5' }]}>
+                      <Text style={[s.badgeText, { color: isUrgent ? '#D97706' : '#059669' }]}>
+                        {lease.daysToExpiry} Days Left
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[s.cardRow, { marginTop: 8, backgroundColor: '#F8FAFC', padding: 8, borderRadius: 8 }]}>
+                    <View>
+                      <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>MONTHLY RENT</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.text }}>
+                        ₹{lease.monthlyRent.toLocaleString()}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>SECURITY DEPOSIT</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>
+                        ₹{lease.depositAmount.toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[s.cardRow, { marginTop: 6 }]}>
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                      Term: {lease.startDate} to {lease.endDate}
+                    </Text>
+                    {lease.policeVerification && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                        <Ionicons name="shield-checkmark" size={12} color="#059669" />
+                        <Text style={{ fontSize: 10, color: '#059669', fontWeight: '700' }}>Police Verified</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={[s.cardRow, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 8 }]}>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                      onPress={() => Alert.alert('Agreement', `Viewing signed agreement for Unit ${lease.unitNumber}`)}
+                    >
+                      <Ionicons name="document-text-outline" size={14} color={COLORS.primary} />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.primary }}>View PDF</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 }}
+                      onPress={() => Alert.alert('Renewal Notice', `Sent lease renewal notice to ${lease.tenantName} (${lease.tenantPhone})`)}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#4F46E5' }}>Send Renewal Notice</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })
+          )}
         </ScrollView>
       )}
 

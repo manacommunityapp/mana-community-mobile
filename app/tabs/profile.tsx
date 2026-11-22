@@ -1191,6 +1191,14 @@ export default function ProfileScreen() {
             badge={unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined}
           />
           <MenuItem
+            icon="home-outline"
+            label="My Household"
+            sublabel="Flat, family members and vehicles in one place"
+            onPress={() => router.push('/household')}
+            iconColor="#0D9488"
+            iconBg="#CCFBF1"
+          />
+          <MenuItem
             icon="people-outline"
             label="Family Members"
             sublabel="Register family so security knows who can enter"
@@ -1213,6 +1221,14 @@ export default function ProfileScreen() {
             onPress={() => router.push('/profile/kyc')}
             iconColor="#059669"
             iconBg="#D1FAE5"
+          />
+          <MenuItem
+            icon="ribbon-outline"
+            label="Reputation & Identity"
+            sublabel="Community score, badges and moving token"
+            onPress={() => router.push('/profile/reputation')}
+            iconColor="#6366F1"
+            iconBg="#EEF2FF"
           />
           <MenuItem
             icon="shield-checkmark-outline"

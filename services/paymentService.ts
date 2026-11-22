@@ -1,4 +1,10 @@
 import api from './apiClient';
+import { requestQueue } from './requestQueue';
+
+function isNetworkError(err: unknown): boolean {
+  const e = err as any;
+  return !e?.response && (e?.code === 'ECONNABORTED' || e?.message === 'Network Error' || !e?.status);
+}
 
 export interface CashfreeCreateOrderRequest {
   amount: number;
@@ -42,6 +48,17 @@ export const paymentService = {
       const res = await api.post<CashfreeOrderResponse>('/payments/cashfree/orders', req);
       return res.data;
     } catch (err: any) {
+      if (isNetworkError(err)) {
+        await requestQueue.enqueue({
+          url: '/payments/cashfree/orders',
+          method: 'POST',
+          body: req,
+          headers: {},
+          maxRetries: 3,
+          tags: ['payment'],
+        });
+        throw new Error('No connection. Payment queued and will retry automatically.');
+      }
       throw new Error(err?.response?.data?.message || 'Failed to create payment order. Please try again.');
     }
   },
