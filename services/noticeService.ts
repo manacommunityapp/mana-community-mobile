@@ -62,7 +62,7 @@ export const noticeService = {
         params: category && category !== 'ALL' ? { category } : undefined,
       });
       const list = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
-      return list.map(normalizeNotice).sort((a, b) => {
+      return list.map(normalizeNotice).sort((a: NoticeDto, b: NoticeDto) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();

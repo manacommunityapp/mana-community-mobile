@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
   ActivityIndicator, TouchableOpacity, Modal,
@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/common/Header';
 import { AttendanceCalendar } from '@/components/hrm/AttendanceCalendar';
 import { hrmService } from '@/services/hrmService';
+import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { COLORS, FONTS, SHADOWS, RADIUS } from '@/constants/config';
 import type { AttendanceRecord } from '@/types/hrm';
 
@@ -25,14 +26,17 @@ export default function AttendanceScreen() {
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+  const { activeOrgId: orgId, initialize } = useHrmOrg();
+  useEffect(() => { initialize(); }, []);
 
   const from = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const lastDay = new Date(year, month + 1, 0).getDate();
   const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
   const { data: records, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['hrm-attendance', from, to],
-    queryFn: () => hrmService.getMyAttendance(from, to),
+    queryKey: ['hrm-attendance', orgId, from, to],
+    queryFn: () => hrmService.getMyAttendance(orgId!, from, to),
+    enabled: !!orgId,
   });
 
   const attendance = records ?? [];
@@ -52,7 +56,7 @@ export default function AttendanceScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
         contentContainerStyle={s.content}
       >
         {isLoading ? (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, Alert, ActivityIndicator, Vibration,
+  ScrollView, Alert, ActivityIndicator, Vibration, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,8 @@ import { healthGuardService } from '@/services/healthGuardService';
 import type { EmergencyIncidentDto } from '@/types/healthguard';
 
 const COUNTDOWN = 5;
+/** Direct fallback when the SOS cannot reach the server. */
+const EMERGENCY_FALLBACK_NUMBER = '112';
 
 export default function SosScreen() {
   const router = useRouter();
@@ -21,9 +23,11 @@ export default function SosScreen() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    healthGuardService.getActiveIncident().then(inc => {
-      if (inc) { setActiveIncident(inc); setPhase('active'); }
-    });
+    healthGuardService.getActiveIncident()
+      .then(inc => {
+        if (inc) { setActiveIncident(inc); setPhase('active'); }
+      })
+      .catch(() => { /* unknown — stay idle rather than claim an active incident */ });
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
@@ -61,8 +65,24 @@ export default function SosScreen() {
       setPhase('active');
       Vibration.vibrate([0, 500, 200, 500, 200, 500]);
     } catch {
-      Alert.alert('SOS Sent', 'Emergency alert triggered (offline mode).');
-      setPhase('active');
+      // The server never received this SOS, so no contact was alerted. Never show an
+      // active incident here — show a hard failure with a direct phone fallback.
+      setActiveIncident(null);
+      setPhase('idle');
+      setCountdown(COUNTDOWN);
+      Alert.alert(
+        'SOS NOT SENT',
+        'Your SOS could not reach the server, so NO emergency contacts were alerted. Call emergency services or security directly right now.',
+        [
+          {
+            text: `Call ${EMERGENCY_FALLBACK_NUMBER}`,
+            style: 'destructive',
+            onPress: () => Linking.openURL(`tel:${EMERGENCY_FALLBACK_NUMBER}`),
+          },
+          { text: 'Retry', onPress: () => triggerSos() },
+          { text: 'Close', style: 'cancel' },
+        ]
+      );
     } finally {
       setLoading(false);
     }
@@ -73,11 +93,19 @@ export default function SosScreen() {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Yes, I\'m safe', onPress: async () => {
-          if (activeIncident?.id) {
-            await healthGuardService.resolveIncident(activeIncident.id, 'Resolved by user');
+          try {
+            if (activeIncident?.id) {
+              await healthGuardService.resolveIncident(activeIncident.id, 'Resolved by user');
+            }
+            setActiveIncident(null);
+            setPhase('resolved');
+          } catch {
+            // Not resolved server-side — keep the incident visible as still active.
+            Alert.alert(
+              'Could Not Resolve',
+              'The server did not confirm this. The incident is still ACTIVE for responders. Please try again.'
+            );
           }
-          setActiveIncident(null);
-          setPhase('resolved');
         },
       },
     ]);
@@ -88,11 +116,19 @@ export default function SosScreen() {
       { text: 'No', style: 'cancel' },
       {
         text: 'Yes, cancel', onPress: async () => {
-          if (activeIncident?.id) {
-            await healthGuardService.cancelIncident(activeIncident.id);
+          try {
+            if (activeIncident?.id) {
+              await healthGuardService.cancelIncident(activeIncident.id);
+            }
+            setActiveIncident(null);
+            setPhase('idle');
+          } catch {
+            // Not cancelled server-side — the alert is still live.
+            Alert.alert(
+              'Could Not Cancel',
+              'The server did not confirm the cancellation. The emergency alert is still ACTIVE. Please try again.'
+            );
           }
-          setActiveIncident(null);
-          setPhase('idle');
         },
       },
     ]);

@@ -142,9 +142,18 @@ describe('Mobile Platform Verification Suite', () => {
       expect(resolveRoute({ type: 'EVENT_REMINDER', eventId: 10 })).toBe('/tabs/events');
     });
 
-    it('routes SOS_ALERT and EMERGENCY to safety screen', () => {
-      expect(resolveRoute({ type: 'SOS_ALERT' })).toBe('/safety');
+    // resolveRoute deliberately splits these two: a medical SOS or incident goes to
+    // HealthGuard, a general emergency or fire goes to Safety. This test previously
+    // asserted that both landed on /safety, from before the split existed — and it
+    // never ran, so nothing caught the drift.
+    it('routes medical SOS and incident reports to the HealthGuard screen', () => {
+      expect(resolveRoute({ type: 'SOS_ALERT' })).toBe('/healthguard');
+      expect(resolveRoute({ type: 'INCIDENT_REPORT' })).toBe('/healthguard');
+    });
+
+    it('routes general emergencies and fire alerts to the Safety screen', () => {
       expect(resolveRoute({ type: 'EMERGENCY' })).toBe('/safety');
+      expect(resolveRoute({ type: 'FIRE_ALERT' })).toBe('/safety');
     });
 
     it('routes PAYMENT_DUE and INVOICE to finance screen', () => {

@@ -172,7 +172,7 @@ export default function MyFacilityBookingsScreen() {
           keyExtractor={b => b.id}
           renderItem={renderItem}
           contentContainerStyle={s.list}
-          onRefresh={refetch}
+          onRefresh={() => { void refetch(); }}
           refreshing={false}
         />
       )}

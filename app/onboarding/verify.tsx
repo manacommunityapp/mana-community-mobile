@@ -14,6 +14,7 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 import { StepHeader } from './account';
 import { COLORS } from '@/constants/config';
 import api from '@/services/apiClient';
+import { hashGovtIdNumber, govtIdLast4 } from '@/services/kycService';
 import type { GovtIdType } from '@/types/api';
 import {
   validateDocumentFile,
@@ -88,14 +89,17 @@ export default function VerifyStep() {
       const frontUrl = await uploadImage(frontUri!);
       const backUrl  = backUri ? await uploadImage(backUri) : undefined;
 
+      // Only the digest and the last 4 leave the device — never the raw number.
       const updatedUser = await authService.submitKyc({
-        govtIdType:       idType,
-        govtIdNumber:     idNumber.trim(),
-        documentFrontUrl: frontUrl,
-        documentBackUrl:  backUrl,
+        govtIdType:        idType,
+        govtIdNumberHash:  await hashGovtIdNumber(idNumber),
+        govtIdLast4:       govtIdLast4(idNumber),
+        documentFrontUrl:  frontUrl,
+        documentBackUrl:   backUrl,
       });
 
       updateUser(updatedUser);
+      setIdNumber(''); // drop the raw ID from state as soon as it is hashed
       reset();
       router.replace('/onboarding/pending');
     } catch (err: any) {

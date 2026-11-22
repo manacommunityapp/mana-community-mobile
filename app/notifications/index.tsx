@@ -175,7 +175,7 @@ export default function NotificationsScreen() {
           data={notifications}
           keyExtractor={(n) => String(n.id)}
           renderItem={renderItem}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={scr.empty}>
               <View style={scr.emptyIconWrap}>

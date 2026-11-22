@@ -226,7 +226,7 @@ export default function MarketplaceOrdersScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={tab === 'buying' ? refetchMy : refetchSeller}
+              onRefresh={() => { void (tab === 'buying' ? refetchMy() : refetchSeller()); }}
               tintColor={COLORS.primary}
             />
           }

@@ -213,10 +213,8 @@ export const visitorService = {
       const res = await api.post<{ maskedPhone: string }>('/visitors/delivery-otp/generate', { flat, company });
       return res.data;
     } catch (err: any) {
-      // Mock fallback for demo — real backend sends OTP to resident's phone
-      if (err?.response?.status === 404 || err?.response?.status === 405) {
-        return { maskedPhone: '******7890' };
-      }
+      // Only the backend can send an OTP to the resident. A misconfigured route must
+      // surface as a failure, never as a fake masked number.
       throw new Error(err?.response?.data?.message || 'Failed to send OTP to resident.');
     }
   },
@@ -225,10 +223,8 @@ export const visitorService = {
     try {
       await api.post('/visitors/delivery-otp/verify', { flat, otp });
     } catch (err: any) {
-      if (err?.response?.status === 404 || err?.response?.status === 405) {
-        // Mock: accept any 6-digit OTP for demo
-        if (otp.length === 6) return;
-      }
+      // Never accept an OTP locally — a 404/405 from a misconfigured route would
+      // otherwise admit any delivery on a guessed 6-digit code.
       throw new Error(err?.response?.data?.message || 'OTP verification failed. Please try again.');
     }
   },

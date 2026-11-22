@@ -167,18 +167,22 @@ export default function FacilitiesScreen() {
       const currentFacility = selectedFacility;
       const currentDay = upcomingDays[selectedDayOffset];
 
+      // Use the booking the server actually created. Its status may legitimately be
+      // PENDING (e.g. awaiting committee approval) — never relabel it CONFIRMED, and
+      // never invent a booking reference.
       const confirmedPass: FacilityBookingDto = {
-        id: res?.id || `BK-${Date.now()}`,
-        facilityId: currentFacility?.id || 'fac',
-        facilityName: currentFacility?.name || 'Community Amenity',
-        date: currentDay.fullDate,
-        startTime: selectedSlot?.split(' - ')[0] || '06:00 AM',
-        endTime: selectedSlot?.split(' - ')[1] || '07:00 AM',
-        guestCount,
-        totalAmount: currentFacility ? currentFacility.hourlyRate : 0,
-        status: 'CONFIRMED',
-        bookingRef: res?.bookingRef || `FAC-${Math.floor(100000 + Math.random() * 900000)}`,
-        createdAt: new Date().toISOString(),
+        ...res,
+        id: res?.id,
+        facilityId: res?.facilityId || currentFacility?.id || 'fac',
+        facilityName: res?.facilityName || currentFacility?.name || 'Community Amenity',
+        date: res?.date || currentDay.fullDate,
+        startTime: res?.startTime || selectedSlot?.split(' - ')[0] || '06:00 AM',
+        endTime: res?.endTime || selectedSlot?.split(' - ')[1] || '07:00 AM',
+        guestCount: res?.guestCount ?? guestCount,
+        totalAmount: res?.totalAmount ?? (currentFacility ? currentFacility.hourlyRate : 0),
+        status: res?.status || 'PENDING',
+        bookingRef: res?.bookingRef,
+        createdAt: res?.createdAt || new Date().toISOString(),
       };
 
       setSelectedFacility(null);
@@ -646,10 +650,19 @@ export default function FacilitiesScreen() {
         <View style={s.modalOverlay}>
           <View style={s.passCard}>
             <View style={s.passHeader}>
-              <View style={s.passSuccessBadge}>
-                <Ionicons name="checkmark-circle" size={16} color="#059669" />
-                <Text style={s.passSuccessText}>Reservation Verified</Text>
-              </View>
+              {bookingPass?.status === 'CONFIRMED' ? (
+                <View style={s.passSuccessBadge}>
+                  <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                  <Text style={s.passSuccessText}>Reservation Confirmed</Text>
+                </View>
+              ) : (
+                <View style={s.passPendingBadge}>
+                  <Ionicons name="time-outline" size={16} color="#B45309" />
+                  <Text style={s.passPendingText}>
+                    {bookingPass?.status === 'WAITLISTED' ? 'Waitlisted' : 'Pending Confirmation'}
+                  </Text>
+                </View>
+              )}
               <TouchableOpacity onPress={() => setBookingPass(null)}>
                 <Ionicons name="close" size={22} color={COLORS.textMuted} />
               </TouchableOpacity>
@@ -659,6 +672,12 @@ export default function FacilitiesScreen() {
               <View style={s.passBody}>
                 <Text style={s.passFacilityName}>{bookingPass.facilityName}</Text>
                 <Text style={s.passRefText}>Pass Reference: {bookingPass.bookingRef || bookingPass.id}</Text>
+                {bookingPass.status !== 'CONFIRMED' && (
+                  <Text style={s.passPendingNote}>
+                    This booking is {String(bookingPass.status || 'PENDING')} and is NOT yet confirmed. Do not invite
+                    guests until the society confirms it.
+                  </Text>
+                )}
 
                 <View style={s.passDivider} />
 
@@ -1090,6 +1109,17 @@ const s = StyleSheet.create({
     borderRadius: 6,
   },
   passSuccessText: { fontSize: 10, fontWeight: '800', color: '#059669', fontFamily: 'Outfit-Bold' },
+  passPendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  passPendingText: { fontSize: 10, fontWeight: '800', color: '#B45309', fontFamily: 'Outfit-Bold' },
+  passPendingNote: { fontSize: 11, color: '#B45309', fontWeight: '700', lineHeight: 15, marginTop: 4 },
   passBody: { gap: 4 },
   passFacilityName: { fontSize: 17, fontWeight: '800', color: COLORS.text, fontFamily: 'Outfit-Bold' },
   passRefText: { fontSize: 11, fontFamily: 'monospace', color: COLORS.textMuted },

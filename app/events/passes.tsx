@@ -101,7 +101,7 @@ export default function EventPassesScreen() {
           data={filteredPasses}
           keyExtractor={item => item.id}
           contentContainerStyle={s.listContent}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
           renderItem={({ item }) => (
             <View style={s.ticketCard}>
               <View style={s.ticketHeader}>

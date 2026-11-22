@@ -20,6 +20,7 @@ export default function OfflineSyncScreen() {
   const [queue, setQueue] = useState<SyncMutation[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [lastSyncFailed, setLastSyncFailed] = useState(false);
 
   useEffect(() => {
     loadQueue();
@@ -41,10 +42,33 @@ export default function OfflineSyncScreen() {
     try {
       const pushRes = await offlineSyncService.pushPendingMutations(1);
       const pullRes = await offlineSyncService.pullDeltaChanges(1);
+      const latest = offlineSyncService.getServerQueue();
+      setQueue(latest);
+      const stillPending = latest.filter((m) => m.status === 'PENDING').length;
+
+      if (pushRes.status === 'PUSH_FAILED' || pullRes.status === 'PULL_FAILED') {
+        setLastSyncFailed(true);
+        Alert.alert(
+          'Sync Failed',
+          `The server could not be reached, so nothing was confirmed. ${stillPending} item(s) are still pending and will be retried. Do not treat them as submitted.`
+        );
+        return;
+      }
+
+      setLastSyncFailed(false);
+      Alert.alert(
+        'Sync Complete',
+        `Server confirmed ${pushRes.acceptedMutationIds.length} mutation(s).` +
+          (stillPending > 0 ? ` ${stillPending} item(s) are still pending.` : '')
+      );
+    } catch (err) {
+      setLastSyncFailed(true);
       setQueue(offlineSyncService.getServerQueue());
-      Alert.alert('Sync Complete', `Processed ${pushRes.acceptedMutationIds.length} mutations. Delta checkpoint updated.`);
-    } catch {
-      Alert.alert('Sync Staged', 'Network unreachable. Mutations safely queued in local storage.');
+      const stillPending = offlineSyncService.getServerQueue().filter((m) => m.status === 'PENDING').length;
+      Alert.alert(
+        'Sync Failed',
+        `Sync could not complete. Nothing was confirmed by the server. ${stillPending} item(s) remain pending.`
+      );
     } finally {
       setSyncing(false);
     }
@@ -67,6 +91,16 @@ export default function OfflineSyncScreen() {
           <Text style={styles.statusDescription}>
             Mutations recorded in elevator shafts or basement parking are cached locally and synchronized via Last-Write-Wins (LWW) delta protocol.
           </Text>
+
+          {lastSyncFailed && (
+            <View style={styles.failureBanner}>
+              <Ionicons name="alert-circle-outline" size={16} color="#B91C1C" />
+              <Text style={styles.failureBannerText}>
+                Last sync failed — server unreachable. {queue.filter((m) => m.status === 'PENDING').length} item(s) pending
+                confirmation. Nothing below has been confirmed by the server.
+              </Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.syncBtn}
@@ -166,6 +200,18 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionHeader: { fontSize: 13, fontWeight: '700', color: '#475569', textTransform: 'uppercase' },
   clearBtnText: { fontSize: 12, color: '#0284C7', fontWeight: '600' },
+  failureBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 14,
+  },
+  failureBannerText: { flex: 1, fontSize: 11, color: '#B91C1C', lineHeight: 16, fontWeight: '600' },
   emptyCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.lg,

@@ -369,7 +369,7 @@ export default function SkillPassportScreen() {
   });
 
   const addCertMut = useMutation({
-    mutationFn: (data: Parameters<typeof hrmService.addCertification>[0]) => hrmService.addCertification(data),
+    mutationFn: (data: Parameters<typeof hrmService.addPassportCertification>[0]) => hrmService.addPassportCertification(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['mw-passport'] }),
     onError: () => Alert.alert('Error', 'Could not add certification.'),
   });

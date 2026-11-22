@@ -173,7 +173,7 @@ export default function PackagesScreen() {
         data={displayList}
         keyExtractor={i => String(i.id)}
         renderItem={renderPackage}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { void refetch(); }} />}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.empty}>

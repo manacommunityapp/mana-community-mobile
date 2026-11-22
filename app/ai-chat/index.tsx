@@ -472,7 +472,7 @@ export default function AiChatScreen() {
                   <Text style={s.thinkingText}>Consulting 66 society tools...</Text>
                 </View>
               </View>
-            ) : null
+            ) : undefined
           }
         />
 

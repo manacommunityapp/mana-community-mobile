@@ -16,6 +16,71 @@ export interface PersonalReceiptDto {
 
 import api from './apiClient';
 import { secureLog } from '@/security';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PENDING_BILLS_KEY = '@mana/pendingMarkBillPaid';
+
+/**
+ * Thrown when a write could not reach the server but was persisted to the offline retry
+ * queue. The operation is NOT confirmed — callers must render a "pending confirmation"
+ * state, never a success state.
+ */
+export class OfflineQueuedError extends Error {
+  readonly code = 'OFFLINE_QUEUED';
+  constructor(message = 'OFFLINE_QUEUED') {
+    super(message);
+    this.name = 'OfflineQueuedError';
+  }
+}
+
+export function isOfflineQueuedError(err: unknown): err is OfflineQueuedError {
+  return err instanceof OfflineQueuedError || (err as { code?: string })?.code === 'OFFLINE_QUEUED';
+}
+
+/** Queue a bill-paid operation so it retries on next app open */
+async function queueMarkBillPaid(id: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_BILLS_KEY);
+    const queue: string[] = raw ? JSON.parse(raw) : [];
+    if (!queue.includes(id)) {
+      queue.push(id);
+      await AsyncStorage.setItem(PENDING_BILLS_KEY, JSON.stringify(queue));
+    }
+  } catch {
+    // AsyncStorage unavailable — log and continue
+    secureLog.warn('[personalFinanceService] queueMarkBillPaid: could not persist to AsyncStorage');
+  }
+}
+
+/** Retry any queued mark-paid operations. Call on app resume / network reconnect. */
+export async function flushPendingMarkBillPaid(): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_BILLS_KEY);
+    if (!raw) return;
+    const queue: string[] = JSON.parse(raw);
+    const failed: string[] = [];
+    for (const id of queue) {
+      let sent = false;
+      for (const path of [`/api/v1/personal-finance/bills/${id}/mark-paid`, `/personal-finance/bills/${id}/mark-paid`]) {
+        try {
+          await api.post(path, {});
+          sent = true;
+          break;
+        } catch {
+          // try next path
+        }
+      }
+      if (!sent) failed.push(id);
+    }
+    if (failed.length > 0) {
+      await AsyncStorage.setItem(PENDING_BILLS_KEY, JSON.stringify(failed));
+    } else {
+      await AsyncStorage.removeItem(PENDING_BILLS_KEY);
+    }
+  } catch {
+    secureLog.warn('[personalFinanceService] flushPendingMarkBillPaid: error processing queue');
+  }
+}
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -1141,10 +1206,15 @@ export const personalFinanceService = {
         await api.post(path, {});
         return;
       } catch {
-        // try next
+        // try next path
       }
     }
-    secureLog.warn('[personalFinanceService] markBillPaid: offline, bill not updated on server');
+    // All paths failed — queue for retry on next online session, then surface the
+    // failure. The server has NOT recorded this payment, so the caller must not
+    // treat it as done.
+    secureLog.warn('[personalFinanceService] markBillPaid: offline, queuing for later retry');
+    await queueMarkBillPaid(id);
+    throw new OfflineQueuedError('Bill payment queued — not yet confirmed by the server.');
   },
 
   // ── Installments & Loans (P3) ───────────────────────────────────────────────
@@ -1198,15 +1268,9 @@ export const personalFinanceService = {
         // try next
       }
     }
-    const inst = LOCAL_INSTALLMENTS.find(i => i.id === id);
-    if (inst && inst.remainingTenorMonths > 0) {
-      inst.remainingTenorMonths -= 1;
-      inst.paidAmount += (amount || inst.monthlyEmi);
-      inst.remainingAmount = Math.max(0, inst.totalAmount - inst.paidAmount);
-      inst.percentPaid = Math.round(((inst.totalTenorMonths - inst.remainingTenorMonths) / inst.totalTenorMonths) * 100);
-      if (inst.remainingTenorMonths === 0) inst.status = 'COMPLETED';
-    }
-    return inst!;
+    // An EMI payment is only real once the server records it. Do not advance the local
+    // amortization schedule or report a debit that never happened.
+    throw new Error('EMI payment could not be recorded — the server is unreachable. Nothing was debited.');
   },
 
   deleteInstallment: async (id: string): Promise<void> => {

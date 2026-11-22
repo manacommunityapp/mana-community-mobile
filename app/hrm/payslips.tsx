@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -80,15 +80,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   card: { backgroundColor: COLORS.white, borderRadius: RADIUS.md, padding: 16, ...SHADOWS.sm },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  period: { ...FONTS.semibold, fontSize: 16, color: COLORS.text },
-  net: { ...FONTS.bold, fontSize: 18, color: COLORS.success },
+  period: { fontFamily: FONTS.semibold, fontSize: 16, color: COLORS.text },
+  net: { fontFamily: FONTS.bold, fontSize: 18, color: COLORS.success },
   row: { flexDirection: 'row', marginBottom: 12 },
   col: { flex: 1, alignItems: 'center' },
-  colVal: { ...FONTS.semibold, fontSize: 14, color: COLORS.text },
-  colLabel: { ...FONTS.regular, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
+  colVal: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.text },
+  colLabel: { fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   breakdown: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, gap: 4 },
   breakdownRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  breakdownLabel: { ...FONTS.regular, fontSize: 12, color: COLORS.textSecondary },
-  breakdownVal: { ...FONTS.regular, fontSize: 12, color: COLORS.text },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, ...FONTS.regular },
+  breakdownLabel: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textSecondary },
+  breakdownVal: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.text },
+  empty: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, fontFamily: FONTS.regular },
 });

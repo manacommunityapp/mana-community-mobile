@@ -14,6 +14,8 @@ interface HeaderProps {
   actions?: HeaderAction[];
   leftIcon?: keyof typeof Ionicons.glyphMap;
   onLeftPress?: () => void;
+  rightIcon?: keyof typeof Ionicons.glyphMap;
+  onRightPress?: () => void;
   branded?: boolean;
   showBack?: boolean;
   onBack?: () => void;
@@ -25,6 +27,8 @@ export function Header({
   actions = [],
   leftIcon,
   onLeftPress,
+  rightIcon,
+  onRightPress,
   branded = false,
   showBack = false,
   onBack,
@@ -53,8 +57,13 @@ export function Header({
         </View>
       </View>
 
-      {actions.length > 0 && (
+      {(actions.length > 0 || rightIcon) && (
         <View style={styles.actions}>
+          {rightIcon && onRightPress && (
+            <TouchableOpacity onPress={onRightPress} hitSlop={8} style={styles.actionBtn}>
+              <Ionicons name={rightIcon} size={21} color={COLORS.text} />
+            </TouchableOpacity>
+          )}
           {actions.map((action, i) => (
             <TouchableOpacity
               key={i}

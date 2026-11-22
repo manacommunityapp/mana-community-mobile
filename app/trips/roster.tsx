@@ -135,7 +135,7 @@ export default function TripRosterScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.listContent}
           refreshing={isRefetching}
-          onRefresh={refetch}
+          onRefresh={() => { void refetch(); }}
           renderItem={({ item: booking }) => {
             const isCheckedIn = !!booking.attendance?.checkedIn;
 

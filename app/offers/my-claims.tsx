@@ -64,7 +64,7 @@ export default function MyClaimsScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
       >
         {/* ── Wallet Overview Card ────────────────────────────────────── */}
         <View style={styles.walletHero}>

@@ -264,7 +264,7 @@ export default function HandoverScreen() {
               keyExtractor={(i) => String(i.id)}
               renderItem={renderHandover}
               contentContainerStyle={styles.list}
-              refreshControl={<RefreshControl refreshing={handoversQ.isFetching} onRefresh={() => handoversQ.refetch()} />}
+              refreshControl={<RefreshControl refreshing={handoversQ.isFetching} onRefresh={() => { void handoversQ.refetch(); }} />}
               ListEmptyComponent={<Text style={styles.empty}>No handovers today.</Text>}
             />
           )}
@@ -289,7 +289,7 @@ export default function HandoverScreen() {
               keyExtractor={(i) => String(i.id)}
               renderItem={renderAssignment}
               contentContainerStyle={styles.list}
-              refreshControl={<RefreshControl refreshing={assignmentsQ.isFetching} onRefresh={() => assignmentsQ.refetch()} />}
+              refreshControl={<RefreshControl refreshing={assignmentsQ.isFetching} onRefresh={() => { void assignmentsQ.refetch(); }} />}
               ListEmptyComponent={<Text style={styles.empty}>No assignments found.</Text>}
             />
           )}

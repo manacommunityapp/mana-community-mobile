@@ -137,7 +137,7 @@ export default function EventCalendarScreen() {
             data={selectedDayEvents}
             keyExtractor={item => String(item.id)}
             contentContainerStyle={{ paddingBottom: 40 }}
-            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} />}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={s.eventRowCard}

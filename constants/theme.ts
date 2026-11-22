@@ -27,6 +27,7 @@ export const THEME = {
   text:         "#0F172A",
   muted:        "#64748B",
   primary:      "#4F46E5",
+  card:         "#FFFFFF",  // card surface alias
 } as const;
 
 export default THEME;

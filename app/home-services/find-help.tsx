@@ -252,8 +252,7 @@ export default function FindHelpScreen() {
                 bookMutation.mutate({
                   workerId: bookingWorker.id,
                   providerName: bookingWorker.name,
-                  category: bookingWorker.category,
-                  phone: bookingWorker.phone,
+                  category: bookingWorker.category ?? '',
                   slotDate: new Date().toISOString().split('T')[0],
                   timeSlot: slot,
                   requirementsNotes: notes,

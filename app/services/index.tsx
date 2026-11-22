@@ -257,7 +257,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   }, [providers, selectedCategory, searchQuery]);
 
   const pkgStats = useMemo(() => ({
-    totalMonthly: packages.reduce((sum, p) => sum + p.monthlySalary, 0),
+    totalMonthly: packages.reduce((sum, p) => sum + (p.monthlySalary ?? 0), 0),
     overdue: packages.filter((p) => p.paymentStatus === 'OVERDUE').length,
     due: packages.filter((p) => p.paymentStatus === 'DUE').length,
   }), [packages]);
@@ -602,7 +602,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
         <FlatList
           style={{ flex: 1 }}
           data={domesticStaff}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
@@ -659,7 +659,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     <Text style={s.cardSpeciality}>🕐 {staff.shiftTime} · 🏢 {staff.workingTowers}</Text>
                   </View>
                   <View style={s.salaryCol}>
-                    <Text style={s.salaryValue}>₹{staff.monthlySalary.toLocaleString()}</Text>
+                    <Text style={s.salaryValue}>₹{(staff.monthlySalary ?? 0).toLocaleString()}</Text>
                     <Text style={s.salaryUnit}>/month</Text>
                   </View>
                 </View>
@@ -689,7 +689,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                   </View>
                   <View style={s.metaTag}>
                     <Text style={{ fontSize: 11 }}>🏠</Text>
-                    <Text style={s.metaTagText}>{staff.workingFlats.length} flats</Text>
+                    <Text style={s.metaTagText}>{(staff.workingFlats ?? []).length} flats</Text>
                   </View>
                 </View>
 
@@ -725,7 +725,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
         <FlatList
           style={{ flex: 1 }}
           data={attendance}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
@@ -760,7 +760,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           }
           renderItem={({ item: att }) => {
             const aCfg = ATT_STATUS_CONFIG[att.status];
-            const rCfg = ROLE_CONFIG[att.role] || ROLE_CONFIG.HELPER;
+            const rCfg = ROLE_CONFIG[att.role ?? 'HELPER'] || ROLE_CONFIG.HELPER;
             return (
               <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: aCfg.color }]}>
                 <View style={s.cardTopRow}>
@@ -817,7 +817,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
         <FlatList
           style={{ flex: 1 }}
           data={packages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
@@ -854,8 +854,8 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
             </>
           }
           renderItem={({ item: pkg }) => {
-            const rCfg = ROLE_CONFIG[pkg.role] || ROLE_CONFIG.HELPER;
-            const pCfg = PAYMENT_CONFIG[pkg.paymentStatus] || PAYMENT_CONFIG.DUE;
+            const rCfg = ROLE_CONFIG[pkg.role ?? 'HELPER'] || ROLE_CONFIG.HELPER;
+            const pCfg = PAYMENT_CONFIG[pkg.paymentStatus ?? 'DUE'] || PAYMENT_CONFIG.DUE;
             return (
               <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: pCfg.color }]}>
                 <View style={s.cardTopRow}>
@@ -867,7 +867,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     <Text style={s.cardSpeciality}>{rCfg.emoji} {rCfg.label} · 🏠 {pkg.flatNumber}</Text>
                   </View>
                   <View style={s.salaryCol}>
-                    <Text style={s.salaryValue}>₹{pkg.monthlySalary.toLocaleString()}</Text>
+                    <Text style={s.salaryValue}>₹{(pkg.monthlySalary ?? 0).toLocaleString()}</Text>
                     <View style={[s.statusBadge, { backgroundColor: pCfg.bg, borderWidth: 1, borderColor: pCfg.color + '30' }]}>
                       <Text style={{ fontSize: 9 }}>{pCfg.emoji}</Text>
                       <Text style={[s.statusBadgeText, { color: pCfg.color }]}>{pCfg.label}</Text>
@@ -876,7 +876,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 </View>
 
                 <View style={s.servicesWrap}>
-                  {pkg.services.map((svc) => (
+                  {(pkg.services ?? []).map((svc) => (
                     <View key={svc} style={s.serviceChip}>
                       <Text style={s.serviceChipText}>{svc}</Text>
                     </View>
@@ -899,7 +899,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                 {pkg.paymentStatus !== 'PAID' && (
                   <TouchableOpacity
                     style={s.payBtn}
-                    onPress={() => Alert.alert('Pay Salary', `Mark ₹${pkg.monthlySalary.toLocaleString()} as paid for ${pkg.staffName}?`, [
+                    onPress={() => Alert.alert('Pay Salary', `Mark ₹${(pkg.monthlySalary ?? 0).toLocaleString()} as paid for ${pkg.staffName}?`, [
                       { text: 'Cancel' },
                       { text: 'Mark Paid' },
                     ])}
@@ -929,7 +929,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
         <FlatList
           style={{ flex: 1 }}
           data={jobPosts}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
@@ -1024,7 +1024,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
         <FlatList
           style={{ flex: 1 }}
           data={bookings}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4F46E5']} tintColor="#4F46E5" />}
@@ -1074,7 +1074,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                       style={[s.outlineBtn, { borderColor: '#FCA5A5' }]}
                       onPress={() => Alert.alert('Cancel', 'Cancel this booking?', [
                         { text: 'Keep' },
-                        { text: 'Cancel', style: 'destructive', onPress: () => cancelMutation.mutate(bk.id) },
+                        { text: 'Cancel', style: 'destructive', onPress: () => cancelMutation.mutate(bk.id as unknown as string) },
                       ])}
                       activeOpacity={0.7}
                     >
@@ -1267,8 +1267,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                       bookMutation.mutate({
                         workerId: selectedProvider.id,
                         providerName: selectedProvider.name,
-                        phone: selectedProvider.phone,
-                        category: selectedProvider.category,
+                        category: selectedProvider.category ?? '',
                         slotDate: bookDate,
                         timeSlot: bookTimeSlot,
                         requirementsNotes: bookIssue.trim() || `${selectedProvider.category} service`,
@@ -1295,7 +1294,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
           <View style={s.sheetCard}>
             {selectedProviderDetail && (() => {
               const catCfg = CATEGORIES.find((c) => c.value === selectedProviderDetail.category) || CATEGORIES[0];
-              const stars = Math.round(selectedProviderDetail.rating);
+              const stars = Math.round(selectedProviderDetail.rating ?? 0);
               return (
                 <>
                   <View style={[s.sheetHandle]} />
@@ -1473,10 +1472,10 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                     {/* Summary chips */}
                     <View style={s.calSummaryRow}>
                       {[
-                        { label: 'Present', count: calendarData.summary.present, color: '#059669', bg: '#DCFCE7' },
-                        { label: 'Absent', count: calendarData.summary.absent, color: '#DC2626', bg: '#FEE2E2' },
-                        { label: 'Leave', count: calendarData.summary.onLeave, color: '#D97706', bg: '#FEF3C7' },
-                        { label: 'Unknown', count: calendarData.summary.notMarked, color: '#6B7280', bg: '#F1F5F9' },
+                        { label: 'Present', count: calendarData.summary?.present ?? 0, color: '#059669', bg: '#DCFCE7' },
+                        { label: 'Absent', count: calendarData.summary?.absent ?? 0, color: '#DC2626', bg: '#FEE2E2' },
+                        { label: 'Leave', count: calendarData.summary?.onLeave ?? 0, color: '#D97706', bg: '#FEF3C7' },
+                        { label: 'Unknown', count: calendarData.summary?.notMarked ?? 0, color: '#6B7280', bg: '#F1F5F9' },
                       ].map(item => (
                         <View key={item.label} style={[s.calSummaryChip, { backgroundColor: item.bg, borderColor: item.color + '40' }]}>
                           <Text style={[s.calSummaryNum, { color: item.color }]}>{item.count}</Text>
@@ -1498,7 +1497,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
                       {Array.from({ length: new Date(calendarYear, calendarMonth - 1, 1).getDay() }).map((_, i) => (
                         <View key={`empty-${i}`} style={s.calCell} />
                       ))}
-                      {calendarData.days.map(({ day, status, checkInTime }) => {
+                      {(calendarData.days ?? []).map(({ day, status, checkInTime }) => {
                         const cfg: Record<AttendanceStatus, { color: string; bg: string; char: string }> = {
                           CHECKED_IN:  { color: '#059669', bg: '#DCFCE7', char: 'P' },
                           CHECKED_OUT: { color: '#2563EB', bg: '#DBEAFE', char: 'P' },

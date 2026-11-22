@@ -11,11 +11,12 @@ import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import {
   kycService,
+  buildSubmitKycRequest,
   KycSummary,
   KycDocument,
   KycDocumentType,
   KycStatus,
-  SubmitKycRequest,
+  KycFormInput,
 } from '@/services/kycService';
 
 const DOC_TYPES: { type: KycDocumentType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -50,7 +51,9 @@ export default function KycScreen() {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [resubmitDoc, setResubmitDoc] = useState<KycDocument | null>(null);
-  const [form, setForm] = useState<SubmitKycRequest>({ documentType: 'AADHAAR', documentNumber: '' });
+  // Holds the raw ID number for as long as the form is open, and no longer.
+  // It is hashed on submit and never persisted or sent.
+  const [form, setForm] = useState<KycFormInput>({ documentType: 'AADHAAR', documentNumber: '' });
   const [formError, setFormError] = useState('');
   const [modalSuccess, setModalSuccess] = useState('');
 
@@ -61,7 +64,8 @@ export default function KycScreen() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (data: SubmitKycRequest) => kycService.submitDocument(data),
+    mutationFn: async (data: KycFormInput) =>
+      kycService.submitDocument(await buildSubmitKycRequest(data)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kyc'] });
       setForm({ documentType: 'AADHAAR', documentNumber: '' });
@@ -73,7 +77,8 @@ export default function KycScreen() {
   });
 
   const resubmitMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: SubmitKycRequest }) => kycService.resubmitDocument(id, data),
+    mutationFn: async ({ id, data }: { id: number; data: KycFormInput }) =>
+      kycService.resubmitDocument(id, await buildSubmitKycRequest(data)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kyc'] });
       setResubmitDoc(null);
@@ -97,7 +102,11 @@ export default function KycScreen() {
 
   const openResubmit = (doc: KycDocument) => {
     setResubmitDoc(doc);
-    setForm({ documentType: doc.documentType, documentNumber: doc.documentNumber });
+    // The server only ever returns the last 4 digits, so there is nothing to
+    // pre-fill: hashing a masked value would produce a digest that can never
+    // match. Require the full number to be re-entered.
+    setForm({ documentType: doc.documentType, documentNumber: '' });
+    setFormError('');
     setShowAdd(true);
   };
 
@@ -164,7 +173,9 @@ export default function KycScreen() {
                   </View>
                   <View style={{ flex: 1, marginLeft: SPACING.md }}>
                     <Text style={s.docName}>{docMeta?.label ?? doc.documentType}</Text>
-                    <Text style={s.docNumber}>{doc.documentNumber}</Text>
+                    <Text style={s.docNumber}>
+                      {doc.idNumberLast4 ? `•••• •••• ${doc.idNumberLast4}` : '••••'}
+                    </Text>
                   </View>
                   <View style={[s.docStatus, { backgroundColor: stCfg.bg }]}>
                     <Ionicons name={stCfg.icon} size={12} color={stCfg.color} />
@@ -206,7 +217,7 @@ export default function KycScreen() {
           <View style={s.modal}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>{resubmitDoc ? 'Resubmit Document' : 'Add Document'}</Text>
-              <TouchableOpacity onPress={() => { setShowAdd(false); setResubmitDoc(null); setFormError(''); setModalSuccess(''); }} hitSlop={8}>
+              <TouchableOpacity onPress={() => { setShowAdd(false); setResubmitDoc(null); setForm({ documentType: 'AADHAAR', documentNumber: '' }); setFormError(''); setModalSuccess(''); }} hitSlop={8}>
                 <Ionicons name="close" size={22} color={COLORS.text} />
               </TouchableOpacity>
             </View>

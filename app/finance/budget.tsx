@@ -97,7 +97,7 @@ export default function SocietyBudgetScreen() {
 
       <ScrollView
         contentContainerStyle={s.scrollContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={[THEME.brand]} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { void refetch(); }} colors={[THEME.brand]} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Summary Card */}
