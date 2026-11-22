@@ -1,18 +1,21 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { setTenantCommunityId } from '@/services/apiClient';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TenantContextValue {
   communityId: number | null;
   communityName: string | null;
   isResolved: boolean;
+  setTenantInfo: (communityId: number | null, communityName?: string | null) => void;
 }
 
 const TenantCtx = createContext<TenantContextValue>({
   communityId: null,
   communityName: null,
   isResolved: false,
+  setTenantInfo: () => {},
 });
 
 // React Native compatible base64 decoder for JWT
@@ -67,24 +70,48 @@ function getToken(): Promise<string | null> {
 }
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
-  const [value, setValue] = useState<TenantContextValue>({
+  const [value, setValue] = useState<{
+    communityId: number | null;
+    communityName: string | null;
+    isResolved: boolean;
+  }>({
     communityId: null,
     communityName: null,
     isResolved: false,
   });
 
+  const setTenantInfo = useCallback((communityId: number | null, communityName?: string | null) => {
+    setValue((prev) => ({
+      ...prev,
+      communityId,
+      communityName: communityName !== undefined ? communityName : prev.communityName,
+      isResolved: true,
+    }));
+    setTenantCommunityId(communityId);
+  }, []);
+
   useEffect(() => {
+    // 1. Initial resolution from stored token
     getToken().then((token) => {
       if (!token) {
-        setValue({ communityId: null, communityName: null, isResolved: true });
+        setValue((prev) => ({ ...prev, communityId: null, communityName: null, isResolved: true }));
         setTenantCommunityId(null);
         return;
       }
-      // JWT is the authority — do not trust raw AsyncStorage for communityId
       const fromJwt = extractCommunityIdFromJwt(token);
-      setValue({ communityId: fromJwt, communityName: null, isResolved: true });
+      setValue((prev) => ({ ...prev, communityId: fromJwt, isResolved: true }));
       setTenantCommunityId(fromJwt);
     });
+
+    // 2. Reactively subscribe to useAuth state changes
+    const unsub = useAuth.subscribe((state) => {
+      const cid = state.user?.communityId ?? null;
+      const cname = state.user?.communityName ?? (typeof state.user?.community === 'object' ? (state.user?.community as any)?.name : null) ?? null;
+      setValue({ communityId: cid, communityName: cname, isResolved: true });
+      setTenantCommunityId(cid);
+    });
+
+    return () => unsub();
   }, []);
 
   // Sync communityId into apiClient whenever it changes
@@ -92,9 +119,17 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setTenantCommunityId(value.communityId);
   }, [value.communityId]);
 
-  return <TenantCtx.Provider value={value}>{children}</TenantCtx.Provider>;
+  const contextValue: TenantContextValue = {
+    ...value,
+    setTenantInfo,
+  };
+
+  return <TenantCtx.Provider value={contextValue}>{children}</TenantCtx.Provider>;
 }
 
 export function useTenantContext(): TenantContextValue {
   return useContext(TenantCtx);
 }
+
+export const useTenant = useTenantContext;
+

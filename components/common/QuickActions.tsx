@@ -9,61 +9,87 @@ import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Maps a QuickActionItem.id → the community enabledModules[] keys that must be present
- * for this tile to be visible. If an ID has NO entry here, the tile is always visible.
+ * for this tile to be visible. If an ID has NO entries (empty array), the tile is always visible.
  * If enabledModules is empty/undefined (no restrictions set by backend), everything shows.
  */
-const MODULE_KEYS: Record<string, string[]> = {
+export const MODULE_KEYS: Record<string, string[]> = {
+  // Safety & Help
+  emergency:        ["EMERGENCY", "SAFETY"],
+  visitors:         ["VISITORS"],
+  staff:            ["VISITORS", "SAFETY"],
+  school_bus:       ["VISITORS"],
+  turnstiles:       ["VISITORS", "SAFETY"],
+  helpdesk:         ["HELPDESK"],
+  insta_help:       ["HELPDESK", "SERVICE_PLATFORM", "HOME_SERVICES"],
+  health:           ["SAFETY", "FOOD_OS", "SERVICE_PLATFORM"],
+  health_buddy:     ["SAFETY", "FOOD_OS"],
+  healthguard:      ["SAFETY", "EMERGENCY"],
+  ai_chat:          [], // AI assistant is available to all
+  safety:           ["SAFETY"],
+  insurance:        ["INSURANCE"],
+  home_services:    ["SERVICE_PLATFORM", "HOME_SERVICES"],
+  cctv:             ["SAFETY", "VISITORS"],
+  directory:        ["COMMUNITY_FEED", "COMMUNITY_MGMT"],
+  broadcast:        ["ADMIN_HUB", "NOTICES"],
+
   // Bills & Wealth
-  dues:             ["FINANCE_MGMT", "MANA_PAY"],
-  auto_debit:       ["FINANCE_MGMT", "MANA_PAY"],
-  mana_pay:         ["MANA_PAY", "PAYMENTS"],
-  recharge:         ["MANA_PAY", "PAYMENTS"],
-  scan_pay:         ["MANA_PAY", "PAYMENTS"],
-  send_money:       ["MANA_PAY", "PAYMENTS"],
-  fd:               ["PERSONAL_FINANCE", "FINANCE_MGMT"],
-  gold:             ["PERSONAL_FINANCE"],
-  mutual_funds:     ["PERSONAL_FINANCE"],
-  loans:            ["PERSONAL_FINANCE"],
-  split_bill:       ["MANA_PAY", "PAYMENTS"],
-  my_money:         ["PERSONAL_FINANCE", "FINANCE_MGMT"],
-  upi_history:      ["MANA_PAY", "PAYMENTS"],
-  society_treasury: ["FINANCE_MGMT"],
-  budget:           ["FINANCE_MGMT"],
+  dues:             ["FINANCE_MGMT", "PAYMENTS"],
+  auto_debit:       ["FINANCE_MGMT", "PAYMENTS"],
+  mana_pay:         ["PAYMENTS", "FINANCE_MGMT"],
+  recharge:         ["PAYMENTS", "FINANCE_MGMT"],
+  scan_pay:         ["PAYMENTS", "FINANCE_MGMT"],
+  send_money:       ["PAYMENTS", "FINANCE_MGMT"],
+  fd:               ["FINANCE_MGMT", "PAYMENTS", "PERSONAL_FINANCE"],
+  gold:             ["FINANCE_MGMT", "PAYMENTS", "PERSONAL_FINANCE"],
+  mutual_funds:     ["FINANCE_MGMT", "PAYMENTS", "PERSONAL_FINANCE"],
+  loans:            ["FINANCE_MGMT", "PAYMENTS", "PERSONAL_FINANCE"],
+  split_bill:       ["PAYMENTS", "FINANCE_MGMT"],
+  my_money:         ["FINANCE_MGMT", "PAYMENTS", "PERSONAL_FINANCE"],
+  upi_history:      ["PAYMENTS", "FINANCE_MGMT"],
+  society_treasury: ["FINANCE_MGMT", "ADMIN_HUB"],
+  budget:           ["FINANCE_MGMT", "ADMIN_HUB"],
 
   // Facilities & Living
-  calendar:         ["CALENDAR", "EVENTS"],
-  vehicle_care:     ["HOME_SERVICES"],
-  cpos:             ["CPOS"],
+  facilities:       ["BOOKINGS"],
+  calendar:         ["EVENTS", "COMMUNITY_FEED"],
+  notices:          ["NOTICES"],
+  vehicle_care:     ["SERVICE_PLATFORM", "HOME_SERVICES"],
+  parking:          ["VISITORS"],
+  mobility:         ["TRIPS"],
+  commute:          ["TRIPS"],
+  cpos:             ["CPOS", "MAINTENANCE"],
+  services:         ["SERVICE_PLATFORM", "HOME_SERVICES"],
   projects:         ["CPOS", "FINANCE_MGMT"],
-  inventory:        ["CPOS", "FINANCE_MGMT"],
-  amc_maintenance:  ["CPOS", "HOME_SERVICES"],
-  automation:       ["HOME_SERVICES"],
-  submeters:        ["HOME_SERVICES"],
+  inventory:        ["CPOS", "MAINTENANCE", "FINANCE_MGMT"],
+  amc_maintenance:  ["CPOS", "MAINTENANCE", "SERVICE_PLATFORM", "HOME_SERVICES"],
+  automation:       ["SERVICE_PLATFORM", "HOME_SERVICES"],
+  submeters:        ["SERVICE_PLATFORM", "HOME_SERVICES"],
 
   // Social & Sports
   sports:           ["SPORTS"],
   events:           ["EVENTS"],
   movies:           ["ENTERTAINMENT"],
-  trips:            ["EVENTS"],
-  polls:            ["POLLS"],
-  governance:       ["GOVERNANCE"],
+  experiences:      ["EVENTS", "COMMUNITY_FEED"],
+  governance:       ["COMMUNITY_MGMT", "GOVERNANCE"],
+  academy:          ["ACADEMY"],
   jobs:             ["JOBS"],
   cpn:              ["JOBS"],
+  trips:            ["TRIPS", "EVENTS"],
+  forum:            ["COMMUNITY_FEED"],
+  polls:            ["POLLS"],
+  pets:             ["COMMUNITY_FEED"],
 
   // Commerce & Food
-  food:             ["FOOD_OS"],
+  market:           ["MARKETPLACE", "COMMERCE"],
   fresh_kitchen:    ["FOOD_OS"],
   daily_basket:     ["FOOD_OS"],
-  wellness_basket:  ["HEALTH", "FOOD_OS"],
+  wellness_basket:  ["FOOD_OS"],
+  offers:           ["COMMERCE", "MARKETPLACE"],
   group_buying:     ["GROUP_BUYING"],
+  food:             ["FOOD_OS"],
   auctions:         ["MARKETPLACE"],
-
-  // Safety & Help
-  healthguard:      ["HEALTH"],
-  cctv:             ["SAFETY", "VISITORS"],
-  broadcast:        ["ADMIN_HUB"],
-  turnstiles:       ["VISITORS", "SAFETY"],
-  school_bus:       ["VISITORS"],
+  lost_found:       ["MARKETPLACE", "COMMUNITY_FEED"],
+  donations:        ["MARKETPLACE", "COMMUNITY_FEED"],
 };
 
 export interface QuickActionItem {
@@ -169,24 +195,35 @@ const CATEGORIES: Array<QuickActionItem["category"]> = [
 export function QuickActions() {
   const router = useRouter();
   const { trackClick } = useHubUsage();
-  const { user } = useAuth();
+  const { user, isSuperAdmin, hasModule } = useAuth();
   const [activeCategory, setActiveCategory] = useState<QuickActionItem["category"]>("Safety & Help");
   const [showAllInCategory, setShowAllInCategory] = useState(false);
 
   // Layer 1: filter tiles by community enabledModules (graceful fallback if not set)
   const enabledModules: string[] = user?.enabledModules ?? [];
   const visibleServices = useMemo(() => {
-    if (enabledModules.length === 0) return ALL_COMMUNITY_SERVICES; // no restrictions
+    if (isSuperAdmin || enabledModules.length === 0) return ALL_COMMUNITY_SERVICES;
     return ALL_COMMUNITY_SERVICES.filter((item) => {
       const keys = MODULE_KEYS[item.id];
-      if (!keys) return true; // no module gate → always visible
-      return keys.some((k) => enabledModules.includes(k));
+      if (!keys || keys.length === 0) return true; // always accessible base utilities
+      return keys.some((k) => hasModule(k));
     });
-  }, [enabledModules]);
+  }, [enabledModules, isSuperAdmin, hasModule]);
+
+  // Dynamically determine available categories that have at least 1 service
+  const availableCategories = useMemo(() => {
+    return CATEGORIES.filter((cat) => visibleServices.some((a) => a.category === cat));
+  }, [visibleServices]);
+
+  // Ensure active category is valid
+  const effectiveCategory = useMemo(() => {
+    if (availableCategories.includes(activeCategory)) return activeCategory;
+    return availableCategories[0] || "Safety & Help";
+  }, [activeCategory, availableCategories]);
 
   const categoryActions = useMemo(() => {
-    return visibleServices.filter((a) => a.category === activeCategory);
-  }, [activeCategory, visibleServices]);
+    return visibleServices.filter((a) => a.category === effectiveCategory);
+  }, [effectiveCategory, visibleServices]);
 
   const hasOverflow = categoryActions.length > 8;
   const displayedActions = hasOverflow && !showAllInCategory
@@ -207,8 +244,8 @@ export function QuickActions() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={s.categoriesScroll}
       >
-        {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat;
+        {availableCategories.map((cat) => {
+          const isActive = effectiveCategory === cat;
           return (
             <TouchableOpacity
               key={cat}

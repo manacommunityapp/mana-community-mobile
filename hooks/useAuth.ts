@@ -1,9 +1,49 @@
 import { create } from 'zustand';
 import { authService } from '@/services/authService';
-import { tokenStore } from '@/services/apiClient';
+import { tokenStore, setTenantCommunityId } from '@/services/apiClient';
 import type { UserProfileResponse, LoginRequest, RegisterRequest } from '@/types/api';
 
 export type UserPersona = 'RESIDENT' | 'ADMIN' | 'STAFF' | 'VENDOR';
+
+const MODULE_ALIASES: Record<string, string[]> = {
+  COMMUNITY_FEED: ['COMMUNITY_FEED', 'FEED', 'FORUM', 'COMMUNITY'],
+  SPORTS: ['SPORTS'],
+  MARKETPLACE: ['MARKETPLACE', 'COMMERCE', 'AUCTIONS', 'MARKET'],
+  VISITORS: ['VISITORS', 'SECURITY', 'GATE', 'SAFETY'],
+  NOTICES: ['NOTICES', 'BROADCAST', 'ANNOUNCEMENT'],
+  BOOKINGS: ['BOOKINGS', 'FACILITIES', 'AMENITIES'],
+  FACILITIES: ['BOOKINGS', 'FACILITIES', 'AMENITIES'],
+  HELPDESK: ['HELPDESK', 'COMPLAINTS', 'ISSUES'],
+  POLLS: ['POLLS'],
+  JOBS: ['JOBS', 'CPN'],
+  EVENTS: ['EVENTS', 'CALENDAR', 'EXPERIENCES'],
+  CALENDAR: ['EVENTS', 'CALENDAR'],
+  ENTERTAINMENT: ['ENTERTAINMENT', 'MOVIES'],
+  COMMUNITY_MGMT: ['COMMUNITY_MGMT', 'GOVERNANCE'],
+  GOVERNANCE: ['COMMUNITY_MGMT', 'GOVERNANCE'],
+  FINANCE_MGMT: ['FINANCE_MGMT', 'PAYMENTS', 'PERSONAL_FINANCE'],
+  PERSONAL_FINANCE: ['FINANCE_MGMT', 'PAYMENTS', 'PERSONAL_FINANCE'],
+  ADMIN_HUB: ['ADMIN_HUB'],
+  FOOD_OS: ['FOOD_OS', 'FOOD', 'FRESH_KITCHEN', 'DAILY_BASKET'],
+  FOOD: ['FOOD_OS', 'FOOD'],
+  VENDOR_MANAGEMENT: ['VENDOR_MANAGEMENT', 'VENDOR'],
+  GROUP_BUYING: ['GROUP_BUYING'],
+  SERVICE_PLATFORM: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
+  HOME_SERVICES: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
+  SERVICES: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
+  EMERGENCY: ['EMERGENCY', 'SAFETY'],
+  TRIPS: ['TRIPS', 'COMMUTE', 'MOBILITY'],
+  COMMUTE: ['TRIPS', 'COMMUTE', 'MOBILITY'],
+  DISCOVER: ['DISCOVER'],
+  MAINTENANCE: ['MAINTENANCE', 'CPOS', 'AMC'],
+  INSURANCE: ['INSURANCE'],
+  COMMERCE: ['COMMERCE', 'MARKETPLACE'],
+  ACADEMY: ['ACADEMY'],
+  SAFETY: ['SAFETY', 'VISITORS', 'EMERGENCY'],
+  PAYMENTS: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT'],
+  MANA_PAY: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT'],
+  CPOS: ['CPOS', 'MAINTENANCE'],
+};
 
 interface AuthState {
   user: UserProfileResponse | null;
@@ -63,6 +103,40 @@ function resolvePrimaryPersona(roles: string[]): UserPersona {
   return 'RESIDENT';
 }
 
+async function enrichUserProfile(
+  user: UserProfileResponse,
+  fallbackCid?: number,
+  fallbackModules?: string[]
+): Promise<UserProfileResponse> {
+  const cid = user.communityId ?? fallbackCid ?? null;
+  let enabledMods = (user.enabledModules && user.enabledModules.length > 0)
+    ? user.enabledModules
+    : (fallbackModules || []);
+  let commName = user.communityName ?? (typeof user.community === 'object' ? (user.community as any)?.name : null);
+
+  if (cid) {
+    setTenantCommunityId(cid);
+    if (!commName || enabledMods.length === 0) {
+      try {
+        const comm = await authService.getCommunityDetails(cid);
+        if (comm?.name) commName = comm.name;
+        if (enabledMods.length === 0 && comm?.enabledModules?.length) {
+          enabledMods = comm.enabledModules;
+        }
+      } catch {
+        // Graceful fallback if offline or backend route fails
+      }
+    }
+  }
+
+  return {
+    ...user,
+    communityId: cid ?? undefined,
+    communityName: commName,
+    enabledModules: enabledMods,
+  };
+}
+
 export const useAuth = create<AuthState>((set, get) => ({
   user: null,
   isLoading: true,
@@ -96,7 +170,10 @@ export const useAuth = create<AuthState>((set, get) => ({
     const { enabledModules, isSuperAdmin } = get();
     if (isSuperAdmin) return true;
     if (!enabledModules || enabledModules.length === 0) return true;
-    return enabledModules.includes(moduleKey);
+    const normalizedKey = moduleKey.trim().toUpperCase();
+    if (enabledModules.includes(normalizedKey)) return true;
+    const aliases = MODULE_ALIASES[normalizedKey] || [];
+    return aliases.some(alias => enabledModules.includes(alias));
   },
 
   hasRole: (...checkRoles: string[]): boolean => {
@@ -114,6 +191,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     try {
       const token = await tokenStore.getAccess();
       if (!token) {
+        setTenantCommunityId(null);
         set({
           user: null,
           isAuthenticated: false,
@@ -129,7 +207,9 @@ export const useAuth = create<AuthState>((set, get) => ({
         });
         return;
       }
-      const user = await authService.getProfile();
+      let user = await authService.getProfile();
+      user = await enrichUserProfile(user);
+
       const roles = computeRoles(user);
       const roleSet = new Set(roles);
       const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
@@ -137,6 +217,8 @@ export const useAuth = create<AuthState>((set, get) => ({
       const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
       const isVendor = roleSet.has('VENDOR');
       const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+
+      setTenantCommunityId(user.communityId ?? null);
 
       set({
         user,
@@ -154,6 +236,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       });
     } catch {
       await tokenStore.clearAll();
+      setTenantCommunityId(null);
       set({
         user: null,
         isAuthenticated: false,
@@ -171,9 +254,14 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   login: async (data) => {
-    await authService.login(data);
+    const loginRes = await authService.login(data);
+    if (loginRes?.communityId != null) {
+      setTenantCommunityId(loginRes.communityId);
+    }
     try {
-      const user = await authService.getProfile();
+      let user = await authService.getProfile();
+      user = await enrichUserProfile(user, loginRes?.communityId, loginRes?.enabledModules);
+
       const roles = computeRoles(user);
       const roleSet = new Set(roles);
       const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
@@ -182,9 +270,51 @@ export const useAuth = create<AuthState>((set, get) => ({
       const isVendor = roleSet.has('VENDOR');
       const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
 
+      setTenantCommunityId(user.communityId ?? null);
+
       set({
         user,
         isAuthenticated: true,
+        isLoading: false,
+        roles,
+        permissions: (user.permissions && user.permissions.length > 0) ? user.permissions : (loginRes?.permissions || []),
+        enabledModules: user.enabledModules || loginRes?.enabledModules || [],
+        activePersona: resolvePrimaryPersona(roles),
+        isAdmin,
+        isSuperAdmin,
+        isGuard,
+        isVendor,
+        isAnyAdmin,
+      });
+    } catch {
+      const fallbackUser: UserProfileResponse = {
+        id: Number(loginRes?.userId) || 0,
+        fullName: loginRes?.fullName,
+        name: loginRes?.fullName || 'Resident',
+        email: loginRes?.email || '',
+        role: loginRes?.role || 'RESIDENT',
+        roles: (loginRes as any)?.roles || [loginRes?.role || 'RESIDENT'],
+        communityId: loginRes?.communityId,
+        enabledModules: loginRes?.enabledModules || [],
+        permissions: (loginRes as any)?.permissions || [],
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString(),
+      };
+      const user = await enrichUserProfile(fallbackUser, loginRes?.communityId, loginRes?.enabledModules);
+      const roles = computeRoles(user);
+      const roleSet = new Set(roles);
+      const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
+      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
+      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
+      const isVendor = roleSet.has('VENDOR');
+      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+
+      setTenantCommunityId(user.communityId ?? null);
+
+      set({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
         roles,
         permissions: user.permissions || [],
         enabledModules: user.enabledModules || [],
@@ -195,15 +325,18 @@ export const useAuth = create<AuthState>((set, get) => ({
         isVendor,
         isAnyAdmin,
       });
-    } catch {
-      set({ isAuthenticated: true });
     }
   },
 
   register: async (data) => {
-    await authService.register(data);
+    const regRes = await authService.register(data);
+    if (regRes?.communityId != null) {
+      setTenantCommunityId(regRes.communityId);
+    }
     try {
-      const user = await authService.getProfile();
+      let user = await authService.getProfile();
+      user = await enrichUserProfile(user, regRes?.communityId, regRes?.enabledModules);
+
       const roles = computeRoles(user);
       const roleSet = new Set(roles);
       const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
@@ -212,12 +345,15 @@ export const useAuth = create<AuthState>((set, get) => ({
       const isVendor = roleSet.has('VENDOR');
       const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
 
+      setTenantCommunityId(user.communityId ?? null);
+
       set({
         user,
         isAuthenticated: true,
+        isLoading: false,
         roles,
-        permissions: user.permissions || [],
-        enabledModules: user.enabledModules || [],
+        permissions: (user.permissions && user.permissions.length > 0) ? user.permissions : (regRes?.permissions || []),
+        enabledModules: user.enabledModules || regRes?.enabledModules || [],
         activePersona: resolvePrimaryPersona(roles),
         isAdmin,
         isSuperAdmin,
@@ -226,12 +362,13 @@ export const useAuth = create<AuthState>((set, get) => ({
         isAnyAdmin,
       });
     } catch {
-      set({ isAuthenticated: true });
+      set({ isAuthenticated: true, isLoading: false });
     }
   },
 
   logout: async () => {
     await authService.logout();
+    setTenantCommunityId(null);
     set({
       user: null,
       isAuthenticated: false,
@@ -255,6 +392,10 @@ export const useAuth = create<AuthState>((set, get) => ({
     const isVendor = roleSet.has('VENDOR');
     const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
 
+    if (user.communityId != null) {
+      setTenantCommunityId(user.communityId);
+    }
+
     set({
       user,
       roles,
@@ -268,3 +409,4 @@ export const useAuth = create<AuthState>((set, get) => ({
     });
   },
 }));
+

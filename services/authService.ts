@@ -53,6 +53,11 @@ export const authService = {
     return res.data;
   },
 
+  async getCommunityDetails(communityId: number): Promise<any> {
+    const res = await api.get(`/communities/${communityId}`);
+    return res.data;
+  },
+
   async submitKyc(data: any): Promise<UserProfileResponse> {
     const res = await api.post<UserProfileResponse>('/users/me/kyc', data);
     return res.data;

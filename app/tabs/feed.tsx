@@ -22,6 +22,8 @@ import type { FacilityBookingDto } from '@/services/facilityService';
 import type { VisitorDto } from '@/services/visitorService';
 import { insightsService, CommunityInsight } from '@/services/insightsService';
 
+import { QuickActions } from '@/components/common/QuickActions';
+
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
 // ─── SOS ─────────────────────────────────────────────────────────────────────
@@ -59,19 +61,20 @@ interface QuickAction {
   icon: IoniconsName;
   route: string;
   color: string;
+  moduleKey?: string;
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { key: 'pay', label: 'Pay Dues', icon: 'card-outline', route: '/payments', color: '#059669' },
-  { key: 'book', label: 'Book Facility', icon: 'calendar-outline', route: '/facilities', color: '#4F46E5' },
-  { key: 'complaint', label: 'Raise Issue', icon: 'chatbubble-ellipses-outline', route: '/helpdesk', color: '#D97706' },
-  { key: 'visitor', label: 'Add Visitor', icon: 'person-add-outline', route: '/security/visitor', color: '#7C3AED' },
-  { key: 'devices', label: 'Devices', icon: 'hardware-chip-outline', route: '/devices', color: '#64748B' },
+  { key: 'pay', label: 'Pay Dues', icon: 'card-outline', route: '/payments', color: '#059669', moduleKey: 'PAYMENTS' },
+  { key: 'book', label: 'Book Facility', icon: 'calendar-outline', route: '/facilities', color: '#4F46E5', moduleKey: 'BOOKINGS' },
+  { key: 'complaint', label: 'Raise Issue', icon: 'chatbubble-ellipses-outline', route: '/helpdesk', color: '#D97706', moduleKey: 'HELPDESK' },
+  { key: 'visitor', label: 'Add Visitor', icon: 'person-add-outline', route: '/security/visitor', color: '#7C3AED', moduleKey: 'VISITORS' },
+  { key: 'devices', label: 'Devices', icon: 'hardware-chip-outline', route: '/devices', color: '#64748B', moduleKey: 'SERVICE_PLATFORM' },
 ];
 
 function QuickActionsRow() {
   const router = useRouter();
-  const { hasRole } = useAuth();
+  const { hasRole, hasModule } = useAuth();
   const isAdmin = hasRole('ADMIN', 'COMMUNITY_ADMIN', 'SUPER_ADMIN');
   const isGuard = hasRole('GUARD', 'SECURITY');
   const isVendor = hasRole('VENDOR');
@@ -101,8 +104,9 @@ function QuickActionsRow() {
         { key: 'gate', label: 'Visitors', icon: 'people-outline', route: '/security', color: '#7C3AED' },
       ];
     }
-    return QUICK_ACTIONS;
-  }, [isAdmin, isGuard, isVendor]);
+    const filtered = QUICK_ACTIONS.filter(a => !a.moduleKey || hasModule(a.moduleKey));
+    return filtered.length > 0 ? filtered : QUICK_ACTIONS;
+  }, [isAdmin, isGuard, isVendor, hasModule]);
 
   return (
     <View style={styles.quickActionsRow}>
@@ -338,41 +342,45 @@ function CommunityHealthCard() {
 export default function HomeScreen() {
   const router = useRouter();
   const qc = useQueryClient();
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, hasModule } = useAuth();
   const isAdmin = hasRole('ADMIN', 'COMMUNITY_ADMIN', 'SUPER_ADMIN');
   const isResident = hasRole('RESIDENT', 'OWNER', 'TENANT');
+  const isGuard = hasRole('GUARD', 'SECURITY');
+  const isVendor = hasRole('VENDOR');
 
   const { data: feedPage, isLoading: feedLoading } = useQuery({
     queryKey: ['home-feed'],
     queryFn: () => feedService.getPosts(0, 10),
     staleTime: 60_000,
+    enabled: hasModule('COMMUNITY_FEED'),
   });
 
   const { data: upcomingEvents = [] } = useQuery({
     queryKey: ['home-events'],
     queryFn: () => eventService.getUpcomingEvents(),
     staleTime: 60_000,
+    enabled: hasModule('EVENTS'),
   });
 
   const { data: myBookings = [] } = useQuery({
     queryKey: ['home-bookings'],
     queryFn: () => facilityService.getMyBookings(),
     staleTime: 60_000,
-    enabled: isResident,
+    enabled: isResident && hasModule('BOOKINGS'),
   });
 
   const { data: invoices = [] } = useQuery({
     queryKey: ['home-invoices-overdue'],
     queryFn: () => societyFinanceService.getInvoices('OVERDUE'),
     staleTime: 60_000,
-    enabled: isResident,
+    enabled: isResident && (hasModule('PAYMENTS') || hasModule('FINANCE_MGMT')),
   });
 
   const { data: visitors = [] } = useQuery({
     queryKey: ['home-visitors-today'],
     queryFn: () => visitorService.getTodaysPasses(),
     staleTime: 30_000,
-    enabled: isResident || isAdmin,
+    enabled: (isResident || isAdmin) && hasModule('VISITORS'),
   });
 
   const allPosts = feedPage?.content ?? [];
@@ -424,11 +432,18 @@ export default function HomeScreen() {
         }
       >
         {/* 1 · Emergency SOS */}
-        <SOSButton />
+        {hasModule('EMERGENCY') && <SOSButton />}
 
-        {/* 2 · Quick Actions */}
-        <SectionHeader title="Quick Actions" />
-        <QuickActionsRow />
+        {/* 2 · Operational Shortcuts (Staff / Vendor / Admin) */}
+        {(isGuard || isVendor || isAdmin) && (
+          <>
+            <SectionHeader title={isGuard ? "Guard Operations" : isVendor ? "Vendor Hub" : "Admin Shortcuts"} />
+            <QuickActionsRow />
+          </>
+        )}
+
+        {/* 3 · Complete Community Module Hub (Filtered by Eligible Community Modules) */}
+        <QuickActions />
 
         {/* 3 · Upcoming Activities */}
         {(nextEvent || nextBooking) && (

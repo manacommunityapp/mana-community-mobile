@@ -12,6 +12,8 @@ export interface LoginResponse {
   fullName: string;
   email: string;
   role: string;
+  roles?: string[];
+  permissions?: string[];
   communityId: number;
   dateOfBirth?: string;
   enabledModules?: string[];
