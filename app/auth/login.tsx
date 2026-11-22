@@ -124,9 +124,15 @@ export default function LoginScreen() {
     } catch (err: any) {
       if (!handleRateLimit(err)) {
         const status = err?.response?.status ?? err?.statusCode;
-        const msg = status === 401
-          ? (parsed.type === 'phone' ? 'Invalid mobile number or password.' : 'Invalid email or password.')
-          : 'Login failed. Please try again.';
+        const serverMsg = err?.response?.data?.message;
+        let msg = 'Login failed. Please try again.';
+        if (status === 401) {
+          msg = parsed.type === 'phone' ? 'Invalid mobile number or password.' : 'Invalid email or password.';
+        } else if (err?.code === 'ERR_NETWORK' || !err?.response) {
+          msg = 'Unable to connect to server. Please check your internet connection.';
+        } else if (serverMsg && typeof serverMsg === 'string') {
+          msg = serverMsg;
+        }
         Alert.alert('Login Failed', msg);
       }
     } finally {

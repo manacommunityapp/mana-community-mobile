@@ -2,15 +2,16 @@ export * from './theme';
 // ── API Configuration ──────────────────────────────────────────
 // Switch between dev (local Spring Boot) and prod (Lightsail) easily.
 
-const DEV_API_URL  = "http://3.111.198.165:8081";   // dev Lightsail (PostgreSQL-backed)
-const PROD_API_URL = "https://api.manacommunity.in";
+const DEFAULT_API_URL = "http://3.111.198.165:8081";
+const DEV_API_URL  = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;   // dev Lightsail (PostgreSQL-backed)
+const PROD_API_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
 
 const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
 
 export const CONFIG = {
   N8N_AI_WEBHOOK_URL: process.env.EXPO_PUBLIC_N8N_AI_WEBHOOK_URL || "",
-  API_BASE_URL: isDev ? DEV_API_URL : PROD_API_URL,
-  WS_URL:       isDev ? `ws://3.111.198.165:8081/ws` : `wss://api.manacommunity.in/ws`,
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_URL || (isDev ? DEV_API_URL : PROD_API_URL),
+  WS_URL:       process.env.EXPO_PUBLIC_WS_URL || "ws://3.111.198.165:8081/ws",
   APP_NAME:     "Mana Community",
   VERSION:      "1.0.0",
 

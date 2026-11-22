@@ -185,9 +185,14 @@ api.interceptors.response.use(
     return res;
   },
   async (error: AxiosError) => {
-    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const url = original?.url || '';
+    const isAuthRoute = url.includes('/auth/login') ||
+                        url.includes('/auth/register') ||
+                        url.includes('/auth/refresh') ||
+                        url.includes('/auth/forgot-password');
 
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401 && original && !original._retry && !isAuthRoute) {
       original._retry = true;
 
       if (refreshing) {
