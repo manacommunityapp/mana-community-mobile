@@ -63,7 +63,7 @@ export default function CommunityFeedScreen() {
       if (searchQuery.trim()) {
         return feedService.searchPosts(searchQuery.trim(), pageParam, 15);
       }
-      return feedService.getPosts(pageParam, 15);
+      return feedService.getPosts(pageParam, 15, activeTab !== 'ALL' ? activeTab : undefined);
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
