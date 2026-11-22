@@ -24,6 +24,7 @@ import { CreatePostModal } from '@/components/feed/CreatePostModal';
 import { PostCommentSheet } from '@/components/feed/PostCommentSheet';
 import { RichPostContent } from '@/components/feed/RichPostContent';
 import { CachedImage as Image } from '@/components/common/CachedImage';
+import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import { formatDistanceToNow } from 'date-fns';
 
 type CategoryFilter = 'ALL' | 'ANNOUNCEMENT' | 'POST' | 'QUESTION' | 'CLASSIFIED' | 'LOST_FOUND';
@@ -66,7 +67,7 @@ export default function CommunityFeedScreen() {
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      if (!lastPage || lastPage.hasNext === false) return undefined;
+      if (!lastPage) return undefined;
       const currentPage = lastPage.page ?? lastPage.number ?? 0;
       const totalPages = lastPage.totalPages ?? 1;
       return currentPage + 1 < totalPages ? currentPage + 1 : undefined;
@@ -155,7 +156,7 @@ export default function CommunityFeedScreen() {
     const authorName = item.authorName || (item as any).author?.name || 'Neighbor';
     const initials = getInitials(authorName);
     const avatarColor = getAvatarColor(authorName);
-    const unit = item.flatNumber || (item as any).author?.flatNumber;
+    const unit = item.authorFlat || (item as any).flatNumber || (item as any).author?.flatNumber;
     const isOfficial = item.official || item.type === 'announcement';
 
     let timeAgo = '';
@@ -165,13 +166,21 @@ export default function CommunityFeedScreen() {
       timeAgo = 'recently';
     }
 
+    const rawImageSrc = (item.mediaUrls && item.mediaUrls[0]) || item.linkImage || (item as any).imageUrl;
+    const imageSrc = rawImageSrc ? resolveImageUrl(rawImageSrc) : null;
+    const authorAvatar = resolveUserAvatar(item);
+
     return (
       <View style={s.postCard}>
         {/* Author Header */}
         <View style={s.postHeader}>
-          <View style={[s.avatar, { backgroundColor: avatarColor }]}>
-            <Text style={s.avatarText}>{initials}</Text>
-          </View>
+          {authorAvatar ? (
+            <Image source={{ uri: authorAvatar }} style={s.avatarImage} />
+          ) : (
+            <View style={[s.avatar, { backgroundColor: avatarColor.bg }]}>
+              <Text style={[s.avatarText, { color: avatarColor.text }]}>{initials}</Text>
+            </View>
+          )}
           <View style={s.authorMeta}>
             <View style={s.nameRow}>
               <Text style={s.authorName} numberOfLines={1}>
@@ -207,10 +216,10 @@ export default function CommunityFeedScreen() {
         <RichPostContent post={item} />
 
         {/* Attached Image */}
-        {!!item.imageUrl && (
+        {!!imageSrc && (
           <View style={s.imageWrap}>
             <Image
-              source={{ uri: item.imageUrl }}
+              source={{ uri: imageSrc }}
               style={s.postImage}
               resizeMode="cover"
             />
@@ -371,7 +380,7 @@ export default function CommunityFeedScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefetching && !isFetchingNextPage}
-            onRefresh={refetch}
+            onRefresh={() => { refetch(); }}
             tintColor={THEME.brandDark}
           />
         }
@@ -386,7 +395,7 @@ export default function CommunityFeedScreen() {
             <View style={s.footerLoading}>
               <ActivityIndicator size="small" color={THEME.brandDark} />
             </View>
-          ) : null
+          ) : undefined
         }
       />
 
@@ -546,6 +555,12 @@ const s = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 10,
+  },
+  avatarImage: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     marginRight: 10,
   },
   avatarText: {
