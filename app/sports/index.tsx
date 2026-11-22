@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Client } from '@stomp/stompjs';
+import { tokenStore } from '@/services/apiClient';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Dimensions, Image,
@@ -117,6 +119,9 @@ export default function SportsHubScreen() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [selectedRegisterEventId, setSelectedRegisterEventId] = useState<number | null>(null);
   const [customRegistrations, setCustomRegistrations] = useState<RegistrationRecord[]>([]);
+  const [wsScores, setWsScores] = useState<Record<number, Partial<MatchDto>>>({});
+  const [scoreFlash, setScoreFlash] = useState<number | null>(null);
+  const stompHubRef = useRef<Client | null>(null);
 
   const isSportsAdmin = useMemo(() => {
     return Boolean(
@@ -199,6 +204,63 @@ export default function SportsHubScreen() {
     ]);
   };
 
+  // ── WebSocket: real-time score push for live matches ─────────────
+  useEffect(() => {
+    if (!liveMatches || liveMatches.length === 0) return;
+    const liveIds = liveMatches
+      .filter(m => m.status === 'LIVE' || m.status === 'IN_PROGRESS')
+      .map(m => m.id);
+    if (liveIds.length === 0) return;
+
+    let client: Client;
+    (async () => {
+      const token = await tokenStore.getAccess();
+      if (!token) return;
+      client = new Client({
+        brokerURL: CONFIG.WS_URL,
+        connectHeaders: { Authorization: `Bearer ${token}` },
+        reconnectDelay: 5000,
+        onConnect: () => {
+          liveIds.forEach(id => {
+            const handleUpdate = (frame: { body: string }) => {
+              try {
+                const ev = JSON.parse(frame.body);
+                const patch: Partial<MatchDto> = {};
+                if (ev.homeScore    !== undefined) patch.homeScore    = ev.homeScore;
+                if (ev.awayScore    !== undefined) patch.awayScore    = ev.awayScore;
+                if (ev.status       !== undefined) patch.status       = ev.status;
+                if (ev.currentPeriod   !== undefined) patch.currentPeriod   = ev.currentPeriod;
+                if (ev.elapsedMinutes  !== undefined) patch.elapsedMinutes  = ev.elapsedMinutes;
+                if (ev.homeSetsWon  !== undefined) patch.homeSetsWon  = ev.homeSetsWon;
+                if (ev.awaySetsWon  !== undefined) patch.awaySetsWon  = ev.awaySetsWon;
+                if (ev.homeOvers    !== undefined) patch.homeOvers    = ev.homeOvers;
+                if (ev.homeWickets  !== undefined) patch.homeWickets  = ev.homeWickets;
+                if (ev.awayOvers    !== undefined) patch.awayOvers    = ev.awayOvers;
+                if (ev.awayWickets  !== undefined) patch.awayWickets  = ev.awayWickets;
+                if (Object.keys(patch).length > 0) {
+                  setWsScores(prev => ({ ...prev, [id]: { ...(prev[id] ?? {}), ...patch } }));
+                  setScoreFlash(id);
+                  setTimeout(() => setScoreFlash(cur => cur === id ? null : cur), 900);
+                }
+              } catch {}
+            };
+            client.subscribe(`/topic/sports.match.${id}`, handleUpdate);
+            client.subscribe(`/topic/match/${id}/state`,  handleUpdate);
+          });
+        },
+        onStompError: () => {},
+      });
+      client.activate();
+      stompHubRef.current = client;
+    })();
+    return () => {
+      stompHubRef.current?.deactivate();
+      stompHubRef.current = null;
+    };
+  // reconnect only when the set of live match IDs changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveMatches?.map(m => m.id).join(',')]);
+
   // ── Derived Data ──────────────────────────────────────────────
   const filteredLive = useMemo(() => {
     if (!liveMatches) return [];
@@ -228,7 +290,12 @@ export default function SportsHubScreen() {
     });
   }, [facilities, selectedSport]);
 
-  const activeLiveMatch = filteredLive[liveIndex] ?? filteredLive[0] ?? null;
+  const activeLiveMatch = useMemo(() => {
+    const base = filteredLive[liveIndex] ?? filteredLive[0] ?? null;
+    if (!base) return null;
+    const override = wsScores[base.id];
+    return override ? { ...base, ...override } : base;
+  }, [filteredLive, liveIndex, wsScores]);
 
   // Player profile derived
   const profileStats = useMemo(() => {
@@ -400,7 +467,7 @@ export default function SportsHubScreen() {
           </View>
           <View style={s.heroScoreCol}>
             <View style={{ alignItems: 'center' }}>
-              <Text style={s.heroScoreBig}>
+              <Text style={[s.heroScoreBig, scoreFlash === activeLiveMatch.id && s.heroScoreFlash]}>
                 {activeLiveMatch.homeScore ?? 0}
                 <Text style={s.heroScoreColon}> : </Text>
                 {activeLiveMatch.awayScore ?? 0}
@@ -455,6 +522,16 @@ export default function SportsHubScreen() {
               <TouchableOpacity key={i} onPress={() => setLiveIndex(i)} style={[s.heroDot, i === liveIndex ? s.heroDotActive : s.heroDotInactive]} />
             ))}
           </View>
+        )}
+        {isSportsAdmin && (
+          <TouchableOpacity
+            onPress={() => router.push(`/sports/match/${activeLiveMatch.id}` as any)}
+            style={s.heroScoreBtn}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="flash" size={11} color="#1E1B4B" />
+            <Text style={s.heroScoreBtnText}>Score Match</Text>
+          </TouchableOpacity>
         )}
       </>
     );
@@ -1303,6 +1380,12 @@ const s = StyleSheet.create({
   heroDot: { height: 5, borderRadius: 3 },
   heroDotActive: { width: 22, backgroundColor: '#fff' },
   heroDotInactive: { width: 5, backgroundColor: 'rgba(255,255,255,0.35)' },
+  heroScoreFlash: { color: '#FDE047' },
+  heroScoreBtn: {
+    alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#FDE047', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginTop: 10,
+  },
+  heroScoreBtnText: { fontSize: 11, fontWeight: '800', color: '#1E1B4B' } as const,
 
   // Player Profile Card
   profileCard: { backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 12, ...SHADOWS.sm },
