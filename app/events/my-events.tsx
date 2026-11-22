@@ -174,7 +174,7 @@ export default function MyEventsScreen() {
           renderItem={renderEvent}
           contentContainerStyle={st.list}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={st.empty}>
               <View style={st.emptyCircle}>

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,7 +75,7 @@ export default function HelpDeskScreen() {
           keyExtractor={item => String(item.id)}
           renderItem={({ item }) => <TicketCard item={item} />}
           contentContainerStyle={{ padding: 16, gap: 12 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
           ListEmptyComponent={<Text style={styles.empty}>No tickets yet.</Text>}
         />
       )}
@@ -118,25 +118,25 @@ export default function HelpDeskScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', margin: 16, backgroundColor: COLORS.primary, borderRadius: RADIUS.sm, paddingHorizontal: 14, paddingVertical: 8 },
-  addBtnText: { color: COLORS.white, ...FONTS.medium, fontSize: 14 },
+  addBtnText: { color: COLORS.white, fontFamily: FONTS.medium, fontSize: 14 },
   card: { backgroundColor: COLORS.white, borderRadius: RADIUS.md, padding: 14, ...SHADOWS.sm, gap: 6 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  ticketNum: { ...FONTS.regular, fontSize: 11, color: COLORS.textSecondary, fontFamily: 'monospace' },
-  status: { ...FONTS.medium, fontSize: 11 },
-  subject: { ...FONTS.semibold, fontSize: 14, color: COLORS.text },
-  category: { ...FONTS.regular, fontSize: 12, color: COLORS.textSecondary },
+  ticketNum: { fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textSecondary },
+  status: { fontFamily: FONTS.medium, fontSize: 11 },
+  subject: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.text },
+  category: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textSecondary },
   resolution: { backgroundColor: '#F0FDF4', borderRadius: RADIUS.xs, padding: 8 },
-  resolutionLabel: { ...FONTS.semibold, fontSize: 11, color: COLORS.success },
-  resolutionText: { ...FONTS.regular, fontSize: 12, color: COLORS.text, marginTop: 2 },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, ...FONTS.regular },
+  resolutionLabel: { fontFamily: FONTS.semibold, fontSize: 11, color: COLORS.success },
+  resolutionText: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.text, marginTop: 2 },
+  empty: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, fontFamily: FONTS.regular },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  modalTitle: { ...FONTS.semibold, fontSize: 17, color: COLORS.text },
-  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: 10, marginBottom: 10, ...FONTS.regular, fontSize: 14, color: COLORS.text, backgroundColor: COLORS.white },
-  fieldLabel: { ...FONTS.semibold, fontSize: 13, color: COLORS.text, marginBottom: 8 },
+  modalTitle: { fontFamily: FONTS.semibold, fontSize: 17, color: COLORS.text },
+  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: 10, marginBottom: 10, fontFamily: FONTS.regular, fontSize: 14, color: COLORS.text, backgroundColor: COLORS.white },
+  fieldLabel: { fontFamily: FONTS.semibold, fontSize: 13, color: COLORS.text, marginBottom: 8 },
   chip: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, marginRight: 8 },
   chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  chipText: { ...FONTS.medium, fontSize: 12, color: COLORS.textSecondary },
+  chipText: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textSecondary },
   chipTextActive: { color: COLORS.white },
   saveBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, padding: 14, alignItems: 'center', marginBottom: 32 },
-  saveBtnText: { color: COLORS.white, ...FONTS.semibold, fontSize: 15 },
+  saveBtnText: { color: COLORS.white, fontFamily: FONTS.semibold, fontSize: 15 },
 });

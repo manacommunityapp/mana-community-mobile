@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, Switch, Alert, ActivityIndicator,
@@ -26,7 +26,7 @@ export default function CreatePollScreen() {
   const [multiVote,    setMultiVote]    = useState(false);
   const [anonymous,    setAnonymous]    = useState(false);
 
-  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const inputRefs = useRef<(React.ElementRef<typeof TextInput> | null)[]>([]);
 
   const createMutation = useMutation({
     mutationFn: () => pollService.createPoll({

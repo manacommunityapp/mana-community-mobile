@@ -42,9 +42,6 @@ const FALLBACK_CONTACTS: EmergencyContact[] = [
   { id: 'ec-4', role: 'Police', phone: '112', available: '24/7' },
 ];
 
-// Queue SOS alerts locally so they can be retried when connectivity returns.
-const pendingSOSQueue: Array<{ data: EmergencyTriggerRequest; timestamp: string }> = [];
-
 export const emergencyService = {
   async triggerSOS(data: EmergencyTriggerRequest): Promise<EmergencyAlertDto> {
     try {
@@ -61,18 +58,9 @@ export const emergencyService = {
       });
       return res.data;
     } catch (err) {
-      // Store locally so the resident has a record, and retry is possible.
-      pendingSOSQueue.push({ data, timestamp: new Date().toISOString() });
-      // Return a local alert so the UI can show the SOS was recorded.
-      return {
-        id: `local-sos-${Date.now()}`,
-        category: data.category,
-        status: 'DISPATCHED',
-        timestamp: new Date().toISOString(),
-        description: data.description,
-        tower: data.tower,
-        flatNumber: data.flatNumber,
-      };
+      // No local queue and no fabricated dispatch: if the server did not receive the SOS,
+      // nobody has been notified. The caller must show a hard failure and a phone fallback.
+      throw err;
     }
   },
 
@@ -104,7 +92,4 @@ export const emergencyService = {
     }
   },
 
-  getPendingSOSQueue() {
-    return [...pendingSOSQueue];
-  },
 };

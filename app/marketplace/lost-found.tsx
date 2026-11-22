@@ -111,7 +111,7 @@ export default function LostFoundScreen() {
         data={filtered}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={() => { void refetch(); }} />}
         renderItem={({ item }) => {
           const isLost = item.type === 'LOST';
           const isResolved = item.status === 'RESOLVED';

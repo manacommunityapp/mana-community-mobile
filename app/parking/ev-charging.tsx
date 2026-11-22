@@ -73,6 +73,12 @@ export default function EVChargingScreen() {
       );
       setActiveTab('HISTORY');
     },
+    onError: (err: any) => {
+      Alert.alert(
+        'Could Not Stop Session',
+        `${err?.message || 'The server did not confirm this.'}\n\nThe session may still be running and no billed summary was issued. Please retry or contact the facility desk.`
+      );
+    },
   });
 
   const startChargingMutation = useMutation({
@@ -84,6 +90,12 @@ export default function EVChargingScreen() {
       Alert.alert('Power Flow Active', 'High-voltage relay connected. Real-time telemetry is now active on your dashboard.');
       setActiveTab('ACTIVE_SESSION');
     },
+    onError: (err: any) => {
+      Alert.alert(
+        'Charging Not Started',
+        `${err?.message || 'The server did not confirm this.'}\n\nNo charging session was created. Please retry when you are back online.`
+      );
+    },
   });
 
   const bookStationMutation = useMutation({
@@ -92,6 +104,12 @@ export default function EVChargingScreen() {
       qc.invalidateQueries({ queryKey: ['evStations'] });
       setBookingModalVisible(false);
       Alert.alert('Bay Reserved', 'Your EV charging bay slot has been pre-authorized. Auto-barrier clearance will be enabled.');
+    },
+    onError: (err: any) => {
+      Alert.alert(
+        'Reservation Failed',
+        `${err?.message || 'The server did not confirm this.'}\n\nNo bay has been reserved and no booking code was issued. Please retry.`
+      );
     },
   });
 

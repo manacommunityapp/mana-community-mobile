@@ -156,7 +156,7 @@ export default function DailyBasketScreen() {
               >
                 <Text
                   style={[
-                    styles.statusPillText,
+                    styles.statusPill,
                     deliveryPass.status === 'DELIVERED'
                       ? styles.statusDeliveredText
                       : deliveryPass.status === 'OUT_FOR_DELIVERY'

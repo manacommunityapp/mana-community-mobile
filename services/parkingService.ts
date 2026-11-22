@@ -425,46 +425,15 @@ export const parkingService = {
   },
 
   async createVisitorPass(data: VisitorPassRequest): Promise<VisitorPassDto> {
-    try {
-      const res = await api.post<VisitorPassDto>('/parking/visitor-pass', data);
-      if (res.data) return res.data;
-    } catch {}
-
-    const code = 'VP-' + Math.floor(1000 + Math.random() * 9000);
-    const now = new Date();
-    const validUntil = data.validUntil || new Date(now.getTime() + 8 * 3600000).toISOString();
-    const newPass: VisitorPassDto = {
-      id: Date.now(),
-      passCode: code,
-      visitorName: data.visitorName,
-      visitorPhone: data.visitorPhone,
-      vehicleNumber: data.vehicleNumber,
-      vehicleType: data.vehicleType || 'CAR',
-      spotId: data.spotId,
-      spotNumber: data.spotId ? 'B2-P' + data.spotId : 'B2-Visitor',
-      validFrom: data.validFrom || now.toISOString(),
-      validUntil,
-      purpose: data.purpose || 'Guest Visit',
-      status: 'ACTIVE',
-    };
-    inMemoryVisitorPasses.unshift(newPass);
-
-    inMemoryANPRLogs.unshift({
-      id: 'anpr-v-' + Date.now().toString().slice(-4),
-      plateNumber: data.vehicleNumber,
-      ocrConfidence: 99.1,
-      timestamp: 'Just now',
-      gateName: 'Main Entrance Gate 1',
-      direction: 'ENTRY',
-      category: 'VISITOR',
-      ownerName: data.visitorName + ' (Pass ' + code + ')',
-      ownerFlat: 'Guest of Tower A - 302',
-      barrierLatencyMs: 175,
-      status: 'CLEARED',
-      notes: 'Visitor Pass pre-cleared via Resident App.',
-    });
-
-    return newPass;
+    // No local fallback. This used to mint a VP-xxxx pass with status ACTIVE
+    // and write a matching ANPR log claiming the vehicle had been CLEARED at
+    // the main gate, so a resident could show a guard a pass code the server
+    // never issued. A failure must reach the caller.
+    const res = await api.post<VisitorPassDto>('/parking/visitor-pass', data);
+    if (!res.data?.passCode) {
+      throw new Error('Visitor pass was not issued. Nothing has been authorised at the gate.');
+    }
+    return res.data;
   },
 
   // ── 3. Temporary Parking Marketplace ★ ─────────────────────────────
@@ -504,60 +473,16 @@ export const parkingService = {
   },
 
   async bookMarketplaceSlot(req: BookMarketplaceSlotRequest): Promise<ParkingMarketplaceBookingDto> {
-    try {
-      const res = await api.post<ParkingMarketplaceBookingDto>('/parking/marketplace/book', req);
-      if (res.data) return res.data;
-    } catch {}
-
-    const listing = inMemoryMarketplaceListings.find((l) => l.id === req.listingId);
-    if (!listing) throw new Error('Listing not found');
-
-    const start = new Date(req.startDate);
-    const end = new Date(req.endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-    const totalCost = listing.pricingType === 'FREE_GOOD_NEIGHBOR' ? 0 : listing.rateINR * diffDays;
-
-    listing.status = 'BOOKED';
-
-    const booking: ParkingMarketplaceBookingDto = {
-      id: 'bk-mkt-' + Date.now().toString().slice(-4),
-      listingId: listing.id,
-      spotNumber: listing.spotNumber,
-      level: listing.level,
-      ownerFlat: listing.ownerFlat,
-      ownerName: listing.ownerName,
-      borrowerFlat: 'Tower A1 - 302',
-      borrowerName: 'You',
-      vehicleNumber: req.vehicleNumber,
-      startDate: req.startDate,
-      endDate: req.endDate,
-      totalDays: diffDays,
-      totalAmountINR: totalCost,
-      status: 'CONFIRMED',
-      anprWhitelisted: true,
-      bookingCode: 'MKT-' + Math.floor(1000 + Math.random() * 9000),
-      createdAt: new Date().toISOString(),
-    };
-
-    inMemoryMarketplaceBookings.unshift(booking);
-
-    inMemoryANPRLogs.unshift({
-      id: 'anpr-mkt-' + Date.now().toString().slice(-4),
-      plateNumber: req.vehicleNumber,
-      ocrConfidence: 99.5,
-      timestamp: 'Scheduled for ' + req.startDate,
-      gateName: 'Basement Barrier 1',
-      direction: 'ENTRY',
-      category: 'MARKETPLACE_GUEST',
-      ownerName: 'Marketplace Borrower (Code: ' + booking.bookingCode + ')',
-      ownerFlat: 'Temporary allocated to ' + listing.spotNumber,
-      barrierLatencyMs: 140,
-      status: 'CLEARED',
-      notes: 'ANPR Auto-Whitelisted for slot ' + listing.spotNumber + ' (' + req.startDate + ' to ' + req.endDate + ')',
-    });
-
-    return booking;
+    // No local fallback. This used to mint a CONFIRMED booking with an
+    // MKT-xxxx code and anprWhitelisted: true, plus a fabricated ANPR log
+    // marking the vehicle CLEARED at the barrier at 99.5% OCR confidence --
+    // a parking reservation and gate authorisation that existed only on the
+    // device. A failure must reach the caller.
+    const res = await api.post<ParkingMarketplaceBookingDto>('/parking/marketplace/book', req);
+    if (!res.data?.bookingCode) {
+      throw new Error('Booking was not confirmed. Nothing has been reserved and no gate access was granted.');
+    }
+    return res.data;
   },
 
   async getMyMarketplaceBookings(): Promise<ParkingMarketplaceBookingDto[]> {
@@ -622,11 +547,6 @@ export const parkingService = {
     return res.data;
   },
 
-  async overrideANPRAction(eventId: string | number, action: 'OPEN' | 'HOLD' | 'DENY'): Promise<unknown> {
-    const res = await api.put(`/parking/anpr/events/${eventId}/override`, null, { params: { action } });
-    return res.data;
-  },
-
   async getVehicleWhitelist(): Promise<VehicleWhitelistDto[]> {
     try {
       const res = await api.get<VehicleWhitelistDto[]>('/parking/whitelist');
@@ -684,34 +604,28 @@ export const parkingService = {
   },
 
   async startEVCharging(stationId: string | number, vehicleNumber?: string): Promise<EVChargingSessionDto> {
-    try {
-      const res = await api.post<EVChargingSessionDto>('/parking/ev/start', { stationId, vehicleNumber });
-      return res.data;
-    } catch {
-      return FALLBACK_ACTIVE_EV_SESSION;
-    }
+    // Only the charger/server can open a session. A failure propagates rather than
+    // showing a fabricated live session for a relay that was never engaged.
+    const res = await api.post<EVChargingSessionDto>('/parking/ev/start', { stationId, vehicleNumber });
+    return res.data;
   },
 
   async stopEVCharging(sessionId?: string): Promise<{ success: boolean; message: string; summary: { energyDeliveredKWh: number; totalCostINR: number; co2SavedKg: number } }> {
-    try {
-      const res = await api.post('/parking/ev/stop', { sessionId });
-      return res.data;
-    } catch {
-      return {
-        success: true,
-        message: 'Charging session stopped successfully',
-        summary: { energyDeliveredKWh: 14.5, totalCostINR: 174, co2SavedKg: 11.2 },
-      };
+    // The billed summary (kWh and cost) is metered server-side — never fabricated.
+    const res = await api.post('/parking/ev/stop', { sessionId });
+    if (!res.data?.summary) {
+      throw new Error('Charging session could not be stopped: no metered summary returned.');
     }
+    return res.data;
   },
 
   async bookEVStation(req: EVBookingRequest): Promise<{ success: boolean; bookingCode: string }> {
-    try {
-      const res = await api.post('/parking/ev/book', req);
-      return res.data;
-    } catch {
-      return { success: true, bookingCode: 'EV-' + Math.floor(1000 + Math.random() * 9000) };
+    // Booking codes are server-issued; a client-minted code would be rejected at the bay.
+    const res = await api.post('/parking/ev/book', req);
+    if (!res.data?.bookingCode) {
+      throw new Error('Bay reservation failed: the server did not return a booking code.');
     }
+    return res.data;
   },
 
   async getActiveEVSession(): Promise<EVChargingSessionDto | null> {

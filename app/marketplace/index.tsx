@@ -44,7 +44,7 @@ const QUICK_ACTIONS = [
 export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boolean }) {
   const router     = useRouter();
   const qc         = useQueryClient();
-  const searchRef  = useRef<TextInput>(null);
+  const searchRef  = useRef<React.ElementRef<typeof TextInput>>(null);
 
   const [search,      setSearch]      = useState('');
   const [category,    setCategory]    = useState<MarketplaceCategory>('ALL');
@@ -329,7 +329,7 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
           )}
           contentContainerStyle={s.grid}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />
           }
           onEndReached={() => hasNextPage && fetchNextPage()}
           onEndReachedThreshold={0.4}
@@ -338,7 +338,7 @@ export default function MarketplaceBrowseScreen({ isTab = false }: { isTab?: boo
               ? <ActivityIndicator style={{ padding: 20 }} color={COLORS.primary} />
               : listings.length > 0
                 ? <View style={s.footerSafe} />
-                : null
+                : undefined
           }
           ListEmptyComponent={
             <View style={s.empty}>

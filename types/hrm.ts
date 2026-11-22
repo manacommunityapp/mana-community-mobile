@@ -1,3 +1,9 @@
+export interface HrOrganization {
+  id: number;
+  organizationName: string;
+  organizationType: string;
+}
+
 export interface HrEmployee {
   id: number;
   organizationId: number;
@@ -154,7 +160,7 @@ export interface HrHoliday {
   isOptional: boolean;
 }
 
-export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN' | 'TEMPORARY' | 'GIG';
+export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN' | 'TEMPORARY' | 'GIG' | 'INTERNSHIP';
 export type EmploymentStatus = 'ACTIVE' | 'ON_NOTICE' | 'SUSPENDED' | 'TERMINATED' | 'RESIGNED' | 'RETIRED';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'HALF_DAY' | 'ON_LEAVE' | 'HOLIDAY' | 'WEEK_OFF' | 'NOT_MARKED';
 export type LeaveApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'L1_APPROVED' | 'L1_REJECTED';
@@ -703,7 +709,7 @@ export interface MwEngagementContract {
 // ── Mana Jobs ────────────────────────────────────────────────────────
 export type JobStatus = 'ACTIVE' | 'PAUSED' | 'CLOSED';
 export type JobApplicationStatus = 'APPLIED' | 'SHORTLISTED' | 'REJECTED' | 'OFFERED' | 'WITHDRAWN';
-export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'GIG';
+// EmploymentType is defined above (merged)
 
 export interface MwJobListing {
   id: number;

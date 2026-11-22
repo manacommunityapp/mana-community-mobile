@@ -8,6 +8,44 @@ export interface DeepLinkRoute {
 }
 
 /**
+ * Route a deep link falls back to when it names nothing recognised.
+ * `/tabs/feed` is the app's home tab (see app/tabs/_layout.tsx).
+ */
+const SAFE_FALLBACK_ROUTE = '/tabs/feed';
+
+/** A single id path segment: no slashes, so nested paths cannot slip through. */
+const ID_SEGMENT = /^[A-Za-z0-9._-]{1,128}$/;
+
+type RouteRule =
+  | { kind: 'exact'; match: string[]; target: string }
+  | { kind: 'prefix'; prefix: string };
+
+/**
+ * The complete set of routes an inbound deep link may open. Anything outside
+ * this list resolves to SAFE_FALLBACK_ROUTE, so a crafted link cannot reach
+ * privileged routes (admin, finance, settings, ...).
+ *
+ * NOTE: the two payment targets below do not currently exist under `app/`.
+ * They are preserved verbatim because the existing contract/tests depend on
+ * them; the real screens still need to be created (or these remapped to
+ * `/payments/receipt`) by whoever owns the payment flow.
+ */
+const ROUTE_ALLOWLIST: RouteRule[] = [
+  // 1. Payment callbacks
+  { kind: 'exact', match: ['/payment/success', '/payment/callback'], target: '/finance/payment-success' },
+  { kind: 'exact', match: ['/payment/failed'], target: '/finance/payment-failed' },
+
+  // 2. Emergency SOS
+  { kind: 'exact', match: ['/emergency', '/sos'], target: '/emergency' },
+
+  // 3-6. Resource routes, passed through only under a known-safe prefix.
+  { kind: 'prefix', prefix: '/services/ticket/' },
+  { kind: 'prefix', prefix: '/visitor/pass/' },
+  { kind: 'prefix', prefix: '/chat/' },
+  { kind: 'prefix', prefix: '/events/' },
+];
+
+/**
  * Service to parse, validate, and resolve deep links and universal links.
  * Supported schemes: mana://, mana-community://, https://app.manacommunity.com/
  */
@@ -58,46 +96,28 @@ export const deepLinkService = {
 
   resolveInternalRoute(pathname: string, params: Record<string, string>): string {
     const cleanPath = pathname.replace(/\/+$/, ''); // trim trailing slash
+    if (!cleanPath) return SAFE_FALLBACK_ROUTE;
 
-    // 1. Payment callback
-    if (cleanPath === '/payment/success' || cleanPath === '/payment/callback') {
-      return '/finance/payment-success';
-    }
-    if (cleanPath === '/payment/failed') {
-      return '/finance/payment-failed';
-    }
-
-    // 2. Emergency SOS
-    if (cleanPath === '/emergency' || cleanPath === '/sos') {
-      return '/emergency';
-    }
-
-    // 3. Service Ticket / Maintenance
-    if (cleanPath.startsWith('/services/ticket/')) {
-      const id = cleanPath.split('/services/ticket/')[1];
-      return `/services/ticket/${id}`;
+    for (const rule of ROUTE_ALLOWLIST) {
+      if (rule.kind === 'exact') {
+        if (rule.match.includes(cleanPath)) return rule.target;
+        continue;
+      }
+      if (cleanPath.startsWith(rule.prefix)) {
+        const id = cleanPath.slice(rule.prefix.length);
+        // A single, well-formed id segment only — this blocks nested paths and
+        // traversal such as `/chat/../admin/audit-logs`.
+        if (ID_SEGMENT.test(id) && !id.includes('..')) {
+          return `${rule.prefix}${id}`;
+        }
+        break;
+      }
     }
 
-    // 4. Visitor Gate Pass
-    if (cleanPath.startsWith('/visitor/pass/')) {
-      const id = cleanPath.split('/visitor/pass/')[1];
-      return `/visitor/pass/${id}`;
-    }
-
-    // 5. Chat Conversation
-    if (cleanPath.startsWith('/chat/')) {
-      const id = cleanPath.split('/chat/')[1];
-      return `/chat/${id}`;
-    }
-
-    // 6. Events
-    if (cleanPath.startsWith('/events/')) {
-      const id = cleanPath.split('/events/')[1];
-      return `/events/${id}`;
-    }
-
-    // Default route fallback
-    return cleanPath || '/tabs/home';
+    // Deny by default. Returning `cleanPath` verbatim here previously let any
+    // inbound link resolve to any route, including `mana://admin/audit-logs`.
+    secureLog.security('[DeepLink] Rejected unrecognised route', { path: cleanPath });
+    return SAFE_FALLBACK_ROUTE;
   },
 
   async getInitialRoute(): Promise<DeepLinkRoute | null> {

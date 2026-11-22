@@ -1,5 +1,4 @@
-import { CONFIG } from '@/constants/config';
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? CONFIG.API_BASE_URL + '/api';
+import api from './apiClient';
 
 export type SplitType = 'EQUAL' | 'CUSTOM' | 'PERCENTAGE';
 
@@ -80,8 +79,8 @@ const FALLBACK_SPLITS: SplitBill[] = [
 export const splitBillService = {
   async getSplits(): Promise<SplitBill[]> {
     try {
-      const r = await fetch(`${API_BASE}/v1/split/my-splits`);
-      if (r.ok) { const d = await r.json(); if (Array.isArray(d)) return d; }
+      const res = await api.get<SplitBill[]>('/v1/split/my-splits');
+      if (Array.isArray(res.data)) return res.data;
     } catch {}
     return FALLBACK_SPLITS;
   },
@@ -94,42 +93,26 @@ export const splitBillService = {
     members: { user_id: string; name: string; flat?: string; share_amount: number }[];
     category: SplitBill['category'];
   }): Promise<SplitBill> {
-    try {
-      const r = await fetch(`${API_BASE}/v1/split/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (r.ok) { const d = await r.json(); if (d?.id) return d; }
-    } catch {}
-    return {
-      ...payload,
-      id: `split-${Date.now()}`,
-      created_by: 'me',
-      created_by_name: 'You',
-      members: payload.members.map(m => ({ ...m, status: 'PENDING' as const })),
-      settled_amount: 0,
-      pending_amount: payload.total_amount,
-      status: 'OPEN',
-      created_at: new Date().toISOString(),
-    };
+    // The split is created server-side so every member sees it. A failure propagates —
+    // never hand back a locally-minted split that only exists on this device.
+    const res = await api.post<SplitBill>('/v1/split/create', payload);
+    if (!res.data?.id) {
+      throw new Error('Split could not be created: the server did not return a split.');
+    }
+    return res.data;
   },
 
   async settle(splitId: string, memberId: string, amount: number, payeeName: string): Promise<SettleResult> {
-    try {
-      const r = await fetch(`${API_BASE}/v1/split/${splitId}/settle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ member_id: memberId, amount }),
-      });
-      if (r.ok) { const d = await r.json(); if (d?.upi_intent_url) return d; }
-    } catch {}
-    const tr = `MANA-SPLIT-${Date.now()}`;
-    return {
-      upi_intent_url: `upi://pay?pa=split@setu&pn=${encodeURIComponent(payeeName)}&am=${amount.toFixed(2)}&cu=INR&tr=${tr}&tn=Split+Bill+Settlement`,
-      phone_pe_url: `phonepe://pay?pa=split@setu&pn=${encodeURIComponent(payeeName)}&am=${amount.toFixed(2)}&cu=INR&tr=${tr}`,
-      transaction_ref: tr,
+    // The UPI intent and transaction reference must be issued by the server so the
+    // settlement is actually tracked. Never mint a payment intent on the client.
+    const res = await api.post<SettleResult>(`/v1/split/${splitId}/settle`, {
+      member_id: memberId,
       amount,
-    };
+      payee_name: payeeName,
+    });
+    if (!res.data?.upi_intent_url) {
+      throw new Error('Settlement could not be initiated: the server did not return a payment intent.');
+    }
+    return res.data;
   },
 };

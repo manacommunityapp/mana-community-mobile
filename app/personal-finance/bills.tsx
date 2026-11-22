@@ -14,7 +14,7 @@ import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
-import { personalFinanceService, PersonalBillDto } from '@/services/personalFinanceService';
+import { personalFinanceService, PersonalBillDto, isOfflineQueuedError } from '@/services/personalFinanceService';
 
 function formatCurrency(amount: number): string {
   return '₹' + amount.toLocaleString('en-IN');
@@ -39,6 +39,16 @@ export default function BillsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personal-finance-bills'] });
       Alert.alert('Bill Paid', 'Bill marked as paid and expense recorded.');
+    },
+    onError: (err) => {
+      if (isOfflineQueuedError(err)) {
+        Alert.alert(
+          'Pending Confirmation',
+          'You are offline. This bill has been queued and will be submitted when you reconnect. It is NOT marked paid yet.'
+        );
+        return;
+      }
+      Alert.alert('Could Not Mark Paid', 'The server did not confirm this bill as paid. Please try again.');
     },
   });
 

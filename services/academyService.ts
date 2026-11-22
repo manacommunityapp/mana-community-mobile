@@ -32,21 +32,24 @@ const MOCK_CERTIFICATES: DigitalCertificate[] = [];
 const MOCK_STUDENT_ROSTER: ClassAttendee[] = [];
 
 const MOCK_INSTRUCTOR_EARNINGS: InstructorEarnings = {
-  totalRevenue: 0,
-  activeStudents: 0,
-  completedWorkshops: 0,
-  averageRating: 0,
-  upcomingPayout: 0,
-  nextPayoutDate: '',
+  totalGrossRevenue: 0,
+  platformFeeAmount: 0,
+  netPayoutAmount: 0,
+  pendingPayout: 0,
+  totalLearnersTaught: 0,
+  activeWorkshopsCount: 0,
+  completedWorkshopsCount: 0,
 };
 
 const MOCK_ADMIN_STATS: AcademyAdminStats = {
-  totalPrograms: 0,
-  activeWorkshops: 0,
+  totalActiveWorkshops: 0,
+  totalResidentFaculty: 0,
   totalEnrollments: 0,
-  verifiedInstructors: 0,
-  pendingApprovals: 0,
-  monthlyGrossValue: 0,
+  totalCertificatesIssued: 0,
+  grossRevenueGmv: 0,
+  communityFundContribution: 0,
+  pendingInstructorApplications: 0,
+  pendingProgramApprovals: 0,
 };
 
 const MOCK_PENDING_INSTRUCTORS: InstructorApplication[] = [];

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useHrmOrg } from '@/hooks/useHrmOrg';
 import {
   View, Text, StyleSheet, FlatList, ScrollView,
@@ -73,7 +73,7 @@ export default function LeavesScreen() {
             <LeaveRequestItem request={item} onCancel={handleCancel} />
           </View>
         )}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={

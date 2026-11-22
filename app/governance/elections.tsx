@@ -195,7 +195,7 @@ export default function ElectionsScreen() {
     <ScrollView
       style={s.container}
       contentContainerStyle={s.scroll}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} />}
     >
       {/* Election selector tabs */}
       {elections.length > 1 && (

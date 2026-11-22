@@ -80,7 +80,7 @@ export default function CommuteHubScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
       >
         {/* ── Stats ─────────────────────────────────────────────────── */}
         {stats && (

@@ -1,6 +1,21 @@
 import api, { tokenStore } from './apiClient';
 import { profileService } from './profileService';
-import type { LoginRequest, LoginResponse, RegisterRequest, UserProfileResponse } from '@/types/api';
+import type { GovtIdType, LoginRequest, LoginResponse, RegisterRequest, UserProfileResponse } from '@/types/api';
+
+/**
+ * Onboarding KYC submission. There is deliberately no field for the raw
+ * government ID number — only the SHA-256 digest of the normalised value plus
+ * the last 4 characters for display. See `hashGovtIdNumber` in kycService.
+ */
+export interface SubmitKycPayload {
+  govtIdType: GovtIdType;
+  /** SHA-256 (lowercase hex) of the normalised ID number. */
+  govtIdNumberHash: string;
+  /** Last 4 characters of the normalised ID, for display only. */
+  govtIdLast4: string;
+  documentFrontUrl?: string;
+  documentBackUrl?: string;
+}
 
 export const authService = {
   async login(data: LoginRequest): Promise<LoginResponse> {
@@ -58,7 +73,7 @@ export const authService = {
     return res.data;
   },
 
-  async submitKyc(data: any): Promise<UserProfileResponse> {
+  async submitKyc(data: SubmitKycPayload): Promise<UserProfileResponse> {
     const res = await api.post<UserProfileResponse>('/users/me/kyc', data);
     return res.data;
   },

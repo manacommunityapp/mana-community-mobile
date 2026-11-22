@@ -93,14 +93,14 @@ export default function WishlistScreen() {
           )}
           contentContainerStyle={s.grid}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />
           }
           onEndReached={() => hasNextPage && fetchNextPage()}
           onEndReachedThreshold={0.4}
           ListFooterComponent={
             isFetchingNextPage
               ? <ActivityIndicator style={{ padding: 20 }} color={COLORS.primary} />
-              : null
+              : undefined
           }
           ListEmptyComponent={
             <View style={s.empty}>

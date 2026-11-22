@@ -121,7 +121,7 @@ export default function MarketDaysScreen() {
       <TouchableOpacity onPress={() => setTab('discover')} style={[s.tab, tab === 'discover' && s.tabOn]}><Text style={[s.tabText, tab === 'discover' && s.tabTextOn]}>Discover</Text></TouchableOpacity>
       <TouchableOpacity onPress={() => setTab('applications')} style={[s.tab, tab === 'applications' && s.tabOn]}><Text style={[s.tabText, tab === 'applications' && s.tabTextOn]}>My applications</Text></TouchableOpacity>
     </View>
-    {tab === 'discover' ? <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={events.isRefetching} onRefresh={() => events.refetch()} />}>
+    {tab === 'discover' ? <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={events.isRefetching} onRefresh={() => { void events.refetch(); }} />}>
       <Text style={s.eyebrow}>MANA COMMUNITY BAZAAR</Text>
       <Text style={s.heading}>Markets around your community</Text>
       <Text style={s.sub}>Discover local events, browse current stall inventory, and apply to exhibit.</Text>
@@ -169,7 +169,7 @@ export default function MarketDaysScreen() {
           </View> : null}
         </View>;
       })}
-    </ScrollView> : <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={applications.isRefetching} onRefresh={() => applications.refetch()} />}>
+    </ScrollView> : <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={applications.isRefetching} onRefresh={() => { void applications.refetch(); }} />}>
       <Text style={s.heading}>My stall applications</Text><Text style={s.sub}>Approval and payment are separate steps. A stall is confirmed only after payment verification.</Text>
       {applications.isLoading ? <ActivityIndicator style={s.spinner} color={COLORS.primary} /> : null}
       {applications.isError ? <View style={s.notice}><Text style={s.noticeText}>Applications could not be loaded.</Text><TouchableOpacity onPress={() => applications.refetch()}><Text style={s.link}>Retry</Text></TouchableOpacity></View> : null}

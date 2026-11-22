@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,6 +21,7 @@ import {
   PersonalBudgetDto,
   PersonalSpendingCategoryDto,
   DashboardSummaryDto,
+  isOfflineQueuedError,
 } from '@/services/personalFinanceService';
 
 const TYPE_COLORS = {
@@ -112,6 +114,16 @@ export default function PersonalFinanceDashboard() {
     mutationFn: personalFinanceService.markBillPaid,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personal-finance-bills'] });
+    },
+    onError: (err) => {
+      if (isOfflineQueuedError(err)) {
+        Alert.alert(
+          'Pending Confirmation',
+          'You are offline. This bill has been queued and will be submitted when you reconnect. It is NOT marked paid yet.'
+        );
+        return;
+      }
+      Alert.alert('Could Not Mark Paid', 'The server did not confirm this bill as paid. Please try again.');
     },
   });
 

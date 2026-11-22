@@ -157,7 +157,7 @@ export default function PollsScreen() {
           keyExtractor={(p) => String(p.id)}
           renderItem={({ item }) => <PollListItem post={item} />}
           contentContainerStyle={{ paddingVertical: 8 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
           onEndReached={() => hasNextPage && fetchNextPage()}
           onEndReachedThreshold={0.4}
           ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} color={COLORS.primary} /> : undefined}
