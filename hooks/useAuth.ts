@@ -396,7 +396,6 @@ export const useAuth = create<AuthState>((set, get) => ({
         set({ user: enriched });
       });
   },
-  },
 
   logout: async () => {
     await authService.logout();
