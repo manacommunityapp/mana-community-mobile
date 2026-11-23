@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { sportsService } from '@/services/sportsService';
 import { BadgeCard } from '@/components/sports/BadgeCard';
 import { COLORS, SHADOWS, RADIUS, getInitials } from '@/constants/config';
-import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
+import { SPORT_EMOJI } from '@/constants/sports';
 import type { LeaderboardCategory, SportType } from '@/types/api';
 
 const SPORTS_FILTER: { key: SportType | 'ALL'; label: string }[] = [
@@ -18,8 +18,8 @@ const SPORTS_FILTER: { key: SportType | 'ALL'; label: string }[] = [
   { key: 'CRICKET',     label: '🏏 Cricket'   },
   { key: 'BADMINTON',   label: '🏸 Badminton' },
   { key: 'FOOTBALL',    label: '⚽ Football'  },
-  { key: 'PICKLEBALL' as SportType, label: '🏓 Pickleball' },
-  { key: 'TENNIS' as SportType,     label: '🎾 Tennis'     },
+  { key: 'PICKLEBALL', label: '🏓 Pickleball' },
+  { key: 'TENNIS',     label: '🎾 Tennis'     },
   { key: 'TABLE_TENNIS',label: '🏓 TT'        },
   { key: 'BASKETBALL',  label: '🏀 Basketball'},
 ];

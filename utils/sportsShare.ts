@@ -1,20 +1,7 @@
 import { Share } from 'react-native';
 import type { MatchDto, TournamentDto } from '@/types/api';
 import { safeFormat } from '@/utils/dateUtils';
-
-const SPORT_EMOJI: Record<string, string> = {
-  CRICKET:      '🏏',
-  FOOTBALL:     '⚽',
-  BADMINTON:    '🏸',
-  TABLE_TENNIS: '🏓',
-  TENNIS:       '🎾',
-  BASKETBALL:   '🏀',
-  VOLLEYBALL:   '🏐',
-  CHESS:        '♟️',
-  CARROM:       '🎯',
-  SQUASH:       '🎾',
-  OTHER:        '🏅',
-};
+import { SPORT_EMOJI } from '@/constants/sports';
 
 export function formatMatchShareText(match: MatchDto, extras?: { manOfMatch?: string }): string {
   const emoji = SPORT_EMOJI[match.sport] || '🏅';

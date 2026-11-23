@@ -717,6 +717,8 @@ export interface MatchDto {
   awayOvers?:       string;
   awayWickets?:     number;
   winnerTeamName?:  string;
+  homeScoreDisplay?: string;
+  awayScoreDisplay?: string;
 }
 
 export interface MatchEventDto {
@@ -829,6 +831,9 @@ export interface CreateSportsChallengeRequest {
   venue?:         string;
   scheduledTime?: string;
   notes?:         string;
+  creatorId?:     number;
+  creatorName?:   string;
+  creatorFlat?:   string;
 }
 
 // ── Sports Dashboard & Event Registrations ──────────────────────

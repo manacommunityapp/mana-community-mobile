@@ -29,17 +29,22 @@ const BADGE_META_MAP: Record<string, { title: string; emoji: string; tier: 'lege
   good_sport:        { title: 'Good Sport',          emoji: '🏅', tier: 'common' },
 };
 
+function logApiWarn(method: string, err?: unknown) {
+  const msg = err instanceof Error ? err.message : String(err ?? '');
+  secureLog.warn(`[sportsService.${method}] API failed: ${msg}`);
+}
+
 function normalizeSportType(raw?: string | null): SportType {
   const s = String(raw || '').toUpperCase().replace(/\s+/g, '_');
   if (s.includes('CRICKET')) return 'CRICKET';
   if (s.includes('BADMINTON')) return 'BADMINTON';
   if (s.includes('TABLE_TENNIS') || s === 'TT' || s.includes('PING_PONG')) return 'TABLE_TENNIS';
-  if (s.includes('PICKLEBALL')) return 'PICKLEBALL' as SportType;
-  if (s.includes('TENNIS')) return 'TENNIS' as SportType;
+  if (s.includes('PICKLEBALL')) return 'PICKLEBALL';
+  if (s.includes('TENNIS')) return 'TENNIS';
   if (s.includes('FOOTBALL') || s.includes('SOCCER')) return 'FOOTBALL';
   if (s.includes('BASKETBALL')) return 'BASKETBALL';
   if (s.includes('VOLLEYBALL')) return 'VOLLEYBALL';
-  if (s.includes('SWIM')) return 'SWIMMING' as SportType;
+  if (s.includes('SWIM')) return 'SWIMMING';
   if (s.includes('CHESS')) return 'CHESS';
   if (s.includes('CARROM')) return 'CARROM';
   return (s || 'OTHER') as SportType;
@@ -289,7 +294,7 @@ export const sportsService = {
       if (list.length > 0) {
         return filterAndPage(list);
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 2. Try all tournaments
     try {
@@ -298,7 +303,7 @@ export const sportsService = {
       if (list.length > 0) {
         return filterAndPage(list);
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 3. Fallback to /sports/tournaments if supported
     try {
@@ -306,7 +311,8 @@ export const sportsService = {
         params: { sport, status, page, size: 20 },
       });
       return res.data;
-    } catch {
+    } catch (err) {
+      logApiWarn('getTournaments', err);
       return { content: [], totalElements: 0, totalPages: 0, page: 0, size: 20, hasNext: false, hasPrevious: false } as any;
     }
   },
@@ -315,7 +321,7 @@ export const sportsService = {
     try {
       const res = await api.get<any>(`/tournaments/${id}`);
       if (res.data) return normalizeTournamentDto(res.data);
-    } catch {}
+    } catch (_e) { /* fallback */ }
     try {
       const page = await sportsService.getTournaments();
       const matched = (page.content || []).find((t: any) => {
@@ -324,7 +330,7 @@ export const sportsService = {
         return evs.some((ev: any) => Number(ev?.id) === Number(id));
       });
       if (matched) return normalizeTournamentDto(matched);
-    } catch {}
+    } catch (_e) { /* fallback */ }
     const res = await api.get<any>(`/sports/tournaments/${id}`);
     return normalizeTournamentDto(res.data);
   },
@@ -337,7 +343,7 @@ export const sportsService = {
       return (all.content || []).filter((t: any) =>
         t.myTeamRegistered || myNames.has((t.name || '').toLowerCase())
       );
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -378,7 +384,7 @@ export const sportsService = {
                 isMyTeam: Boolean(tm.isMyTeam),
                 isCaptain: Boolean(tm.isCaptain),
               }));
-            } catch {
+            } catch (err) { logApiWarn('api', err);
               return [];
             }
           }),
@@ -386,13 +392,13 @@ export const sportsService = {
         const flat = nested.flat();
         if (flat.length > 0) return flat;
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 2. Fallback to legacy endpoint
     try {
       const res = await api.get<TeamDto[]>(`/sports/tournaments/${tournamentId}/teams`);
       return Array.isArray(res.data) ? res.data : [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -439,7 +445,7 @@ export const sportsService = {
           });
         }
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 2. Supplement from user sports event registrations & tournament squads (zero 404s; /sports/teams/my does not exist on backend)
     try {
@@ -482,7 +488,7 @@ export const sportsService = {
           isCaptain: Boolean(r.captainNomination),
         });
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     return collected;
   },
@@ -524,7 +530,7 @@ export const sportsService = {
     try {
       await api.delete(`/auction/teams/${teamId}/leave`);
       return;
-    } catch {}
+    } catch (_e) { /* fallback */ }
     await api.delete(`/sports/teams/${teamId}/leave`);
   },
 
@@ -532,7 +538,7 @@ export const sportsService = {
     try {
       await api.delete(`/auction/teams/${teamId}/dissolve`);
       return;
-    } catch {}
+    } catch (_e) { /* fallback */ }
     await api.delete(`/sports/teams/${teamId}`);
   },
 
@@ -658,7 +664,7 @@ export const sportsService = {
         res = await api.get<FeedLiveMatch[]>('/sports/live-feed');
       }
       return Array.isArray(res.data) ? res.data : [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -671,7 +677,7 @@ export const sportsService = {
         res = await api.get<FeedLiveMatch[]>(`/sports/upcoming-feed?limit=${limit}`);
       }
       return Array.isArray(res.data) ? res.data : [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -684,7 +690,7 @@ export const sportsService = {
         res = await api.get<FeedLiveMatch[]>(`/sports/recent-completed?limit=${limit}`);
       }
       return Array.isArray(res.data) ? res.data : [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -694,7 +700,7 @@ export const sportsService = {
       const res = await api.get<any>('/tournament/configs');
       const d = res.data;
       return Array.isArray(d) ? d : (d?.content || d?.items || []);
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -705,7 +711,7 @@ export const sportsService = {
       const res = await api.get<any>(`/tournament/${configId}/matches`);
       const d = res.data;
       return Array.isArray(d) ? d : (d?.content || d?.items || []);
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -739,7 +745,7 @@ export const sportsService = {
           completedAt: m.completedAt || null,
           venueName: m.venueName || m.venue || null,
         }));
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -757,7 +763,7 @@ export const sportsService = {
             res = await api.get<any[]>('/sports/live-feed');
           }
           return Array.isArray(res.data) ? res.data.map(feedMatchToMatchDto) : [];
-        } catch {
+        } catch (err) { logApiWarn('api', err);
           return [] as MatchDto[];
         }
       })(),
@@ -775,7 +781,7 @@ export const sportsService = {
       if (Array.isArray(res.data) && res.data.length > 0) {
         return res.data.map(feedMatchToMatchDto);
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     return [];
   },
@@ -792,7 +798,7 @@ export const sportsService = {
             res = await api.get<any[]>('/sports/upcoming-feed?limit=20');
           }
           return Array.isArray(res.data) ? res.data.map(feedMatchToMatchDto) : [];
-        } catch {
+        } catch (err) { logApiWarn('api', err);
           return [] as MatchDto[];
         }
       })(),
@@ -803,7 +809,7 @@ export const sportsService = {
             res = await api.get<any[]>('/sports/recent-completed?limit=20');
           }
           return Array.isArray(res.data) ? res.data.map(feedMatchToMatchDto) : [];
-        } catch {
+        } catch (err) { logApiWarn('api', err);
           return [] as MatchDto[];
         }
       })(),
@@ -817,7 +823,7 @@ export const sportsService = {
     try {
       const res = await api.get<MatchDto[]>('/sports/matches/today');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     try {
       const res = await api.get<PageResponse<MatchDto>>('/sports/matches', {
@@ -825,7 +831,7 @@ export const sportsService = {
       });
       const all = res.data?.content || [];
       if (all.length > 0) return all.map((m: any) => feedMatchToMatchDto(m));
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     return [];
   },
@@ -845,20 +851,20 @@ export const sportsService = {
           venueName: inner.venueName || d.venueName,
         });
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 2. Try live match state endpoint
     try {
       const res = await api.get<any>(`/tournament/match/${id}/live`);
       if (res.data) return feedMatchToMatchDto({ ...res.data, matchId: res.data.matchId ?? id });
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 3. Search combined resident matches list
     try {
       const page = await sportsService.getMatches();
       const found = (page.content || []).find((m) => Number(m.id) === Number(id));
       if (found) return found;
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     const res = await api.get<MatchDto>(`/sports/matches/${id}`);
     return feedMatchToMatchDto(res.data);
@@ -881,11 +887,11 @@ export const sportsService = {
           timestamp: b.createdAt || new Date().toISOString(),
         }));
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
     try {
       const res = await api.get<MatchEventDto[]>(`/sports/matches/${matchId}/events`);
       return Array.isArray(res.data) ? res.data : [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -895,7 +901,7 @@ export const sportsService = {
     try {
       const res = await api.get<any>(`/tournament/match/${matchId}/live`);
       return res.data;
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return null;
     }
   },
@@ -935,7 +941,7 @@ export const sportsService = {
     try {
       const res = await api.put<any>(`/sports/matches/${matchId}/status`, { status });
       return feedMatchToMatchDto(res.data);
-    } catch {}
+    } catch (_e) { /* fallback */ }
     const res = await api.patch<MatchDto>(`/sports/matches/${matchId}`, { status });
     return res.data;
   },
@@ -971,13 +977,13 @@ export const sportsService = {
           }));
         }
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 2. Fallback to legacy standings endpoint
     try {
       const res = await api.get<StandingDto[]>(`/sports/tournaments/${tournamentId}/standings`);
       return Array.isArray(res.data) ? res.data : [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -992,7 +998,7 @@ export const sportsService = {
     try {
       const res = await api.get<import('@/types/api').DashboardStatsDto>('/sports/dashboard/stats');
       if (res.data) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // Resident-accessible fallback: compute stats from available tournaments & matches
     try {
@@ -1006,7 +1012,7 @@ export const sportsService = {
         openRegistrations: tournaments.length,
         upcomingTournaments: tournaments.length,
       };
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return { yourRegistrations: 0, liveEvents: 0, openRegistrations: 0, upcomingTournaments: 0 };
     }
   },
@@ -1015,11 +1021,11 @@ export const sportsService = {
     try {
       const res = await api.get<import('@/types/api').DashboardUpcomingEventDto[]>('/sports/dashboard/upcoming');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback */ }
     try {
       const res = await api.get<import('@/types/api').DashboardUpcomingEventDto[]>('/sports/dashboard/upcoming-events');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // Resident-accessible fallback: extract upcoming events from /tournaments/community
     try {
@@ -1050,7 +1056,7 @@ export const sportsService = {
         }
       }
       return events;
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -1060,7 +1066,7 @@ export const sportsService = {
     try {
       const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/dashboard/open-tournaments');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 2. Fallback to community tournaments endpoint and map to DashboardTournamentCardDto
     try {
@@ -1082,7 +1088,7 @@ export const sportsService = {
         );
         return (openOnly.length > 0 ? openOnly : nonDraft).map(tournamentToDashboardCard);
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 3. Fallback to /sports/tournaments/open
     try {
@@ -1092,7 +1098,7 @@ export const sportsService = {
       if (list.length > 0) {
         return list.map(tournamentToDashboardCard);
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // 4. Fallback to all tournaments
     try {
@@ -1104,7 +1110,7 @@ export const sportsService = {
       if (nonDraft.length > 0) {
         return nonDraft.map(tournamentToDashboardCard);
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     return [];
   },
@@ -1113,11 +1119,11 @@ export const sportsService = {
     try {
       const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/dashboard/closed-tournaments');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback */ }
     try {
       const res = await api.get<any>('/sports/tournaments/closed');
       return Array.isArray(res.data) ? res.data : [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -1126,15 +1132,15 @@ export const sportsService = {
     try {
       const res = await api.get<import('@/types/api').DashboardMyRegistrationDto[]>('/sports/dashboard/my-registrations');
       if (Array.isArray(res.data)) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback */ }
     try {
       const res = await api.get<any>('/sports/schedule/registrations/mine');
       if (Array.isArray(res.data)) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback */ }
     try {
       const res = await api.get<any>('/sports/registrations/mine');
       return Array.isArray(res.data) ? res.data : [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -1237,7 +1243,7 @@ export const sportsService = {
           displayValue: item.displayValue || `${item.score ?? item.value ?? 0} pts`,
         }));
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     // Fallback: build leaderboard from /sports/rankings or tournament leaderboard
     try {
@@ -1255,7 +1261,7 @@ export const sportsService = {
           topBadge: r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : undefined,
         }));
       }
-    } catch {}
+    } catch (_e) { /* fallback */ }
 
     return [];
   },
@@ -1265,7 +1271,7 @@ export const sportsService = {
     try {
       const res = await api.get<BadgeDto[]>('/sports/badges');
       return res.data ?? [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -1274,7 +1280,7 @@ export const sportsService = {
     try {
       const res = await api.get<BadgeDto[]>(`/sports/players/${userId}/badges`);
       return res.data ?? [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -1284,7 +1290,7 @@ export const sportsService = {
     try {
       const res = await api.get<MatchPhotoDto[]>(`/sports/matches/${matchId}/photos`);
       return res.data ?? [];
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -1370,9 +1376,9 @@ export const sportsService = {
       id: Date.now(),
       title: req.title,
       sport: req.sport,
-      creatorId: 1,
-      creatorName: 'You (Host)',
-      creatorFlat: 'Resident',
+      creatorId: req.creatorId ?? 0,
+      creatorName: req.creatorName ?? 'You (Host)',
+      creatorFlat: req.creatorFlat ?? 'Resident',
       format: req.format,
       venue: req.venue || 'Clubhouse Sports Arena',
       scheduledTime: req.scheduledTime || 'Scheduled',
@@ -1396,13 +1402,14 @@ export const sportsService = {
     }
     const idx = sessionChallenges.findIndex((c) => c.id === challengeId);
     if (idx !== -1) {
-      sessionChallenges[idx] = {
+      const updated = {
         ...sessionChallenges[idx],
-        status: 'ACCEPTED',
+        status: 'ACCEPTED' as const,
         challengerName,
         challengerFlat,
       };
-      return sessionChallenges[idx];
+      sessionChallenges.splice(idx, 1, updated);
+      return updated;
     }
     throw new Error('Challenge not found');
   },
@@ -1453,7 +1460,7 @@ export const sportsService = {
     try {
       const res = await api.get<SportsCricHeroesProfileResponse>(`/api/cricheroes/profile/${playerId}`);
       return res.data;
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return null;
     }
   },
@@ -1520,13 +1527,13 @@ export const sportsService = {
               params: { sportId: sp.id, season },
             });
             return Array.isArray(res.data) ? res.data : [];
-          } catch {
+          } catch (err) { logApiWarn('api', err);
             return [];
           }
         }),
       );
       return results.flat();
-    } catch {
+    } catch (err) { logApiWarn('api', err);
       return [];
     }
   },
@@ -1535,7 +1542,7 @@ export const sportsService = {
       const res = await api.get<any>(`/sports/rankings/user/${userId}`);
       if (Array.isArray(res.data)) return res.data[0] ?? null;
       return res.data ?? null;
-    } catch { return null; }
+    } catch (err) { logApiWarn('getUserRanking', err); return null; }
   },
 };
 

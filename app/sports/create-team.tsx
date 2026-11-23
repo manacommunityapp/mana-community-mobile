@@ -9,7 +9,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
 import { COLORS, getInitials } from '@/constants/config';
-import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
+import { SPORT_EMOJI } from '@/constants/sports';
 import api from '@/services/apiClient';
 import type { UserProfileResponse } from '@/types/api';
 

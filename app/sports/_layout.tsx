@@ -1,7 +1,9 @@
 import { Stack } from 'expo-router';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function SportsLayout() {
   return (
+    <ErrorBoundary fallbackTitle="Sports module error">
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="tournaments" />
@@ -24,5 +26,6 @@ export default function SportsLayout() {
       <Stack.Screen name="auction" />
       <Stack.Screen name="facility" />
     </Stack>
+    </ErrorBoundary>
   );
 }

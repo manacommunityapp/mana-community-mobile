@@ -11,11 +11,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { sportsService } from '@/services/sportsService';
 import { ScoreCard } from '@/components/sports/ScoreCard';
-import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import { COLORS } from '@/constants/config';
 import { safeFormat, formatTournamentDateRange } from '@/utils/dateUtils';
 import { shareTournament } from '@/utils/sportsShare';
 import { TournamentBracketView } from '@/components/sports/TournamentBracketView';
+import { SPORT_EMOJI } from '@/constants/sports';
 import type { DashboardEventCardDto, DashboardTournamentCardDto } from '@/types/api';
 
 const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings', 'Brackets'] as const;
@@ -26,15 +26,9 @@ const FORMAT_LABEL: Record<string, string> = {
   LEAGUE:   'League',   SWISS:       'Swiss',
 };
 
-const SPORT_EMOJI_MAP: Record<string, string> = {
-  BADMINTON: '🏸', CRICKET: '🏏', FOOTBALL: '⚽', TENNIS: '🎾',
-  TABLE_TENNIS: '🏓', PICKLEBALL: '🏓', SWIMMING: '🏊', BASKETBALL: '🏀',
-  GYM: '💪', SQUASH: '🎾',
-};
-
 // ── Category Card ──────────────────────────────────────────────
 function CategoryCard({ ev, onRegister }: { ev: DashboardEventCardDto; onRegister?: (ev: DashboardEventCardDto) => void }) {
-  const sportEmoji = SPORT_EMOJI_MAP[(ev.sportName ?? '').toUpperCase().replace(/\s+/g, '_')] ?? '🏅';
+  const sportEmoji = SPORT_EMOJI[(ev.sportName ?? '').toUpperCase().replace(/\s+/g, '_')] ?? '🏅';
   const isOpen = (ev.registrationStatus ?? '').toUpperCase() === 'REGISTRATION_OPEN';
   const isClosed = !isOpen;
   const isRegistered = ev.myRegistrationId != null;
@@ -235,7 +229,7 @@ export default function TournamentDetailScreen() {
     const sport = ev.sportName ?? 'Other';
     if (!sportGroupsMap.has(sport)) {
       sportGroupsMap.set(sport, {
-        emoji: SPORT_EMOJI_MAP[sport.toUpperCase().replace(/\s+/g, '_')] ?? '🏅',
+        emoji: SPORT_EMOJI[sport.toUpperCase().replace(/\s+/g, '_')] ?? '🏅',
         events: [],
       });
     }

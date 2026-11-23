@@ -257,10 +257,13 @@ export default function ScorecardEntryScreen() {
     onError: (err: any) => Alert.alert('Error', err?.response?.data?.message ?? 'Failed to save scorecard.'),
   });
 
-  function InningsSection({
-    label, teamName, setTeamName, total, setTotal, wkts, setWkts, overs, setOvers,
-    batters, setBatters, bowlers, setBowlers,
-  }: any) {
+  function InningsSection({ label, teamName, setTeamName, total, setTotal, wkts, setWkts, overs, setOvers, batters, setBatters, bowlers, setBowlers }: {
+    label: string; teamName: string; setTeamName: (v: string) => void;
+    total: string; setTotal: (v: string) => void; wkts: string; setWkts: (v: string) => void;
+    overs: string; setOvers: (v: string) => void;
+    batters: BattingRow[]; setBatters: React.Dispatch<React.SetStateAction<BattingRow[]>>;
+    bowlers: BowlingRow[]; setBowlers: React.Dispatch<React.SetStateAction<BowlingRow[]>>;
+  }) {
     return (
       <View style={sec.wrap}>
         <Text style={sec.inningsLabel}>{label}</Text>
@@ -293,7 +296,13 @@ export default function ScorecardEntryScreen() {
       <View style={s.header}>
         <TouchableOpacity onPress={goBack} hitSlop={8}><Text style={s.cancel}>Cancel</Text></TouchableOpacity>
         <Text style={s.title}>Enter Scorecard</Text>
-        <TouchableOpacity onPress={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+        <TouchableOpacity onPress={() => {
+          if (!team1Name.trim() && !team1Total.trim()) {
+            Alert.alert('Validation', 'Please enter at least the 1st innings team name and total.');
+            return;
+          }
+          saveMutation.mutate();
+        }} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={s.save}>Save</Text>}
         </TouchableOpacity>
       </View>
