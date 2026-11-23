@@ -3,13 +3,13 @@ import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
-import { ADMIN_ROLES, GUARD_ROLES, type UserRole } from '@/constants/permissions';
+import { ADMIN_ROLES, ADMIN_PORTAL_ROLES, GUARD_ROLES, type UserRole } from '@/constants/permissions';
 import { secureLog } from '@/security/secureLogger';
 
 type PortalType = 'admin' | 'guard' | 'vendor' | 'sports-admin' | 'event-admin';
 
 const PORTAL_ROLES: Record<PortalType, Set<UserRole>> = {
-  admin: ADMIN_ROLES,
+  admin: ADMIN_PORTAL_ROLES,
   guard: GUARD_ROLES,
   vendor: new Set(['VENDOR', 'SPORTS_VENDOR']),
   'sports-admin': new Set(['SPORTS_ADMIN', 'SPORTS_REFEREE', 'ADMIN', 'SUPER_ADMIN']),

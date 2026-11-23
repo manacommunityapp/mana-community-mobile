@@ -43,12 +43,12 @@ const CATEGORIES: Category[] = [
   { key: 'school-bus', label: 'School Bus', icon: 'bus', route: '/school-bus', color: '#F59E0B', bgColor: '#FFFBEB', moduleKey: 'VISITORS' },
   { key: 'bbps', label: 'Bills & BBPS', icon: 'card', route: '/bbps', color: '#0284C7', bgColor: '#F0F9FF', moduleKey: 'PAYMENTS' },
   { key: 'trips', label: 'Trips', icon: 'airplane', route: '/trips', color: '#1D4ED8', bgColor: '#EFF6FF', moduleKey: 'TRIPS' },
-  { key: 'security', label: 'Security', icon: 'shield-checkmark', route: '/security', color: '#B45309', bgColor: '#FFFBEB', moduleKey: 'VISITORS' },
+  { key: 'security', label: 'Security', icon: 'shield-checkmark', route: '/visitors', color: '#B45309', bgColor: '#FFFBEB', moduleKey: 'VISITORS' },
   { key: 'academy', label: 'Academy', icon: 'school', route: '/academy', color: '#7E22CE', bgColor: '#FAF5FF', moduleKey: 'ACADEMY' },
   { key: 'social', label: 'Social', icon: 'chatbubbles', route: '/social', color: '#0891B2', bgColor: '#ECFEFF', moduleKey: 'COMMUNITY_FEED' },
   { key: 'devices', label: 'Devices', icon: 'hardware-chip', route: '/devices', color: '#64748B', bgColor: '#F1F5F9', moduleKey: 'SERVICE_PLATFORM' },
   { key: 'infrastructure', label: 'Infrastructure', icon: 'cellular-outline', route: '/community/iot', color: '#0369A1', bgColor: '#F0F9FF', moduleKey: 'SERVICE_PLATFORM' },
-  { key: 'more', label: 'More', icon: 'apps', route: '/more', color: '#475569', bgColor: '#F8FAFC' },
+  { key: 'more', label: 'More', icon: 'apps', route: '/tabs/profile', color: '#475569', bgColor: '#F8FAFC' },
 ];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;

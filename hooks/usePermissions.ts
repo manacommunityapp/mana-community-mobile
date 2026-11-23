@@ -18,10 +18,12 @@ export function usePermissions() {
 
   const activeRoles = useMemo<UserRole[]>(() => {
     if (!user) return [];
-    const roles = (user.roles ?? []).length > 0
-      ? (user.roles as UserRole[])
-      : [user.role as UserRole];
-    return roles;
+    const rawRoles = (user.roles && user.roles.length > 0)
+      ? user.roles
+      : (user.role ? [user.role] : []);
+    return rawRoles
+      .filter(Boolean)
+      .map((r) => String(r).trim().toUpperCase() as UserRole);
   }, [user?.role, user?.roles]);
 
   const grantedPermissions = useMemo(
@@ -38,10 +40,10 @@ export function usePermissions() {
   };
 
   const hasRole = (role: UserRole): boolean =>
-    activeRoles.includes(role);
+    activeRoles.includes(String(role).trim().toUpperCase() as UserRole);
 
   const hasAnyRole = (roles: UserRole[]): boolean =>
-    roles.some((r) => activeRoles.includes(r));
+    roles.some((r) => activeRoles.includes(String(r).trim().toUpperCase() as UserRole));
 
   const isAdmin = activeRoles.some((r) => ADMIN_ROLES.has(r));
   const isGuard = activeRoles.some((r) => GUARD_ROLES.has(r));

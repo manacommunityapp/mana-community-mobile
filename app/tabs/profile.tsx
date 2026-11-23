@@ -23,6 +23,7 @@ import { maintenanceDuesService } from '@/services/maintenanceDuesService';
 import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { notificationService } from '@/services/notificationService';
 import { ProfileImageModal } from '@/components/common/ProfileImageModal';
+import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import {
   VIEW_EMERGENCY,
   VIEW_GROUP_BUYING,
@@ -146,7 +147,7 @@ function HubSectionHeader({
 }
 
 export default function ProfileScreen() {
-  const { user: authUser, logout, isLoading: isAuthLoading, loadUser } = useAuth();
+  const { user: authUser, logout, isLoading: isAuthLoading, loadUser, hasModule } = useAuth();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [passModalVisible, setPassModalVisible] = useState(false);
@@ -268,55 +269,45 @@ export default function ProfileScreen() {
     ...useRoleSwitcher(),
   };
 
-  // Community service permissions
-  const showEmergency = hasPerm(VIEW_EMERGENCY);
-  const showFinance = hasPerm(VIEW_MAINTENANCE_DUES);
-  const showHelpdesk = hasPerm(VIEW_TICKETS);
-  const showGroupBuying = hasPerm(VIEW_GROUP_BUYING);
-  const showTrips = hasPerm(VIEW_TRIPS);
-  const showDiscover = hasPerm(VIEW_DISCOVER);
+  // Community service permissions (gated by user permission AND community module)
+  const showEmergency = hasPerm(VIEW_EMERGENCY) && hasModule('EMERGENCY');
+  const showFinance = hasPerm(VIEW_MAINTENANCE_DUES) && hasModule('FINANCE_MGMT');
+  const showHelpdesk = hasPerm(VIEW_TICKETS) && hasModule('HELPDESK');
+  const showGroupBuying = hasPerm(VIEW_GROUP_BUYING) && hasModule('GROUP_BUYING');
+  const showTrips = hasPerm(VIEW_TRIPS) && hasModule('TRIPS');
+  const showDiscover = hasPerm(VIEW_DISCOVER) && hasModule('DISCOVER');
 
   // Explore items permissions
-  const showSports = hasPerm(VIEW_SPORTS_MENU);
-  const showPolls = hasPerm(VIEW_POLLS);
-  const showMarketplace = hasPerm(VIEW_MARKETPLACE);
+  const showSports = hasPerm(VIEW_SPORTS_MENU) && hasModule('SPORTS');
+  const showPolls = hasPerm(VIEW_POLLS) && hasModule('POLLS');
+  const showMarketplace = hasPerm(VIEW_MARKETPLACE) && hasModule('MARKETPLACE');
 
   // Wealth & investment permissions
-  const showPersonalFinance = hasPerm(VIEW_PERSONAL_FINANCE) || hasPerm('Manage Personal Finance');
-  const showFixedDeposits   = hasPerm(VIEW_FIXED_DEPOSITS)   || showPersonalFinance;
-  const showDigitalGold     = hasPerm(VIEW_DIGITAL_GOLD)     || showPersonalFinance;
-  const showMutualFunds     = hasPerm(VIEW_MUTUAL_FUNDS)     || showPersonalFinance;
-  const showLoans           = hasPerm(VIEW_LOANS)            || showPersonalFinance;
+  const showPersonalFinance = (hasPerm(VIEW_PERSONAL_FINANCE) || hasPerm('Manage Personal Finance')) && hasModule('PERSONAL_FINANCE');
+  const showFixedDeposits   = (hasPerm(VIEW_FIXED_DEPOSITS)   || showPersonalFinance) && hasModule('PERSONAL_FINANCE');
+  const showDigitalGold     = (hasPerm(VIEW_DIGITAL_GOLD)     || showPersonalFinance) && hasModule('PERSONAL_FINANCE');
+  const showMutualFunds     = (hasPerm(VIEW_MUTUAL_FUNDS)     || showPersonalFinance) && hasModule('PERSONAL_FINANCE');
+  const showLoans           = (hasPerm(VIEW_LOANS)            || showPersonalFinance) && hasModule('PERSONAL_FINANCE');
 
   // Payment & transfer permissions
-  const showSplitBill  = hasPerm(VIEW_SPLIT_BILL);
-  const showScanPay    = hasPerm(VIEW_SCAN_PAY);
-  const showSendMoney  = hasPerm(VIEW_SEND_MONEY);
-  const showUpiHistory = hasPerm(VIEW_UPI_HISTORY);
+  const showSplitBill  = hasPerm(VIEW_SPLIT_BILL) && hasModule('PAYMENTS');
+  const showScanPay    = hasPerm(VIEW_SCAN_PAY) && hasModule('PAYMENTS');
+  const showSendMoney  = hasPerm(VIEW_SEND_MONEY) && hasModule('PAYMENTS');
+  const showUpiHistory = hasPerm(VIEW_UPI_HISTORY) && hasModule('PAYMENTS');
 
   // Lifestyle permissions
-  const showMovies      = hasPerm(VIEW_MOVIES);
-  const showVehicleCare = hasPerm(VIEW_VEHICLE_CARE);
-  const showCalendar    = hasPerm(VIEW_CALENDAR);
-  const showHealthGuard = hasPerm(VIEW_HEALTH_GUARD);
+  const showMovies      = hasPerm(VIEW_MOVIES) && hasModule('ENTERTAINMENT');
+  const showVehicleCare = hasPerm(VIEW_VEHICLE_CARE) && hasModule('VISITORS');
+  const showCalendar    = hasPerm(VIEW_CALENDAR) && hasModule('CALENDAR');
+  const showHealthGuard = hasPerm(VIEW_HEALTH_GUARD) && hasModule('SAFETY');
 
   const flatNumber = user.flatNumber || user.flatNo;
   const tower = user.tower || user.block;
   const communityName = user.communityName || 'Mana Residency';
-  const profilePhoto = user.profilePicUrl || user.profilePhoto;
+  const profilePhoto = resolveUserAvatar(user);
   const displayName =
     user.fullName || user.name || (user.email ? user.email.split('@')[0] : 'Resident');
-  const hasPhoto =
-    !photoError &&
-    !!profilePhoto &&
-    typeof profilePhoto === 'string' &&
-    profilePhoto.trim().length > 0 &&
-    !profilePhoto.includes('null') &&
-    !profilePhoto.includes('undefined') &&
-    (profilePhoto.startsWith('http') ||
-      profilePhoto.startsWith('/') ||
-      profilePhoto.startsWith('file://') ||
-      profilePhoto.startsWith('data:'));
+  const hasPhoto = !photoError && !!profilePhoto;
 
   const totalEventsCount = myEvents.length;
   const totalListingsCount =

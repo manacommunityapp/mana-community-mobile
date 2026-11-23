@@ -120,6 +120,7 @@ export interface PostDto {
   title?: string;
   type: PostType;
   postType?: string;
+  imageUrl?: string;
   mediaUrls?: string[];
   likeCount: number;
   likesCount?: number;

@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { profileService, UpdateProfileRequest } from '@/services/profileService';
 import { useAuth } from '@/hooks/useAuth';
+import { resolveImageUrl } from '@/utils/imageUrlUtils';
 import { COLORS, getInitials } from '@/constants/config';
 import {
   validateProfilePhoto,
@@ -231,7 +232,8 @@ export default function EditProfileScreen() {
 
   // ── Current photo to display ───────────────────────────────────
   const [displayPhotoError, setDisplayPhotoError] = useState(false);
-  const rawPhoto = photoUri ?? user?.profilePicUrl ?? user?.profilePhoto ?? null;
+  const targetPhoto = photoUri ?? user?.profilePicUrl ?? user?.profilePhoto ?? null;
+  const rawPhoto = targetPhoto ? resolveImageUrl(targetPhoto) : null;
   const hasDisplayPhoto = !displayPhotoError && !!rawPhoto && typeof rawPhoto === 'string' && rawPhoto.trim().length > 0 && !rawPhoto.includes('null') && !rawPhoto.includes('undefined');
 
   return (

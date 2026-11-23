@@ -75,11 +75,17 @@ export const sportsService = {
     sport?: SportType,
     status?: string,
     page = 0,
+    communityId?: number,
   ): Promise<PageResponse<TournamentDto>> {
+    const qs = communityId ? `?communityId=${communityId}` : '';
     // 1. Try community tournaments (open to all authenticated residents)
     try {
-      const res = await api.get<any>('/tournaments/community');
-      const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      let res = await api.get<any>(`/tournaments/community${qs}`);
+      let list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      if ((!list || list.length === 0) && communityId) {
+        res = await api.get<any>('/tournaments/community');
+        list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      }
       if (list.length > 0) {
         let filtered = list;
         if (status) {
@@ -218,31 +224,55 @@ export const sportsService = {
     }
   },
 
-  async getLiveMatches(): Promise<MatchDto[]> {
+  async getLiveMatches(communityId?: number): Promise<MatchDto[]> {
+    const qs = communityId ? `?communityId=${communityId}` : '';
+    // 1. Resident-accessible endpoint: /sports/live-feed (matches web LiveMatchesStrip)
     try {
-      const res = await api.get<MatchDto[]>('/sports/matches/live');
-      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
-
-    // Resident-accessible endpoint: /sports/live-feed
-    try {
-      const res = await api.get<any[]>('/sports/live-feed');
+      let res = await api.get<any[]>(`/sports/live-feed${qs}`);
+      if ((!res.data || res.data.length === 0) && communityId) {
+        res = await api.get<any[]>('/sports/live-feed');
+      }
       if (Array.isArray(res.data) && res.data.length > 0) {
         return res.data.map(feedMatchToMatchDto);
       }
     } catch {}
 
+    // 2. Admin endpoint: /sports/matches/live
+    try {
+      const res = await api.get<MatchDto[]>('/sports/matches/live');
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+
     return [];
   },
 
-  async getTodayMatches(): Promise<MatchDto[]> {
-    // 1. Try /sports/matches/today
+  async getTodayMatches(communityId?: number): Promise<MatchDto[]> {
+    const qs = communityId ? `&communityId=${communityId}` : '';
+    // 1. Resident-accessible upcoming feed + recent completed
+    try {
+      let [upRes, recRes] = await Promise.all([
+        api.get<any[]>(`/sports/upcoming-feed?limit=15${qs}`).catch(() => ({ data: [] })),
+        api.get<any[]>(`/sports/recent-completed?limit=15${qs}`).catch(() => ({ data: [] })),
+      ]);
+      if ((!upRes.data || upRes.data.length === 0) && communityId) {
+        upRes = await api.get<any[]>('/sports/upcoming-feed?limit=15').catch(() => ({ data: [] }));
+      }
+      const combined = [
+        ...(Array.isArray(upRes.data) ? upRes.data : []),
+        ...(Array.isArray(recRes.data) ? recRes.data : []),
+      ];
+      if (combined.length > 0) {
+        return combined.map(feedMatchToMatchDto);
+      }
+    } catch {}
+
+    // 2. Try /sports/matches/today
     try {
       const res = await api.get<MatchDto[]>('/sports/matches/today');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
     } catch {}
 
-    // 2. Try /sports/matches
+    // 3. Try /sports/matches
     try {
       const res = await api.get<PageResponse<MatchDto>>('/sports/matches', {
         params: { page: 0, size: 50 },
@@ -256,21 +286,6 @@ export const sportsService = {
         });
         if (todayList.length > 0) return todayList;
         return all.slice(0, 6);
-      }
-    } catch {}
-
-    // 3. Resident-accessible upcoming feed + recent completed
-    try {
-      const [upRes, recRes] = await Promise.all([
-        api.get<any[]>('/sports/upcoming-feed').catch(() => ({ data: [] })),
-        api.get<any[]>('/sports/recent-completed').catch(() => ({ data: [] })),
-      ]);
-      const combined = [
-        ...(Array.isArray(upRes.data) ? upRes.data : []),
-        ...(Array.isArray(recRes.data) ? recRes.data : []),
-      ];
-      if (combined.length > 0) {
-        return combined.map(feedMatchToMatchDto);
       }
     } catch {}
 
@@ -359,7 +374,7 @@ export const sportsService = {
     }
   },
 
-  async getUpcomingEvents(): Promise<import('@/types/api').DashboardUpcomingEventDto[]> {
+  async getUpcomingEvents(communityId?: number): Promise<import('@/types/api').DashboardUpcomingEventDto[]> {
     try {
       const res = await api.get<import('@/types/api').DashboardUpcomingEventDto[]>('/sports/dashboard/upcoming');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
@@ -371,8 +386,13 @@ export const sportsService = {
 
     // Resident-accessible fallback: extract upcoming events from /tournaments/community
     try {
-      const res = await api.get<any>('/tournaments/community');
-      const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      const qs = communityId ? `?communityId=${communityId}` : '';
+      let res = await api.get<any>(`/tournaments/community${qs}`);
+      let list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      if ((!list || list.length === 0) && communityId) {
+        res = await api.get<any>('/tournaments/community');
+        list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      }
       const events: import('@/types/api').DashboardUpcomingEventDto[] = [];
       for (const t of list) {
         const tEvents = t.events || t.sportsEvents || [];
@@ -398,7 +418,7 @@ export const sportsService = {
     }
   },
 
-  async getOpenTournaments(): Promise<import('@/types/api').DashboardTournamentCardDto[]> {
+  async getOpenTournaments(communityId?: number): Promise<import('@/types/api').DashboardTournamentCardDto[]> {
     // 1. Try dashboard open tournaments (admin / user with sports permission)
     try {
       const res = await api.get<import('@/types/api').DashboardTournamentCardDto[]>('/sports/dashboard/open-tournaments');
@@ -407,14 +427,29 @@ export const sportsService = {
 
     // 2. Fallback to community tournaments endpoint and map to DashboardTournamentCardDto
     try {
-      const res = await api.get<any>('/tournaments/community');
+      const qs = communityId ? `?communityId=${communityId}` : '';
+      let res = await api.get<any>(`/tournaments/community${qs}`);
+      let list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      if ((!list || list.length === 0) && communityId) {
+        res = await api.get<any>('/tournaments/community');
+        list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      }
+      if (list.length > 0) {
+        return list.map(tournamentToDashboardCard);
+      }
+    } catch {}
+
+    // 3. Fallback to /sports/tournaments/open
+    try {
+      const qs = communityId ? `?communityId=${communityId}` : '';
+      const res = await api.get<any>(`/sports/tournaments/open${qs}`);
       const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
       if (list.length > 0) {
         return list.map(tournamentToDashboardCard);
       }
     } catch {}
 
-    // 3. Fallback to all tournaments
+    // 4. Fallback to all tournaments
     try {
       const res = await api.get<any>('/tournaments/all');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);

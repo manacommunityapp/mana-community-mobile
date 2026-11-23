@@ -15,10 +15,11 @@ import { commuteService } from '@/services/commuteService';
 import { SportsRegisterModal, RegistrationRecord } from '@/components/sports/SportsRegisterModal';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
+import { resolveImageUrl } from '@/utils/imageUrlUtils';
 import { formatTournamentDateRange, safeFormat, parseSafeDate } from '@/utils/dateUtils';
 import type {
   MatchDto, TournamentDto, PlayerProfileDto, LeaderboardEntryDto,
-  SportType, DashboardTournamentCardDto, DashboardEventCardDto,
+  SportType, DashboardTournamentCardDto, DashboardEventCardDto, PageResponse,
 } from '@/types/api';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -130,25 +131,25 @@ export default function SportsHubScreen() {
 
   // ── Data Queries ──────────────────────────────────────────────
   const { data: liveMatches = [], refetch: refetchLive, isRefetching: isRefetchingLive } = useQuery<MatchDto[]>({
-    queryKey: ['sports-live'],
-    queryFn: sportsService.getLiveMatches,
+    queryKey: ['sports-live', user?.communityId],
+    queryFn: () => sportsService.getLiveMatches(user?.communityId),
     refetchInterval: 15_000,
   });
 
   const { data: todayMatches = [], refetch: refetchToday } = useQuery<MatchDto[]>({
-    queryKey: ['sports-today'],
-    queryFn: sportsService.getTodayMatches,
+    queryKey: ['sports-today', user?.communityId],
+    queryFn: () => sportsService.getTodayMatches(user?.communityId),
     refetchInterval: 60_000,
   });
 
-  const { data: tournamentsPage, refetch: refetchTournaments } = useQuery({
-    queryKey: ['tournaments-hub', selectedSport],
-    queryFn: () => sportsService.getTournaments(selectedSport === 'ALL' ? undefined : (selectedSport as SportType), 'ONGOING'),
+  const { data: tournamentsPage, refetch: refetchTournaments } = useQuery<PageResponse<TournamentDto>>({
+    queryKey: ['tournaments-hub', selectedSport, user?.communityId],
+    queryFn: () => sportsService.getTournaments(selectedSport === 'ALL' ? undefined : (selectedSport as SportType), 'ONGOING', 0, user?.communityId),
   });
 
   const { data: openTournamentsDash = [], refetch: refetchOpenTournaments } = useQuery<DashboardTournamentCardDto[]>({
-    queryKey: ['tournaments-open-dash'],
-    queryFn: sportsService.getOpenTournaments,
+    queryKey: ['tournaments-open-dash', user?.communityId],
+    queryFn: () => sportsService.getOpenTournaments(user?.communityId),
     staleTime: 30_000,
   });
 
@@ -509,7 +510,7 @@ export default function SportsHubScreen() {
             <View style={s.profileTopRow}>
               <View style={s.profileAvatarWrap}>
                 {playerProfile.avatarUrl ? (
-                  <Image source={{ uri: playerProfile.avatarUrl }} style={s.profileAvatarImg} />
+                  <Image source={{ uri: resolveImageUrl(playerProfile.avatarUrl) }} style={s.profileAvatarImg} />
                 ) : (
                   <LinearGradient colors={['#4F46E5', '#6366F1']} style={s.profileAvatarFallback}>
                     <Text style={s.profileAvatarLetter}>
@@ -1186,7 +1187,7 @@ export default function SportsHubScreen() {
                     </View>
                     <View style={[s.leaderAvatar, isTop3 && { borderWidth: 2, borderColor: MEDAL_COLORS[idx] }]}>
                       {pl.avatarUrl ? (
-                        <Image source={{ uri: pl.avatarUrl }} style={{ width: 32, height: 32, borderRadius: 16 }} />
+                        <Image source={{ uri: resolveImageUrl(pl.avatarUrl) }} style={{ width: 32, height: 32, borderRadius: 16 }} />
                       ) : (
                         <Text style={s.leaderAvatarText}>{name[0]?.toUpperCase()}</Text>
                       )}

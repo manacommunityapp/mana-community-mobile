@@ -65,6 +65,8 @@ export function CreatePostModal({ visible, onClose, defaultType = 'post' }: Crea
   const createMutation = useMutation({
     mutationFn: (req: CreatePostRequest) => feedService.createPost(req),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['home-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['community-feed-all'] });
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       resetForm();
       onClose();
