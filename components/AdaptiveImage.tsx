@@ -17,7 +17,7 @@ function appendQuality(uri: string, quality: 'full' | 'reduced'): string {
   return uri;
 }
 
-export function AdaptiveImage({ uri, reducedUri, placeholderColor = '#E2E8F0', style, containerStyle }: Props) {
+export function AdaptiveImage({ uri, reducedUri, placeholderColor = '#E2E8F0', style, containerStyle, headers }: Props) {
   const quality = useAdaptiveImage();
   const opacity = useRef(new Animated.Value(0)).current;
 

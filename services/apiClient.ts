@@ -45,9 +45,12 @@ export function setTenantCommunityId(id: number | null): void {
   _communityId = id;
 }
 
-const ACCESS_TOKEN_KEY  = 'mana_access_token';
-const REFRESH_TOKEN_KEY = 'mana_refresh_token';
-const PUSH_TOKEN_KEY    = 'mana_push_token';
+const ACCESS_TOKEN_KEY    = 'mana_access_token';
+const REFRESH_TOKEN_KEY   = 'mana_refresh_token';
+const PUSH_TOKEN_KEY      = 'mana_push_token';
+// Encrypted snapshot of the last-known UserProfileResponse, used for offline launch.
+// Written after every successful getProfile() call; cleared on logout.
+const CACHED_PROFILE_KEY  = 'mana_cached_profile';
 
 const webStore = {
   getItemAsync: (key: string) => Promise.resolve(typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null),
@@ -68,25 +71,30 @@ export function getAccessTokenSync(): string | null {
 
 // ── Token helpers ──────────────────────────────────────────────
 export const tokenStore = {
-  getAccess:      async () => {
+  getAccess:          async () => {
     const t = await store.getItemAsync(ACCESS_TOKEN_KEY);
     _cachedAccessToken = t;
     return t;
   },
-  getRefresh:     () => store.getItemAsync(REFRESH_TOKEN_KEY),
-  getPushToken:   () => store.getItemAsync(PUSH_TOKEN_KEY),
-  setAccess:      (t: string) => {
+  getRefresh:         () => store.getItemAsync(REFRESH_TOKEN_KEY),
+  getPushToken:       () => store.getItemAsync(PUSH_TOKEN_KEY),
+  setAccess:          (t: string) => {
     _cachedAccessToken = t;
     return store.setItemAsync(ACCESS_TOKEN_KEY, t, SECURE_STORE_OPTIONS);
   },
-  setRefresh:     (t: string) => store.setItemAsync(REFRESH_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
-  setPushToken:   (t: string) => store.setItemAsync(PUSH_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
-  clearPushToken: () => store.deleteItemAsync(PUSH_TOKEN_KEY),
-  clearAll:       async () => {
+  setRefresh:         (t: string) => store.setItemAsync(REFRESH_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
+  setPushToken:       (t: string) => store.setItemAsync(PUSH_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
+  clearPushToken:     () => store.deleteItemAsync(PUSH_TOKEN_KEY),
+  // Cached profile for offline launch
+  getCachedProfile:   () => store.getItemAsync(CACHED_PROFILE_KEY),
+  setCachedProfile:   (json: string) => store.setItemAsync(CACHED_PROFILE_KEY, json, SECURE_STORE_OPTIONS),
+  clearCachedProfile: () => store.deleteItemAsync(CACHED_PROFILE_KEY),
+  clearAll:           async () => {
     _cachedAccessToken = null;
     await store.deleteItemAsync(ACCESS_TOKEN_KEY);
     await store.deleteItemAsync(REFRESH_TOKEN_KEY);
     await store.deleteItemAsync(PUSH_TOKEN_KEY);
+    await store.deleteItemAsync(CACHED_PROFILE_KEY);
   },
 };
 
