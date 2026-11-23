@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
+import { useModuleGuard } from '@/hooks/useRoleGuard';
 import {
   petService,
   PetDto,
@@ -30,6 +31,7 @@ export default function PetsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  useModuleGuard('PETS');
   const [tab, setTab] = useState<PetFilter>('REGISTRY');
   const [refreshing, setRefreshing] = useState(false);
 

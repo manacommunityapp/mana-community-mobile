@@ -378,29 +378,106 @@ describe('Roles and Permissions Matrix — Minute Level Audit', () => {
 
   describe('6. KPI Strip Module-Gating Audit', () => {
     const KPI_ITEMS = [
-      { label: 'Events', module: 'EVENTS' },
-      { label: 'Polls', module: 'POLLS' },
-      { label: 'Tickets', module: 'HELPDESK' },
-      { label: 'Pass', module: 'VISITORS' },
+      { id: 'pass',        label: 'Pass',       module: 'VISITORS' },
+      { id: 'events',      label: 'Events',     module: 'EVENTS' },
+      { id: 'sports',      label: 'Sports',     module: 'SPORTS' },
+      { id: 'dues',        label: 'Dues',       module: 'FINANCE_MGMT' },
+      { id: 'polls',       label: 'Polls',      module: 'POLLS' },
+      { id: 'tickets',     label: 'Tickets',    module: 'HELPDESK' },
+      { id: 'facilities',  label: 'Facilities', module: 'FACILITIES' },
+      { id: 'notices',     label: 'Notices',    module: 'NOTICES' },
+      { id: 'marketplace', label: 'Market',     module: 'MARKETPLACE' },
+      { id: 'group_buying',label: 'Group Buy',  module: 'GROUP_BUYING' },
+      { id: 'trips',       label: 'Trips',      module: 'TRIPS' },
+      { id: 'food',        label: 'Food OS',    module: 'FOOD_OS' },
     ];
 
     function filterKpi(kpis, enabledModules) {
       return kpis.filter(k => !k.module || hasModule(enabledModules, k.module));
     }
 
+    it('When user only has sports and events, displays BOTH Events and Sports chips (not a lonely single chip)', () => {
+      const modules = ['SPORTS', 'EVENTS'];
+      const visible = filterKpi(KPI_ITEMS, modules);
+      const visibleLabels = visible.map(k => k.label);
+      assert.deepStrictEqual(visibleLabels, ['Events', 'Sports']);
+      assert.strictEqual(visible.length, 2);
+    });
+
     it('Filters out KPI chips for disabled modules', () => {
       const modules = ['HELPDESK', 'VISITORS'];
       const visible = filterKpi(KPI_ITEMS, modules);
       const visibleLabels = visible.map(k => k.label);
-      assert.deepStrictEqual(visibleLabels, ['Tickets', 'Pass']);
+      assert.deepStrictEqual(visibleLabels, ['Pass', 'Tickets']);
       assert.strictEqual(visibleLabels.includes('Events'), false);
+      assert.strictEqual(visibleLabels.includes('Sports'), false);
       assert.strictEqual(visibleLabels.includes('Polls'), false);
     });
 
-    it('Displays all KPI chips when all modules are enabled', () => {
-      const modules = ['EVENTS', 'POLLS', 'HELPDESK', 'VISITORS'];
-      const visible = filterKpi(KPI_ITEMS, modules);
-      assert.strictEqual(visible.length, 4);
+    it('Displays all KPI chips when modules are unrestricted / fail-open', () => {
+      const visible = filterKpi(KPI_ITEMS, []);
+      assert.strictEqual(visible.length, KPI_ITEMS.length);
+    });
+
+    it('Adaptive Sub-KPI Engine unpacks single module (SPORTS) into multiple granular chips', () => {
+      // Simulating Adaptive Sub-KPI expansion function
+      function computeAdaptiveKpis(macroItems, stats) {
+        if (macroItems.length > 3) return macroItems;
+        const sub = [];
+        for (const item of macroItems) {
+          if (item.module === 'SPORTS') {
+            if (stats.sportsLive > 0) sub.push({ id: 'sports_live', label: 'Live Match', badge: 'LIVE', priority: 95 });
+            if (stats.sportsToday > 0) sub.push({ id: 'sports_today', label: "Today's Games", priority: 80 });
+            if (stats.sportsTourneys > 0) sub.push({ id: 'sports_tourneys', label: 'Tournaments', priority: 70 });
+            sub.push({ id: 'sports_courts', label: 'Court Slots', priority: 45 });
+          }
+          if (item.module === 'EVENTS') {
+            if (stats.eventsToday > 0) sub.push({ id: 'events_today', label: "Today's Events", badge: 'TODAY', priority: 85 });
+            sub.push({ id: 'events_upcoming', label: 'Upcoming', priority: 65 });
+          }
+        }
+        return sub.sort((a, b) => b.priority - a.priority);
+      }
+
+      const singleModule = filterKpi(KPI_ITEMS, ['SPORTS']);
+      const adaptive = computeAdaptiveKpis(singleModule, { sportsLive: 1, sportsToday: 2, sportsTourneys: 3 });
+
+      assert(adaptive.length >= 3, 'Must expand single sports module into at least 3 chips');
+      assert.strictEqual(adaptive[0].id, 'sports_live', 'Live sports match must sort first');
+      assert.strictEqual(adaptive[0].badge, 'LIVE');
+      assert(adaptive.some(c => c.id === 'sports_today'));
+      assert(adaptive.some(c => c.id === 'sports_tourneys'));
+    });
+
+    it('Adaptive Sub-KPI Engine unrolls dual modules (SPORTS + EVENTS) into balanced 5-chip HUD', () => {
+      function computeAdaptiveKpis(macroItems, stats) {
+        const sub = [];
+        for (const item of macroItems) {
+          if (item.module === 'SPORTS') {
+            if (stats.sportsLive > 0) sub.push({ id: 'sports_live', label: 'Live Match', badge: 'LIVE', priority: 95 });
+            if (stats.sportsToday > 0) sub.push({ id: 'sports_today', label: "Today's Games", priority: 80 });
+            if (stats.sportsTourneys > 0) sub.push({ id: 'sports_tourneys', label: 'Tournaments', priority: 70 });
+          }
+          if (item.module === 'EVENTS') {
+            if (stats.eventsToday > 0) sub.push({ id: 'events_today', label: "Today's Events", badge: 'TODAY', priority: 85 });
+            sub.push({ id: 'events_upcoming', label: 'Upcoming', priority: 65 });
+          }
+        }
+        return sub.sort((a, b) => b.priority - a.priority);
+      }
+
+      const dualModules = filterKpi(KPI_ITEMS, ['SPORTS', 'EVENTS']);
+      const adaptive = computeAdaptiveKpis(dualModules, {
+        sportsLive: 1,
+        sportsToday: 2,
+        sportsTourneys: 1,
+        eventsToday: 1,
+        eventsUpcoming: 4,
+      });
+
+      assert.strictEqual(adaptive.length, 5);
+      const labels = adaptive.map(a => a.label);
+      assert.deepStrictEqual(labels, ['Live Match', "Today's Events", "Today's Games", 'Tournaments', 'Upcoming']);
     });
   });
 });

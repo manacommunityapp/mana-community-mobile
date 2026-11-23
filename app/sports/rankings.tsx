@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -31,11 +31,15 @@ const bar = StyleSheet.create({
   fill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 2 },
 });
 
-function RankCard({ entry }: { entry: SportsPlayerRankingResponse }) {
-  const name = entry.player.fullName || entry.player.email || `Player ${entry.player.id}`;
+function RankCard({ entry, onPress }: { entry: SportsPlayerRankingResponse; onPress?: () => void }) {
+  const name = entry.player?.fullName || entry.player?.email || `Player ${entry.player?.id ?? entry.id}`;
   const m = medal(entry.rank);
   return (
-    <View style={[rc.card, entry.rank != null && entry.rank <= 3 && rc.cardTop]}>
+    <TouchableOpacity
+      style={[rc.card, entry.rank != null && entry.rank <= 3 && rc.cardTop]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.8 : 1}
+    >
       <View style={rc.left}>
         <View style={rc.rankWrap}>
           {m ? (
@@ -49,7 +53,7 @@ function RankCard({ entry }: { entry: SportsPlayerRankingResponse }) {
         </View>
         <View style={rc.info}>
           <Text style={rc.name} numberOfLines={1}>{name}</Text>
-          {entry.player.flatNo && <Text style={rc.flat}>🏠 {entry.player.flatNo}</Text>}
+          {entry.player?.flatNo && <Text style={rc.flat}>🏠 {entry.player.flatNo}</Text>}
           <View style={rc.meta}>
             {entry.sport && <Text style={rc.sport}>{entry.sport.name}</Text>}
             {entry.season && <Text style={rc.season}>{entry.season}</Text>}
@@ -65,7 +69,7 @@ function RankCard({ entry }: { entry: SportsPlayerRankingResponse }) {
         )}
         {entry.source && <Text style={rc.source}>{entry.source}</Text>}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 const rc = StyleSheet.create({
@@ -88,13 +92,13 @@ const rc = StyleSheet.create({
   source:     { fontSize: 10, color: COLORS.textMuted, fontStyle: 'italic' },
 });
 
-const SPORTS = ['All', 'CRICKET', 'FOOTBALL', 'BADMINTON', 'TENNIS', 'BASKETBALL', 'SWIMMING', 'ATHLETICS'];
+const SPORTS = ['All', 'CRICKET', 'BADMINTON', 'FOOTBALL', 'PICKLEBALL', 'TENNIS', 'TABLE_TENNIS', 'BASKETBALL', 'SWIMMING'];
 
 export default function RankingsScreen() {
   const router = useRouter();
   const [sport, setSport] = useState('All');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['rankings', sport],
     queryFn:  () => sportsService.getRankings(sport !== 'All' ? { sport } : undefined),
   });
@@ -113,6 +117,7 @@ export default function RankingsScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={s.filters}
+        style={{ maxHeight: 54 }}
       >
         {SPORTS.map((sp) => (
           <TouchableOpacity
@@ -121,7 +126,7 @@ export default function RankingsScreen() {
             onPress={() => setSport(sp)}
           >
             <Text style={[s.chipText, sport === sp && s.chipTextActive]}>
-              {sp === 'All' ? 'All Sports' : sp.charAt(0) + sp.slice(1).toLowerCase()}
+              {sp === 'All' ? 'All Sports' : sp.replace('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
             </Text>
           </TouchableOpacity>
         ))}
@@ -136,10 +141,18 @@ export default function RankingsScreen() {
           <Text style={s.emptySub}>Play matches to earn your ranking</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={s.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
+        >
           <Text style={s.count}>{data!.length} players ranked</Text>
-          {data!.map((entry) => (
-            <RankCard key={entry.id} entry={entry} />
+          {data!.map((entry, idx) => (
+            <RankCard
+              key={`${entry.id}-${idx}`}
+              entry={entry}
+              onPress={entry.player?.id ? () => router.push(`/sports/player/${entry.player.id}` as any) : undefined}
+            />
           ))}
           <View style={{ height: 24 }} />
         </ScrollView>

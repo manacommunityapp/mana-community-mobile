@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventService } from '@/services/eventService';
+import { useAppBack } from '@/hooks/useAppBack';
 import { COLORS, GRADIENTS, SHADOWS, RADIUS, FONTS, SPACING } from '@/constants/config';
 import type { CreateEventRequest, EventType, EventLocationType, EventPriceType } from '@/types/api';
 
@@ -39,6 +40,7 @@ const PRICE_TYPES: { value: EventPriceType; label: string; emoji: string }[] = [
 
 export default function CreateEventScreen() {
   const router = useRouter();
+  const { goBack } = useAppBack({ fallbackRoute: '/events' });
   const qc = useQueryClient();
 
   const [title, setTitle] = useState('');
@@ -62,7 +64,7 @@ export default function CreateEventScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['events'] });
       Alert.alert('Success', 'Event created successfully!', [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => goBack() },
       ]);
     },
     onError: () => Alert.alert('Error', 'Failed to create event. Please try again.'),
@@ -100,7 +102,7 @@ export default function CreateEventScreen() {
     <SafeAreaView style={st.container} edges={['top']}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => router.back()} style={st.navBtn} hitSlop={8}>
+        <TouchableOpacity onPress={goBack} style={st.navBtn} hitSlop={8}>
           <Ionicons name="close" size={20} color={COLORS.text} />
         </TouchableOpacity>
         <View style={st.headerCenter}>

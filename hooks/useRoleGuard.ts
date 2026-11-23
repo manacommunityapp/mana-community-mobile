@@ -71,6 +71,34 @@ export function useEventAdminGuard() {
   return usePortalGuard('event-admin');
 }
 
+/**
+ * Route-level community-module guard. Entry points (tabs / tiles) are already
+ * module-filtered, but deep links, notifications and stale navigation state can
+ * still reach a screen whose module the community has disabled. Pass several
+ * keys to allow access when ANY of them is enabled. Fails open when the
+ * community has no module list configured (same rule as `hasModule`).
+ */
+export function useModuleGuard(...moduleKeys: string[]) {
+  const { user, isLoading, hasModule } = useAuth();
+  const router = useRouter();
+
+  const allowed = moduleKeys.length === 0 || moduleKeys.some((k) => hasModule(k));
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+    if (!allowed) {
+      secureLog.security('MODULE_NOT_ENABLED_ACCESS', {
+        userId: user.id,
+        modules: moduleKeys,
+      });
+      Alert.alert('Not Available', 'This feature is not enabled for your community.');
+      router.replace('/tabs/feed');
+    }
+  }, [isLoading, user, allowed, router]);
+
+  return { allowed, isLoading };
+}
+
 export function useRoleGuard(requiredRoles: UserRole[]) {
   const { user, isLoading } = useAuth();
   const { hasAnyRole } = usePermissions();

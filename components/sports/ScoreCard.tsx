@@ -8,7 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 const SPORT_EMOJI: Record<string, string> = {
   CRICKET: '🏏', FOOTBALL: '⚽', BADMINTON: '🏸',
-  TABLE_TENNIS: '🏓', BASKETBALL: '🏀', VOLLEYBALL: '🏐',
+  TABLE_TENNIS: '🏓', PICKLEBALL: '🏓', TENNIS: '🎾',
+  BASKETBALL: '🏀', VOLLEYBALL: '🏐', SWIMMING: '🏊',
   CHESS: '♟️', CARROM: '🎯', OTHER: '🏅',
 };
 
@@ -28,17 +29,33 @@ const SPORT_COLOR: Record<string, string> = {
 // ── Score display ─────────────────────────────────────────────────────────────
 function SportScore({ match }: { match: MatchDto }) {
   const sport = match.sport;
+  const dispHome = (match as any).homeScoreDisplay;
+  const dispAway = (match as any).awayScoreDisplay;
 
-  if (sport === 'CRICKET' && match.status !== 'SCHEDULED') {
+  if (match.status === 'SCHEDULED') {
+    return <Text style={ss.time}>{safeFormat(match.scheduledAt, 'h:mm a')}</Text>;
+  }
+
+  if (dispHome != null && String(dispHome).trim() !== '' && dispAway != null && String(dispAway).trim() !== '') {
     return (
       <View style={ss.wrap}>
-        <Text style={ss.mainScore}>{match.homeScore}/{match.homeWickets ?? 0}</Text>
-        {match.homeOvers && <Text style={ss.sub}>({match.homeOvers} ov)</Text>}
+        <Text style={ss.mainScore} numberOfLines={1}>{String(dispHome)}</Text>
         <Text style={ss.vs}>vs</Text>
-        {match.status === 'COMPLETED' ? (
+        <Text style={ss.mainScore} numberOfLines={1}>{String(dispAway)}</Text>
+      </View>
+    );
+  }
+
+  if (sport === 'CRICKET') {
+    return (
+      <View style={ss.wrap}>
+        <Text style={ss.mainScore}>{dispHome ? String(dispHome) : `${match.homeScore}/${match.homeWickets ?? 0}`}</Text>
+        {match.homeOvers && !String(dispHome || '').includes('ov') && <Text style={ss.sub}>({match.homeOvers} ov)</Text>}
+        <Text style={ss.vs}>vs</Text>
+        {match.status === 'COMPLETED' || dispAway || match.awayOvers ? (
           <>
-            <Text style={ss.mainScore}>{match.awayScore}/{match.awayWickets ?? 0}</Text>
-            {match.awayOvers && <Text style={ss.sub}>({match.awayOvers} ov)</Text>}
+            <Text style={ss.mainScore}>{dispAway ? String(dispAway) : `${match.awayScore}/${match.awayWickets ?? 0}`}</Text>
+            {match.awayOvers && !String(dispAway || '').includes('ov') && <Text style={ss.sub}>({match.awayOvers} ov)</Text>}
           </>
         ) : (
           <Text style={ss.pending}>Yet to bat</Text>
@@ -47,19 +64,15 @@ function SportScore({ match }: { match: MatchDto }) {
     );
   }
 
-  if ((sport === 'BADMINTON' || sport === 'TABLE_TENNIS') && match.status !== 'SCHEDULED') {
+  if (sport === 'BADMINTON' || sport === 'TABLE_TENNIS') {
     return (
       <View style={ss.setsRow}>
-        <Text style={ss.setsScore}>{match.homeSetsWon ?? 0}</Text>
+        <Text style={ss.setsScore}>{match.homeSetsWon ?? match.homeScore ?? 0}</Text>
         <Text style={ss.setsDash}>–</Text>
-        <Text style={ss.setsScore}>{match.awaySetsWon ?? 0}</Text>
-        <Text style={ss.setsSub}> sets</Text>
+        <Text style={ss.setsScore}>{match.awaySetsWon ?? match.awayScore ?? 0}</Text>
+        {match.homeSetsWon != null && <Text style={ss.setsSub}> sets</Text>}
       </View>
     );
-  }
-
-  if (match.status === 'SCHEDULED') {
-    return <Text style={ss.time}>{safeFormat(match.scheduledAt, 'h:mm a')}</Text>;
   }
 
   return (

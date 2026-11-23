@@ -31,6 +31,7 @@ import { getPortalForRole } from '@/hooks/useRoleSwitcher';
 import { useAppBiometrics } from '@/hooks/useAppBiometrics';
 import { BiometricLockModal } from '@/components/security/BiometricLockModal';
 import { TenantProvider } from '@/context/TenantContext';
+import { ThemeProvider, useAppTheme } from '@/context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
@@ -109,6 +110,11 @@ function AuthGuard() {
   );
 }
 
+function ThemedStatusBar() {
+  const { palette } = useAppTheme();
+  return <StatusBar style={palette.statusBar} />;
+}
+
 function RootLayout() {
   useEffect(() => {
     ScreenCapture.preventScreenCaptureAsync().catch(() => {});
@@ -136,11 +142,12 @@ function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <ThemeProvider>
         <TenantProvider>
         <QueryClientProvider client={queryClient}>
           <AuthGuard />
-          <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <ThemedStatusBar />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FAF8FF' } }}>
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="auth" />
             <Stack.Screen name="tabs" />
@@ -251,6 +258,7 @@ function RootLayout() {
           </Stack>
         </QueryClientProvider>
         </TenantProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

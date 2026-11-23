@@ -77,7 +77,7 @@ export const MODULE_KEYS: Record<string, string[]> = {
   trips:            ["TRIPS", "EVENTS"],
   forum:            ["COMMUNITY_FEED"],
   polls:            ["POLLS"],
-  pets:             ["COMMUNITY_FEED"],
+  pets:             ["PETS", "SERVICE_PLATFORM", "HOME_SERVICES"],
 
   // Commerce & Food
   market:           ["MARKETPLACE", "COMMERCE"],

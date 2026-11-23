@@ -8,6 +8,7 @@ export default function SportsLayout() {
       <Stack.Screen name="tournament" />
       <Stack.Screen name="matches" />
       <Stack.Screen name="match" />
+      <Stack.Screen name="registrations" />
       <Stack.Screen name="my-teams" />
       <Stack.Screen name="create-team" options={{ presentation: 'modal' }} />
       <Stack.Screen name="scorecard" />

@@ -8,7 +8,8 @@ export type UserPersona = 'RESIDENT' | 'ADMIN' | 'STAFF' | 'VENDOR';
 
 const MODULE_ALIASES: Record<string, string[]> = {
   COMMUNITY_FEED: ['COMMUNITY_FEED', 'FEED', 'FORUM', 'COMMUNITY'],
-  SPORTS: ['SPORTS', 'TOURNAMENTS'],
+  COMMUNITY_HIGHLIGHT: ['COMMUNITY_HIGHLIGHT', 'HIGHLIGHT_BANNER', 'HIGHLIGHTS'],
+  SPORTS: ['SPORTS', 'TOURNAMENTS', 'SPORTS_MAIN', 'SPORTS_LEAGUE'],
   MARKETPLACE: ['MARKETPLACE', 'COMMERCE', 'AUCTIONS', 'MARKET'],
   VISITORS: ['VISITORS', 'SECURITY', 'GATE', 'SAFETY', 'PARKING'],
   NOTICES: ['NOTICES', 'BROADCAST', 'ANNOUNCEMENT'],
@@ -38,23 +39,25 @@ const MODULE_ALIASES: Record<string, string[]> = {
   TRIPS: ['TRIPS', 'COMMUTE', 'MOBILITY'],
   COMMUTE: ['TRIPS', 'COMMUTE', 'MOBILITY'],
   DISCOVER: ['DISCOVER'],
-  MAINTENANCE: ['MAINTENANCE', 'CPOS', 'AMC', 'ASSETS'],
+  MAINTENANCE: ['MAINTENANCE', 'CPOS', 'AMC', 'ASSETS', 'FACILITIES'],
   AMC: ['AMC', 'MAINTENANCE', 'CPOS', 'FACILITIES'],
   INSURANCE: ['INSURANCE'],
   COMMERCE: ['COMMERCE', 'MARKETPLACE'],
+  BAZAAR: ['BAZAAR', 'MARKETPLACE', 'COMMERCE'],
+  DOCUMENTS: ['DOCUMENTS', 'FINANCE_MGMT', 'COMMUNITY_MGMT', 'SAFETY'],
   ACADEMY: ['ACADEMY', 'LEARNING'],
   SAFETY: ['SAFETY', 'VISITORS', 'EMERGENCY', 'HEALTH'],
   HEALTH: ['HEALTH', 'SAFETY', 'WELLNESS'],
   WELLNESS: ['WELLNESS', 'HEALTH', 'SAFETY', 'FOOD_OS'],
   PAYMENTS: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT', 'WALLET', 'BBPS'],
   MANA_PAY: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT'],
-  CPOS: ['CPOS', 'MAINTENANCE'],
+  CPOS: ['CPOS', 'MAINTENANCE', 'FACILITIES'],
   PARKING: ['PARKING', 'FACILITIES', 'VISITORS'],
   SMART_HOME: ['SMART_HOME', 'AUTOMATION', 'FACILITIES', 'IOT'],
   AUTOMATION: ['SMART_HOME', 'AUTOMATION', 'FACILITIES', 'IOT'],
   IOT: ['IOT', 'SUBMETERS', 'FACILITIES', 'SMART_HOME'],
   INVENTORY: ['INVENTORY', 'FACILITIES', 'MAINTENANCE'],
-  PETS: ['PETS', 'COMMUNITY_FEED', 'COMMUNITY'],
+  PETS: ['PETS', 'SERVICE_PLATFORM', 'HOME_SERVICES'],
   AI_CONCIERGE: ['AI_CONCIERGE', 'AI_CHAT', 'SAFETY'],
   AI_CHAT: ['AI_CONCIERGE', 'AI_CHAT', 'SAFETY'],
 };
@@ -202,8 +205,17 @@ export const useAuth = create<AuthState>((set, get) => ({
   hasModule: (moduleKey: string): boolean => {
     const { enabledModules, isSuperAdmin } = get();
     if (isSuperAdmin) return true;
-    if (!enabledModules || enabledModules.length === 0) return true;
     const normalizedKey = moduleKey.trim().toUpperCase();
+
+    // Community highlight banner is hidden by default unless explicitly enabled from admin side
+    if (normalizedKey === 'COMMUNITY_HIGHLIGHT' || normalizedKey === 'HIGHLIGHT_BANNER') {
+      if (!enabledModules || enabledModules.length === 0) return false;
+      const upperMods = enabledModules.map(m => (m || '').trim().toUpperCase());
+      const aliases = MODULE_ALIASES[normalizedKey] || [normalizedKey];
+      return aliases.some(alias => upperMods.includes(alias.toUpperCase()));
+    }
+
+    if (!enabledModules || enabledModules.length === 0) return true;
     const upperMods = enabledModules.map(m => (m || '').trim().toUpperCase());
     if (upperMods.includes(normalizedKey)) return true;
     const aliases = MODULE_ALIASES[normalizedKey] || [normalizedKey];

@@ -24,53 +24,53 @@ export const CONFIG = {
   },
 } as const;
 
-// ── Theme Colors (matches web app Mana indigo palette) ────────
+// ── Theme Colors (Stitch Lavender-White + Cobalt Button Palette) ──────
 export const COLORS = {
-  primary:      "#4F46E5",  // indigo-600
-  primaryDark:  "#3730A3",  // indigo-800
-  primaryLight: "#EEF2FF",  // indigo-50
-  primaryMid:   "#C7D2FE",  // indigo-200
-  secondary:    "#818CF8",  // indigo-400
-  accent:       "#4F46E5",  // primary indigo
-  accentDark:   "#3730A3",  // indigo-800
-  accentLight:  "#EEF2FF",  // indigo-50
-  background:   "#F9FAFC",  // light mode base background
-  backgroundAlt:"#F1F4F7",  // secondary background
-  surface:      "#FFFFFF",  // white card
-  surfaceAlt:   "#F8FAFC",  // soft slate surface
+  primary:      "#004AC6",  // cobalt primary
+  primaryDark:  "#003EA8",  // deep cobalt
+  primaryLight: "#DBE1FF",  // primary-fixed tint
+  primaryMid:   "#B4C5FF",  // primary-fixed-dim border/mid
+  secondary:    "#2563EB",  // primary-container
+  accent:       "#004AC6",  // primary cobalt
+  accentDark:   "#003EA8",
+  accentLight:  "#DBE1FF",
+  background:   "#FAF8FF",  // Stitch lavender-white surface/background
+  backgroundAlt:"#F2F3FF",  // surface-container-low
+  surface:      "#FFFFFF",  // surface-container-lowest
+  surfaceAlt:   "#F2F3FF",  // surface-container-low
   surfaceCard:  "#FFFFFF",  // card surface
   white:        "#FFFFFF",  // alias for surface
   card:         "#FFFFFF",  // alias for surfaceCard
-  border:       "rgba(99, 102, 241, 0.14)",  // refined border
-  borderLight:  "rgba(99, 102, 241, 0.08)",  // subtle border
-  borderSlate:  "#EBEFF2",  // hairline border
-  text:         "#0F172A",  // slate-900 (ultra-crisp)
-  textSecondary:"#475569",  // slate-600
-  textMuted:    "#64748B",  // slate-500
-  success:      "#10B981",  // emerald-500
-  successLight: "#ECFDF5",  // emerald-50
-  successDark:  "#059669",  // emerald-600
-  error:        "#EF4444",  // red-500
-  errorLight:   "#FEF2F2",  // red-50
-  errorDark:    "#DC2626",  // red-600
-  warning:      "#F59E0B",  // amber-500
-  warningLight: "#FFFBEB",  // amber-50
-  warningDark:  "#D97706",  // amber-600
-  info:         "#06B6D4",  // cyan-500
-  infoLight:    "#ECFEFF",  // cyan-50
-  teal:         "#0D9488",  // teal-600
-  tealLight:    "#F0FDFA",  // teal-50
-  overlay:      "rgba(15, 23, 42, 0.65)", // dark obsidian backdrop
+  border:       "#E2E7FF",  // surface-container-high hairline border
+  borderLight:  "#EAEDFF",  // subtle border
+  borderSlate:  "#C3C6D7",  // outline-variant hairline
+  text:         "#131B2E",  // on-surface deep navy
+  textSecondary:"#434655",  // on-surface-variant
+  textMuted:    "#737686",  // outline muted
+  success:      "#006247",  // tertiary emerald
+  successLight: "#E3FFF4",  // mint surface
+  successDark:  "#00513B",  // deep emerald
+  error:        "#BA1A1A",  // error red
+  errorLight:   "#FFDAD6",  // error-container
+  errorDark:    "#93000A",  // on-error-container
+  warning:      "#855300",  // secondary amber ink
+  warningLight: "#FFDDB8",  // secondary-fixed
+  warningDark:  "#653E00",
+  info:         "#2563EB",
+  infoLight:    "#DBE1FF",
+  teal:         "#007D5C",  // tertiary-container
+  tealLight:    "#E3FFF4",
+  overlay:      "rgba(19, 27, 46, 0.58)", // midnight backdrop
 } as const;
 
 // ── Domain-Specific Visual Themes ─────────────────────────────
 export const THEMES = {
   mana: {
-    primary: "#4F46E5",
-    gradient: ["#4338CA", "#4F46E5", "#6366F1"] as const,
-    bg: "#F8FAFC",
+    primary: "#004AC6",
+    gradient: ["#004AC6", "#2563EB", "#4F46E5"] as const,
+    bg: "#FAF8FF",
     card: "#FFFFFF",
-    accentLight: "#EEF2FF",
+    accentLight: "#DBE1FF",
   },
   finance: {
     heroDark: ["#0F172A", "#1E293B"] as const,
@@ -119,17 +119,17 @@ export const THEMES = {
 
 // ── Gradient Pairs ─────────────────────────────────────────────
 export const GRADIENTS = {
-  primary:     ["#4F46E5", "#6366F1"] as const,
-  primaryDeep: ["#3730A3", "#4F46E5"] as const,
-  brandAvatar: ["#4F46E5", "#6366F1"] as const,
-  hero:        ["#312E81", "#4338CA", "#4F46E5"] as const,
-  warm:        ["#F59E0B", "#D97706"] as const,
-  success:     ["#059669", "#10B981"] as const,
-  teal:        ["#0F766E", "#0D9488"] as const,
-  obsidian:    ["#0F172A", "#1E293B", "#334155"] as const,
-  surface:     ["#FFFFFF", "#F8FAFC"] as const,
-  card:        ["#FFFFFF", "#F8FAFC"] as const,
-  avatar:      ["#6366F1", "#7C3AED"] as const,
+  primary:     ["#004AC6", "#2563EB"] as const,
+  primaryDeep: ["#003EA8", "#004AC6"] as const,
+  brandAvatar: ["#004AC6", "#2563EB"] as const,
+  hero:        ["#00174B", "#004AC6", "#2563EB"] as const,
+  warm:        ["#FEA619", "#855300"] as const,
+  success:     ["#006247", "#007D5C"] as const,
+  teal:        ["#006247", "#007D5C"] as const,
+  obsidian:    ["#06081A", "#0B0F2E", "#161B47"] as const,
+  surface:     ["#FFFFFF", "#F2F3FF"] as const,
+  card:        ["#FFFFFF", "#F2F3FF"] as const,
+  avatar:      ["#004AC6", "#2563EB"] as const,
 } as const;
 
 // ── Typography ─────────────────────────────────────────────────
@@ -189,38 +189,6 @@ export const RADIUS = {
 } as const;
 
 // ── Shadows (Multi-Layer Ambient & Directional Depth) ──────────
-// ── Mana Community Design System ────────────────────────
-export const THEME = {
-  brand:        "#00D09C",  // Emerald Primary
-  brandDark:    "#008767",  // Deeper emerald for text
-  brandLight:   "#E6FAF5",  // 10% alpha emerald tint
-  brandBorder:  "#A7F3D0",  // Emerald border
-  loss:         "#EB5B5B",  // Coral Red
-  lossDark:     "#DC2626",
-  lossLight:    "#FEEFEF",  // 10% alpha red tint
-  lossBorder:   "#FECACA",
-  surface:      "#FFFFFF",  // Main card surface
-  surfaceSubtle:"#F9FAFC",  // Subtle secondary surface
-  surfaceMuted: "#F1F4F7",  // Background chip
-  background:   "#F9FAFC",  // Light mode base background
-  backgroundAlt:"#F1F4F7",  // Secondary background
-  headerBg:     "#FFFFFF",  // Clean white header
-  headerBorder: "#EBEFF2",  // Hairline bottom header border
-  border:       "#EBEFF2",  // 1px hairline border
-  borderMedium: "#DFE4E8",
-  textPrimary:  "#44475B",  // Soft Charcoal primary text
-  textSecondary:"#7C7E8C",  // Secondary text
-  textMuted:    "#9CA3AF",
-  indigo:       "#5367FF",  // Electric accent
-  indigoLight:  "#EEF2FF",
-  amber:        "#FFB800",
-  amberLight:   "#FFFBEB",
-  text:         "#0F172A",
-  muted:        "#64748B",
-  primary:      "#4F46E5",
-  card:         "#FFFFFF",  // card surface alias
-} as const;
-
 export const SHADOWS = {
   sm: {
     shadowColor: "#0F172A",

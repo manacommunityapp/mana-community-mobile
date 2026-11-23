@@ -27,21 +27,34 @@ import { CachedImage as Image } from '@/components/common/CachedImage';
 import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import { formatDistanceToNow } from 'date-fns';
 
-type CategoryFilter = 'ALL' | 'ANNOUNCEMENT' | 'POST' | 'QUESTION' | 'CLASSIFIED' | 'LOST_FOUND';
+type CategoryFilter =
+  | 'ALL'
+  | 'ANNOUNCEMENT'
+  | 'POLL'
+  | 'POST'
+  | 'SPORTS'
+  | 'EVENT'
+  | 'CLASSIFIED'
+  | 'LOST_FOUND'
+  | 'EMERGENCY';
 
 const FILTER_TABS: { key: CategoryFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'ALL', label: 'All', icon: 'grid-outline' },
-  { key: 'ANNOUNCEMENT', label: 'Notices', icon: 'megaphone-outline' },
-  { key: 'POST', label: 'Discussions', icon: 'chatbubbles-outline' },
-  { key: 'QUESTION', label: 'Questions', icon: 'help-circle-outline' },
-  { key: 'CLASSIFIED', label: 'Buy & Sell', icon: 'pricetag-outline' },
-  { key: 'LOST_FOUND', label: 'Lost & Found', icon: 'search-outline' },
+  { key: 'ALL',          label: 'All',          icon: 'grid-outline' },
+  { key: 'ANNOUNCEMENT', label: 'Notices',      icon: 'megaphone-outline' },
+  { key: 'POLL',         label: 'Polls',        icon: 'bar-chart-outline' },
+  { key: 'POST',         label: 'Community',    icon: 'chatbubbles-outline' },
+  { key: 'SPORTS',       label: 'Sports',       icon: 'trophy-outline' },
+  { key: 'EVENT',        label: 'Events',       icon: 'calendar-outline' },
+  { key: 'CLASSIFIED',   label: 'Classifieds',  icon: 'pricetag-outline' },
+  { key: 'LOST_FOUND',   label: 'Lost & Found', icon: 'search-outline' },
+  { key: 'EMERGENCY',    label: 'Emergency',    icon: 'alert-circle-outline' },
 ];
 
 export default function CommunityFeedScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, hasPermission, isAdmin, isSuperAdmin, isAnyAdmin } = useAuth();
+  const canCreatePost = isSuperAdmin || isAdmin || isAnyAdmin || hasPermission('Create Post') || hasPermission('Create Notice') || hasPermission('Create Poll');
 
   const [activeTab, setActiveTab] = useState<CategoryFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,8 +93,9 @@ export default function CommunityFeedScreen() {
     if (activeTab === 'ALL') return rawList;
     return rawList.filter((p) => {
       const type = (p.type || p.postType || '').toUpperCase();
-      if (activeTab === 'ANNOUNCEMENT') return type === 'ANNOUNCEMENT' || p.official;
-      if (activeTab === 'POST') return type === 'POST' || type === 'GENERAL';
+      if (activeTab === 'ANNOUNCEMENT') return type === 'ANNOUNCEMENT' || type === 'COMMITTEE_NOTICE' || p.official;
+      if (activeTab === 'POLL') return type === 'POLL' || Boolean(p.poll || (p as any).pollQuestion);
+      if (activeTab === 'POST') return (type === 'POST' || type === 'GENERAL') && !p.official;
       return type === activeTab;
     });
   }, [data, activeTab]);
@@ -310,14 +324,16 @@ export default function CommunityFeedScreen() {
           <Text style={s.headerSub}>{user?.communityName || 'Your Community'}</Text>
         </View>
 
-        <TouchableOpacity
-          onPress={() => setShowCreateModal(true)}
-          style={s.newPostBtn}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <Text style={s.newPostBtnText}>Post</Text>
-        </TouchableOpacity>
+        {canCreatePost && (
+          <TouchableOpacity
+            onPress={() => setShowCreateModal(true)}
+            style={s.newPostBtn}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Text style={s.newPostBtnText}>+ Create Post</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Search Bar ── */}
@@ -357,9 +373,9 @@ export default function CommunityFeedScreen() {
               >
                 <Ionicons
                   name={item.icon}
-                  size={14}
+                  size={12}
                   color={active ? '#FFFFFF' : COLORS.textSecondary}
-                  style={{ marginRight: 5 }}
+                  style={{ marginRight: 4 }}
                 />
                 <Text style={[s.filterChipText, active && s.filterChipTextActive]}>
                   {item.label}
@@ -400,18 +416,21 @@ export default function CommunityFeedScreen() {
       />
 
       {/* ── Floating Action Button for New Post ── */}
-      <TouchableOpacity
-        style={s.fab}
-        onPress={() => setShowCreateModal(true)}
-        activeOpacity={0.9}
-        accessibilityLabel="Create New Post"
-      >
-        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+      {canCreatePost && (
+        <TouchableOpacity
+          style={s.fab}
+          onPress={() => setShowCreateModal(true)}
+          activeOpacity={0.9}
+          accessibilityLabel="Create New Post"
+        >
+          <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
 
       {/* ── Modals & Sheets ── */}
       <CreatePostModal
         visible={showCreateModal}
+        initialFilter={activeTab === 'ANNOUNCEMENT' ? 'Notices' : activeTab === 'POLL' ? 'Polls' : 'Community'}
         onClose={() => {
           setShowCreateModal(false);
           refetch();
@@ -505,11 +524,11 @@ const s = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
+    height: 28,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
+    paddingHorizontal: 11,
+    borderRadius: 14,
     backgroundColor: '#F1F5F9',
     marginRight: 6,
   },
@@ -517,13 +536,13 @@ const s = StyleSheet.create({
     backgroundColor: '#4F46E5',
   },
   filterChipText: {
-    fontSize: 13,
+    fontSize: 11.5,
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   filterChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   listContent: {
     padding: 16,

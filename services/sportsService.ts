@@ -14,6 +14,64 @@ import type {
   SportsGenericLeaderboardEntry, SportsPlayerRankingResponse,
 } from '@/types/api';
 
+const BADGE_META_MAP: Record<string, { title: string; emoji: string; tier: 'legendary' | 'epic' | 'rare' | 'common' }> = {
+  tournament_winner: { title: 'Tournament Champion', emoji: '🏆', tier: 'legendary' },
+  runner_up:         { title: 'Runner-up',           emoji: '🥈', tier: 'epic' },
+  century_club:      { title: 'Century Club',        emoji: '💯', tier: 'epic' },
+  hat_trick:         { title: 'Hat-trick Hero',      emoji: '🎩', tier: 'legendary' },
+  five_wickets:      { title: 'Fifer',               emoji: '🌟', tier: 'rare' },
+  top_scorer:        { title: 'Top Scorer',          emoji: '🏅', tier: 'rare' },
+  most_valuable:     { title: 'MVP',                 emoji: '⭐', tier: 'epic' },
+  '10_matches':      { title: 'Veteran',             emoji: '💪', tier: 'common' },
+  '50_matches':      { title: 'Legend',              emoji: '🦁', tier: 'rare' },
+  first_match:       { title: 'Debut',               emoji: '🌱', tier: 'common' },
+  team_player:       { title: 'Team Player',         emoji: '🤝', tier: 'common' },
+  good_sport:        { title: 'Good Sport',          emoji: '🏅', tier: 'common' },
+};
+
+function normalizeSportType(raw?: string | null): SportType {
+  const s = String(raw || '').toUpperCase().replace(/\s+/g, '_');
+  if (s.includes('CRICKET')) return 'CRICKET';
+  if (s.includes('BADMINTON')) return 'BADMINTON';
+  if (s.includes('TABLE_TENNIS') || s === 'TT' || s.includes('PING_PONG')) return 'TABLE_TENNIS';
+  if (s.includes('PICKLEBALL')) return 'PICKLEBALL' as SportType;
+  if (s.includes('TENNIS')) return 'TENNIS' as SportType;
+  if (s.includes('FOOTBALL') || s.includes('SOCCER')) return 'FOOTBALL';
+  if (s.includes('BASKETBALL')) return 'BASKETBALL';
+  if (s.includes('VOLLEYBALL')) return 'VOLLEYBALL';
+  if (s.includes('SWIM')) return 'SWIMMING' as SportType;
+  if (s.includes('CHESS')) return 'CHESS';
+  if (s.includes('CARROM')) return 'CARROM';
+  return (s || 'OTHER') as SportType;
+}
+
+function parseScoreString(raw?: string | number | null): {
+  runs: number;
+  wickets?: number;
+  overs?: string;
+  display?: string;
+} {
+  if (raw == null || raw === '') return { runs: 0 };
+  if (typeof raw === 'number') return { runs: raw, display: String(raw) };
+  const str = String(raw).trim();
+  const ovMatch = str.match(/\(([\d.]+)\s*(?:ov|overs)?\)/i);
+  const scoreMatch = str.match(/(\d+)(?:\s*\/\s*(\d+))?/);
+  return {
+    runs: scoreMatch ? parseInt(scoreMatch[1], 10) || 0 : 0,
+    wickets: scoreMatch?.[2] != null ? parseInt(scoreMatch[2], 10) : undefined,
+    overs: ovMatch?.[1],
+    display: str,
+  };
+}
+
+function normalizeMatchStatus(status?: string | null): MatchDto['status'] {
+  const s = String(status || 'SCHEDULED').toUpperCase().trim();
+  if (s === 'IN_PROGRESS' || s === 'INPROGRESS' || s === 'ONGOING' || s === 'ACTIVE') return 'LIVE';
+  if (s === 'COMPLETED' || s === 'FINISHED' || s === 'FINAL') return 'COMPLETED';
+  if (s === 'CANCELLED') return 'CANCELLED';
+  return 'SCHEDULED';
+}
+
 function tournamentToDashboardCard(t: any): import('@/types/api').DashboardTournamentCardDto {
   const rawEvents = t.events || t.sportsEvents || t.childEvents || [];
   const mappedEvents: import('@/types/api').DashboardEventCardDto[] = rawEvents.map((ev: any) => ({
@@ -21,16 +79,16 @@ function tournamentToDashboardCard(t: any): import('@/types/api').DashboardTourn
     name: ev.name || t.name,
     eventDateStart: ev.eventDateStart || t.eventDateStart || null,
     eventDateEnd: ev.eventDateEnd || t.eventDateEnd || null,
-    sportName: ev.sport?.name || ev.sportName || t.name || '',
-    categoryName: ev.categories?.[0]?.name || ev.categoryName || '',
-    venueName: ev.venue?.name || ev.venueName || '',
+    sportName: ev.sport?.name || ev.sportName || t.sport?.name || t.sportName || t.name || '',
+    categoryName: ev.categories?.[0]?.name || ev.categoryName || ev.name || '',
+    venueName: ev.venue?.name || ev.venueName || t.venue?.name || t.venueName || '',
     maxParticipants: ev.maxParticipants ?? t.maxParticipants ?? null,
     registeredCount: ev.registeredCount ?? 0,
     registrationStatus: ev.status || ev.registrationStatus || t.registrationStatus || 'REGISTRATION_OPEN',
     auctionStatus: ev.auctionStatus || null,
-    teamSport: (ev.minPlayers && ev.minPlayers > 1) || false,
-    myRegistrationId: null,
-    myRegistrationStatus: null,
+    teamSport: (ev.minPlayers && ev.minPlayers > 1) || (Array.isArray(ev.format) && ev.format.includes('TEAM')) || false,
+    myRegistrationId: ev.myRegistrationId ?? null,
+    myRegistrationStatus: ev.myRegistrationStatus ?? null,
   }));
 
   return {
@@ -39,34 +97,149 @@ function tournamentToDashboardCard(t: any): import('@/types/api').DashboardTourn
     bannerImage: t.bannerImage || null,
     eventDateStart: t.eventDateStart || null,
     eventDateEnd: t.eventDateEnd || null,
-    registrationStatus: t.registrationStatus || 'REGISTRATION_OPEN',
-    communityId: t.communityId || null,
-    communityName: t.communityName || null,
+    registrationStatus: t.registrationStatus || t.status || 'REGISTRATION_OPEN',
+    communityId: t.communityId || t.community?.id || null,
+    communityName: t.communityName || t.community?.name || null,
     events: mappedEvents,
   };
 }
 
-function feedMatchToMatchDto(f: any): MatchDto {
+function normalizeTournamentDto(t: any): TournamentDto & Record<string, any> {
+  const rawEvents = Array.isArray(t.sportsEvents) ? t.sportsEvents : (Array.isArray(t.events) ? t.events : []);
+  const firstEv = rawEvents[0];
+  const rawSport = typeof t.sport === 'object' ? t.sport?.name : (t.sport || t.sportName || firstEv?.sport?.name || firstEv?.sportName || t.name);
+  const rawStatus = String(t.status || t.registrationStatus || 'UPCOMING').toUpperCase();
+  const mappedStatus = (rawStatus === 'LIVE' || rawStatus === 'IN_PROGRESS') ? 'ONGOING' : rawStatus;
+
+  const venueObj = t.venue || firstEv?.venue;
+  const venueStr = typeof venueObj === 'string'
+    ? venueObj
+    : venueObj
+      ? [venueObj.name, venueObj.area, venueObj.city].filter(Boolean).join(', ') || venueObj.address || ''
+      : '';
+
+  const totalReg = rawEvents.reduce((sum: number, ev: any) => sum + (Number(ev?.registeredCount) || 0), 0);
+  const rawFmt = Array.isArray(firstEv?.format) ? firstEv.format[0] : (t.format || firstEv?.tournamentType || 'KNOCKOUT');
+
   return {
-    id: f.matchId ?? f.id,
-    tournamentId: f.configId ?? 0,
+    ...t,
+    id: t.id,
+    name: t.name || t.title || 'Tournament',
+    sport: normalizeSportType(rawSport),
+    description: t.description || '',
+    format: (rawFmt || 'KNOCKOUT') as any,
+    status: mappedStatus as any,
+    registrationStatus: t.registrationStatus || t.status || mappedStatus,
+    startDate: t.startDate || t.eventDateStart || '',
+    endDate: t.endDate || t.eventDateEnd || '',
+    registrationDeadline: t.registrationDeadline || t.registrationDateEnd || undefined,
+    maxTeams: t.maxTeams ?? t.maxParticipants ?? 0,
+    registeredTeamsCount: t.registeredTeamsCount ?? totalReg,
+    teamSize: t.teamSize ?? firstEv?.minPlayers ?? 1,
+    organizerName: t.organizerName || t.contactName || t.communityName || 'Community Arena',
+    communityId: t.communityId ?? t.community?.id ?? 0,
+    venue: venueStr || undefined,
+    myTeamRegistered: Boolean(t.myTeamRegistered),
+    createdAt: t.createdAt || '',
+    sportsEvents: rawEvents,
+    events: rawEvents,
+  };
+}
+
+function feedMatchToMatchDto(f: any): MatchDto & Record<string, any> {
+  const sport = normalizeSportType(f.sportName || f.sport);
+  const parsedA = parseScoreString(f.scoreTeamA ?? f.score1 ?? f.homeScore);
+  const parsedB = parseScoreString(f.scoreTeamB ?? f.score2 ?? f.awayScore);
+  const status = normalizeMatchStatus(f.status);
+  return {
+    id: Number(f.matchId ?? f.id),
+    tournamentId: Number(f.configId ?? f.tournamentId ?? 0),
+    configId: f.configId ?? null,
+    eventId: f.eventId ?? null,
     tournamentName: f.tournamentName || f.eventName || 'Tournament Match',
-    sport: ((f.sportName || 'CRICKET').toUpperCase().replace(/\s+/g, '_')) as SportType,
-    homeTeamId: 1,
-    homeTeamName: f.teamAName || 'Team A',
-    homeTeamEmoji: '🏏',
-    awayTeamId: 2,
-    awayTeamName: f.teamBName || 'Team B',
-    awayTeamEmoji: '🏏',
-    homeScore: parseInt(f.scoreTeamA || '0', 10) || 0,
-    awayScore: parseInt(f.scoreTeamB || '0', 10) || 0,
-    status: (f.status || 'SCHEDULED') as any,
+    sport,
+    rawSportName: f.sportName || f.sport || sport,
+    homeTeamId: f.teamAId ?? f.homeTeamId ?? 1,
+    homeTeamName: f.teamAName || f.homeTeamName || f.homeName || 'Team A',
+    homeTeamEmoji: '🏅',
+    awayTeamId: f.teamBId ?? f.awayTeamId ?? 2,
+    awayTeamName: f.teamBName || f.awayTeamName || f.awayName || 'Team B',
+    awayTeamEmoji: '🏅',
+    homeScore: typeof f.homeScore === 'number' ? f.homeScore : parsedA.runs,
+    awayScore: typeof f.awayScore === 'number' ? f.awayScore : parsedB.runs,
+    homeWickets: f.homeWickets ?? parsedA.wickets,
+    awayWickets: f.awayWickets ?? parsedB.wickets,
+    homeOvers: f.homeOvers ?? parsedA.overs,
+    awayOvers: f.awayOvers ?? parsedB.overs,
+    status,
     scheduledAt: f.scheduledAt || new Date().toISOString(),
-    venue: f.venueName || '',
-    round: f.roundName || '',
-    homeScoreDisplay: f.scoreTeamA,
-    awayScoreDisplay: f.scoreTeamB,
-  } as any;
+    endedAt: f.endedAt || f.completedAt || undefined,
+    venue: f.venueName || f.courtName || f.venue || '',
+    round: f.roundName || f.round || '',
+    matchNumber: f.matchNumber,
+    winnerTeamName: f.winnerTeamName || f.winnerName || undefined,
+    homeScoreDisplay: f.homeScoreDisplay ?? parsedA.display,
+    awayScoreDisplay: f.awayScoreDisplay ?? parsedB.display,
+  };
+}
+
+export interface FeedLiveMatch {
+  matchId: number;
+  configId?: number | null;
+  eventId?: number | null;
+  sportName?: string | null;
+  tournamentName?: string | null;
+  eventName?: string | null;
+  roundName?: string | null;
+  teamAName: string;
+  teamBName: string;
+  teamAId?: number | null;
+  teamBId?: number | null;
+  teamAFlat?: string | null;
+  teamBFlat?: string | null;
+  scoreTeamA?: string | null;
+  scoreTeamB?: string | null;
+  status: 'LIVE' | 'COMPLETED' | string;
+  winnerName?: string | null;
+  scheduledAt?: string | null;
+  completedAt?: string | null;
+  venueName?: string | null;
+}
+
+export function doesSportMatchFilter(rawSport?: string | null, selected?: string | null): boolean {
+  if (!selected || selected === 'ALL') return true;
+  const target = selected.toUpperCase().replace(/\s+/g, '_');
+  const norm = normalizeSportType(rawSport);
+  if (norm === target) return true;
+  const rawUp = String(rawSport || '').toUpperCase().replace(/\s+/g, '_');
+  if (!rawUp) return false;
+  if (target === 'TENNIS' && rawUp.includes('TABLE_TENNIS')) return false;
+  return rawUp.includes(target) || target.includes(rawUp);
+}
+
+function doesTournamentStatusMatch(t: any, status?: string): boolean {
+  if (!status) return true;
+  const req = status.toUpperCase();
+  const regStat = String(t.registrationStatus || t.status || '').toUpperCase();
+  if (req === 'ONGOING' || req === 'LIVE') {
+    return ['ONGOING', 'LIVE', 'IN_PROGRESS', 'ACTIVE'].includes(regStat);
+  }
+  if (req === 'UPCOMING') {
+    return ['UPCOMING', 'SCHEDULED', 'REGISTRATION_OPEN', 'OPEN'].includes(regStat);
+  }
+  if (req === 'REGISTRATION_OPEN') {
+    return ['REGISTRATION_OPEN', 'OPEN'].includes(regStat);
+  }
+  return regStat === req;
+}
+
+function dedupeMatchesById<T extends { id: number }>(list: T[]): T[] {
+  const seen = new Map<number, T>();
+  for (const item of list) {
+    if (!item?.id) continue;
+    if (!seen.has(item.id)) seen.set(item.id, item);
+  }
+  return Array.from(seen.values());
 }
 
 export const sportsService = {
@@ -78,6 +251,33 @@ export const sportsService = {
     communityId?: number,
   ): Promise<PageResponse<TournamentDto>> {
     const qs = communityId ? `?communityId=${communityId}` : '';
+
+    const filterAndPage = (rawList: any[]): PageResponse<TournamentDto> => {
+      const normalized = rawList
+        .filter((t: any) => String(t?.registrationStatus || t?.status || '').toUpperCase() !== 'DRAFT')
+        .map(normalizeTournamentDto)
+        .filter((t: any) => {
+          if (status && !doesTournamentStatusMatch(t, status)) return false;
+          if (sport) {
+            const topMatch = doesSportMatchFilter(t.sport, sport) || doesSportMatchFilter(t.name, sport);
+            const evMatch = (t.sportsEvents || []).some((ev: any) =>
+              doesSportMatchFilter(ev?.sport?.name || ev?.sportName || ev?.name, sport)
+            );
+            if (!topMatch && !evMatch) return false;
+          }
+          return true;
+        });
+      return {
+        content: normalized,
+        page: 0,
+        size: normalized.length,
+        totalElements: normalized.length,
+        totalPages: 1,
+        hasNext: false,
+        hasPrevious: false,
+      } as any;
+    };
+
     // 1. Try community tournaments (open to all authenticated residents)
     try {
       let res = await api.get<any>(`/tournaments/community${qs}`);
@@ -87,21 +287,7 @@ export const sportsService = {
         list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
       }
       if (list.length > 0) {
-        let filtered = list;
-        if (status) {
-          filtered = filtered.filter((t: any) =>
-            t.registrationStatus === status || t.status === status
-          );
-        }
-        return {
-          content: filtered,
-          page: 0,
-          size: filtered.length,
-          totalElements: filtered.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrevious: false,
-        } as any;
+        return filterAndPage(list);
       }
     } catch {}
 
@@ -110,21 +296,7 @@ export const sportsService = {
       const res = await api.get<any>('/tournaments/all');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
       if (list.length > 0) {
-        let filtered = list;
-        if (status) {
-          filtered = filtered.filter((t: any) =>
-            t.registrationStatus === status || t.status === status
-          );
-        }
-        return {
-          content: filtered,
-          page: 0,
-          size: filtered.length,
-          totalElements: filtered.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrevious: false,
-        } as any;
+        return filterAndPage(list);
       }
     } catch {}
 
@@ -140,36 +312,227 @@ export const sportsService = {
   },
 
   async getTournament(id: number): Promise<TournamentDto> {
-    const res = await api.get<TournamentDto>(`/sports/tournaments/${id}`);
-    return res.data;
+    try {
+      const res = await api.get<any>(`/tournaments/${id}`);
+      if (res.data) return normalizeTournamentDto(res.data);
+    } catch {}
+    try {
+      const page = await sportsService.getTournaments();
+      const matched = (page.content || []).find((t: any) => {
+        if (Number(t.id) === Number(id)) return true;
+        const evs = t.sportsEvents || t.events || [];
+        return evs.some((ev: any) => Number(ev?.id) === Number(id));
+      });
+      if (matched) return normalizeTournamentDto(matched);
+    } catch {}
+    const res = await api.get<any>(`/sports/tournaments/${id}`);
+    return normalizeTournamentDto(res.data);
   },
 
   async getMyTournaments(): Promise<TournamentDto[]> {
-    const res = await api.get<TournamentDto[]>('/sports/tournaments/my');
-    return res.data;
+    try {
+      const regs = await sportsService.getMyRegistrations();
+      const all = await sportsService.getTournaments();
+      const myNames = new Set(regs.map((r: any) => (r.tournamentName || r.eventName || '').toLowerCase()).filter(Boolean));
+      return (all.content || []).filter((t: any) =>
+        t.myTeamRegistered || myNames.has((t.name || '').toLowerCase())
+      );
+    } catch {
+      return [];
+    }
   },
 
   // ── Teams ─────────────────────────────────────────────────────
   async getTeams(tournamentId: number): Promise<TeamDto[]> {
-    const res = await api.get<TeamDto[]>(`/sports/tournaments/${tournamentId}/teams`);
-    return res.data;
+    // 1. Resolve teams via resident-accessible tournament scheduler configs
+    try {
+      const configs = await sportsService.getTournamentConfigs();
+      const matching = configs.filter((c: any) =>
+        Number(c.id) === Number(tournamentId) ||
+        Number(c.tournamentId) === Number(tournamentId) ||
+        Number(c.eventId) === Number(tournamentId)
+      );
+      const targets = matching.length > 0 ? matching : configs.slice(0, 3);
+      if (targets.length > 0) {
+        const nested = await Promise.all(
+          targets.map(async (cfg: any) => {
+            try {
+              const res = await api.get<any[]>(`/tournament/${cfg.id}/teams`);
+              const rawTeams = Array.isArray(res.data) ? res.data : [];
+              return rawTeams.map((tm: any): TeamDto => ({
+                id: Number(tm.id ?? tm.teamId),
+                name: tm.name || tm.teamName || 'Team',
+                captainId: tm.captainId ?? 0,
+                captainName: tm.captainName || 'Captain',
+                tournamentId,
+                sport: normalizeSportType(cfg.sportName || tm.sport),
+                members: Array.isArray(tm.members) ? tm.members : [],
+                status: tm.status || 'APPROVED',
+                wins: tm.wins ?? 0,
+                losses: tm.losses ?? 0,
+                draws: tm.draws ?? 0,
+                points: tm.points ?? 0,
+                goalsFor: tm.goalsFor ?? 0,
+                goalsAgainst: tm.goalsAgainst ?? 0,
+                logoEmoji: tm.logoEmoji || '🏅',
+                isMyTeam: Boolean(tm.isMyTeam),
+                isCaptain: Boolean(tm.isCaptain),
+              }));
+            } catch {
+              return [];
+            }
+          }),
+        );
+        const flat = nested.flat();
+        if (flat.length > 0) return flat;
+      }
+    } catch {}
+
+    // 2. Fallback to legacy endpoint
+    try {
+      const res = await api.get<TeamDto[]>(`/sports/tournaments/${tournamentId}/teams`);
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   async getMyTeams(): Promise<TeamDto[]> {
-    const res = await api.get<TeamDto[]>('/sports/teams/my');
-    return res.data;
+    const collected: TeamDto[] = [];
+    const seen = new Set<string>();
+
+    // 1. Try auction captain/team registrations (/auction/teams/captain/mine)
+    try {
+      const res = await api.get<any[]>('/auction/teams/captain/mine');
+      if (Array.isArray(res.data)) {
+        for (const tm of res.data) {
+          const tid = Number(tm.id ?? tm.teamId);
+          if (!tid) continue;
+          const key = `auction-${tid}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          collected.push({
+            id: tid,
+            name: tm.teamName || tm.name || 'Team',
+            captainId: Number(tm.captainUserId ?? tm.captainId ?? 0),
+            captainName: tm.captainName || 'Captain',
+            tournamentId: Number(tm.tournamentId ?? tm.eventId ?? tm.configId ?? 0),
+            sport: normalizeSportType(tm.sportName || tm.sport),
+            members: Array.isArray(tm.players)
+              ? tm.players.map((p: any) => ({
+                  userId: Number(p.userId ?? p.id ?? 0),
+                  name: p.playerName || p.fullName || p.name || 'Player',
+                  flat: p.flatNumber || p.flatNo,
+                  role: p.isCaptain ? 'CAPTAIN' : 'PLAYER',
+                }))
+              : [],
+            status: 'APPROVED',
+            wins: tm.wins ?? 0,
+            losses: tm.losses ?? 0,
+            draws: tm.draws ?? 0,
+            points: tm.points ?? 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            logoEmoji: tm.logoEmoji || '🏅',
+            isMyTeam: true,
+            isCaptain: true,
+          });
+        }
+      }
+    } catch {}
+
+    // 2. Supplement from user sports event registrations & tournament squads (zero 404s; /sports/teams/my does not exist on backend)
+    try {
+      const [regs, tournsPage] = await Promise.all([
+        sportsService.getMyRegistrations(),
+        sportsService.getTournaments().catch(() => ({ content: [] } as any)),
+      ]);
+      const tourns = tournsPage?.content || [];
+      for (const r of regs as any[]) {
+        if (String(r.status || '').toUpperCase() === 'WITHDRAWN') continue;
+        const regTeamName = r.proposedTeamName || r.teamName || r.playerName || r.eventName || 'My Entry';
+        const matchedTourn = tourns.find((t: any) =>
+          Number(t.id) === Number(r.tournamentId) ||
+          (t.sportsEvents || t.events || []).some((ev: any) => Number(ev?.id) === Number(r.eventId))
+        );
+        const resolvedTournId = Number(r.tournamentId || matchedTourn?.id || r.eventId || 0);
+        const key = `reg-${r.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        collected.push({
+          id: Number(r.id),
+          name: `${regTeamName}${r.categoryName ? ` · ${r.categoryName}` : ''}`,
+          captainId: 0,
+          captainName: r.playerName || 'Resident',
+          tournamentId: resolvedTournId,
+          sport: normalizeSportType(r.sportName),
+          members: [
+            { userId: 0, name: r.playerName || 'You', flat: r.flatNumber || r.flatNo, role: r.captainNomination ? 'CAPTAIN' : 'PLAYER' },
+            ...(r.partnerName ? [{ userId: Number(r.partnerUserId ?? 1), name: r.partnerName, flat: r.partnerFlatNumber, role: 'PLAYER' as const }] : []),
+          ],
+          status: ['CONFIRMED', 'APPROVED', 'REGISTERED', 'ACTIVE'].includes(String(r.status || '').toUpperCase()) ? 'APPROVED' : 'PENDING',
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          points: 0,
+          goalsFor: 0,
+          goalsAgainst: 0,
+          logoEmoji: '🏅',
+          isMyTeam: true,
+          isCaptain: Boolean(r.captainNomination),
+        });
+      }
+    } catch {}
+
+    return collected;
   },
 
   async registerTeam(data: RegisterTeamRequest): Promise<TeamDto> {
-    const res = await api.post<TeamDto>('/sports/teams', data);
-    return res.data;
+    try {
+      const res = await api.post<any[]>('/sports/register-team', {
+        eventId: data.tournamentId,
+        teamName: data.teamName,
+        memberUserIds: data.memberUserIds,
+      });
+      const first = Array.isArray(res.data) ? res.data[0] : res.data;
+      return {
+        id: Number(first?.id ?? Date.now()),
+        name: data.teamName,
+        captainId: 0,
+        captainName: first?.playerName || 'Captain',
+        tournamentId: data.tournamentId,
+        sport: 'OTHER' as SportType,
+        members: [],
+        status: 'PENDING',
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        points: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        logoEmoji: data.logoEmoji || '🏅',
+        isMyTeam: true,
+        isCaptain: true,
+      };
+    } catch {
+      const res = await api.post<TeamDto>('/sports/teams', data);
+      return res.data;
+    }
   },
 
   async leaveTeam(teamId: number): Promise<void> {
+    try {
+      await api.delete(`/auction/teams/${teamId}/leave`);
+      return;
+    } catch {}
     await api.delete(`/sports/teams/${teamId}/leave`);
   },
 
   async dissolveTeam(teamId: number): Promise<void> {
+    try {
+      await api.delete(`/auction/teams/${teamId}/dissolve`);
+      return;
+    } catch {}
     await api.delete(`/sports/teams/${teamId}`);
   },
 
@@ -181,6 +544,54 @@ export const sportsService = {
     await api.delete(`/sports/teams/${teamId}/members/${userId}`);
   },
 
+  async fetchConfigMatchesAsDto(opts?: {
+    tournamentId?: number;
+    maxConfigs?: number;
+    maxPerConfig?: number;
+  }): Promise<MatchDto[]> {
+    const configs = await sportsService.getTournamentConfigs();
+    const targetTid = opts?.tournamentId;
+    let validConfigs = configs.filter((c: any) => String(c?.status || '').toUpperCase() !== 'DRAFT');
+    if (targetTid) {
+      const exact = validConfigs.filter((c: any) =>
+        Number(c.id) === Number(targetTid) ||
+        Number(c.tournamentId) === Number(targetTid) ||
+        Number(c.eventId) === Number(targetTid)
+      );
+      if (exact.length > 0) validConfigs = exact;
+    }
+    validConfigs = validConfigs.slice(0, opts?.maxConfigs ?? 8);
+    if (validConfigs.length === 0) return [];
+
+    const nested = await Promise.all(
+      validConfigs.map(async (cfg: any): Promise<MatchDto[]> => {
+        const rawList = await sportsService.getMatchesByConfigId(Number(cfg.id));
+        return rawList
+          .filter((m: any) => {
+            const id = Number(m?.id ?? m?.matchId);
+            if (!id) return false;
+            const st = String(m?.status || '').toUpperCase();
+            if (['BYE', 'AUTO_ADVANCED', 'CANCELLED', 'DRAFT'].includes(st)) return false;
+            if (m?.isBye) return false;
+            return true;
+          })
+          .slice(0, opts?.maxPerConfig ?? 30)
+          .map((m: any) =>
+            feedMatchToMatchDto({
+              ...m,
+              matchId: m.id ?? m.matchId,
+              configId: cfg.id,
+              eventId: cfg.eventId,
+              sportName: cfg.sportName || cfg.eventName || m.sportName || 'Sports',
+              tournamentName: cfg.tournamentName || m.tournamentName || 'Tournament',
+              venueName: m.venueName || m.courtName || cfg.venueName || '',
+            }),
+          );
+      }),
+    );
+    return dedupeMatchesById(nested.flat());
+  },
+
   // ── Matches ───────────────────────────────────────────────────
   async getMatches(
     tournamentId?: number,
@@ -188,59 +599,182 @@ export const sportsService = {
     status?: string,
     page = 0,
   ): Promise<PageResponse<MatchDto>> {
-    // 1. Try standard matches endpoint
-    try {
-      const res = await api.get<PageResponse<MatchDto>>('/sports/matches', {
-        params: { tournamentId, date, status, page, size: 30 },
-      });
-      if (res.data?.content && res.data.content.length > 0) return res.data;
-    } catch {}
+    // 1. Gather resident-accessible matches from feeds + tournament configs + optional /sports/matches
+    const [upRes, recRes, liveRes, cfgMatches, adminRes] = await Promise.all([
+      sportsService.getFeedUpcomingMatches(undefined, 30),
+      sportsService.getFeedRecentCompletedMatches(undefined, 30),
+      sportsService.getFeedLiveMatches(undefined),
+      sportsService.fetchConfigMatchesAsDto({ tournamentId, maxConfigs: 10, maxPerConfig: 30 }),
+      api.get<PageResponse<MatchDto>>('/sports/matches', {
+        params: { tournamentId, status, page, size: 50 },
+      }).then((r) => r.data?.content || []).catch(() => [] as MatchDto[]),
+    ]);
 
-    // 2. Resident-accessible fallback: upcoming and recent-completed feeds
+    const feedDtos = [
+      ...liveRes.map(feedMatchToMatchDto),
+      ...upRes.map(feedMatchToMatchDto),
+      ...recRes.map(feedMatchToMatchDto),
+    ];
+
+    let all = dedupeMatchesById([
+      ...cfgMatches,
+      ...feedDtos,
+      ...adminRes.map((m: any) => feedMatchToMatchDto(m)),
+    ]);
+
+    if (tournamentId) {
+      all = all.filter((m: any) =>
+        Number(m.tournamentId) === Number(tournamentId) ||
+        Number(m.configId) === Number(tournamentId) ||
+        Number(m.eventId) === Number(tournamentId)
+      );
+    }
+    if (status) {
+      const targetSt = normalizeMatchStatus(status);
+      all = all.filter((m: any) => normalizeMatchStatus(m.status) === targetSt);
+    }
+    if (date) {
+      const byDate = all.filter((m: any) => String(m.scheduledAt || '').slice(0, 10) === date);
+      // Only narrow by date if date filtering was requested; caller handles empty vs all-dates
+      all = byDate;
+    }
+
+    return {
+      content: all,
+      page: 0,
+      size: all.length,
+      totalElements: all.length,
+      totalPages: 1,
+      hasNext: false,
+      hasPrevious: false,
+    } as any;
+  },
+
+  async getFeedLiveMatches(communityId?: number | null): Promise<FeedLiveMatch[]> {
+    const qs = communityId ? `?communityId=${communityId}` : '';
     try {
-      const [upRes, recRes] = await Promise.all([
-        api.get<any[]>('/sports/upcoming-feed').catch(() => ({ data: [] })),
-        api.get<any[]>('/sports/recent-completed').catch(() => ({ data: [] })),
-      ]);
-      const combined = [
-        ...(Array.isArray(upRes.data) ? upRes.data : []),
-        ...(Array.isArray(recRes.data) ? recRes.data : []),
-      ];
-      let mapped = combined.map(feedMatchToMatchDto);
-      if (status) {
-        mapped = mapped.filter((m: any) => m.status === status);
+      let res = await api.get<FeedLiveMatch[]>(`/sports/live-feed${qs}`);
+      if ((!res.data || res.data.length === 0) && communityId) {
+        res = await api.get<FeedLiveMatch[]>('/sports/live-feed');
       }
-      return {
-        content: mapped,
-        page: 0,
-        size: mapped.length,
-        totalElements: mapped.length,
-        totalPages: 1,
-        hasNext: false,
-        hasPrevious: false,
-      } as any;
+      return Array.isArray(res.data) ? res.data : [];
     } catch {
-      return { content: [], totalElements: 0, totalPages: 0, page: 0, size: 30, hasNext: false, hasPrevious: false } as any;
+      return [];
+    }
+  },
+
+  async getFeedUpcomingMatches(communityId?: number | null, limit = 15): Promise<FeedLiveMatch[]> {
+    const cid = communityId ? `&communityId=${communityId}` : '';
+    try {
+      let res = await api.get<FeedLiveMatch[]>(`/sports/upcoming-feed?limit=${limit}${cid}`);
+      if ((!res.data || res.data.length === 0) && communityId) {
+        res = await api.get<FeedLiveMatch[]>(`/sports/upcoming-feed?limit=${limit}`);
+      }
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async getFeedRecentCompletedMatches(communityId?: number | null, limit = 30): Promise<FeedLiveMatch[]> {
+    const cid = communityId ? `&communityId=${communityId}` : '';
+    try {
+      let res = await api.get<FeedLiveMatch[]>(`/sports/recent-completed?limit=${limit}${cid}`);
+      if ((!res.data || res.data.length === 0) && communityId) {
+        res = await api.get<FeedLiveMatch[]>(`/sports/recent-completed?limit=${limit}`);
+      }
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async getTournamentConfigs(): Promise<any[]> {
+    try {
+      const res = await api.get<any>('/tournament/configs');
+      const d = res.data;
+      return Array.isArray(d) ? d : (d?.content || d?.items || []);
+    } catch {
+      return [];
+    }
+  },
+
+  async getMatchesByConfigId(configId: number): Promise<any[]> {
+    if (!configId) return [];
+    try {
+      const res = await api.get<any>(`/tournament/${configId}/matches`);
+      const d = res.data;
+      return Array.isArray(d) ? d : (d?.content || d?.items || []);
+    } catch {
+      return [];
+    }
+  },
+
+  async getMatchesAsFeedList(status?: string): Promise<FeedLiveMatch[]> {
+    try {
+      const res = await api.get<any>('/sports/matches', {
+        params: { ...(status ? { status } : {}), page: 0, size: 40 },
+      });
+      const d = res.data;
+      const list: any[] = Array.isArray(d) ? d : (d?.content || d?.items || []);
+      return list
+        .filter((m) => m && (m.id || m.matchId))
+        .map((m): FeedLiveMatch => ({
+          matchId: Number(m.matchId ?? m.id),
+          configId: m.configId ?? m.tournamentId ?? null,
+          eventId: m.eventId ?? null,
+          sportName: m.sportName || m.sport || 'Sports',
+          tournamentName: m.tournamentName || 'Tournament',
+          eventName: m.eventName || null,
+          roundName: m.roundName || m.round || null,
+          teamAName: m.teamAName || m.homeTeamName || m.homeName || 'Team A',
+          teamBName: m.teamBName || m.awayTeamName || m.awayName || 'Team B',
+          teamAFlat: m.teamAFlat || m.homeFlat || null,
+          teamBFlat: m.teamBFlat || m.awayFlat || null,
+          scoreTeamA: m.scoreTeamA ?? m.homeScoreDisplay ?? (m.homeScore != null ? String(m.homeScore) : null),
+          scoreTeamB: m.scoreTeamB ?? m.awayScoreDisplay ?? (m.awayScore != null ? String(m.awayScore) : null),
+          status: m.status || 'SCHEDULED',
+          winnerName: m.winnerName || null,
+          scheduledAt: m.scheduledAt || null,
+          completedAt: m.completedAt || null,
+          venueName: m.venueName || m.venue || null,
+        }));
+    } catch {
+      return [];
     }
   },
 
   async getLiveMatches(communityId?: number): Promise<MatchDto[]> {
     const qs = communityId ? `?communityId=${communityId}` : '';
-    // 1. Resident-accessible endpoint: /sports/live-feed (matches web LiveMatchesStrip)
+    const collected: MatchDto[] = [];
+
+    // 1. Resident-accessible live feed + config live matches in parallel
+    const [feedList, cfgList] = await Promise.all([
+      (async () => {
+        try {
+          let res = await api.get<any[]>(`/sports/live-feed${qs}`);
+          if ((!res.data || res.data.length === 0) && communityId) {
+            res = await api.get<any[]>('/sports/live-feed');
+          }
+          return Array.isArray(res.data) ? res.data.map(feedMatchToMatchDto) : [];
+        } catch {
+          return [] as MatchDto[];
+        }
+      })(),
+      sportsService.fetchConfigMatchesAsDto({ maxConfigs: 8, maxPerConfig: 30 })
+        .then((all) => all.filter((m) => m.status === 'LIVE'))
+        .catch(() => [] as MatchDto[]),
+    ]);
+
+    collected.push(...feedList.filter((m) => m.status === 'LIVE'), ...cfgList);
+    if (collected.length > 0) return dedupeMatchesById(collected);
+
+    // 2. Admin endpoint fallback: /sports/matches/live
     try {
-      let res = await api.get<any[]>(`/sports/live-feed${qs}`);
-      if ((!res.data || res.data.length === 0) && communityId) {
-        res = await api.get<any[]>('/sports/live-feed');
-      }
+      const res = await api.get<any[]>('/sports/matches/live');
       if (Array.isArray(res.data) && res.data.length > 0) {
         return res.data.map(feedMatchToMatchDto);
       }
-    } catch {}
-
-    // 2. Admin endpoint: /sports/matches/live
-    try {
-      const res = await api.get<MatchDto[]>('/sports/matches/live');
-      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
     } catch {}
 
     return [];
@@ -248,61 +782,124 @@ export const sportsService = {
 
   async getTodayMatches(communityId?: number): Promise<MatchDto[]> {
     const qs = communityId ? `&communityId=${communityId}` : '';
-    // 1. Resident-accessible upcoming feed + recent completed
-    try {
-      let [upRes, recRes] = await Promise.all([
-        api.get<any[]>(`/sports/upcoming-feed?limit=15${qs}`).catch(() => ({ data: [] })),
-        api.get<any[]>(`/sports/recent-completed?limit=15${qs}`).catch(() => ({ data: [] })),
-      ]);
-      if ((!upRes.data || upRes.data.length === 0) && communityId) {
-        upRes = await api.get<any[]>('/sports/upcoming-feed?limit=15').catch(() => ({ data: [] }));
-      }
-      const combined = [
-        ...(Array.isArray(upRes.data) ? upRes.data : []),
-        ...(Array.isArray(recRes.data) ? recRes.data : []),
-      ];
-      if (combined.length > 0) {
-        return combined.map(feedMatchToMatchDto);
-      }
-    } catch {}
 
-    // 2. Try /sports/matches/today
+    // Gather upcoming feed, recent completed feed, and tournament config matches in parallel
+    const [upList, recList, cfgMatches] = await Promise.all([
+      (async () => {
+        try {
+          let res = await api.get<any[]>(`/sports/upcoming-feed?limit=20${qs}`);
+          if ((!res.data || res.data.length === 0) && communityId) {
+            res = await api.get<any[]>('/sports/upcoming-feed?limit=20');
+          }
+          return Array.isArray(res.data) ? res.data.map(feedMatchToMatchDto) : [];
+        } catch {
+          return [] as MatchDto[];
+        }
+      })(),
+      (async () => {
+        try {
+          let res = await api.get<any[]>(`/sports/recent-completed?limit=20${qs}`);
+          if ((!res.data || res.data.length === 0) && communityId) {
+            res = await api.get<any[]>('/sports/recent-completed?limit=20');
+          }
+          return Array.isArray(res.data) ? res.data.map(feedMatchToMatchDto) : [];
+        } catch {
+          return [] as MatchDto[];
+        }
+      })(),
+      sportsService.fetchConfigMatchesAsDto({ maxConfigs: 8, maxPerConfig: 30 }).catch(() => [] as MatchDto[]),
+    ]);
+
+    const merged = dedupeMatchesById([...upList, ...recList, ...cfgMatches]);
+    if (merged.length > 0) return merged;
+
+    // Legacy fallbacks
     try {
       const res = await api.get<MatchDto[]>('/sports/matches/today');
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
     } catch {}
 
-    // 3. Try /sports/matches
     try {
       const res = await api.get<PageResponse<MatchDto>>('/sports/matches', {
         params: { page: 0, size: 50 },
       });
       const all = res.data?.content || [];
-      if (all.length > 0) {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const todayList = all.filter((m: any) => {
-          const sched = m.scheduledAt || m.date;
-          return sched && sched.slice(0, 10) === todayStr;
-        });
-        if (todayList.length > 0) return todayList;
-        return all.slice(0, 6);
-      }
+      if (all.length > 0) return all.map((m: any) => feedMatchToMatchDto(m));
     } catch {}
 
     return [];
   },
 
   async getMatch(id: number): Promise<MatchDto> {
+    // 1. Try tournament match detail endpoint (/tournament/match/{id}/detail)
+    try {
+      const res = await api.get<any>(`/tournament/match/${id}/detail`);
+      const d = res.data;
+      if (d) {
+        const inner = d.match || d;
+        return feedMatchToMatchDto({
+          ...inner,
+          matchId: inner.matchId ?? inner.id ?? id,
+          sportName: d.sportName || inner.sportName || d.config?.sportName,
+          tournamentName: d.tournamentName || inner.tournamentName || d.config?.tournamentName,
+          venueName: inner.venueName || d.venueName,
+        });
+      }
+    } catch {}
+
+    // 2. Try live match state endpoint
+    try {
+      const res = await api.get<any>(`/tournament/match/${id}/live`);
+      if (res.data) return feedMatchToMatchDto({ ...res.data, matchId: res.data.matchId ?? id });
+    } catch {}
+
+    // 3. Search combined resident matches list
+    try {
+      const page = await sportsService.getMatches();
+      const found = (page.content || []).find((m) => Number(m.id) === Number(id));
+      if (found) return found;
+    } catch {}
+
     const res = await api.get<MatchDto>(`/sports/matches/${id}`);
-    return res.data;
+    return feedMatchToMatchDto(res.data);
   },
 
   async getMatchEvents(matchId: number): Promise<MatchEventDto[]> {
-    const res = await api.get<MatchEventDto[]>(`/sports/matches/${matchId}/events`);
-    return res.data;
+    try {
+      const res = await api.get<any>(`/sports/matches/${matchId}/balls`);
+      const raw = res.data;
+      const list = Array.isArray(raw) ? raw : (raw?.balls || raw?.events || []);
+      if (Array.isArray(list) && list.length > 0) {
+        return list.map((b: any, idx: number): MatchEventDto => ({
+          id: Number(b.id ?? idx + 1),
+          matchId,
+          type: b.isWicket ? 'WICKET' : 'POINT',
+          teamName: b.battingTeamName || b.teamName,
+          playerName: b.batsmanName || b.playerName,
+          description: b.commentary || b.description || `${b.runs ?? 0} run(s)${b.isWicket ? ' · WICKET!' : ''}`,
+          over: b.overLabel || (b.overNumber != null ? `${b.overNumber}.${b.ballNumber ?? 0}` : undefined),
+          timestamp: b.createdAt || new Date().toISOString(),
+        }));
+      }
+    } catch {}
+    try {
+      const res = await api.get<MatchEventDto[]>(`/sports/matches/${matchId}/events`);
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   // ── Live Scoring & Umpire Actions ─────────────────────────────
+  async getLiveMatchState(matchId: number): Promise<any> {
+    try {
+      const res = await api.get<any>(`/tournament/match/${matchId}/live`);
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+
   async recordCricketBall(matchId: number, data: import('@/types/api').BallEventRequest): Promise<any> {
     const res = await api.post(`/tournament/match/${matchId}/ball`, data);
     return res.data;
@@ -335,14 +932,54 @@ export const sportsService = {
   },
 
   async updateMatchStatus(matchId: number, status: string): Promise<MatchDto> {
+    try {
+      const res = await api.put<any>(`/sports/matches/${matchId}/status`, { status });
+      return feedMatchToMatchDto(res.data);
+    } catch {}
     const res = await api.patch<MatchDto>(`/sports/matches/${matchId}`, { status });
     return res.data;
   },
 
   // ── Standings ─────────────────────────────────────────────────
   async getStandings(tournamentId: number): Promise<StandingDto[]> {
-    const res = await api.get<StandingDto[]>(`/sports/tournaments/${tournamentId}/standings`);
-    return res.data;
+    // 1. Resolve standings from tournament scheduler config schedule
+    try {
+      const configs = await sportsService.getTournamentConfigs();
+      const matching = configs.filter((c: any) =>
+        Number(c.id) === Number(tournamentId) ||
+        Number(c.tournamentId) === Number(tournamentId) ||
+        Number(c.eventId) === Number(tournamentId)
+      );
+      const target = matching[0];
+      if (target?.id) {
+        const res = await api.get<any>(`/tournament/${target.id}/schedule`);
+        const rawStandings = res.data?.standings || [];
+        if (Array.isArray(rawStandings) && rawStandings.length > 0) {
+          return rawStandings.map((row: any, idx: number): StandingDto => ({
+            position: row.position ?? row.rank ?? idx + 1,
+            teamId: Number(row.teamId ?? idx + 1),
+            teamName: row.teamName || row.name || 'Team',
+            teamEmoji: '🏅',
+            played: row.played ?? row.matchesPlayed ?? 0,
+            won: row.won ?? row.wins ?? 0,
+            drawn: row.drawn ?? row.draws ?? 0,
+            lost: row.lost ?? row.losses ?? 0,
+            points: row.points ?? 0,
+            goalsFor: row.goalsFor ?? 0,
+            goalsAgainst: row.goalsAgainst ?? 0,
+            goalDifference: row.goalDifference ?? row.netRunRate ?? 0,
+          }));
+        }
+      }
+    } catch {}
+
+    // 2. Fallback to legacy standings endpoint
+    try {
+      const res = await api.get<StandingDto[]>(`/sports/tournaments/${tournamentId}/standings`);
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
   },
 
   // ── Dashboard & Event Registrations ───────────────────────────
@@ -434,8 +1071,16 @@ export const sportsService = {
         res = await api.get<any>('/tournaments/community');
         list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
       }
-      if (list.length > 0) {
-        return list.map(tournamentToDashboardCard);
+      const nonDraft = list.filter((t: any) =>
+        !['DRAFT', 'CANCELLED'].includes(String(t?.registrationStatus || t?.status || '').toUpperCase())
+      );
+      if (nonDraft.length > 0) {
+        const openOnly = nonDraft.filter((t: any) =>
+          ['REGISTRATION_OPEN', 'OPEN', 'LIVE', 'ONGOING', 'UPCOMING'].includes(
+            String(t?.registrationStatus || t?.status || 'REGISTRATION_OPEN').toUpperCase(),
+          ),
+        );
+        return (openOnly.length > 0 ? openOnly : nonDraft).map(tournamentToDashboardCard);
       }
     } catch {}
 
@@ -453,8 +1098,11 @@ export const sportsService = {
     try {
       const res = await api.get<any>('/tournaments/all');
       const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-      if (list.length > 0) {
-        return list.map(tournamentToDashboardCard);
+      const nonDraft = list.filter((t: any) =>
+        !['DRAFT', 'CANCELLED'].includes(String(t?.registrationStatus || t?.status || '').toUpperCase())
+      );
+      if (nonDraft.length > 0) {
+        return nonDraft.map(tournamentToDashboardCard);
       }
     } catch {}
 
@@ -477,6 +1125,10 @@ export const sportsService = {
   async getMyRegistrations(): Promise<import('@/types/api').DashboardMyRegistrationDto[]> {
     try {
       const res = await api.get<import('@/types/api').DashboardMyRegistrationDto[]>('/sports/dashboard/my-registrations');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    try {
+      const res = await api.get<any>('/sports/schedule/registrations/mine');
       if (Array.isArray(res.data)) return res.data;
     } catch {}
     try {
@@ -508,13 +1160,55 @@ export const sportsService = {
 
   // ── Player Profile & Career Stats ────────────────────────────
   async getPlayerProfile(userId: number): Promise<PlayerProfileDto> {
-    const res = await api.get<PlayerProfileDto>(`/sports/players/${userId}`);
-    return res.data;
+    const res = await api.get<any>(`/sports/players/${userId}`);
+    const d = res.data || {};
+    const statsList = Array.isArray(d.stats) ? d.stats : (Array.isArray(d.sportStats) ? d.sportStats : []);
+    const computedMatches = statsList.reduce((acc: number, s: any) => acc + (s?.matchesPlayed ?? s?.matches ?? 0), 0);
+    const computedTrophies = statsList.reduce((acc: number, s: any) => acc + (s?.trophies ?? 0), 0);
+    const rawBadges = Array.isArray(d.badges) ? d.badges : [];
+    const enrichedBadges = rawBadges.map((b: any) => {
+      const meta = BADGE_META_MAP[String(b?.id || '')] || null;
+      return {
+        ...b,
+        title: b?.title || b?.name || meta?.title || String(b?.id || 'Badge').replace(/_/g, ' '),
+        emoji: b?.emoji || meta?.emoji || '🏅',
+        tier: b?.tier || b?.rarity || meta?.tier || 'common',
+      };
+    });
+    return {
+      ...d,
+      stats: statsList,
+      sportStats: statsList,
+      badges: enrichedBadges,
+      totalMatches: d.totalMatches || computedMatches,
+      totalTrophies: d.totalTrophies || computedTrophies,
+    };
   },
 
   async getMyProfile(): Promise<PlayerProfileDto> {
-    const res = await api.get<PlayerProfileDto>('/sports/players/me');
-    return res.data;
+    const res = await api.get<any>('/sports/players/me');
+    const d = res.data || {};
+    const statsList = Array.isArray(d.stats) ? d.stats : (Array.isArray(d.sportStats) ? d.sportStats : []);
+    const computedMatches = statsList.reduce((acc: number, s: any) => acc + (s?.matchesPlayed ?? s?.matches ?? 0), 0);
+    const computedTrophies = statsList.reduce((acc: number, s: any) => acc + (s?.trophies ?? 0), 0);
+    const rawBadges = Array.isArray(d.badges) ? d.badges : [];
+    const enrichedBadges = rawBadges.map((b: any) => {
+      const meta = BADGE_META_MAP[String(b?.id || '')] || null;
+      return {
+        ...b,
+        title: b?.title || b?.name || meta?.title || String(b?.id || 'Badge').replace(/_/g, ' '),
+        emoji: b?.emoji || meta?.emoji || '🏅',
+        tier: b?.tier || b?.rarity || meta?.tier || 'common',
+      };
+    });
+    return {
+      ...d,
+      stats: statsList,
+      sportStats: statsList,
+      badges: enrichedBadges,
+      totalMatches: d.totalMatches || computedMatches,
+      totalTrophies: d.totalTrophies || computedTrophies,
+    };
   },
 
   // ── Leaderboard ──────────────────────────────────────────────
@@ -524,15 +1218,45 @@ export const sportsService = {
     period: 'MONTH' | 'SEASON' | 'ALL_TIME' = 'ALL_TIME',
   ): Promise<LeaderboardEntryDto[]> {
     try {
-      const res = await api.get<LeaderboardEntryDto[]>('/sports/leaderboard', {
+      const res = await api.get<any[]>('/sports/leaderboard', {
         params: {
           sport:    sport === 'ALL' ? undefined : sport,
           category,
           period,
         },
       });
-      if (Array.isArray(res.data)) return res.data;
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        return res.data.map((item: any, idx: number): LeaderboardEntryDto => ({
+          ...item,
+          rank: item.rank ?? idx + 1,
+          playerName: item.playerName || item.name || 'Athlete',
+          name: item.name || item.playerName || 'Athlete',
+          flatNumber: item.flatNumber || item.flatNo || '',
+          score: item.score ?? item.value ?? 0,
+          matchesPlayed: item.matchesPlayed ?? 0,
+          displayValue: item.displayValue || `${item.score ?? item.value ?? 0} pts`,
+        }));
+      }
     } catch {}
+
+    // Fallback: build leaderboard from /sports/rankings or tournament leaderboard
+    try {
+      const rankings = await sportsService.getRankings(sport !== 'ALL' ? { sport } : undefined);
+      if (Array.isArray(rankings) && rankings.length > 0) {
+        return rankings.map((r: any, idx: number): LeaderboardEntryDto => ({
+          rank: r.rank ?? idx + 1,
+          userId: Number(r.player?.id ?? r.userId ?? idx + 1),
+          playerName: r.player?.fullName || r.playerName || `Player ${idx + 1}`,
+          name: r.player?.fullName || r.playerName || `Player ${idx + 1}`,
+          flatNumber: r.player?.flatNo || '',
+          score: r.rating ?? 0,
+          matchesPlayed: 0,
+          displayValue: r.rating ? `${r.rating} pts` : `#${r.rank ?? idx + 1}`,
+          topBadge: r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : undefined,
+        }));
+      }
+    } catch {}
+
     return [];
   },
 
@@ -777,13 +1501,40 @@ export const sportsService = {
 
   // ── Player Rankings ───────────────────────────────────────────
   async getRankings(params?: { sport?: string; season?: string }): Promise<SportsPlayerRankingResponse[]> {
-    const res = await api.get<SportsPlayerRankingResponse[]>('/api/sports/rankings', params ? { params } : undefined);
-    return res.data;
+    try {
+      // Backend /api/sports/rankings requires numeric sportId param
+      const metaRes = await api.get<any[]>('/sports/meta').catch(() => ({ data: [] }));
+      const sportsMeta = Array.isArray(metaRes.data) ? metaRes.data : [];
+      if (sportsMeta.length === 0) return [];
+
+      const season = params?.season || 'CURRENT';
+      const targetMeta = params?.sport && params.sport !== 'ALL'
+        ? sportsMeta.filter((s: any) => doesSportMatchFilter(s?.name, params.sport))
+        : sportsMeta.slice(0, 6);
+
+      if (targetMeta.length === 0) return [];
+      const results = await Promise.all(
+        targetMeta.map(async (sp: any) => {
+          try {
+            const res = await api.get<SportsPlayerRankingResponse[]>('/sports/rankings', {
+              params: { sportId: sp.id, season },
+            });
+            return Array.isArray(res.data) ? res.data : [];
+          } catch {
+            return [];
+          }
+        }),
+      );
+      return results.flat();
+    } catch {
+      return [];
+    }
   },
   async getMyRanking(userId: number): Promise<SportsPlayerRankingResponse | null> {
     try {
-      const res = await api.get<SportsPlayerRankingResponse>(`/api/sports/rankings/user/${userId}`);
-      return res.data;
+      const res = await api.get<any>(`/sports/rankings/user/${userId}`);
+      if (Array.isArray(res.data)) return res.data[0] ?? null;
+      return res.data ?? null;
     } catch { return null; }
   },
 };
