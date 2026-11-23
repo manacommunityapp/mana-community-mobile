@@ -51,7 +51,9 @@ interface AuthState {
   isAuthenticated: boolean;
   isPending: boolean;
   isRejected: boolean;
-  
+  /** True when the app launched offline and is showing a cached profile */
+  isOffline: boolean;
+
   // Computed role & module state
   roles: string[];
   permissions: string[];
@@ -143,6 +145,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isPending: false,
   isRejected: false,
+  isOffline: false,
 
   roles: [],
   permissions: [],
@@ -188,68 +191,79 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   loadUser: async () => {
-    try {
-      const token = await tokenStore.getAccess();
-      if (!token) {
-        setTenantCommunityId(null);
-        set({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          roles: [],
-          permissions: [],
-          enabledModules: [],
-          isAdmin: false,
-          isSuperAdmin: false,
-          isGuard: false,
-          isVendor: false,
-          isAnyAdmin: false,
-        });
-        return;
-      }
-      let user = await authService.getProfile();
-      user = await enrichUserProfile(user);
+    const clearAndSignOut = async () => {
+      await tokenStore.clearAll();
+      setTenantCommunityId(null);
+      set({
+        user: null, isAuthenticated: false, isLoading: false, isOffline: false,
+        roles: [], permissions: [], enabledModules: [],
+        isAdmin: false, isSuperAdmin: false, isGuard: false, isVendor: false, isAnyAdmin: false,
+      });
+    };
 
+    const applyUser = (user: UserProfileResponse, offline: boolean) => {
       const roles = computeRoles(user);
       const roleSet = new Set(roles);
       const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
-      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
-      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
-      const isVendor = roleSet.has('VENDOR');
-      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
-
       setTenantCommunityId(user.communityId ?? null);
-
       set({
         user,
         isAuthenticated: true,
         isLoading: false,
+        isOffline: offline,
         roles,
         permissions: user.permissions || [],
         enabledModules: user.enabledModules || [],
         activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
+        isAdmin: isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN'),
         isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
+        isGuard: roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD'),
+        isVendor: roleSet.has('VENDOR'),
+        isAnyAdmin: isSuperAdmin || roles.some(r => r.includes('ADMIN')),
       });
+    };
+
+    try {
+      const token = await tokenStore.getAccess();
+      if (!token) {
+        await clearAndSignOut();
+        return;
+      }
+
+      try {
+        let user = await authService.getProfile();
+        user = await enrichUserProfile(user);
+        applyUser(user, false);
+      } catch (err: any) {
+        const status: number | undefined = err?.response?.status;
+
+        // 401/403 means the server explicitly rejected the token — sign out.
+        if (status === 401 || status === 403) {
+          await clearAndSignOut();
+          return;
+        }
+
+        // Network error or other non-auth failure: try the encrypted profile cache so
+        // the user stays logged in and can use cached screens offline.
+        const cached = await tokenStore.getCachedProfile().catch(() => null);
+        if (cached) {
+          try {
+            const cachedUser = JSON.parse(cached) as UserProfileResponse;
+            const enriched = await enrichUserProfile(cachedUser).catch(() => cachedUser);
+            applyUser(enriched, true);
+            return;
+          } catch {
+            // Corrupt JSON (schema change from an app update) — clear and re-login.
+            await clearAndSignOut();
+            return;
+          }
+        }
+
+        // No cache available — cannot restore session offline.
+        await clearAndSignOut();
+      }
     } catch {
-      await tokenStore.clearAll();
-      setTenantCommunityId(null);
-      set({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        roles: [],
-        permissions: [],
-        enabledModules: [],
-        isAdmin: false,
-        isSuperAdmin: false,
-        isGuard: false,
-        isVendor: false,
-        isAnyAdmin: false,
-      });
+      await clearAndSignOut();
     }
   },
 
@@ -398,11 +412,12 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await authService.logout();
+    await authService.logout(); // also calls tokenStore.clearAll() which clears the cached profile
     setTenantCommunityId(null);
     set({
       user: null,
       isAuthenticated: false,
+      isOffline: false,
       roles: [],
       permissions: [],
       enabledModules: [],

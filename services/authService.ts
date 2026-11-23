@@ -50,13 +50,16 @@ export const authService = {
     const res = await api.get<UserProfileResponse>('/users/me');
     const data = res.data;
     const resolvedName = data.fullName || data.name || (data as any).username || (data as any).displayName || (data.email ? data.email.split('@')[0] : '');
-    return {
+    const profile: UserProfileResponse = {
       ...data,
       fullName: resolvedName,
       name: resolvedName,
       status: data.isActive === false ? 'SUSPENDED' : (data.status ?? 'ACTIVE'),
       createdAt: data.createdAt ?? new Date().toISOString(),
     };
+    // Persist to encrypted SecureStore so loadUser() can hydrate the app when offline.
+    tokenStore.setCachedProfile(JSON.stringify(profile)).catch(() => {});
+    return profile;
   },
 
   async forgotPassword(email: string): Promise<void> {
