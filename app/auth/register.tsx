@@ -22,6 +22,8 @@ export default function RegisterScreen() {
     name: '', email: '', mobile: '', password: '',
     communityCode: '', flatNumber: '', tower: '',
   });
+  const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER'>('OTHER');
+  const [consentToPrivacyNotice, setConsentToPrivacyNotice] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -38,9 +40,33 @@ export default function RegisterScreen() {
       Alert.alert('Validation', 'Password must be at least 8 characters.');
       return;
     }
+    const digitsOnly = form.mobile.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      Alert.alert('Validation', 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (!consentToPrivacyNotice) {
+      Alert.alert('Validation', 'You must agree to the privacy notice to register.');
+      return;
+    }
     setLoading(true);
     try {
-      await register({ ...form, email: form.email.toLowerCase().trim() });
+      await register({
+        fullName: form.name.trim(),
+        name: form.name.trim(),
+        email: form.email.toLowerCase().trim(),
+        phone: digitsOnly.slice(-10),
+        mobile: digitsOnly.slice(-10),
+        password: form.password,
+        inviteCode: form.communityCode.trim() || undefined,
+        communityCode: form.communityCode.trim() || undefined,
+        flatNo: form.flatNumber.trim() || undefined,
+        flatNumber: form.flatNumber.trim() || undefined,
+        block: form.tower.trim() || undefined,
+        tower: form.tower.trim() || undefined,
+        gender,
+        consentToPrivacyNotice,
+      });
     } catch (err: any) {
       const status = err?.response?.status;
       const msg = status === 409
@@ -70,9 +96,9 @@ export default function RegisterScreen() {
     { label: 'Email',           key: 'email',         placeholder: 'you@example.com', icon: 'mail-outline',        required: true, keyboardType: 'email-address' },
     { label: 'Mobile',          key: 'mobile',        placeholder: '+91 98765 43210', icon: 'call-outline',        required: true, keyboardType: 'phone-pad' },
     { label: 'Password',        key: 'password',      placeholder: '••••••••',        icon: 'lock-closed-outline', required: true, isPassword: true },
-    { label: 'Community Code',  key: 'communityCode', placeholder: 'ABC123',          icon: 'business-outline',   required: false },
-    { label: 'Flat / Unit No.', key: 'flatNumber',    placeholder: 'A-204',           icon: 'home-outline',        required: false },
-    { label: 'Tower / Block',   key: 'tower',         placeholder: 'Tower A',         icon: 'layers-outline',      required: false },
+    { label: 'Community Code (Optional)',  key: 'communityCode', placeholder: 'Enter code or leave empty to join later', icon: 'business-outline', required: false },
+    { label: 'Flat / Unit No. (Optional)', key: 'flatNumber',    placeholder: 'e.g. A-204 (can add later)',           icon: 'home-outline',        required: false },
+    { label: 'Tower / Block (Optional)',   key: 'tower',         placeholder: 'Tower A (can add later)',         icon: 'layers-outline',      required: false },
   ];
 
   return (
@@ -139,6 +165,41 @@ export default function RegisterScreen() {
               </View>
             </View>
           ))}
+
+          {/* Gender */}
+          <View style={styles.field}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Gender</Text>
+            </View>
+            <View style={styles.genderRow}>
+              {(['MALE', 'FEMALE', 'OTHER'] as const).map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.genderPill, gender === g && styles.genderPillActive]}
+                  onPress={() => setGender(g)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.genderPillText, gender === g && styles.genderPillTextActive]}>
+                    {g === 'MALE' ? 'Male' : g === 'FEMALE' ? 'Female' : 'Other'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Privacy Notice Consent */}
+          <TouchableOpacity
+            style={styles.consentRow}
+            onPress={() => setConsentToPrivacyNotice((v) => !v)}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.checkbox, consentToPrivacyNotice && styles.checkboxActive]}>
+              {consentToPrivacyNotice && <Ionicons name="checkmark" size={14} color="#fff" />}
+            </View>
+            <Text style={styles.consentText}>
+              I agree to the <Text style={styles.consentLink}>Privacy Notice</Text> and consent to processing my details.
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -265,6 +326,66 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     paddingHorizontal: 14,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  genderPill: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  genderPillActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight ?? '#EEF2FF',
+  },
+  genderPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  genderPillTextActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.regular,
+  },
+  consentLink: {
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   button: {
     borderRadius: 14,

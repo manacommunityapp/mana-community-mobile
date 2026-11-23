@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLE_PERMISSIONS, ADMIN_ROLES, GUARD_ROLES, type UserRole } from '@/constants/permissions';
+import { normalizeRoles } from '@/constants/roleAliases';
+import { ROLE_PERMISSIONS, ADMIN_ROLES, GUARD_ROLES, ROLE_ALIASES, type UserRole } from '@/constants/permissions';
 
 function resolvePermissions(roles: UserRole[]): Set<string> {
   const perms = new Set<string>();
@@ -21,9 +22,8 @@ export function usePermissions() {
     const rawRoles = (user.roles && user.roles.length > 0)
       ? user.roles
       : (user.role ? [user.role] : []);
-    return rawRoles
-      .filter(Boolean)
-      .map((r) => String(r).trim().toUpperCase() as UserRole);
+    const flat = rawRoles.flatMap((r) => String(r ?? '').split(','));
+    return normalizeRoles(flat) as UserRole[];
   }, [user?.role, user?.roles]);
 
   const grantedPermissions = useMemo(
@@ -39,11 +39,15 @@ export function usePermissions() {
     return grantedPermissions.has(perm);
   };
 
-  const hasRole = (role: UserRole): boolean =>
-    activeRoles.includes(String(role).trim().toUpperCase() as UserRole);
+  const hasRole = (role: UserRole): boolean => {
+    const target = String(role).trim().toUpperCase();
+    if (activeRoles.includes(target as UserRole)) return true;
+    const aliases = ROLE_ALIASES[target] || [];
+    return aliases.some((a) => activeRoles.includes(a as UserRole));
+  };
 
   const hasAnyRole = (roles: UserRole[]): boolean =>
-    roles.some((r) => activeRoles.includes(String(r).trim().toUpperCase() as UserRole));
+    roles.some((r) => hasRole(r));
 
   const isAdmin = activeRoles.some((r) => ADMIN_ROLES.has(r));
   const isGuard = activeRoles.some((r) => GUARD_ROLES.has(r));

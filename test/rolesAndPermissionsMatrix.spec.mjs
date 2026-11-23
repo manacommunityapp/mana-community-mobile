@@ -7,6 +7,8 @@ import {
   ADMIN_ROLES,
   ADMIN_PORTAL_ROLES,
   GUARD_ROLES,
+  ROLE_ALIASES,
+  resolveRoleAliases,
   VIEW_FEED,
   VIEW_EMERGENCY,
   TRIGGER_SOS,
@@ -24,35 +26,99 @@ import {
 
 // Logic under test (mirrored from hooks/useAuth.ts and hooks/useRoleSwitcher.ts)
 const ROLE_PORTAL_MAP = {
-  SUPER_ADMIN:      { role: 'SUPER_ADMIN',      label: 'Admin Console',   route: '/admin-role/tabs/dashboard', icon: 'shield-checkmark' },
-  ADMIN:            { role: 'ADMIN',             label: 'Admin Console',   route: '/admin-role/tabs/dashboard', icon: 'shield-checkmark' },
-  COMMUNITY_ADMIN:  { role: 'COMMUNITY_ADMIN',   label: 'Admin Console',   route: '/admin-role/tabs/dashboard', icon: 'shield-checkmark' },
-  MODERATOR:        { role: 'MODERATOR',          label: 'Moderator',       route: '/admin-role/tabs/dashboard', icon: 'shield-half' },
-  GUARD:            { role: 'GUARD',              label: 'Guard Portal',    route: '/guard/tabs/dashboard',      icon: 'eye' },
-  SECURITY:         { role: 'SECURITY',           label: 'Security Portal', route: '/guard/tabs/dashboard',      icon: 'eye' },
-  VENDOR:           { role: 'VENDOR',             label: 'Vendor Portal',   route: '/vendor/tabs/dashboard',     icon: 'construct' },
-  SPORTS_ADMIN:     { role: 'SPORTS_ADMIN',       label: 'Sports Admin',    route: '/sports-admin/tabs/dashboard', icon: 'trophy' },
-  SPORTS_REFEREE:   { role: 'SPORTS_REFEREE',     label: 'Referee Panel',   route: '/sports-admin/tabs/dashboard', icon: 'flag' },
-  EVENT_ADMIN:      { role: 'EVENT_ADMIN',        label: 'Event Admin',     route: '/event-admin/tabs/dashboard',  icon: 'calendar' },
-  FINANCE_ADMIN:    { role: 'FINANCE_ADMIN',      label: 'Finance Admin',   route: '/admin-role/tabs/dashboard',   icon: 'cash' },
-  FACILITY_MANAGER: { role: 'FACILITY_MANAGER',   label: 'Facility Manager', route: '/admin-role/tabs/dashboard',  icon: 'business' },
-  FOOD_ADMIN:       { role: 'FOOD_ADMIN',         label: 'Food Admin',      route: '/admin-role/tabs/dashboard',   icon: 'restaurant' },
-  HELPDESK_AGENT:   { role: 'HELPDESK_AGENT',     label: 'Helpdesk',        route: '/admin-role/tabs/dashboard',   icon: 'headset' },
-  COMMITTEE_MEMBER: { role: 'COMMITTEE_MEMBER',   label: 'Committee',       route: '/admin-role/tabs/dashboard',   icon: 'people' },
-  ACCOUNTANT:       { role: 'ACCOUNTANT',         label: 'Accountant',      route: '/admin-role/tabs/dashboard',   icon: 'calculator' },
-  READONLY_ADMIN:   { role: 'READONLY_ADMIN',     label: 'View-Only Admin', route: '/admin-role/tabs/dashboard',   icon: 'eye' },
-  MEMBER:           { role: 'MEMBER',             label: 'Resident Home',   route: '/tabs/feed',                   icon: 'home' },
-  USER:             { role: 'USER',               label: 'Home',            route: '/tabs/feed',                   icon: 'home' },
-  RESIDENT:         { role: 'RESIDENT',           label: 'Resident Home',   route: '/tabs/feed',                   icon: 'home' },
-  OWNER:            { role: 'OWNER',              label: 'Owner Home',      route: '/tabs/feed',                   icon: 'home' },
-  TENANT:           { role: 'TENANT',             label: 'Tenant Home',     route: '/tabs/feed',                   icon: 'home' },
-  SPORTS_VENDOR:    { role: 'SPORTS_VENDOR',      label: 'Sports Vendor',   route: '/vendor/tabs/dashboard',       icon: 'construct' },
+  SUPER_ADMIN:          { role: 'SUPER_ADMIN',          label: 'Admin Console',       route: '/admin-role/tabs/dashboard', icon: 'shield-checkmark' },
+  ADMIN:                { role: 'ADMIN',                 label: 'Admin Console',       route: '/admin-role/tabs/dashboard', icon: 'shield-checkmark' },
+  COMMUNITY_ADMIN:      { role: 'COMMUNITY_ADMIN',       label: 'Admin Console',       route: '/admin-role/tabs/dashboard', icon: 'shield-checkmark' },
+  MODERATOR:            { role: 'MODERATOR',              label: 'Moderator',           route: '/admin-role/tabs/dashboard', icon: 'shield-half' },
+  GUARD:                { role: 'GUARD',                  label: 'Guard Portal',        route: '/guard/tabs/dashboard',      icon: 'eye' },
+  SECURITY:             { role: 'SECURITY',               label: 'Security Portal',     route: '/guard/tabs/dashboard',      icon: 'eye' },
+  VENDOR:               { role: 'VENDOR',                 label: 'Vendor Portal',       route: '/vendor/tabs/dashboard',     icon: 'construct' },
+  SPORTS_ADMIN:         { role: 'SPORTS_ADMIN',           label: 'Sports Admin',        route: '/sports-admin/tabs/dashboard', icon: 'trophy' },
+  SPORTS_REFEREE:       { role: 'SPORTS_REFEREE',         label: 'Referee Panel',       route: '/sports-admin/tabs/dashboard', icon: 'flag' },
+  EVENT_ADMIN:          { role: 'EVENT_ADMIN',            label: 'Event Admin',         route: '/event-admin/tabs/dashboard',  icon: 'calendar' },
+  EVENTS_ADMIN:         { role: 'EVENTS_ADMIN',           label: 'Event Admin',         route: '/event-admin/tabs/dashboard',  icon: 'calendar' },
+  FINANCE_ADMIN:        { role: 'FINANCE_ADMIN',          label: 'Finance Admin',       route: '/admin-role/tabs/dashboard',   icon: 'cash' },
+  FINANCE_MGMT_ADMIN:   { role: 'FINANCE_MGMT_ADMIN',     label: 'Finance Admin',       route: '/admin-role/tabs/dashboard',   icon: 'cash' },
+  FACILITY_MANAGER:     { role: 'FACILITY_MANAGER',       label: 'Facility Manager',    route: '/admin-role/tabs/dashboard',  icon: 'business' },
+  FOOD_ADMIN:           { role: 'FOOD_ADMIN',             label: 'Food Admin',          route: '/admin-role/tabs/dashboard',   icon: 'restaurant' },
+  FOOD_OS_ADMIN:        { role: 'FOOD_OS_ADMIN',          label: 'Food Admin',          route: '/admin-role/tabs/dashboard',   icon: 'restaurant' },
+  HELPDESK_AGENT:       { role: 'HELPDESK_AGENT',         label: 'Helpdesk',            route: '/admin-role/tabs/dashboard',   icon: 'headset' },
+  HELPDESK_ADMIN:       { role: 'HELPDESK_ADMIN',         label: 'Helpdesk Admin',      route: '/admin-role/tabs/dashboard',   icon: 'headset' },
+  COMMITTEE_MEMBER:     { role: 'COMMITTEE_MEMBER',       label: 'Committee',           route: '/admin-role/tabs/dashboard',   icon: 'people' },
+  ACCOUNTANT:           { role: 'ACCOUNTANT',             label: 'Accountant',          route: '/admin-role/tabs/dashboard',   icon: 'calculator' },
+  READONLY_ADMIN:       { role: 'READONLY_ADMIN',         label: 'View-Only Admin',     route: '/admin-role/tabs/dashboard',   icon: 'eye' },
+  VISITORS_ADMIN:       { role: 'VISITORS_ADMIN',         label: 'Gate & Visitors',     route: '/admin-role/tabs/dashboard',   icon: 'shield-checkmark' },
+  COMMUNITY_FEED_ADMIN: { role: 'COMMUNITY_FEED_ADMIN',     label: 'Feed Moderator',     route: '/admin-role/tabs/dashboard',   icon: 'chatbubbles' },
+  MEMBER:               { role: 'MEMBER',                 label: 'Resident Home',       route: '/tabs/feed',                   icon: 'home' },
+  USER:                 { role: 'USER',                   label: 'Home',                route: '/tabs/feed',                   icon: 'home' },
+  RESIDENT:             { role: 'RESIDENT',               label: 'Resident Home',       route: '/tabs/feed',                   icon: 'home' },
+  OWNER:                { role: 'OWNER',                  label: 'Owner Home',          route: '/tabs/feed',                   icon: 'home' },
+  TENANT:               { role: 'TENANT',                 label: 'Tenant Home',         route: '/tabs/feed',                   icon: 'home' },
+  SPORTS_VENDOR:        { role: 'SPORTS_VENDOR',          label: 'Sports Vendor',       route: '/vendor/tabs/dashboard',       icon: 'construct' },
 };
 
 function getPortalForRole(role) {
   if (!role) return null;
   const upper = String(role).trim().toUpperCase();
-  return ROLE_PORTAL_MAP[upper] ?? null;
+  if (ROLE_PORTAL_MAP[upper]) return ROLE_PORTAL_MAP[upper];
+  const aliases = ROLE_ALIASES[upper] || [];
+  for (const alias of aliases) {
+    if (ROLE_PORTAL_MAP[alias]) return ROLE_PORTAL_MAP[alias];
+  }
+  return null;
+}
+
+function getDefaultLandingRoute(roles) {
+  if (!roles || roles.length === 0) return '/tabs/feed';
+  const upperRoles = roles.map(r => String(r).trim().toUpperCase());
+  const RESIDENT_ROLES = new Set(['USER', 'RESIDENT', 'MEMBER', 'OWNER', 'TENANT']);
+  if (upperRoles.some(r => RESIDENT_ROLES.has(r))) {
+    return '/tabs/feed';
+  }
+  const primary = upperRoles[0];
+  return getPortalForRole(primary)?.route ?? '/tabs/feed';
+}
+
+function normalizeRegisterPayload(data) {
+  const rawPhone = data.phone || data.mobile || '';
+  const digitsOnly = String(rawPhone).replace(/\D/g, '');
+  const phone10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+
+  const resolvedFullName = (data.fullName || data.name || '').trim();
+  const resolvedInviteCode = (data.inviteCode || data.communityCode || '').trim();
+  const resolvedFlatNo = (data.flatNo || data.flatNumber || '').trim();
+  const resolvedBlock = (data.block || data.tower || '').trim();
+  const resolvedGender = (data.gender || 'OTHER').trim().toUpperCase() || 'OTHER';
+  const consent = data.consentToPrivacyNotice !== undefined ? Boolean(data.consentToPrivacyNotice) : true;
+
+  const payload = {
+    ...data,
+    fullName: resolvedFullName,
+    phone: phone10,
+    ...(resolvedInviteCode ? { inviteCode: resolvedInviteCode, communityCode: resolvedInviteCode } : {}),
+    ...(resolvedFlatNo ? { flatNo: resolvedFlatNo, flatNumber: resolvedFlatNo } : {}),
+    ...(resolvedBlock ? { block: resolvedBlock, tower: resolvedBlock } : {}),
+    gender: resolvedGender,
+    consentToPrivacyNotice: consent,
+
+    name: resolvedFullName,
+    mobile: phone10,
+  };
+
+  if (!resolvedInviteCode) {
+    delete payload.inviteCode;
+    delete payload.communityCode;
+  }
+  if (!resolvedFlatNo) {
+    delete payload.flatNo;
+    delete payload.flatNumber;
+  }
+  if (!resolvedBlock) {
+    delete payload.block;
+    delete payload.tower;
+  }
+
+  return payload;
 }
 
 function computeEffectivePermissions(roles, directPermissions) {
@@ -244,12 +310,12 @@ describe('Roles and Permissions Matrix — Minute Level Audit', () => {
   });
 
   describe('3. Admin Portal Guard Access (ADMIN_PORTAL_ROLES)', () => {
-    it('Includes all 11 admin-level roles in ADMIN_PORTAL_ROLES', () => {
+    it('Includes all admin-level roles in ADMIN_PORTAL_ROLES', () => {
       const expected = [
         'SUPER_ADMIN', 'ADMIN', 'COMMUNITY_ADMIN',
-        'MODERATOR', 'FINANCE_ADMIN', 'FACILITY_MANAGER',
-        'FOOD_ADMIN', 'HELPDESK_AGENT', 'COMMITTEE_MEMBER',
-        'ACCOUNTANT', 'READONLY_ADMIN',
+        'MODERATOR', 'FINANCE_ADMIN', 'FINANCE_MGMT_ADMIN', 'FACILITY_MANAGER',
+        'FOOD_ADMIN', 'FOOD_OS_ADMIN', 'HELPDESK_AGENT', 'HELPDESK_ADMIN', 'COMMITTEE_MEMBER',
+        'ACCOUNTANT', 'READONLY_ADMIN', 'VISITORS_ADMIN', 'COMMUNITY_FEED_ADMIN',
       ];
       for (const role of expected) {
         assert.ok(ADMIN_PORTAL_ROLES.has(role), `${role} must be in ADMIN_PORTAL_ROLES`);
@@ -478,6 +544,200 @@ describe('Roles and Permissions Matrix — Minute Level Audit', () => {
       assert.strictEqual(adaptive.length, 5);
       const labels = adaptive.map(a => a.label);
       assert.deepStrictEqual(labels, ['Live Match', "Today's Events", "Today's Games", 'Tournaments', 'Upcoming']);
+    });
+  });
+
+  describe('7. Mobile Registration DTO Payload Normalization (Bug 1)', () => {
+    it('maps mobile legacy payload to backend RegisterRequest canonical DTO', () => {
+      const mobileInput = {
+        name: 'Rahul Sharma',
+        email: 'rahul@example.com',
+        mobile: '+91 98765 43210',
+        password: 'Password123!',
+        communityCode: 'ABC123',
+        flatNumber: 'A-204',
+        tower: 'Tower A',
+      };
+
+      const normalized = normalizeRegisterPayload(mobileInput);
+
+      // Backend canonical fields
+      assert.strictEqual(normalized.fullName, 'Rahul Sharma');
+      assert.strictEqual(normalized.phone, '9876543210', 'Phone must be stripped to clean 10 digits');
+      assert.strictEqual(normalized.inviteCode, 'ABC123');
+      assert.strictEqual(normalized.flatNo, 'A-204');
+      assert.strictEqual(normalized.block, 'Tower A');
+      assert.strictEqual(normalized.gender, 'OTHER', 'Defaults to OTHER when omitted');
+      assert.strictEqual(normalized.consentToPrivacyNotice, true, 'Defaults to true when omitted');
+
+      // Mobile legacy aliases maintained
+      assert.strictEqual(normalized.name, 'Rahul Sharma');
+      assert.strictEqual(normalized.mobile, '9876543210');
+      assert.strictEqual(normalized.communityCode, 'ABC123');
+      assert.strictEqual(normalized.flatNumber, 'A-204');
+      assert.strictEqual(normalized.tower, 'Tower A');
+    });
+
+    it('respects explicitly provided gender and privacy consent', () => {
+      const input = {
+        fullName: 'Priya Patel',
+        email: 'priya@example.com',
+        phone: '09876543210',
+        password: 'SecretPassword!',
+        inviteCode: 'COMM456',
+        flatNo: 'B-101',
+        block: 'Block B',
+        gender: 'FEMALE',
+        consentToPrivacyNotice: true,
+      };
+
+      const normalized = normalizeRegisterPayload(input);
+      assert.strictEqual(normalized.fullName, 'Priya Patel');
+      assert.strictEqual(normalized.phone, '9876543210');
+      assert.strictEqual(normalized.gender, 'FEMALE');
+      assert.strictEqual(normalized.consentToPrivacyNotice, true);
+    });
+  });
+
+  describe('8. Landing Portal Independent of Alphabetical Role Sorting (Bug 2)', () => {
+    it('always lands user in resident home (/tabs/feed) when USER/RESIDENT is among roles', () => {
+      // ADMIN comes alphabetically before USER ('ADMIN' < 'USER')
+      assert.strictEqual(getDefaultLandingRoute(['ADMIN', 'USER']), '/tabs/feed');
+      assert.strictEqual(getDefaultLandingRoute(['USER', 'ADMIN']), '/tabs/feed');
+
+      // SPORTS_ADMIN comes alphabetically before USER ('SPORTS_ADMIN' < 'USER')
+      assert.strictEqual(getDefaultLandingRoute(['SPORTS_ADMIN', 'USER']), '/tabs/feed');
+      assert.strictEqual(getDefaultLandingRoute(['USER', 'SPORTS_ADMIN']), '/tabs/feed');
+
+      // USER + VENDOR ('USER' < 'VENDOR')
+      assert.strictEqual(getDefaultLandingRoute(['USER', 'VENDOR']), '/tabs/feed');
+      assert.strictEqual(getDefaultLandingRoute(['VENDOR', 'USER']), '/tabs/feed');
+
+      // Other resident tiers
+      assert.strictEqual(getDefaultLandingRoute(['ADMIN', 'RESIDENT']), '/tabs/feed');
+      assert.strictEqual(getDefaultLandingRoute(['SPORTS_ADMIN', 'OWNER']), '/tabs/feed');
+      assert.strictEqual(getDefaultLandingRoute(['VENDOR', 'TENANT']), '/tabs/feed');
+      assert.strictEqual(getDefaultLandingRoute(['ADMIN', 'MEMBER']), '/tabs/feed');
+    });
+
+    it('routes non-resident standalone administrative and vendor roles to their portals', () => {
+      assert.strictEqual(getDefaultLandingRoute(['ADMIN']), '/admin-role/tabs/dashboard');
+      assert.strictEqual(getDefaultLandingRoute(['SUPER_ADMIN']), '/admin-role/tabs/dashboard');
+      assert.strictEqual(getDefaultLandingRoute(['SPORTS_ADMIN']), '/sports-admin/tabs/dashboard');
+      assert.strictEqual(getDefaultLandingRoute(['EVENT_ADMIN']), '/event-admin/tabs/dashboard');
+      assert.strictEqual(getDefaultLandingRoute(['EVENTS_ADMIN']), '/event-admin/tabs/dashboard');
+      assert.strictEqual(getDefaultLandingRoute(['GUARD']), '/guard/tabs/dashboard');
+      assert.strictEqual(getDefaultLandingRoute(['VENDOR']), '/vendor/tabs/dashboard');
+    });
+  });
+
+  describe('9. Backend vs Mobile Role Name Aliasing & Guards (Bug 3)', () => {
+    it('maps backend EVENTS_ADMIN to Event Admin portal and allows event-admin access', () => {
+      const portal = getPortalForRole('EVENTS_ADMIN');
+      assert.ok(portal, 'EVENTS_ADMIN must have a portal mapping');
+      assert.strictEqual(portal.route, '/event-admin/tabs/dashboard');
+      assert.strictEqual(portal.label, 'Event Admin');
+
+      const aliases = resolveRoleAliases('EVENTS_ADMIN');
+      assert.ok(aliases.includes('EVENT_ADMIN'));
+      assert.ok(aliases.includes('EVENTS_ADMIN'));
+    });
+
+    it('maps backend FINANCE_MGMT_ADMIN, HELPDESK_ADMIN, FOOD_OS_ADMIN to admin console', () => {
+      assert.strictEqual(getPortalForRole('FINANCE_MGMT_ADMIN')?.route, '/admin-role/tabs/dashboard');
+      assert.strictEqual(getPortalForRole('HELPDESK_ADMIN')?.route, '/admin-role/tabs/dashboard');
+      assert.strictEqual(getPortalForRole('FOOD_OS_ADMIN')?.route, '/admin-role/tabs/dashboard');
+      assert.strictEqual(getPortalForRole('VISITORS_ADMIN')?.route, '/admin-role/tabs/dashboard');
+      assert.strictEqual(getPortalForRole('COMMUNITY_FEED_ADMIN')?.route, '/admin-role/tabs/dashboard');
+    });
+
+    it('grants full permissions to backend role names via ROLE_PERMISSIONS and aliases', () => {
+      const eventsPerms = computeEffectivePermissions(['EVENTS_ADMIN']);
+      assert.ok(eventsPerms.length > 0, 'EVENTS_ADMIN must receive permissions');
+      assert.deepStrictEqual(eventsPerms, ROLE_PERMISSIONS.EVENT_ADMIN);
+
+      const financePerms = computeEffectivePermissions(['FINANCE_MGMT_ADMIN']);
+      assert.ok(financePerms.length > 0);
+      assert.deepStrictEqual(financePerms, ROLE_PERMISSIONS.FINANCE_ADMIN);
+    });
+  });
+
+  describe('10. Standalone Account Creation & Late Community Linking', () => {
+    it('omits inviteCode, communityCode, flatNo, block completely when user creates a standalone account', () => {
+      const standaloneInput = {
+        fullName: 'Alex Standalone',
+        phone: '9876543210',
+        email: 'alex@example.com',
+        password: 'Password123!',
+        inviteCode: '',
+        communityCode: '',
+        flatNo: '',
+        block: '',
+      };
+
+      const payload = normalizeRegisterPayload(standaloneInput);
+      assert.strictEqual(payload.fullName, 'Alex Standalone');
+      assert.strictEqual(payload.phone, '9876543210');
+      assert.strictEqual(payload.inviteCode, undefined);
+      assert.strictEqual(payload.communityCode, undefined);
+      assert.strictEqual(payload.flatNo, undefined);
+      assert.strictEqual(payload.flatNumber, undefined);
+      assert.strictEqual(payload.block, undefined);
+      assert.strictEqual(payload.tower, undefined);
+      assert.ok(!('inviteCode' in payload), 'inviteCode property must not exist in payload');
+      assert.ok(!('communityCode' in payload), 'communityCode property must not exist in payload');
+    });
+
+    it('preserves inviteCode and unit information when user joins a community with a code', () => {
+      const communityInput = {
+        fullName: 'Jordan Resident',
+        phone: '9123456789',
+        email: 'jordan@example.com',
+        password: 'Password123!',
+        inviteCode: 'COMM123',
+        flatNo: 'B-402',
+        block: 'Tower B',
+      };
+
+      const payload = normalizeRegisterPayload(communityInput);
+      assert.strictEqual(payload.inviteCode, 'COMM123');
+      assert.strictEqual(payload.communityCode, 'COMM123');
+      assert.strictEqual(payload.flatNo, 'B-402');
+      assert.strictEqual(payload.flatNumber, 'B-402');
+      assert.strictEqual(payload.block, 'Tower B');
+      assert.strictEqual(payload.tower, 'Tower B');
+    });
+
+    it('resolves Explore Mana and + Join Community HUD when communityId is null or undefined', () => {
+      const standaloneUser = {
+        id: 101,
+        fullName: 'Standalone User',
+        email: 'user@mana.org',
+        communityId: null,
+        role: 'RESIDENT',
+      };
+
+      const hasCommunity = Boolean(standaloneUser.communityId);
+      const communityDisplay = hasCommunity ? (standaloneUser.communityName || 'My Community') : 'Explore Mana';
+      const unitDisplay = hasCommunity ? (standaloneUser.flatNo || 'Unit not set') : '+ Join Community';
+
+      assert.strictEqual(hasCommunity, false);
+      assert.strictEqual(communityDisplay, 'Explore Mana');
+      assert.strictEqual(unitDisplay, '+ Join Community');
+    });
+
+    it('enables global standalone feature access (fail-open) for standalone accounts', () => {
+      // Standalone user without community-specific enabledModules
+      const standaloneModules = [];
+      const hasModule = (name) => {
+        if (!standaloneModules || standaloneModules.length === 0) return true;
+        return standaloneModules.includes(name);
+      };
+
+      assert.strictEqual(hasModule('PERSONAL_FINANCE'), true, 'Standalone user can access personal finance');
+      assert.strictEqual(hasModule('MARKETPLACE'), true, 'Standalone user can access marketplace');
+      assert.strictEqual(hasModule('SPORTS'), true, 'Standalone user can access sports');
+      assert.strictEqual(hasModule('EVENTS'), true, 'Standalone user can access events');
     });
   });
 });

@@ -13,7 +13,7 @@ const PORTAL_ROLES: Record<PortalType, Set<UserRole>> = {
   guard: GUARD_ROLES,
   vendor: new Set(['VENDOR', 'SPORTS_VENDOR']),
   'sports-admin': new Set(['SPORTS_ADMIN', 'SPORTS_REFEREE', 'ADMIN', 'SUPER_ADMIN']),
-  'event-admin': new Set(['EVENT_ADMIN', 'ADMIN', 'SUPER_ADMIN']),
+  'event-admin': new Set(['EVENT_ADMIN', 'EVENTS_ADMIN', 'ADMIN', 'SUPER_ADMIN']),
 };
 
 const PORTAL_FALLBACK: Record<PortalType, string> = {

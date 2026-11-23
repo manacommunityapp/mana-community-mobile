@@ -4,6 +4,7 @@ import {
   ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import WorkspaceSwitcherBar from '@/components/common/WorkspaceSwitcherBar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
@@ -76,6 +77,7 @@ export default function AdminDashboardScreen() {
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: palette.appBg }]} edges={['top']}>
+      <WorkspaceSwitcherBar />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN_COLORS.accent} />}

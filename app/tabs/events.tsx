@@ -189,7 +189,7 @@ export default function EventsScreen() {
   const router = useRouter();
   const { goBack } = useAppBack({ fallbackRoute: '/tabs/feed' });
   const { hasRole, isSuperAdmin } = useAuth();
-  const isEventAdmin = isSuperAdmin || hasRole('EVENT_ADMIN', 'ADMIN', 'SUPER_ADMIN');
+  const isEventAdmin = isSuperAdmin || hasRole('EVENT_ADMIN', 'EVENTS_ADMIN', 'ADMIN', 'SUPER_ADMIN');
   const [filter, setFilter] = useState<EventType | 'ALL'>('ALL');
 
   const { data: events = [], isLoading, refetch, isRefetching } = useQuery<EventDto[]>({

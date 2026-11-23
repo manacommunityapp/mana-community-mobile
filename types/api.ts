@@ -38,6 +38,7 @@ export interface RegisterRequest {
   flatNumber?: string;
   block?: string;
   tower?: string;
+  consentToPrivacyNotice?: boolean;
   userType?: string;
   occupancyStatus?: string;
   residentType?: string;

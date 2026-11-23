@@ -14,6 +14,7 @@ import { THEME } from '@/constants/theme';
 import { useAppTheme } from '@/context/ThemeContext';
 import { useTenantContext } from '@/context/TenantContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoleSwitcher } from '@/hooks/useRoleSwitcher';
 import { feedService } from '@/services/feedService';
 import { eventService } from '@/services/eventService';
 import { facilityService } from '@/services/facilityService';
@@ -34,6 +35,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CreatePostModal } from '@/components/feed/CreatePostModal';
 import { EmergencySosModal } from '@/components/feed/EmergencySosModal';
 import { LiveMatchesStrip } from '@/components/feed/LiveMatchesStrip';
+import { JoinCommunityModal } from '@/components/community/JoinCommunityModal';
 import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import type { PostDto, EventDto } from '@/types/api';
 
@@ -1471,6 +1473,8 @@ function UnitSelectorModal({
   const { palette } = useAppTheme();
   const kycVerified = activeUser?.kycStatus === 'VERIFIED';
   const roleName = activeUser?.role || activeUser?.userType || 'Resident';
+  const { availablePortals, hasMultiplePortals, switchToRole } = useRoleSwitcher();
+  const otherPortals = availablePortals.filter((p) => p.route !== '/tabs/feed');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -1521,6 +1525,32 @@ function UnitSelectorModal({
               <View style={styles.modalActiveDot} />
             </View>
           </LinearGradient>
+
+          {/* Workspaces — only for users holding admin / vendor / staff roles besides resident */}
+          {hasMultiplePortals && otherPortals.length > 0 && (
+            <View style={styles.modalActionsList}>
+              <Text style={[styles.modalSubtitle, { color: palette.textMuted, marginBottom: 6 }]}>SWITCH WORKSPACE</Text>
+              {otherPortals.map((portal) => (
+                <TouchableOpacity
+                  key={portal.route}
+                  style={[styles.modalActionItem, { backgroundColor: palette.surfaceSubtle, borderColor: palette.borderLight }]}
+                  onPress={() => {
+                    onClose();
+                    switchToRole(portal.role);
+                  }}
+                >
+                  <View style={[styles.modalActionIcon, { backgroundColor: palette.primaryLight }]}>
+                    <Ionicons name={portal.icon as any} size={20} color={palette.link} />
+                  </View>
+                  <View style={styles.flex1}>
+                    <Text style={[styles.modalActionTitle, { color: palette.text }]}>{portal.label}</Text>
+                    <Text style={[styles.modalActionSub, { color: palette.textMuted }]}>Open your {portal.label.toLowerCase()} workspace</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={palette.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Unit Quick Actions */}
           <View style={styles.modalActionsList}>
@@ -1630,6 +1660,7 @@ export default function HomeScreen() {
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [showPassModal, setShowPassModal] = useState(false);
   const [showSosModal, setShowSosModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const canUseSos = hasModule('EMERGENCY') || hasModule('SAFETY');
 
   // Server data - dynamically enabled when user is loaded
@@ -1871,16 +1902,17 @@ export default function HomeScreen() {
   const rawBlock = activeUser?.block || activeUser?.tower;
   const rawFlat = activeUser?.flatNo || activeUser?.flatNumber || (activeUser as any)?.unitNumber;
 
+  const hasCommunity = Boolean(resolvedCommunityId);
   const hasUnit = Boolean(rawBlock || rawFlat);
-  let unitDisplay = 'Unit not set';
-  if (rawBlock && rawFlat) {
+  let unitDisplay = hasCommunity ? 'Unit not set' : '+ Join Community';
+  if (hasCommunity && rawBlock && rawFlat) {
     const cleanBlock = String(rawBlock).replace(/^(block|tower)\s*[-:]?\s*/i, '').trim();
     const cleanFlat = String(rawFlat).replace(new RegExp(`^${cleanBlock}[\\s-_]*`, 'i'), '').trim();
     unitDisplay = `Block - ${cleanBlock} ${cleanFlat}`;
-  } else if (rawBlock) {
+  } else if (hasCommunity && rawBlock) {
     const cleanBlock = String(rawBlock).replace(/^(block|tower)\s*[-:]?\s*/i, '').trim();
     unitDisplay = `Block - ${cleanBlock}`;
-  } else if (rawFlat) {
+  } else if (hasCommunity && rawFlat) {
     const flatStr = String(rawFlat).trim();
     const match = flatStr.match(/^([A-Za-z0-9]+)[\s-_]+(\d+)$/);
     if (match) {
@@ -1891,10 +1923,12 @@ export default function HomeScreen() {
   }
 
   const communityDisplay =
-    directCommunityName ||
-    communityDetails?.name ||
-    communityDetails?.communityName ||
-    'My Community';
+    hasCommunity
+      ? directCommunityName ||
+        communityDetails?.name ||
+        communityDetails?.communityName ||
+        'My Community'
+      : 'Explore Mana';
 
   const residentName = activeUser?.fullName || activeUser?.name || user?.fullName || user?.name || activeUser?.email?.split('@')[0] || 'Resident';
   const residentInitials = getInitials(residentName);
@@ -1922,13 +1956,24 @@ export default function HomeScreen() {
         </Pressable>
         <Pressable
           style={styles.headerMeta}
-          onPress={() => setShowUnitModal(true)}
+          onPress={() => {
+            if (!hasCommunity) {
+              setShowJoinModal(true);
+            } else {
+              setShowUnitModal(true);
+            }
+          }}
           hitSlop={8}
         >
           <Text style={[styles.headerCommunity, { color: palette.textMuted }]} numberOfLines={1}>{communityDisplay}</Text>
           <View style={styles.headerFlatRow}>
-            <Text style={[styles.headerFlat, { color: palette.text }]} numberOfLines={1}>{unitDisplay}</Text>
-            <Ionicons name="chevron-down" size={13} color={palette.textMuted} style={{ marginLeft: 2 }} />
+            <Text style={[styles.headerFlat, { color: !hasCommunity ? palette.link : palette.text }]} numberOfLines={1}>{unitDisplay}</Text>
+            <Ionicons
+              name={!hasCommunity ? 'add-circle-outline' : 'chevron-down'}
+              size={13}
+              color={!hasCommunity ? palette.link : palette.textMuted}
+              style={{ marginLeft: 3 }}
+            />
           </View>
         </Pressable>
         <View style={styles.headerRight}>
@@ -1999,13 +2044,48 @@ export default function HomeScreen() {
           }
         />
 
+        {/* Standalone Join Community Banner */}
+        {!hasCommunity && (
+          <View style={[styles.joinBanner, { backgroundColor: palette.surface, borderColor: palette.primaryBorder }]}>
+            <View style={styles.joinBannerRow}>
+              <View style={[styles.joinBannerIconBox, { backgroundColor: palette.primaryLight }]}>
+                <Ionicons name="business-outline" size={24} color={palette.link} />
+              </View>
+              <View style={styles.flex1}>
+                <View style={styles.joinBadgeRow}>
+                  <Text style={[styles.joinBadgeText, { color: palette.link }]}>STANDALONE RESIDENT</Text>
+                </View>
+                <Text style={[styles.joinBannerTitle, { color: palette.text }]}>Join Your Community</Text>
+                <Text style={[styles.joinBannerSub, { color: palette.textMuted }]}>
+                  Have an invite code from your society or apartment? Link your unit to unlock security gate passes, visitor approvals, society billing & amenities.
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.joinBannerBtnWrap}
+              onPress={() => setShowJoinModal(true)}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={palette.primaryGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.joinBannerBtn}
+              >
+                <Ionicons name="key-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+                <Text style={styles.joinBannerBtnText}>Enter Invite Code</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* GateBlocks (Resident/Admin only) */}
-        {(isResident || isAdmin) && hasModule('VISITORS') && (
+        {hasCommunity && (isResident || isAdmin) && hasModule('VISITORS') && (
           <GateBlocks unit={hasUnit ? unitDisplay : undefined} />
         )}
 
         {/* Resident QR Pass */}
-        {isResident && hasModule('VISITORS') && (
+        {hasCommunity && isResident && hasModule('VISITORS') && (
           <ResidentPassCard
             unit={hasUnit ? unitDisplay : undefined}
             residentName={residentName}
@@ -2118,17 +2198,30 @@ export default function HomeScreen() {
           </View>
         ) : (
           <View style={[styles.emptyFeedBox, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}>
-            <Ionicons name="chatbubbles-outline" size={32} color={palette.link} style={{ marginBottom: 6 }} />
-            <Text style={[styles.emptyFeedTitle, { color: palette.text }]}>No posts in {activeFilter}</Text>
-            <Text style={[styles.emptyFeedSub, { color: palette.textMuted }]}>Share an update or question with your neighbors</Text>
-            {canCreatePost && (
+            <Ionicons name={!hasCommunity ? 'business-outline' : 'chatbubbles-outline'} size={32} color={palette.link} style={{ marginBottom: 6 }} />
+            <Text style={[styles.emptyFeedTitle, { color: palette.text }]}>
+              {!hasCommunity ? 'Welcome to Mana!' : `No posts in ${activeFilter}`}
+            </Text>
+            <Text style={[styles.emptyFeedSub, { color: palette.textMuted }]}>
+              {!hasCommunity
+                ? 'Join your residential community to see neighborhood posts, committee notices and poll discussions.'
+                : 'Share an update or question with your neighbors'}
+            </Text>
+            {!hasCommunity ? (
+              <TouchableOpacity
+                style={[styles.emptyPostBtn, { backgroundColor: palette.primary }]}
+                onPress={() => setShowJoinModal(true)}
+              >
+                <Text style={styles.emptyPostBtnText}>+ Join a Community</Text>
+              </TouchableOpacity>
+            ) : canCreatePost ? (
               <TouchableOpacity
                 style={[styles.emptyPostBtn, { backgroundColor: palette.primary }]}
                 onPress={() => setShowCreatePostModal(true)}
               >
                 <Text style={styles.emptyPostBtnText}>+ Create Post</Text>
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         )}
 
@@ -2176,6 +2269,16 @@ export default function HomeScreen() {
         flatNumber={rawFlat ? String(rawFlat) : undefined}
         communityDisplay={communityDisplay}
       />
+
+      {/* Join Community Modal */}
+      <JoinCommunityModal
+        visible={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ['profile', 'me'] });
+          onRefresh();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -2189,6 +2292,61 @@ const styles = StyleSheet.create({
   flex1:            { flex: 1 },
   scrollContent:    { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 24 },
   bottomPad:        { height: 96 },
+
+  // ── Standalone Join Banner ────────────────────────────────────────────────
+  joinBanner: {
+    borderWidth: 1,
+    borderRadius: RADIUS.lg,
+    padding: 14,
+    marginBottom: 12,
+    ...SHADOWS.sm,
+  },
+  joinBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  joinBannerIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinBadgeRow: {
+    marginBottom: 2,
+  },
+  joinBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  joinBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  joinBannerSub: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  joinBannerBtnWrap: {
+    marginTop: 4,
+  },
+  joinBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 38,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 16,
+  },
+  joinBannerBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 
   // ── Top Bar ──────────────────────────────────────────────────────────────
   topBar: {

@@ -94,9 +94,20 @@ function AuthGuard() {
 
     // Fully verified — send to role-appropriate home
     if (inOnboarding || inAuth) {
-      const primaryRole = user?.roles?.[0] || user?.role || 'RESIDENT';
-      const portal = getPortalForRole(primaryRole);
-      router.replace((portal?.route ?? '/tabs/feed') as any);
+      const rawRoles = (user?.roles && user.roles.length > 0)
+        ? user.roles
+        : (user?.role ? [user.role] : []);
+      const upperRoles = rawRoles.map((r) => String(r).trim().toUpperCase());
+
+      // If user has USER or any resident role among their roles, land in resident home
+      const RESIDENT_ROLES = new Set(['USER', 'RESIDENT', 'MEMBER', 'OWNER', 'TENANT']);
+      if (upperRoles.length === 0 || upperRoles.some((r) => RESIDENT_ROLES.has(r))) {
+        router.replace('/tabs/feed');
+      } else {
+        const primaryRole = upperRoles[0] || 'RESIDENT';
+        const portal = getPortalForRole(primaryRole);
+        router.replace((portal?.route ?? '/tabs/feed') as any);
+      }
     }
   }, [isAuthenticated, isLoading, isPending, segments]);
 

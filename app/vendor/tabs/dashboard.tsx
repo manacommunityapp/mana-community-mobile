@@ -4,6 +4,7 @@ import {
   ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import WorkspaceSwitcherBar from '@/components/common/WorkspaceSwitcherBar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -75,6 +76,7 @@ export default function VendorDashboardScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
+      <WorkspaceSwitcherBar />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={VENDOR_COLORS.accent} />}
