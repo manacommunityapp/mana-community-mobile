@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '@/constants/config';
 import { sportsService } from '@/services/sportsService';
+import { secureLog } from '@/security';
 import type { SportsStreamResponse } from '@/types/api';
 
 type Panel = 'overview' | 'cameras' | 'commentary';
@@ -30,7 +31,7 @@ export default function StreamManageScreen() {
 
   async function fetch() {
     try { setStream(await sportsService.getStream(matchId)); }
-    catch { /* silent */ }
+    catch (err) { secureLog.warn(`[StreamManage] fetch failed: ${err instanceof Error ? err.message : String(err)}`); }
     finally { setLoading(false); }
   }
 

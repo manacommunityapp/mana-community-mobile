@@ -17,7 +17,7 @@ export const sportsAuctionService = {
     try {
       const res = await api.get<SportsAuctionConfigResponse[]>(`${BASE}/config`);
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
-    } catch {}
+    } catch (_e) { /* fallback to /config/all */ }
     try {
       const res = await api.get<SportsAuctionConfigResponse[]>(`${BASE}/config/all`);
       return Array.isArray(res.data) ? res.data : [];

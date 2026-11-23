@@ -221,7 +221,7 @@ export function ScoreCard({ match, compact = false }: ScoreCardProps) {
       {match.venue && !compact && (
         <View style={c.venueRow}>
           <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
-          <Text style={c.venue} numberOfLines={1}>{match.venue}</Text>
+          <Text style={c.venue} numberOfLines={1}>{typeof match.venue === 'string' ? match.venue : match.venue?.name ?? ''}</Text>
         </View>
       )}
     </TouchableOpacity>

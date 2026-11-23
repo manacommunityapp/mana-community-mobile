@@ -15,7 +15,8 @@ import { facilityService, FacilityDto } from '@/services/facilityService';
 import { commuteService } from '@/services/commuteService';
 import { SportsRegisterModal, RegistrationRecord } from '@/components/sports/SportsRegisterModal';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS, CONFIG } from '@/constants/config';
-import { SPORT_EMOJI } from '@/constants/sports';
+import { SPORT_EMOJI, getVenueName } from '@/constants/sports';
+import { secureLog } from '@/security';
 import { useAuth } from '@/hooks/useAuth';
 import { useModuleGuard } from '@/hooks/useRoleGuard';
 import { resolveImageUrl } from '@/utils/imageUrlUtils';
@@ -251,13 +252,17 @@ export default function SportsHubScreen() {
                   setScoreFlash(id);
                   setTimeout(() => setScoreFlash(cur => cur === id ? null : cur), 900);
                 }
-              } catch {}
+              } catch (err) {
+                secureLog.warn(`[SportsHub] WS message parse error: ${err instanceof Error ? err.message : String(err)}`);
+              }
             };
             client.subscribe(`/topic/sports.match.${id}`, handleUpdate);
             client.subscribe(`/topic/match/${id}/state`,  handleUpdate);
           });
         },
-        onStompError: () => {},
+        onStompError: (frame) => {
+          secureLog.warn(`[SportsHub] STOMP error: ${frame.headers?.message || 'unknown'}`);
+        },
       });
       client.activate();
       stompHubRef.current = client;
@@ -275,14 +280,14 @@ export default function SportsHubScreen() {
     if (!liveMatches) return [];
     return selectedSport === 'ALL'
       ? liveMatches
-      : liveMatches.filter((m) => doesSportMatchFilter((m as any).rawSportName || m.sport, selectedSport));
+      : liveMatches.filter((m) => doesSportMatchFilter(m.rawSportName || m.sport, selectedSport));
   }, [liveMatches, selectedSport]);
 
   const filteredToday = useMemo(() => {
     if (!todayMatches) return [];
     return selectedSport === 'ALL'
       ? todayMatches
-      : todayMatches.filter((m) => doesSportMatchFilter((m as any).rawSportName || m.sport, selectedSport));
+      : todayMatches.filter((m) => doesSportMatchFilter(m.rawSportName || m.sport, selectedSport));
   }, [todayMatches, selectedSport]);
 
   const scheduledMatches = useMemo(() => {
@@ -431,7 +436,7 @@ export default function SportsHubScreen() {
     openTournamentsWithFilteredEvents.reduce((acc, t) => acc + (t.filteredEvents?.length || t.events?.length || 0), 0),
   [openTournamentsWithFilteredEvents]);
 
-  const communityLabel = (user as any)?.community?.name || (user as any)?.communityName || 'Mana Community';
+  const communityLabel = (typeof user?.community === 'object' ? user.community?.name : undefined) || user?.communityName || 'Mana Community';
 
   // ── Render Helpers ────────────────────────────────────────────
 
@@ -462,7 +467,7 @@ export default function SportsHubScreen() {
               </View>
               <View style={s.heroScoreCol}>
                 <Text style={[s.heroScoreBig, { fontSize: 22, letterSpacing: 1 }]}>VS</Text>
-                <Text style={s.heroLeadStatus}>{typeof next.venue === 'string' ? next.venue : (next.venue as any)?.name || 'Community Arena'}</Text>
+                <Text style={s.heroLeadStatus}>{getVenueName(next.venue) || 'Community Arena'}</Text>
                 {next.round && <Text style={[s.heroLeadStatus, { marginTop: 2, fontWeight: '800' }]}>{next.round}</Text>}
               </View>
               <View style={s.heroTeamCol}>
@@ -1102,7 +1107,7 @@ export default function SportsHubScreen() {
               const sportEmoji = SPORT_EMOJI[m.sport?.toUpperCase()] || '🏅';
               const timeStr = m.scheduledAt ? safeFormat(m.scheduledAt, 'hh:mm a', 'Scheduled') : 'Scheduled';
               const dateStr = m.scheduledAt ? safeFormat(m.scheduledAt, 'dd MMM', '') : '';
-              const venue = typeof m.venue === 'string' ? m.venue : (m.venue as any)?.name || '';
+              const venue = getVenueName(m.venue);
               return (
                 <TouchableOpacity key={m.id || idx} style={[s.fixtureRow, idx > 0 && s.fixtureBorder]}
                   onPress={() => router.push(`/sports/match/${m.id}`)} activeOpacity={0.8}>

@@ -27,7 +27,7 @@ export default function BookSlotScreen() {
   const router = useRouter();
   const { slotId, trainerName } = useLocalSearchParams<{ slotId: string; trainerName?: string }>();
   const { user } = useAuth();
-  const communityId = (user as any)?.communityId ?? (user as any)?.community?.id;
+  const communityId = user?.communityId ?? (typeof user?.community === 'object' ? user.community?.id : undefined);
   const queryClient = useQueryClient();
 
   const [tower, setTower]           = useState('');
@@ -43,7 +43,7 @@ export default function BookSlotScreen() {
   const mutation = useMutation({
     mutationFn: () =>
       sportsTrainerService.bookSlot(Number(slotId), {
-        userName: `${(user as any)?.firstName ?? ''} ${(user as any)?.lastName ?? ''}`.trim() || 'Resident',
+        userName: `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'Resident',
         tower:    tower || undefined,
         flatNumber: flatNumber || undefined,
       }),

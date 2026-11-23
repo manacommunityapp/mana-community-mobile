@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { useAuth } from '@/hooks/useAuth';
 import { sportsTrainerService, SportsTrainerDto } from '@/services/sportsTrainerService';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
+import { SPORT_EMOJI } from '@/constants/sports';
 
 const SPORTS = [
   { key: 'ALL',          label: 'All',          emoji: '🏅' },
@@ -28,14 +29,13 @@ const SPORTS = [
 ];
 
 function sportEmoji(sport: string): string {
-  const s = (sport || '').toLowerCase();
-  return SPORTS.find(sp => sp.key !== 'ALL' && s.includes(sp.key.toLowerCase()))?.emoji ?? '🏅';
+  return SPORT_EMOJI[(sport || '').toUpperCase().replace(/\s+/g, '_')] ?? '🏅';
 }
 
 export default function TrainersScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const communityId = (user as any)?.communityId ?? (user as any)?.community?.id ?? 0;
+  const communityId = user?.communityId ?? (typeof user?.community === 'object' ? user.community?.id : undefined) ?? 0;
 
   const [sportFilter, setSportFilter] = useState('ALL');
   const [search, setSearch] = useState('');

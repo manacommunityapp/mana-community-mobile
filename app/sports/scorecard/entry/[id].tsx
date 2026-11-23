@@ -37,7 +37,7 @@ function BatterInput({ row, onChange, onRemove }: { row: BattingRow; onChange: (
               <Text style={ei.statLabel}>{label}</Text>
               <TextInput
                 style={ei.statInput}
-                value={(row as any)[key]}
+                value={row[key as keyof BattingRow] as string}
                 onChangeText={(v) => onChange({ ...row, [key]: v.replace(/\D/g, '') })}
                 keyboardType="numeric"
                 maxLength={4}
@@ -73,7 +73,7 @@ function BowlerInput({ row, onChange, onRemove }: { row: BowlingRow; onChange: (
               <Text style={ei.statLabel}>{label}</Text>
               <TextInput
                 style={ei.statInput}
-                value={(row as any)[key]}
+                value={row[key as keyof BowlingRow] as string}
                 onChangeText={(v) => onChange({ ...row, [key]: v.replace(/[^\d.]/g, '') })}
                 keyboardType="decimal-pad"
                 maxLength={5}

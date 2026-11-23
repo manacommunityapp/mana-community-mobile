@@ -1,7 +1,7 @@
 import { Share } from 'react-native';
 import type { MatchDto, TournamentDto } from '@/types/api';
 import { safeFormat } from '@/utils/dateUtils';
-import { SPORT_EMOJI } from '@/constants/sports';
+import { SPORT_EMOJI, getVenueName } from '@/constants/sports';
 
 export function formatMatchShareText(match: MatchDto, extras?: { manOfMatch?: string }): string {
   const emoji = SPORT_EMOJI[match.sport] || '🏅';
@@ -38,7 +38,7 @@ export function formatMatchShareText(match: MatchDto, extras?: { manOfMatch?: st
 
   // Match Status / Winner
   if (match.status === 'COMPLETED') {
-    const winner = (match as any).winnerTeamName;
+    const winner = match.winnerTeamName;
     if (winner) {
       lines.push(`🏆 Winner: ${winner}`);
     } else if (match.homeScore != null && match.awayScore != null) {
@@ -62,9 +62,7 @@ export function formatMatchShareText(match: MatchDto, extras?: { manOfMatch?: st
     lines.push(`⭐ Player of the Match: ${extras.manOfMatch}`);
   }
 
-  const venueStr = typeof match.venue === 'object' && match.venue !== null
-    ? [(match.venue as any).name, (match.venue as any).area].filter(Boolean).join(', ')
-    : typeof match.venue === 'string' ? match.venue : '';
+  const venueStr = getVenueName(match.venue);
 
   if (venueStr) {
     lines.push(`📍 Venue: ${venueStr}`);
@@ -102,9 +100,7 @@ export function formatTournamentShareText(tournament: TournamentDto, winnerTeam?
     lines.push(`🔥 Matches Ongoing`);
   }
 
-  const venueStr = typeof tournament.venue === 'object' && tournament.venue !== null
-    ? [(tournament.venue as any).name, (tournament.venue as any).area].filter(Boolean).join(', ')
-    : typeof tournament.venue === 'string' ? tournament.venue : '';
+  const venueStr = getVenueName(tournament.venue);
 
   if (venueStr) {
     lines.push(`📍 Venue: ${venueStr}`);

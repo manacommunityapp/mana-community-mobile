@@ -10,7 +10,7 @@ import { useLiveScore } from '@/hooks/useLiveScore';
 import { useAuth } from '@/hooks/useAuth';
 import { useModuleGuard } from '@/hooks/useRoleGuard';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
-import { SPORT_EMOJI } from '@/constants/sports';
+import { SPORT_EMOJI, getVenueName, getVenueDisplay } from '@/constants/sports';
 import { format, formatDistanceToNow } from 'date-fns';
 import { safeFormat } from '@/utils/dateUtils';
 import { shareMatch } from '@/utils/sportsShare';
@@ -173,11 +173,7 @@ export default function LiveMatchScreen() {
   useModuleGuard('SPORTS');
 
   // Derive venue string for ride search
-  const venueStr = match
-    ? (typeof match.venue === 'object' && match.venue !== null
-        ? [(match.venue as any).name, (match.venue as any).area].filter(Boolean).join(', ') || (match.venue as any).address || ''
-        : typeof match.venue === 'string' ? match.venue : '')
-    : '';
+  const venueStr = match ? getVenueName(match.venue) : '';
 
   // Fetch rides to this venue only when match is scheduled
   const { data: ridesPage } = useQuery({
@@ -294,9 +290,7 @@ export default function LiveMatchScreen() {
             </Text>
           )}
           {(() => {
-            const venueStr = typeof match.venue === 'object' && match.venue !== null
-              ? [(match.venue as any).name, (match.venue as any).area, (match.venue as any).city].filter(Boolean).join(', ') || (match.venue as any).address || ''
-              : typeof match.venue === 'string' ? match.venue : '';
+            const venueStr = getVenueDisplay(match.venue);
             return venueStr ? (
               <Text style={scr.venue}>📍 {venueStr}</Text>
             ) : null;

@@ -73,6 +73,8 @@ export interface UserProfileResponse {
   isActive?: boolean;
   verifiedAt?: string;
   createdAt: string;
+  firstName?: string;
+  lastName?: string;
   communityId?: number;
   communityName?: string;
   community?: string | { id: number; name: string };
@@ -653,7 +655,12 @@ export interface TournamentDto {
   communityId:            number;
   prizes?:                string;
   rules?:                 string;
-  venue?:                 string;
+  venue?:                 string | { name: string; area?: string; city?: string; address?: string };
+  sportsEvents?:          any[];
+  events?:                any[];
+  eventDateStart?:        string;
+  eventDateEnd?:          string;
+  registrationStatus?:    string;
   myTeamRegistered:       boolean;
   createdAt:              string;
 }
@@ -702,8 +709,9 @@ export interface MatchDto {
   scheduledAt:      string;
   startedAt?:       string;
   endedAt?:         string;
-  venue?:           string;
+  venue?:           string | { name: string; area?: string; city?: string; address?: string };
   round?:           string;
+  rawSportName?:    string;
   matchNumber?:     number;
   // Badminton / Table Tennis
   homeSetsWon?:     number;
