@@ -4,6 +4,7 @@ import {
   TextInput, Switch, Alert, ActivityIndicator,
   KeyboardAvoidingView, Platform, Share,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -104,7 +105,7 @@ export default function CommunitySettingsScreen() {
   const [maxMembers,  setMaxMembers]  = useState('');
   const [inviteCode,  setInviteCode]  = useState('');
   const [features, setFeatures] = useState<CommunitySettingsDto['features']>({
-    marketplace: true, sports: true, auction: true, jobs: true, polls: true, commute: true,
+    marketplace: true, sports: true, auction: true, jobs: true, polls: true, commute: true, communityHighlight: false,
   });
 
   useEffect(() => {
@@ -116,18 +117,37 @@ export default function CommunitySettingsScreen() {
     setState(settings.state);
     setMaxMembers(String(settings.maxMembers));
     setInviteCode(settings.inviteCode);
-    setFeatures(settings.features);
+    setFeatures({
+      ...settings.features,
+      communityHighlight: settings.features?.communityHighlight ?? (settings as any).showCommunityHighlight ?? false,
+    });
   }, [settings]);
 
   const saveMutation = useMutation({
-    mutationFn: () => adminService.updateCommunitySettings({
-      name, description, address, city, state,
-      maxMembers: Number(maxMembers),
-      features,
-    }),
+    mutationFn: async () => {
+      const isHighlightOn = Boolean(features.communityHighlight);
+      const updated = await adminService.updateCommunitySettings({
+        name, description, address, city, state,
+        maxMembers: Number(maxMembers),
+        features: {
+          ...features,
+          communityHighlight: isHighlightOn,
+        },
+        showCommunityHighlight: isHighlightOn,
+      });
+
+      // Persist locally so feed page and other resident screens immediately reflect the change
+      const targetId = settings?.id || (settings as any)?.communityId;
+      if (targetId) {
+        await AsyncStorage.setItem(`@mana/community_highlight_${targetId}`, String(isHighlightOn));
+      }
+      return updated;
+    },
     onSuccess: (updated) => {
       setInviteCode(updated.inviteCode);
       qc.invalidateQueries({ queryKey: ['admin-community-settings'] });
+      qc.invalidateQueries({ queryKey: ['community-highlight-enabled'] });
+      qc.invalidateQueries({ queryKey: ['community-details'] });
       Alert.alert('Saved', 'Community settings updated.');
     },
     onError: () => Alert.alert('Error', 'Failed to save settings.'),
@@ -241,8 +261,16 @@ export default function CommunitySettingsScreen() {
 
           {/* ── Feature Toggles ── */}
           <View style={s.section}>
-            <SectionHeader title="Features" />
+            <SectionHeader title="Features & Highlights" />
             <View style={s.featureCard}>
+              <FeatureToggle
+                emoji="📢"
+                label="Community Highlight"
+                sub="Show highlight banner at top of feed (disabled by default)"
+                value={Boolean(features.communityHighlight)}
+                onValueChange={() => toggleFeature('communityHighlight')}
+              />
+              <View style={s.divider} />
               <FeatureToggle emoji="🛒" label="Marketplace"   sub="Buy/sell within community"      value={features.marketplace} onValueChange={() => toggleFeature('marketplace')} />
               <View style={s.divider} />
               <FeatureToggle emoji="🏆" label="Sports"        sub="Tournaments & team management"  value={features.sports}      onValueChange={() => toggleFeature('sports')} />

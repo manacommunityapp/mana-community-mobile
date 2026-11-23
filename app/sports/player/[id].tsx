@@ -136,7 +136,23 @@ export default function PlayerProfileScreen() {
       </SafeAreaView>
     );
   }
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <SafeAreaView style={s.container} edges={['top']}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={s.back}>‹</Text>
+          </TouchableOpacity>
+          <Text style={s.title}>Player Profile</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 }}>
+          <Text style={{ fontSize: 32 }}>🏅</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.text }}>Player profile unavailable</Text>
+          <Text style={{ fontSize: 12.5, color: COLORS.textMuted, textAlign: 'center' }}>No sports stats recorded yet for this player.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const earnedBadges  = [...(profile.badges || [])].filter((b) => b.isEarned)
     .sort((a, b) => (RARITY_ORDER[a.rarity ?? 'common'] ?? 99) - (RARITY_ORDER[b.rarity ?? 'common'] ?? 99));

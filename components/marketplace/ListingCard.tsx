@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { CachedImage as Image } from '@/components/common/CachedImage';
+import { resolveImageUrl } from '@/utils/imageUrlUtils';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
@@ -32,7 +33,8 @@ interface ListingCardProps {
 
 export function ListingCard({ listing, onSave, isSaving }: ListingCardProps) {
   const router = useRouter();
-  const thumb  = listing.imageUrls?.[0];
+  const rawThumb = listing.imageUrls?.[0];
+  const thumb  = rawThumb ? resolveImageUrl(rawThumb) : null;
   const cond   = CONDITION_CONFIG[listing.condition] ?? CONDITION_CONFIG.GOOD;
 
   return (

@@ -5,6 +5,7 @@ import {
 import { SearchResultDto } from '@/services/searchService';
 import { MODULE_ICON, MODULE_LABEL, MODULE_BG } from '@/constants/searchModules';
 import { COLORS, RADIUS, SPACING } from '@/constants/config';
+import { resolveImageUrl } from '@/utils/imageUrlUtils';
 
 interface SearchResultCardProps {
   result: SearchResultDto;
@@ -21,7 +22,7 @@ export function SearchResultCard({ result, onPress }: SearchResultCardProps) {
     <TouchableOpacity style={styles.card} onPress={() => onPress(result)} activeOpacity={0.7}>
       {/* Thumbnail */}
       {result.imageUrl ? (
-        <Image source={{ uri: result.imageUrl }} style={styles.thumbnail} />
+        <Image source={{ uri: resolveImageUrl(result.imageUrl) }} style={styles.thumbnail} />
       ) : (
         <View style={[styles.thumbnail, styles.iconThumbnail, { backgroundColor: bg }]}>
           <Text style={styles.iconEmoji}>{icon}</Text>

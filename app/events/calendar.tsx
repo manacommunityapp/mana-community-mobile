@@ -15,7 +15,7 @@ import type { EventDto } from '@/types/api';
 
 export default function EventCalendarScreen() {
   const router = useRouter();
-  const { goBack } = useAppBack({ fallbackRoute: '/tabs/events' });
+  const { goBack } = useAppBack({ fallbackRoute: '/events' });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
 

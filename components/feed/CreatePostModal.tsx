@@ -23,6 +23,7 @@ interface CreatePostModalProps {
   visible: boolean;
   onClose: () => void;
   defaultType?: PostType;
+  initialFilter?: string;
 }
 
 interface PostTypeOption {
@@ -32,14 +33,67 @@ interface PostTypeOption {
   placeholder: string;
   color: string;
   bg: string;
+  requiresPermission?: string[];
+  requiresAdmin?: boolean;
 }
 
-const POST_TYPES: PostTypeOption[] = [
-  { key: 'post', label: 'Discussion', emoji: '💬', placeholder: 'Share an update, recommendation or thought with neighbors...', color: '#2563EB', bg: '#EFF6FF' },
-  { key: 'announcement', label: 'Notice', emoji: '📢', placeholder: 'Write an official committee update or resident notice...', color: '#4F46E5', bg: '#EEF2FF' },
-  { key: 'lost_found', label: 'Lost & Found', emoji: '🔍', placeholder: 'Describe the lost or found item, brand, color, location...', color: '#D97706', bg: '#FFFBEB' },
-  { key: 'question', label: 'Ask Neighbors', emoji: '❓', placeholder: 'Looking for a plumber, doctor recommendation, or help?', color: '#059669', bg: '#ECFDF5' },
-  { key: 'classified', label: 'Buy & Sell', emoji: '🛍️', placeholder: 'Describe the item you want to sell, condition, reason...', color: '#7C3AED', bg: '#F5F3FF' },
+const ALL_POST_TYPES: PostTypeOption[] = [
+  {
+    key: 'post',
+    label: 'Discussion',
+    emoji: '💬',
+    placeholder: 'Share an update, recommendation or thought with neighbors...',
+    color: '#2563EB',
+    bg: '#EFF6FF',
+    requiresPermission: ['Create Post'],
+  },
+  {
+    key: 'question',
+    label: 'Ask Neighbors',
+    emoji: '❓',
+    placeholder: 'Looking for a plumber, doctor recommendation, or help?',
+    color: '#059669',
+    bg: '#ECFDF5',
+    requiresPermission: ['Create Post'],
+  },
+  {
+    key: 'announcement',
+    label: 'Notice',
+    emoji: '📢',
+    placeholder: 'Write an official committee update or resident notice...',
+    color: '#4F46E5',
+    bg: '#EEF2FF',
+    requiresPermission: ['Create Notice'],
+    requiresAdmin: true,
+  },
+  {
+    key: 'poll',
+    label: 'Poll',
+    emoji: '📊',
+    placeholder: 'Ask the community to vote on an issue or idea...',
+    color: '#7C3AED',
+    bg: '#F5F3FF',
+    requiresPermission: ['Create Poll'],
+    requiresAdmin: true,
+  },
+  {
+    key: 'classified',
+    label: 'Buy & Sell',
+    emoji: '🛍️',
+    placeholder: 'Describe the item you want to sell, condition, reason...',
+    color: '#D97706',
+    bg: '#FFFBEB',
+    requiresPermission: ['Create Post', 'Create Listing'],
+  },
+  {
+    key: 'lost_found',
+    label: 'Lost & Found',
+    emoji: '🔍',
+    placeholder: 'Describe the lost or found item, brand, color, location...',
+    color: '#EF4444',
+    bg: '#FEF2F2',
+    requiresPermission: ['Create Post'],
+  },
 ];
 
 const SUGGESTED_TAGS = [
@@ -47,11 +101,38 @@ const SUGGESTED_TAGS = [
   '#Sports', '#Parking', '#Pets', '#BuySell', '#Events',
 ];
 
-export function CreatePostModal({ visible, onClose, defaultType = 'post' }: CreatePostModalProps) {
-  const { user } = useAuth();
+export function CreatePostModal({ visible, onClose, defaultType, initialFilter }: CreatePostModalProps) {
+  const { user, hasPermission, isAdmin, isSuperAdmin, isAnyAdmin } = useAuth();
   const queryClient = useQueryClient();
 
-  const [selectedType, setSelectedType] = useState<PostType>(defaultType);
+  // Dynamically compute which post categories this user has admin-granted access to post into
+  const availablePostTypes = React.useMemo(() => {
+    return ALL_POST_TYPES.filter((pt) => {
+      if (isSuperAdmin || isAdmin || isAnyAdmin) return true;
+      if (pt.requiresPermission) {
+        const granted = pt.requiresPermission.some((p) => hasPermission(p));
+        if (granted) return true;
+      }
+      if (pt.requiresAdmin) return false;
+      return hasPermission('Create Post');
+    });
+  }, [isSuperAdmin, isAdmin, isAnyAdmin, hasPermission]);
+
+  // Determine starting post type based on initial filter & permissions
+  const computedDefaultType = React.useMemo<PostType>(() => {
+    if (defaultType && availablePostTypes.some((p) => p.key === defaultType)) {
+      return defaultType;
+    }
+    if (initialFilter === 'Notices' && availablePostTypes.some((p) => p.key === 'announcement')) {
+      return 'announcement';
+    }
+    if (initialFilter === 'Polls' && availablePostTypes.some((p) => p.key === 'poll')) {
+      return 'poll';
+    }
+    return availablePostTypes[0]?.key || 'post';
+  }, [defaultType, initialFilter, availablePostTypes]);
+
+  const [selectedType, setSelectedType] = useState<PostType>(computedDefaultType);
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -60,11 +141,24 @@ export function CreatePostModal({ visible, onClose, defaultType = 'post' }: Crea
   const [visibility, setVisibility] = useState<'COMMUNITY' | 'TOWER'>('COMMUNITY');
   const [showImageInput, setShowImageInput] = useState(false);
 
-  const activeMeta = POST_TYPES.find((p) => p.key === selectedType) || POST_TYPES[0];
+  // Poll state
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const [pollAnonymous, setPollAnonymous] = useState(false);
+
+  // Update selectedType when modal opens or available types change
+  React.useEffect(() => {
+    if (visible) {
+      setSelectedType(computedDefaultType);
+    }
+  }, [visible, computedDefaultType]);
+
+  const activeMeta = availablePostTypes.find((p) => p.key === selectedType) || availablePostTypes[0] || ALL_POST_TYPES[0];
 
   const createMutation = useMutation({
     mutationFn: (req: CreatePostRequest) => feedService.createPost(req),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['home-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['community-feed-all'] });
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       resetForm();
       onClose();
@@ -80,6 +174,8 @@ export function CreatePostModal({ visible, onClose, defaultType = 'post' }: Crea
     setImageUrl('');
     setLocation('');
     setPrice('');
+    setPollOptions(['', '']);
+    setPollAnonymous(false);
     setShowImageInput(false);
   };
 
@@ -100,6 +196,17 @@ export function CreatePostModal({ visible, onClose, defaultType = 'post' }: Crea
       location: location.trim() || undefined,
       price: price ? parseFloat(price) : undefined,
     };
+
+    if (selectedType === 'poll') {
+      const validOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+      if (validOptions.length < 2) {
+        Alert.alert('Poll Options Required', 'Please provide at least 2 distinct options for your poll.');
+        return;
+      }
+      payload.pollQuestion = trimmed;
+      payload.pollOptions = validOptions.join(',');
+      payload.pollAnonymous = pollAnonymous;
+    }
 
     createMutation.mutate(payload);
   };
@@ -178,25 +285,37 @@ export function CreatePostModal({ visible, onClose, defaultType = 'post' }: Crea
             </View>
           </View>
 
-          {/* Post Intent Picker Chips */}
-          <View style={styles.intentWrap}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.intentScroll}>
-              {POST_TYPES.map((pt) => {
-                const isSelected = selectedType === pt.key;
-                return (
-                  <TouchableOpacity
-                    key={pt.key}
-                    style={[styles.intentChip, isSelected && { backgroundColor: pt.color, borderColor: pt.color }]}
-                    onPress={() => setSelectedType(pt.key)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={styles.intentEmoji}>{pt.emoji}</Text>
-                    <Text style={[styles.intentLabel, isSelected && styles.intentLabelActive]}>{pt.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+          {/* Post Intent Picker Chips - Filtered by Admin Access */}
+          {availablePostTypes.length === 0 ? (
+            <View style={styles.restrictedNoticeBox}>
+              <Ionicons name="lock-closed-outline" size={24} color="#DC2626" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.restrictedTitle}>Posting Restricted</Text>
+                <Text style={styles.restrictedDesc}>
+                  Your community administrator has restricted post creation for this account. Please contact your society office or management committee to request access.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.intentWrap}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.intentScroll}>
+                {availablePostTypes.map((pt) => {
+                  const isSelected = selectedType === pt.key;
+                  return (
+                    <TouchableOpacity
+                      key={pt.key}
+                      style={[styles.intentChip, isSelected && { backgroundColor: pt.color, borderColor: pt.color }]}
+                      onPress={() => setSelectedType(pt.key)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={styles.intentEmoji}>{pt.emoji}</Text>
+                      <Text style={[styles.intentLabel, isSelected && styles.intentLabelActive]}>{pt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Optional Title for Announcements & Notices */}
           {(selectedType === 'announcement' || selectedType === 'classified') && (
@@ -239,7 +358,7 @@ export function CreatePostModal({ visible, onClose, defaultType = 'post' }: Crea
             </View>
           )}
 
-          {/* Main Content Area */}
+          {/* Main Content Area / Poll Question */}
           <TextInput
             style={styles.contentInput}
             placeholder={activeMeta.placeholder}
@@ -250,6 +369,68 @@ export function CreatePostModal({ visible, onClose, defaultType = 'post' }: Crea
             autoFocus
             textAlignVertical="top"
           />
+
+          {/* Poll Options Builder (Shown only when Poll is selected and user has permission) */}
+          {selectedType === 'poll' && (
+            <View style={styles.pollSection}>
+              <View style={styles.pollHeaderRow}>
+                <Ionicons name="bar-chart-outline" size={18} color="#7C3AED" />
+                <Text style={styles.pollSectionTitle}>Poll Choices</Text>
+              </View>
+
+              {pollOptions.map((opt, idx) => (
+                <View key={idx} style={styles.pollOptionRow}>
+                  <Text style={styles.pollOptionNumber}>{idx + 1}.</Text>
+                  <TextInput
+                    style={styles.pollOptionInput}
+                    placeholder={`Choice ${idx + 1} (e.g. ${idx === 0 ? 'Yes, proceed' : 'No, postpone'})`}
+                    placeholderTextColor={COLORS.textMuted}
+                    value={opt}
+                    onChangeText={(val) => {
+                      const updated = [...pollOptions];
+                      updated[idx] = val;
+                      setPollOptions(updated);
+                    }}
+                  />
+                  {pollOptions.length > 2 && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        const updated = pollOptions.filter((_, i) => i !== idx);
+                        setPollOptions(updated);
+                      }}
+                      hitSlop={6}
+                      style={{ padding: 4 }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+
+              {pollOptions.length < 5 && (
+                <TouchableOpacity
+                  style={styles.addOptionBtn}
+                  onPress={() => setPollOptions([...pollOptions, ''])}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color={COLORS.primary} />
+                  <Text style={styles.addOptionText}>+ Add another choice (max 5)</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.anonymousRow}
+                onPress={() => setPollAnonymous(!pollAnonymous)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={pollAnonymous ? 'checkbox' : 'square-outline'}
+                  size={20}
+                  color={pollAnonymous ? COLORS.primary : COLORS.textMuted}
+                />
+                <Text style={styles.anonymousText}>Anonymous voting (hide resident names from results)</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Image URL Attachment Field */}
           {showImageInput ? (
@@ -510,5 +691,95 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  restrictedNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: RADIUS.md,
+    padding: 12,
+    marginBottom: 16,
+  },
+  restrictedTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#991B1B',
+    marginBottom: 2,
+  },
+  restrictedDesc: {
+    fontSize: 12,
+    color: '#B91C1C',
+    lineHeight: 17,
+  },
+  pollSection: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+    marginBottom: 16,
+  },
+  pollHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  pollSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  pollOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  pollOptionNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    width: 18,
+  },
+  pollOptionInput: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 13,
+    color: COLORS.text,
+  },
+  addOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    marginTop: 2,
+  },
+  addOptionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  anonymousRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  anonymousText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
 });

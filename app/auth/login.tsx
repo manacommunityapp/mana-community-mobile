@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ActivityIndicator, Alert, ScrollView, Dimensions,
+  ActivityIndicator, Alert, ScrollView, Dimensions, Image,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppTheme } from '@/context/ThemeContext';
 import { useAppBack } from '@/hooks/useAppBack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getBiometricCapability, authenticateWithBiometric, BiometricCapability } from '@/hooks/useBiometricAuth';
@@ -21,6 +22,7 @@ const SCREEN_W = Dimensions.get('window').width;
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { login, loadUser } = useAuth();
+  const { palette, isDark, toggleTheme } = useAppTheme();
   const { goBack } = useAppBack({ fallbackRoute: '/onboarding' });
   const { rateLimitState, handleError: handleRateLimit, isLimited } = useRateLimitHandler();
   const [identifier, setIdentifier]       = useState('');
@@ -145,59 +147,87 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={st.container}
+      style={[st.container, { backgroundColor: palette.appBg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={st.scroll} keyboardShouldPersistTaps="handled">
-        {/* ── Top Back Button ──────────────────────────── */}
+        {/* ── Top Back & Theme Toggle ──────────────────── */}
         <TouchableOpacity
-          style={[st.heroBackBtn, { top: Math.max(insets.top + 8, Platform.OS === 'ios' ? 48 : 28) }]}
+          style={[
+            st.heroBackBtn,
+            {
+              top: Math.max(insets.top + 8, Platform.OS === 'ios' ? 48 : 28),
+              backgroundColor: palette.surface,
+              borderColor: palette.borderLight,
+            },
+          ]}
           onPress={goBack}
           hitSlop={8}
           activeOpacity={0.8}
         >
-          <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={20} color={palette.text} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            st.heroThemeBtn,
+            {
+              top: Math.max(insets.top + 8, Platform.OS === 'ios' ? 48 : 28),
+              backgroundColor: palette.surface,
+              borderColor: palette.borderLight,
+            },
+          ]}
+          onPress={toggleTheme}
+          hitSlop={8}
+          activeOpacity={0.8}
+          accessibilityLabel={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={18} color={palette.link} />
+          <Text style={[st.heroThemeText, { color: palette.text }]}>{isDark ? 'Light' : 'Dark'}</Text>
         </TouchableOpacity>
 
         {/* ── Brand Header (Figma Redesign) ─────────────── */}
         <View style={[st.brandHeader, { paddingTop: Math.max(insets.top + 28, Platform.OS === 'ios' ? 68 : 48) }]}>
-          {/* Glowing Aura Ring + Indigo Monogram Badge */}
-          <View style={st.avatarAuraOuter}>
-            <View style={st.avatarAuraInner}>
+          <View style={[st.avatarAuraOuter, { backgroundColor: palette.primaryLight }]}>
+            <View style={[st.avatarAuraInner, { backgroundColor: palette.primaryBorder }]}>
               <LinearGradient
-                colors={['#4F46E5', '#6366F1']}
+                colors={palette.primaryGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={st.brandAvatar}
               >
-                <Text style={st.brandGlyph}>M</Text>
+                <Image
+                  source={require('../../assets/icon.png')}
+                  style={st.brandLogoImg}
+                  resizeMode="cover"
+                />
               </LinearGradient>
             </View>
           </View>
 
-          <Text style={st.brandTitle}>Mana Community</Text>
-          <Text style={st.brandSubtitle}>Your home, connected.</Text>
+          <Text style={[st.brandTitle, { color: palette.text }]}>Mana Community</Text>
+          <Text style={[st.brandSubtitle, { color: palette.textSecondary }]}>Your home, connected.</Text>
         </View>
 
         {/* ── Floating Form Card (Figma Make UI) ────────── */}
-        <View style={st.card}>
+        <View style={[st.card, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}>
           <View style={st.cardHeader}>
-            <Text style={st.cardTitle}>Welcome back</Text>
-            <Text style={st.cardSub}>Sign in to your community account</Text>
+            <Text style={[st.cardTitle, { color: palette.text }]}>Welcome back</Text>
+            <Text style={[st.cardSub, { color: palette.textMuted }]}>Sign in to your community account</Text>
           </View>
 
           {/* ── Role Switcher Segmented Control ──────────── */}
-          <View style={st.roleSwitcher}>
+          <View style={[st.roleSwitcher, { backgroundColor: palette.surfaceSubtle }]}>
             {(['Resident', 'Guard', 'Vendor'] as const).map((role) => {
               const active = activeRole === role;
               return (
                 <TouchableOpacity
                   key={role}
-                  style={[st.rolePill, active && st.rolePillActive]}
+                  style={[st.rolePill, active && { backgroundColor: palette.primary, ...SHADOWS.sm }]}
                   onPress={() => setActiveRole(role)}
                   activeOpacity={0.85}
                 >
-                  <Text style={[st.rolePillText, active && st.rolePillTextActive]}>
+                  <Text style={[st.rolePillText, { color: palette.textMuted }, active && st.rolePillTextActive]}>
                     {role}
                   </Text>
                 </TouchableOpacity>
@@ -208,12 +238,18 @@ export default function LoginScreen() {
           <View style={st.form}>
             {/* Email or Mobile Number */}
             <View style={st.field}>
-              <Text style={st.label}>Email address</Text>
-              <View style={[st.inputWrap, inputFocused && st.inputWrapFocused]}>
+              <Text style={[st.label, { color: palette.textSecondary }]}>Email address</Text>
+              <View
+                style={[
+                  st.inputWrap,
+                  { backgroundColor: palette.surfaceSubtle, borderColor: palette.border },
+                  inputFocused && { borderColor: palette.primary, backgroundColor: palette.surface, borderWidth: 1.5 },
+                ]}
+              >
                 <TextInput
-                  style={st.input}
+                  style={[st.input, { color: palette.text }]}
                   placeholder={activeRole === 'Resident' ? 'resident@manacommunity.in' : 'your@email.com or mobile'}
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={palette.textMuted}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -228,12 +264,18 @@ export default function LoginScreen() {
 
             {/* Password */}
             <View style={st.field}>
-              <Text style={st.label}>Password</Text>
-              <View style={[st.inputWrap, passFocused && st.inputWrapFocused]}>
+              <Text style={[st.label, { color: palette.textSecondary }]}>Password</Text>
+              <View
+                style={[
+                  st.inputWrap,
+                  { backgroundColor: palette.surfaceSubtle, borderColor: palette.border },
+                  passFocused && { borderColor: palette.primary, backgroundColor: palette.surface, borderWidth: 1.5 },
+                ]}
+              >
                 <TextInput
-                  style={st.input}
+                  style={[st.input, { color: palette.text }]}
                   placeholder="••••••••"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={palette.textMuted}
                   secureTextEntry={!showPassword}
                   autoComplete="current-password"
                   value={password}
@@ -248,7 +290,7 @@ export default function LoginScreen() {
             </View>
 
             <View style={st.forgotRow}>
-              <Link href="/auth/forgot-password" style={st.forgot}>
+              <Link href="/auth/forgot-password" style={[st.forgot, { color: palette.link }]}>
                 Forgot password?
               </Link>
             </View>
@@ -269,9 +311,9 @@ export default function LoginScreen() {
               activeOpacity={0.85}
             >
               <LinearGradient
-                colors={['#4F46E5', '#6366F1']}
+                colors={palette.primaryGradient}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                end={{ x: 1, y: 0 }}
                 style={st.buttonGradient}
               >
                 {loading ? (
@@ -284,44 +326,48 @@ export default function LoginScreen() {
 
             {/* Biometric or PIN Sign-in */}
             <View style={st.orRow}>
-              <View style={st.orLine} />
-              <Text style={st.orText}>or</Text>
-              <View style={st.orLine} />
+              <View style={[st.orLine, { backgroundColor: palette.borderLight }]} />
+              <Text style={[st.orText, { color: palette.textMuted }]}>or</Text>
+              <View style={[st.orLine, { backgroundColor: palette.borderLight }]} />
             </View>
 
             <TouchableOpacity
-              style={[st.biometricButton, loading && st.buttonDisabled]}
+              style={[
+                st.biometricButton,
+                { backgroundColor: palette.surfaceSubtle, borderColor: palette.border },
+                loading && st.buttonDisabled,
+              ]}
               onPress={biometric?.available ? handleBiometricLogin : () => { setQuickPin(''); setQuickPinError(''); setShowPinModal(true); }}
               disabled={loading}
               activeOpacity={0.85}
             >
               <Text style={st.biometricButtonIcon}>🔐</Text>
-              <Text style={st.biometricButtonText}>
+              <Text style={[st.biometricButtonText, { color: palette.text }]}>
                 {biometric?.available ? `Sign in with ${biometric.label}` : 'Sign in with Biometrics'}
               </Text>
             </TouchableOpacity>
 
             {hasAppPin && !biometric?.available && (
               <TouchableOpacity
-                style={[st.biometricButton, { marginTop: 8 }]}
+                style={[st.biometricButton, { marginTop: 8, backgroundColor: palette.surfaceSubtle, borderColor: palette.border }]}
                 onPress={() => { setQuickPin(''); setQuickPinError(''); setShowPinModal(true); }}
                 activeOpacity={0.85}
               >
                 <Text style={st.biometricButtonIcon}>🔢</Text>
-                <Text style={st.biometricButtonText}>Sign in with 4-Digit PIN</Text>
+                <Text style={[st.biometricButtonText, { color: palette.text }]}>Sign in with 4-Digit PIN</Text>
               </TouchableOpacity>
             )}
           </View>
 
           {/* Footer Register Link */}
           <View style={st.footer}>
-            <Text style={st.footerText}>Don't have an account? </Text>
-            <Link href="/auth/register" style={st.footerLink}>Register</Link>
+            <Text style={[st.footerText, { color: palette.textMuted }]}>Don't have an account? </Text>
+            <Link href="/auth/register" style={[st.footerLink, { color: palette.link }]}>Register</Link>
           </View>
 
-          {/* Figma Community Location Breadcrumb */}
-          <View style={st.communityMetaRow}>
-            <Text style={st.communityMetaText}>Mana Community · Block G · Flat 4B</Text>
+          {/* Community Security Note */}
+          <View style={[st.communityMetaRow, { borderTopColor: palette.borderLight }]}>
+            <Text style={[st.communityMetaText, { color: palette.textMuted }]}>Encrypted · Verified Community Access</Text>
           </View>
         </View>
       </ScrollView>
@@ -358,36 +404,54 @@ const st = StyleSheet.create({
     zIndex: 10,
     ...SHADOWS.sm,
   },
+  heroThemeBtn: {
+    position: 'absolute',
+    right: 20,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    zIndex: 10,
+    ...SHADOWS.sm,
+  },
+  heroThemeText: {
+    fontSize: 12.5,
+    fontFamily: FONTS.bold,
+  },
   avatarAuraOuter: {
-    width: 92,
-    height: 92,
-    borderRadius: 30,
+    width: 102,
+    height: 102,
+    borderRadius: 32,
     backgroundColor: 'rgba(99, 102, 241, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   avatarAuraInner: {
-    width: 76,
-    height: 76,
-    borderRadius: 24,
+    width: 86,
+    height: 86,
+    borderRadius: 27,
     backgroundColor: 'rgba(99, 102, 241, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   brandAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
+    width: 74,
+    height: 74,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     ...SHADOWS.primary,
   },
-  brandGlyph: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    fontFamily: FONTS.displayEB,
+  brandLogoImg: {
+    width: 90,
+    height: 90,
   },
   brandTitle: {
     fontSize: 26,

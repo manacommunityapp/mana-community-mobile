@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useModuleGuard } from '@/hooks/useRoleGuard';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,7 +16,7 @@ import { COLORS } from '@/constants/config';
 import { safeFormat, formatTournamentDateRange } from '@/utils/dateUtils';
 import { shareTournament } from '@/utils/sportsShare';
 import { TournamentBracketView } from '@/components/sports/TournamentBracketView';
-import type { DashboardEventCardDto } from '@/types/api';
+import type { DashboardEventCardDto, DashboardTournamentCardDto } from '@/types/api';
 
 const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings', 'Brackets'] as const;
 type Tab = typeof TABS[number];
@@ -192,6 +193,7 @@ const st = StyleSheet.create({
 export default function TournamentDetailScreen() {
   const { id }   = useLocalSearchParams<{ id: string }>();
   const router   = useRouter();
+  useModuleGuard('SPORTS');
   const [tab, setTab] = useState<Tab>('Overview');
 
   const { data: tournament, isLoading } = useQuery({
@@ -200,14 +202,32 @@ export default function TournamentDetailScreen() {
   });
 
   // Open tournament events/categories from open tournaments API
-  const { data: openTournamentsDash = [] } = useQuery({
+  const { data: openTournamentsDash = [] } = useQuery<DashboardTournamentCardDto[]>({
     queryKey: ['tournaments-open-dash'],
-    queryFn: sportsService.getOpenTournaments,
+    queryFn: () => sportsService.getOpenTournaments(),
     staleTime: 30_000,
   });
 
-  const dashTournament = openTournamentsDash.find(t => t.id === Number(id));
-  const events = dashTournament?.events ?? [];
+  const dashTournament = openTournamentsDash.find(t => Number(t.id) === Number(id));
+  const rawTournamentEvents = (tournament as any)?.sportsEvents || (tournament as any)?.events || [];
+  const events: DashboardEventCardDto[] = (dashTournament?.events && dashTournament.events.length > 0)
+    ? dashTournament.events
+    : rawTournamentEvents.map((ev: any) => ({
+        id: ev.id,
+        name: ev.name || tournament?.name || 'Event',
+        eventDateStart: ev.eventDateStart || (tournament as any)?.startDate || null,
+        eventDateEnd: ev.eventDateEnd || (tournament as any)?.endDate || null,
+        sportName: ev.sport?.name || ev.sportName || tournament?.sport || 'Sports',
+        categoryName: ev.categories?.[0]?.name || ev.categoryName || ev.name || '',
+        venueName: ev.venue?.name || ev.venueName || (typeof tournament?.venue === 'string' ? tournament.venue : ''),
+        maxParticipants: ev.maxParticipants ?? (tournament as any)?.maxTeams ?? null,
+        registeredCount: ev.registeredCount ?? 0,
+        registrationStatus: ev.status || ev.registrationStatus || (tournament as any)?.registrationStatus || tournament?.status || 'REGISTRATION_OPEN',
+        auctionStatus: ev.auctionStatus ?? null,
+        teamSport: (ev.minPlayers && ev.minPlayers > 1) || false,
+        myRegistrationId: ev.myRegistrationId ?? null,
+        myRegistrationStatus: ev.myRegistrationStatus ?? null,
+      }));
 
   // Group events by sport
   const sportGroupsMap = new Map<string, { emoji: string; events: DashboardEventCardDto[] }>();
@@ -232,7 +252,7 @@ export default function TournamentDetailScreen() {
   const { data: matchesPage, isLoading: loadingMatches } = useQuery({
     queryKey: ['tournament-matches', id],
     queryFn:  () => sportsService.getMatches(Number(id)),
-    enabled:  tab === 'Schedule',
+    enabled:  tab === 'Schedule' || tab === 'Brackets' || tab === 'Standings',
   });
   const matches = matchesPage?.content ?? [];
 
@@ -244,7 +264,23 @@ export default function TournamentDetailScreen() {
     );
   }
 
-  if (!tournament) return null;
+  if (!tournament) {
+    return (
+      <SafeAreaView style={scr.container} edges={['top']}>
+        <LinearGradient colors={['#1E1B4B', '#3730A3', '#4F46E5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={scr.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={scr.backBtn}>
+            <Ionicons name="arrow-back" size={18} color="#fff" />
+          </TouchableOpacity>
+          <Text style={scr.headerTitle}>Tournament</Text>
+        </LinearGradient>
+        <View style={scr.emptyBox}>
+          <Text style={{ fontSize: 36 }}>🏆</Text>
+          <Text style={scr.emptyText}>Tournament details unavailable</Text>
+          <Text style={scr.emptySubText}>Please pull to refresh on the Sports Hub and try again.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const canRegister = tournament.status === 'REGISTRATION_OPEN' && !tournament.myTeamRegistered;
   const isRegOpen = (dashTournament?.registrationStatus ?? tournament.status ?? '').toUpperCase() === 'REGISTRATION_OPEN';

@@ -16,7 +16,11 @@ export const sportsAuctionService = {
   async getMyConfigs(): Promise<SportsAuctionConfigResponse[]> {
     try {
       const res = await api.get<SportsAuctionConfigResponse[]>(`${BASE}/config`);
-      return res.data;
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+    try {
+      const res = await api.get<SportsAuctionConfigResponse[]>(`${BASE}/config/all`);
+      return Array.isArray(res.data) ? res.data : [];
     } catch (err: any) {
       secureLog.warn('[sportsAuction] getMyConfigs failed', err?.message);
       return [];

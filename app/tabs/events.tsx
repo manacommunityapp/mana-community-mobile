@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, StyleSheet,
   TouchableOpacity, ActivityIndicator, RefreshControl, ScrollView,
-  Dimensions,
+  Dimensions, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -13,6 +13,8 @@ import { eventService } from '@/services/eventService';
 import { EventDto, EventType } from '@/types/api';
 import { COLORS, GRADIENTS, SHADOWS, RADIUS, FONTS, SPACING } from '@/constants/config';
 import { THEME } from '@/constants/theme';
+import { useAuth } from '@/hooks/useAuth';
+import { useAppBack } from '@/hooks/useAppBack';
 import { format, parseISO, isToday, isTomorrow, differenceInDays } from 'date-fns';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -185,6 +187,9 @@ function EventCard({ event, onPress }: { event: EventDto; onPress: () => void })
 
 export default function EventsScreen() {
   const router = useRouter();
+  const { goBack } = useAppBack({ fallbackRoute: '/tabs/feed' });
+  const { hasRole, isSuperAdmin } = useAuth();
+  const isEventAdmin = isSuperAdmin || hasRole('EVENT_ADMIN', 'ADMIN', 'SUPER_ADMIN');
   const [filter, setFilter] = useState<EventType | 'ALL'>('ALL');
 
   const { data: events = [], isLoading, refetch, isRefetching } = useQuery<EventDto[]>({
@@ -201,6 +206,18 @@ export default function EventsScreen() {
     return d >= 0 && d <= 7;
   }).length;
 
+  const handleQuickAction = (route: string) => {
+    if (route === '/event-admin' && !isEventAdmin) {
+      Alert.alert(
+        'Event Desk Access',
+        'The Event Desk is reserved for Community Admins and Event Organizers.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    router.push(route as any);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Gradient Header */}
@@ -212,6 +229,16 @@ export default function EventsScreen() {
       >
         <View style={styles.heroTopRow}>
           <View style={styles.heroLeft}>
+            {router.canGoBack() && (
+              <TouchableOpacity
+                style={styles.heroBackBtn}
+                onPress={goBack}
+                hitSlop={8}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
             <View style={styles.heroIconWrap}>
               <Text style={styles.heroEmoji}>📅</Text>
             </View>
@@ -271,7 +298,7 @@ export default function EventsScreen() {
           <TouchableOpacity
             key={a.label}
             style={styles.quickCard}
-            onPress={() => router.push(a.route as any)}
+            onPress={() => handleQuickAction(a.route)}
             activeOpacity={0.7}
           >
             <View style={[styles.quickIcon, { backgroundColor: a.bg }]}>
@@ -380,6 +407,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  heroBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroIconWrap: {
     width: 42,

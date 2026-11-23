@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '@/constants/config';
+import { useAppTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
@@ -43,12 +44,12 @@ const CATEGORIES: Category[] = [
   { key: 'school-bus', label: 'School Bus', icon: 'bus', route: '/school-bus', color: '#F59E0B', bgColor: '#FFFBEB', moduleKey: 'VISITORS' },
   { key: 'bbps', label: 'Bills & BBPS', icon: 'card', route: '/bbps', color: '#0284C7', bgColor: '#F0F9FF', moduleKey: 'PAYMENTS' },
   { key: 'trips', label: 'Trips', icon: 'airplane', route: '/trips', color: '#1D4ED8', bgColor: '#EFF6FF', moduleKey: 'TRIPS' },
-  { key: 'security', label: 'Security', icon: 'shield-checkmark', route: '/security', color: '#B45309', bgColor: '#FFFBEB', moduleKey: 'VISITORS' },
+  { key: 'security', label: 'Security', icon: 'shield-checkmark', route: '/visitors', color: '#B45309', bgColor: '#FFFBEB', moduleKey: 'VISITORS' },
   { key: 'academy', label: 'Academy', icon: 'school', route: '/academy', color: '#7E22CE', bgColor: '#FAF5FF', moduleKey: 'ACADEMY' },
   { key: 'social', label: 'Social', icon: 'chatbubbles', route: '/social', color: '#0891B2', bgColor: '#ECFEFF', moduleKey: 'COMMUNITY_FEED' },
   { key: 'devices', label: 'Devices', icon: 'hardware-chip', route: '/devices', color: '#64748B', bgColor: '#F1F5F9', moduleKey: 'SERVICE_PLATFORM' },
   { key: 'infrastructure', label: 'Infrastructure', icon: 'cellular-outline', route: '/community/iot', color: '#0369A1', bgColor: '#F0F9FF', moduleKey: 'SERVICE_PLATFORM' },
-  { key: 'more', label: 'More', icon: 'apps', route: '/more', color: '#475569', bgColor: '#F8FAFC' },
+  { key: 'more', label: 'More', icon: 'apps', route: '/tabs/profile', color: '#475569', bgColor: '#F8FAFC' },
 ];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -58,6 +59,7 @@ const TILE_SIZE = (SCREEN_WIDTH - 32 - (NUM_COLS - 1) * 10) / NUM_COLS;
 function CategoryTile({ item }: { item: Category }) {
   const scale = useRef(new Animated.Value(1)).current;
   const router = useRouter();
+  const { palette } = useAppTheme();
 
   const onPressIn = () =>
     Animated.spring(scale, { toValue: 0.93, useNativeDriver: true, speed: 30, bounciness: 0 }).start();
@@ -74,11 +76,25 @@ function CategoryTile({ item }: { item: Category }) {
       accessibilityRole="button"
       style={styles.tilePressable}
     >
-      <Animated.View style={[styles.tile, { transform: [{ scale }] }]}>
-        <View style={[styles.tileIconWrap, { backgroundColor: item.bgColor }]}>
-          <Ionicons name={item.icon} size={28} color={item.color} />
+      <Animated.View
+        style={[
+          styles.tile,
+          {
+            transform: [{ scale }],
+            backgroundColor: palette.surface,
+            borderColor: palette.borderLight,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.tileIconWrap,
+            { backgroundColor: palette.isDark ? item.color + '26' : item.bgColor },
+          ]}
+        >
+          <Ionicons name={item.icon} size={27} color={item.color} />
         </View>
-        <Text style={styles.tileLabel} numberOfLines={1}>{item.label}</Text>
+        <Text style={[styles.tileLabel, { color: palette.text }]} numberOfLines={1}>{item.label}</Text>
       </Animated.View>
     </Pressable>
   );
@@ -86,6 +102,7 @@ function CategoryTile({ item }: { item: Category }) {
 
 export default function DiscoverScreen() {
   const { hasRole, hasModule, isSuperAdmin, user } = useAuth();
+  const { palette } = useAppTheme();
   const isAdmin = hasRole('ADMIN', 'COMMUNITY_ADMIN', 'SUPER_ADMIN');
   const isGuard = hasRole('GUARD', 'SECURITY');
   const isVendor = hasRole('VENDOR');
@@ -125,23 +142,25 @@ export default function DiscoverScreen() {
   }, [isAdmin, isGuard, isVendor, hasModule, isSuperAdmin, user?.enabledModules]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <Text style={styles.title}>Discover</Text>
-        <Text style={styles.subtitle}>
+    <SafeAreaView style={[styles.container, { backgroundColor: palette.dockBg }]} edges={['top']}>
+      <StatusBar barStyle={palette.isDark ? 'light-content' : 'dark-content'} />
+      <View style={[styles.header, { backgroundColor: palette.dockBg, borderBottomColor: palette.dockBorder }]}>
+        <Text style={[styles.title, { color: palette.text }]}>Discover</Text>
+        <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
           {isGuard ? 'Security & Gate Operations' : isVendor ? 'Vendor Tools & Services' : isAdmin ? 'Administration & Community' : 'Everything in your community'}
         </Text>
       </View>
-      <FlatList
-        data={categories}
-        keyExtractor={(item) => item.key}
-        numColumns={NUM_COLS}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <CategoryTile item={item} />}
-      />
+      <View style={{ flex: 1, backgroundColor: palette.appBg }}>
+        <FlatList
+          data={categories}
+          keyExtractor={(item) => item.key}
+          numColumns={NUM_COLS}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => <CategoryTile item={item} />}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -149,22 +168,22 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background ?? '#F8FAFC',
+    backgroundColor: COLORS.background ?? '#FAF8FF',
   },
   header: {
+    width: '100%',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    backgroundColor: COLORS.surface,
+    paddingTop: 8,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: THEME.border,
+    backgroundColor: THEME.surface,
     ...SHADOWS.sm,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: COLORS.text ?? '#1E293B',
-    fontFamily: FONTS.bold,
+    fontSize: 25,
+    color: COLORS.text ?? '#131B2E',
+    fontFamily: FONTS.displayBold,
   },
   subtitle: {
     fontSize: 13,
@@ -174,7 +193,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 108,
   },
   row: {
     justifyContent: 'space-between',
@@ -186,8 +205,8 @@ const styles = StyleSheet.create({
   tile: {
     width: TILE_SIZE,
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    paddingVertical: 16,
+    borderRadius: 20,
+    paddingVertical: 15,
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,

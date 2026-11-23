@@ -31,6 +31,7 @@ import { getPortalForRole } from '@/hooks/useRoleSwitcher';
 import { useAppBiometrics } from '@/hooks/useAppBiometrics';
 import { BiometricLockModal } from '@/components/security/BiometricLockModal';
 import { TenantProvider } from '@/context/TenantContext';
+import { ThemeProvider, useAppTheme } from '@/context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
@@ -93,7 +94,8 @@ function AuthGuard() {
 
     // Fully verified — send to role-appropriate home
     if (inOnboarding || inAuth) {
-      const portal = getPortalForRole(user?.role ?? '');
+      const primaryRole = user?.roles?.[0] || user?.role || 'RESIDENT';
+      const portal = getPortalForRole(primaryRole);
       router.replace((portal?.route ?? '/tabs/feed') as any);
     }
   }, [isAuthenticated, isLoading, isPending, segments]);
@@ -106,6 +108,11 @@ function AuthGuard() {
       onUnlock={unlock}
     />
   );
+}
+
+function ThemedStatusBar() {
+  const { palette } = useAppTheme();
+  return <StatusBar style={palette.statusBar} />;
 }
 
 function RootLayout() {
@@ -135,11 +142,12 @@ function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <ThemeProvider>
         <TenantProvider>
         <QueryClientProvider client={queryClient}>
           <AuthGuard />
-          <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <ThemedStatusBar />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FAF8FF' } }}>
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="auth" />
             <Stack.Screen name="tabs" />
@@ -218,9 +226,39 @@ function RootLayout() {
             <Stack.Screen name="payment-result" />
             <Stack.Screen name="privacy" />
             <Stack.Screen name="sync" />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="payments" />
+            <Stack.Screen name="staff" />
+            <Stack.Screen name="school-bus" />
+            <Stack.Screen name="amc" />
+            <Stack.Screen name="wallet" />
+            <Stack.Screen name="social" />
+            <Stack.Screen name="forum" />
+            <Stack.Screen name="daily-basket" />
+            <Stack.Screen name="fresh-kitchen" />
+            <Stack.Screen name="fresh" />
+            <Stack.Screen name="wellness-basket" />
+            <Stack.Screen name="documents" />
+            <Stack.Screen name="devices" />
+            <Stack.Screen name="household" />
+            <Stack.Screen name="maintenance" />
+            <Stack.Screen name="search" />
+            <Stack.Screen name="orders" />
+            <Stack.Screen name="bazaar" />
+            <Stack.Screen name="deals" />
+            <Stack.Screen name="interiors" />
+            <Stack.Screen name="kitty-party" />
+            <Stack.Screen name="healthcare" />
+            <Stack.Screen name="hrm" />
+            <Stack.Screen name="ops" />
+            <Stack.Screen name="sports-ops" />
+            <Stack.Screen name="vendor-finance" />
+            <Stack.Screen name="my-money" />
+            <Stack.Screen name="bookings" />
           </Stack>
         </QueryClientProvider>
         </TenantProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

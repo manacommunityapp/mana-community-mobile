@@ -18,7 +18,7 @@ type PassFilter = 'ALL' | 'ACTIVE' | 'EXPIRED';
 export default function EventPassesScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { goBack } = useAppBack({ fallbackRoute: '/tabs/events' });
+  const { goBack } = useAppBack({ fallbackRoute: '/events' });
   const [filter, setFilter] = useState<PassFilter>('ACTIVE');
 
   const { data: allEvents = [], isLoading, refetch, isRefetching } = useQuery({

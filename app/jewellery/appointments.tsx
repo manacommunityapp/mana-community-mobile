@@ -78,7 +78,7 @@ export default function JewelleryAppointmentsScreen() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: jewelleryService.cancelAppointment,
+    mutationFn: (appointmentId: string) => jewelleryService.cancelAppointment(appointmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jewellery-appointments'] });
     },
