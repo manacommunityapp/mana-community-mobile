@@ -41,6 +41,9 @@ const ROLE_PORTAL_MAP: Record<string, PortalInfo> = {
   OWNER:                { role: 'OWNER',                  label: 'Owner Home',          route: '/tabs/feed',                   icon: 'home' },
   TENANT:               { role: 'TENANT',                 label: 'Tenant Home',         route: '/tabs/feed',                   icon: 'home' },
   SPORTS_VENDOR:        { role: 'SPORTS_VENDOR',          label: 'Sports Vendor',       route: '/vendor/tabs/dashboard',       icon: 'construct' },
+  SPORTS_TRAINER:       { role: 'SPORTS_TRAINER',         label: 'Sports Trainer',      route: '/sports-admin/tabs/dashboard', icon: 'barbell' },
+  STAFF:                { role: 'STAFF',                  label: 'Staff Portal',        route: '/admin-role/tabs/dashboard',   icon: 'id-badge-2' },
+  CASHIER:              { role: 'CASHIER',                label: 'Cashier Portal',      route: '/admin-role/tabs/dashboard',   icon: 'cash' },
 };
 
 export function useRoleSwitcher() {
