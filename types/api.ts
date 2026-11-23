@@ -120,6 +120,7 @@ export interface PostDto {
   title?: string;
   type: PostType;
   postType?: string;
+  imageUrl?: string;
   mediaUrls?: string[];
   likeCount: number;
   likesCount?: number;
@@ -183,7 +184,7 @@ export interface CommentDto {
 export interface CreatePostRequest {
   content: string;
   title?: string;
-  type?: PostType;
+  type?: PostType | string;
   imageUrl?: string;
   mediaUrls?: string[];
   visibility?: 'COMMUNITY' | 'GROUP' | 'PRIVATE' | string;
@@ -192,6 +193,10 @@ export interface CreatePostRequest {
   location?: string;
   linkUrl?: string;
   linkTitle?: string;
+  pollQuestion?: string;
+  pollOptions?: string;
+  pollEndDate?: string;
+  pollAnonymous?: boolean;
 }
 
 // ── Events ─────────────────────────────────────────────────────
@@ -613,7 +618,12 @@ export interface CommunitySettingsDto {
     jobs:        boolean;
     polls:       boolean;
     commute:     boolean;
+    communityHighlight?: boolean;
+    highlightBanner?: boolean;
+    [key: string]: boolean | undefined;
   };
+  showHighlight?: boolean;
+  showCommunityHighlight?: boolean;
 }
 
 // ── Sports ─────────────────────────────────────────────────────
@@ -785,6 +795,8 @@ export interface GenericScoreRequest {
   pointsAwarded?: number;
   playerId?:      number;
   matchMinute?:   number;
+  description?:   string;
+  secondaryPlayerId?: number;
 }
 
 // ── Sports Community Challenges ────────────────────────────────

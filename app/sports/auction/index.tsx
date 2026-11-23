@@ -42,11 +42,19 @@ export default function SportsAuctionListScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  const displayed = configs.filter((c) =>
-    tab === 'active'
-      ? ['DRAFT', 'REGISTRATION', 'LIVE'].includes(c.status)
-      : ['ENDED', 'CANCELLED'].includes(c.status),
-  );
+  const displayed = configs.filter((c) => {
+    const st = String(c.status || '').toUpperCase();
+    return tab === 'active'
+      ? ['DRAFT', 'REGISTRATION', 'REGISTRATION_OPEN', 'OPEN', 'LIVE', 'ACTIVE', 'UPCOMING', 'PAUSED'].includes(st)
+      : ['ENDED', 'COMPLETED', 'CANCELLED'].includes(st);
+  });
+
+  function formatBudget(raw?: number): string {
+    if (!raw || raw <= 0) return 'TBD';
+    if (raw >= 100000) return `₹${(raw / 100000).toFixed(1)}L/team`;
+    if (raw >= 1000) return `₹${Math.round(raw / 1000)}K/team`;
+    return `₹${raw}/team`;
+  }
 
   async function toggleWatch(id: number) {
     if (watchSet.has(id)) {
@@ -81,7 +89,7 @@ export default function SportsAuctionListScreen() {
         <View style={s.statsRow}>
           <StatChip icon="people-outline"  label={`${item.totalTeams} teams`} />
           <StatChip icon="person-outline"  label={`${item.totalPlayers} players`} />
-          <StatChip icon="wallet-outline"  label={`₹${(item.budgetPerTeam / 100).toFixed(0)}L/team`} />
+          <StatChip icon="wallet-outline"  label={formatBudget(item.budgetPerTeam)} />
         </View>
 
         <View style={s.cardFooter}>

@@ -30,6 +30,10 @@ const ROLE_PORTAL_MAP: Record<string, PortalInfo> = {
   READONLY_ADMIN:   { role: 'READONLY_ADMIN',     label: 'View-Only Admin', route: '/admin-role/tabs/dashboard',   icon: 'eye' },
   MEMBER:           { role: 'MEMBER',             label: 'Resident Home',   route: '/tabs/feed',                   icon: 'home' },
   USER:             { role: 'USER',               label: 'Home',            route: '/tabs/feed',                   icon: 'home' },
+  RESIDENT:         { role: 'RESIDENT',           label: 'Resident Home',   route: '/tabs/feed',                   icon: 'home' },
+  OWNER:            { role: 'OWNER',              label: 'Owner Home',      route: '/tabs/feed',                   icon: 'home' },
+  TENANT:           { role: 'TENANT',             label: 'Tenant Home',     route: '/tabs/feed',                   icon: 'home' },
+  SPORTS_VENDOR:    { role: 'SPORTS_VENDOR',      label: 'Sports Vendor',   route: '/vendor/tabs/dashboard',       icon: 'construct' },
 };
 
 export function useRoleSwitcher() {
@@ -38,9 +42,12 @@ export function useRoleSwitcher() {
 
   const availableRoles = useMemo<UserRole[]>(() => {
     if (!user) return [];
-    return (user.roles ?? []).length > 0
-      ? (user.roles as UserRole[])
-      : [user.role as UserRole];
+    const rawRoles = (user.roles && user.roles.length > 0)
+      ? user.roles
+      : (user.role ? [user.role] : []);
+    return rawRoles
+      .filter(Boolean)
+      .map(r => String(r).trim().toUpperCase() as UserRole);
   }, [user?.role, user?.roles]);
 
   const availablePortals = useMemo<PortalInfo[]>(() => {
@@ -81,5 +88,7 @@ export function useRoleSwitcher() {
 }
 
 export function getPortalForRole(role: string): PortalInfo | null {
-  return ROLE_PORTAL_MAP[role] ?? null;
+  if (!role) return null;
+  const upper = String(role).trim().toUpperCase();
+  return ROLE_PORTAL_MAP[upper] ?? null;
 }

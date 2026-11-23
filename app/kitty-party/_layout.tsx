@@ -11,6 +11,7 @@ export default function KittyPartyLayout() {
         headerBackTitle: 'Back',
       }}
     >
+      <Stack.Screen name="index" options={{ title: 'Social Circles' }} />
       <Stack.Screen name="kittyPartyIndex" options={{ title: 'Social Circles' }} />
       <Stack.Screen name="kittyPartyCreateScreen" options={{ title: 'Create Circle' }} />
       <Stack.Screen name="kittyPartyDetailsScreen" options={{ title: 'Circle Details' }} />

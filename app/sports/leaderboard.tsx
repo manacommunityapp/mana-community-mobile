@@ -14,11 +14,13 @@ import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import type { LeaderboardCategory, SportType } from '@/types/api';
 
 const SPORTS_FILTER: { key: SportType | 'ALL'; label: string }[] = [
-  { key: 'ALL',         label: 'Overall'   },
-  { key: 'CRICKET',     label: '🏏 Cricket'  },
-  { key: 'FOOTBALL',    label: '⚽ Football' },
-  { key: 'BADMINTON',   label: '🏸 Badminton'},
-  { key: 'TABLE_TENNIS',label: '🏓 TT'       },
+  { key: 'ALL',         label: 'Overall'    },
+  { key: 'CRICKET',     label: '🏏 Cricket'   },
+  { key: 'BADMINTON',   label: '🏸 Badminton' },
+  { key: 'FOOTBALL',    label: '⚽ Football'  },
+  { key: 'PICKLEBALL' as SportType, label: '🏓 Pickleball' },
+  { key: 'TENNIS' as SportType,     label: '🎾 Tennis'     },
+  { key: 'TABLE_TENNIS',label: '🏓 TT'        },
   { key: 'BASKETBALL',  label: '🏀 Basketball'},
 ];
 
@@ -42,13 +44,32 @@ const MEDAL = ['🥇', '🥈', '🥉'];
 
 export default function LeaderboardScreen() {
   const router  = useRouter();
+  const [mode,     setMode]     = useState<'players' | 'standings'>('players');
   const [sport,    setSport]    = useState<SportType | 'ALL'>('ALL');
   const [category, setCategory] = useState<LeaderboardCategory>('WINS');
   const [period,   setPeriod]   = useState<'MONTH' | 'SEASON' | 'ALL_TIME'>('ALL_TIME');
+  const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
 
   const { data: entries = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['leaderboard', sport, category, period],
     queryFn:  () => sportsService.getLeaderboard(sport, category, period),
+  });
+
+  const { data: configs = [], isLoading: loadingConfigs } = useQuery({
+    queryKey: ['leaderboard-configs'],
+    queryFn:  async () => {
+      const list = await sportsService.getTournamentConfigs();
+      return list.filter((c: any) => String(c?.status || '').toUpperCase() !== 'DRAFT');
+    },
+    enabled: mode === 'standings',
+  });
+
+  const activeConfigId = selectedConfigId ?? (configs[0]?.id ? Number(configs[0].id) : null);
+
+  const { data: standings = [], isLoading: loadingStandings, refetch: refetchStandings } = useQuery({
+    queryKey: ['leaderboard-standings', activeConfigId],
+    queryFn:  () => sportsService.getStandings(activeConfigId!),
+    enabled:  mode === 'standings' && Boolean(activeConfigId),
   });
 
   return (
@@ -58,8 +79,8 @@ export default function LeaderboardScreen() {
           <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
         <View style={s.headerCenter}>
-          <Text style={s.title}>Leaderboard</Text>
-          <Text style={s.subTitle}>Community Rankings</Text>
+          <Text style={s.title}>Standings & Leaders</Text>
+          <Text style={s.subTitle}>Community Leaderboard & Points Table</Text>
         </View>
         <TouchableOpacity
           style={s.headerActionBtn}
@@ -71,122 +92,232 @@ export default function LeaderboardScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Period */}
+      {/* Mode Switch */}
       <View style={s.periodRow}>
-        {PERIODS.map((p) => (
+        {[
+          { key: 'players' as const, label: 'Player Leaders' },
+          { key: 'standings' as const, label: 'Tournament Points Table' },
+        ].map((m) => (
           <TouchableOpacity
-            key={p.key}
-            style={[s.periodChip, period === p.key && s.periodChipActive]}
-            onPress={() => setPeriod(p.key)}
+            key={m.key}
+            style={[s.periodChip, mode === m.key && s.periodChipActive]}
+            onPress={() => setMode(m.key)}
           >
-            <Text style={[s.periodText, period === p.key && s.periodTextActive]}>{p.label}</Text>
+            <Text style={[s.periodText, mode === m.key && s.periodTextActive]}>{m.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Sport filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} style={s.chipsWrap}>
-        {SPORTS_FILTER.map((sp) => (
-          <TouchableOpacity
-            key={sp.key}
-            style={[s.chip, sport === sp.key && s.chipActive]}
-            onPress={() => setSport(sp.key)}
-          >
-            <Text style={[s.chipText, sport === sp.key && s.chipTextActive]}>{sp.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Category tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.catChips} style={s.catWrap}>
-        {CATEGORIES.map((c) => (
-          <TouchableOpacity
-            key={c.key}
-            style={[s.catChip, category === c.key && s.catChipActive]}
-            onPress={() => setCategory(c.key)}
-          >
-            <Text style={[s.catText, category === c.key && s.catTextActive]}>{c.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Category description */}
-      <Text style={s.catDesc}>
-        {CATEGORIES.find((c) => c.key === category)?.desc}
-      </Text>
-
-      {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 60 }} color={COLORS.primary} size="large" />
-      ) : (
-        <FlatList
-          data={entries}
-          keyExtractor={(e) => String(e.userId)}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
-          contentContainerStyle={{ paddingBottom: 24 }}
-          ListEmptyComponent={
+      {mode === 'standings' ? (
+        <ScrollView
+          contentContainerStyle={{ padding: 14, gap: 12, paddingBottom: 28 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={loadingStandings}
+              onRefresh={() => {
+                if (activeConfigId) void refetchStandings();
+              }}
+              tintColor={COLORS.primary}
+            />
+          }
+        >
+          {configs.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {configs.map((cfg: any) => {
+                const cid = Number(cfg.id);
+                const active = cid === activeConfigId;
+                return (
+                  <TouchableOpacity
+                    key={cid}
+                    style={[s.chip, active && s.chipActive]}
+                    onPress={() => setSelectedConfigId(cid)}
+                  >
+                    <Text style={[s.chipText, active && s.chipTextActive]}>
+                      {cfg.tournamentName || cfg.eventName || `Tournament #${cid}`}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+          {loadingConfigs || loadingStandings ? (
+            <ActivityIndicator style={{ marginTop: 48 }} color={COLORS.primary} size="large" />
+          ) : standings.length === 0 ? (
             <View style={s.empty}>
               <View style={s.emptyIconCircle}>
-                <Ionicons name="trophy-outline" size={40} color={COLORS.primary} />
+                <Ionicons name="podium-outline" size={36} color={COLORS.primary} />
               </View>
-              <Text style={s.emptyTitle}>No Rankings Recorded Yet</Text>
+              <Text style={s.emptyTitle}>No Points Table Yet</Text>
               <Text style={s.emptySub}>
-                Tournament scores and match victories will automatically populate rankings here.
+                Knockout brackets or upcoming league matches will populate standings once league results are recorded.
               </Text>
               <TouchableOpacity
                 style={s.emptyActionBtn}
-                onPress={() => router.push('/sports/matches')}
+                onPress={() => router.push('/sports/tournaments')}
                 activeOpacity={0.8}
               >
-                <Ionicons name="calendar-outline" size={15} color="#fff" />
-                <Text style={s.emptyActionBtnText}>Browse Matches</Text>
+                <Ionicons name="trophy-outline" size={15} color="#fff" />
+                <Text style={s.emptyActionBtnText}>View Tournaments</Text>
               </TouchableOpacity>
             </View>
-          }
-          renderItem={({ item: entry }) => {
-            const eName = entry.name || entry.playerName || 'Player';
-            const badgeObj: any = typeof entry.topBadge === 'string'
-              ? { id: entry.topBadge, title: entry.topBadge, tier: 'rare', description: '', icon: 'medal' }
-              : entry.topBadge;
-
-            return (
+          ) : (
+            <View style={{ backgroundColor: COLORS.surface, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', backgroundColor: '#EEF2FF', paddingVertical: 10, paddingHorizontal: 12 }}>
+                <Text style={{ width: 28, fontSize: 11, fontWeight: '800', color: COLORS.textMuted }}>#</Text>
+                <Text style={{ flex: 1, fontSize: 11, fontWeight: '800', color: COLORS.textMuted }}>Team</Text>
+                <Text style={{ width: 28, fontSize: 11, fontWeight: '800', color: COLORS.textMuted, textAlign: 'center' }}>P</Text>
+                <Text style={{ width: 28, fontSize: 11, fontWeight: '800', color: COLORS.textMuted, textAlign: 'center' }}>W</Text>
+                <Text style={{ width: 28, fontSize: 11, fontWeight: '800', color: COLORS.textMuted, textAlign: 'center' }}>L</Text>
+                <Text style={{ width: 34, fontSize: 11, fontWeight: '800', color: COLORS.primary, textAlign: 'right' }}>Pts</Text>
+              </View>
+              {standings.map((row, idx) => (
+                <View
+                  key={`${row.teamId}-${idx}`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderTopWidth: 1,
+                    borderTopColor: COLORS.border,
+                    backgroundColor: row.position <= 2 ? '#F8FAFF' : COLORS.surface,
+                  }}
+                >
+                  <Text style={{ width: 28, fontSize: 12, fontWeight: '800', color: row.position <= 2 ? COLORS.primary : COLORS.textMuted }}>
+                    {row.position <= 3 ? MEDAL[row.position - 1] : row.position}
+                  </Text>
+                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: COLORS.text }} numberOfLines={1}>
+                    {row.teamName}
+                  </Text>
+                  <Text style={{ width: 28, fontSize: 12, color: COLORS.text, textAlign: 'center' }}>{row.played}</Text>
+                  <Text style={{ width: 28, fontSize: 12, color: COLORS.text, textAlign: 'center' }}>{row.won}</Text>
+                  <Text style={{ width: 28, fontSize: 12, color: COLORS.text, textAlign: 'center' }}>{row.lost}</Text>
+                  <Text style={{ width: 34, fontSize: 13, fontWeight: '900', color: COLORS.primary, textAlign: 'right' }}>{row.points}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      ) : (
+        <>
+          {/* Period */}
+          <View style={s.periodRow}>
+            {PERIODS.map((p) => (
               <TouchableOpacity
-                style={[s.entryRow, entry.isCurrentUser && s.entryRowMine]}
-                onPress={() => router.push(`/sports/player/${entry.userId}`)}
-                activeOpacity={0.85}
+                key={p.key}
+                style={[s.periodChip, period === p.key && s.periodChipActive]}
+                onPress={() => setPeriod(p.key)}
               >
-                {/* Rank */}
-                <View style={s.rankWrap}>
-                  {entry.rank <= 3
-                    ? <Text style={s.rankMedal}>{MEDAL[entry.rank - 1]}</Text>
-                    : <Text style={s.rankNum}>{entry.rank}</Text>
-                  }
-                </View>
-
-                {/* Avatar */}
-                <View style={[s.avatar, entry.rank <= 3 && s.avatarTop]}>
-                  <Text style={s.avatarText}>{getInitials(eName)}</Text>
-                </View>
-
-                {/* Info */}
-                <View style={s.entryInfo}>
-                  <View style={s.nameRow}>
-                    <Text style={[s.entryName, entry.isCurrentUser && s.entryNameMe]} numberOfLines={1}>
-                      {eName}
-                      {entry.isCurrentUser ? ' (You)' : ''}
-                    </Text>
-                    {badgeObj && <BadgeCard badge={badgeObj} size="sm" />}
-                  </View>
-                  {(entry.flatNo || entry.flatNumber) && <Text style={s.flat}>🏠 {entry.flatNo || entry.flatNumber}</Text>}
-                </View>
-
-                {/* Value */}
-                <Text style={[s.value, entry.rank === 1 && s.valueFirst]}>
-                  {entry.displayValue ?? String(entry.score ?? '')}
-                </Text>
+                <Text style={[s.periodText, period === p.key && s.periodTextActive]}>{p.label}</Text>
               </TouchableOpacity>
-            );
-          }}
-        />
+            ))}
+          </View>
+
+          {/* Sport filter */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} style={s.chipsWrap}>
+            {SPORTS_FILTER.map((sp) => (
+              <TouchableOpacity
+                key={sp.key}
+                style={[s.chip, sport === sp.key && s.chipActive]}
+                onPress={() => setSport(sp.key)}
+              >
+                <Text style={[s.chipText, sport === sp.key && s.chipTextActive]}>{sp.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Category tabs */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.catChips} style={s.catWrap}>
+            {CATEGORIES.map((c) => (
+              <TouchableOpacity
+                key={c.key}
+                style={[s.catChip, category === c.key && s.catChipActive]}
+                onPress={() => setCategory(c.key)}
+              >
+                <Text style={[s.catText, category === c.key && s.catTextActive]}>{c.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Category description */}
+          <Text style={s.catDesc}>
+            {CATEGORIES.find((c) => c.key === category)?.desc}
+          </Text>
+
+          {isLoading ? (
+            <ActivityIndicator style={{ marginTop: 60 }} color={COLORS.primary} size="large" />
+          ) : (
+            <FlatList
+              data={entries}
+              keyExtractor={(e, idx) => `${e.userId}-${idx}`}
+              refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
+              contentContainerStyle={{ paddingBottom: 24 }}
+              ListEmptyComponent={
+                <View style={s.empty}>
+                  <View style={s.emptyIconCircle}>
+                    <Ionicons name="trophy-outline" size={40} color={COLORS.primary} />
+                  </View>
+                  <Text style={s.emptyTitle}>No Rankings Recorded Yet</Text>
+                  <Text style={s.emptySub}>
+                    Tournament scores and match victories will automatically populate rankings here.
+                  </Text>
+                  <TouchableOpacity
+                    style={s.emptyActionBtn}
+                    onPress={() => router.push('/sports/matches')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="calendar-outline" size={15} color="#fff" />
+                    <Text style={s.emptyActionBtnText}>Browse Matches</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+              renderItem={({ item: entry }) => {
+                const eName = entry.name || entry.playerName || 'Player';
+                const badgeObj: any = typeof entry.topBadge === 'string'
+                  ? { id: entry.topBadge, title: entry.topBadge, tier: 'rare', description: '', icon: 'medal' }
+                  : entry.topBadge;
+
+                return (
+                  <TouchableOpacity
+                    style={[s.entryRow, entry.isCurrentUser && s.entryRowMine]}
+                    onPress={() => router.push(`/sports/player/${entry.userId}`)}
+                    activeOpacity={0.85}
+                  >
+                    {/* Rank */}
+                    <View style={s.rankWrap}>
+                      {entry.rank <= 3
+                        ? <Text style={s.rankMedal}>{MEDAL[entry.rank - 1]}</Text>
+                        : <Text style={s.rankNum}>{entry.rank}</Text>
+                      }
+                    </View>
+
+                    {/* Avatar */}
+                    <View style={[s.avatar, entry.rank <= 3 && s.avatarTop]}>
+                      <Text style={s.avatarText}>{getInitials(eName)}</Text>
+                    </View>
+
+                    {/* Info */}
+                    <View style={s.entryInfo}>
+                      <View style={s.nameRow}>
+                        <Text style={[s.entryName, entry.isCurrentUser && s.entryNameMe]} numberOfLines={1}>
+                          {eName}
+                          {entry.isCurrentUser ? ' (You)' : ''}
+                        </Text>
+                        {badgeObj && <BadgeCard badge={badgeObj} size="sm" />}
+                      </View>
+                      {(entry.flatNo || entry.flatNumber) && <Text style={s.flat}>🏠 {entry.flatNo || entry.flatNumber}</Text>}
+                    </View>
+
+                    {/* Value */}
+                    <Text style={[s.value, entry.rank === 1 && s.valueFirst]}>
+                      {entry.displayValue ?? String(entry.score ?? '')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          )}
+        </>
       )}
     </SafeAreaView>
   );

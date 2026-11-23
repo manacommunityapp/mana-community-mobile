@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CachedImage as Image } from '@/components/common/CachedImage';
+import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import { feedService } from '@/services/feedService';
 import { useAuth } from '@/hooks/useAuth';
 import { PostDto, CommentDto } from '@/types/api';
@@ -135,6 +136,7 @@ export function PostCommentSheet({ visible, onClose, post }: PostCommentSheetPro
               }
               renderItem={({ item }) => {
                 const authorColor = getAvatarColor(item.authorName || 'Neighbor');
+                const authorAvatar = resolveUserAvatar(item);
                 const timeAgo = (() => {
                   try {
                     return formatDistanceToNow(new Date(item.createdAt), { addSuffix: false });
@@ -145,8 +147,8 @@ export function PostCommentSheet({ visible, onClose, post }: PostCommentSheetPro
 
                 return (
                   <View style={styles.commentItem}>
-                    {item.authorPhoto ? (
-                      <Image source={{ uri: item.authorPhoto }} style={styles.commentAvatar} />
+                    {authorAvatar ? (
+                      <Image source={{ uri: authorAvatar }} style={styles.commentAvatar} />
                     ) : (
                       <View style={[styles.commentAvatar, { backgroundColor: authorColor.bg }]}>
                         <Text style={[styles.avatarInitial, { color: authorColor.text }]}>

@@ -10,17 +10,19 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { sportsService } from '@/services/sportsService';
+import { sportsService, doesSportMatchFilter } from '@/services/sportsService';
 import { facilityService, FacilityDto } from '@/services/facilityService';
 import { auctionService } from '@/services/auctionService';
 import { commuteService } from '@/services/commuteService';
 import { SportsRegisterModal, RegistrationRecord } from '@/components/sports/SportsRegisterModal';
-import { COLORS, SHADOWS, RADIUS, SPACING, FONTS } from '@/constants/config';
+import { COLORS, SHADOWS, RADIUS, SPACING, FONTS, CONFIG } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
+import { useModuleGuard } from '@/hooks/useRoleGuard';
+import { resolveImageUrl } from '@/utils/imageUrlUtils';
 import { formatTournamentDateRange, safeFormat, parseSafeDate } from '@/utils/dateUtils';
 import type {
   MatchDto, TournamentDto, PlayerProfileDto, LeaderboardEntryDto,
-  SportType, DashboardTournamentCardDto, DashboardEventCardDto,
+  SportType, DashboardTournamentCardDto, DashboardEventCardDto, PageResponse,
 } from '@/types/api';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -35,13 +37,17 @@ const SPORT_FILTERS = [
   { id: 'TENNIS',       label: 'Tennis',       emoji: '🎾' },
   { id: 'TABLE_TENNIS', label: 'Table Tennis', emoji: '🏓' },
   { id: 'BASKETBALL',   label: 'Basketball',   emoji: '🏀' },
+  { id: 'VOLLEYBALL',   label: 'Volleyball',   emoji: '🏐' },
+  { id: 'CHESS',        label: 'Chess',        emoji: '♟️' },
+  { id: 'CARROM',       label: 'Carrom',       emoji: '🎯' },
   { id: 'SWIMMING',     label: 'Swimming',     emoji: '🏊' },
 ] as const;
 
 const SPORT_EMOJI_MAP: Record<string, string> = {
   BADMINTON: '🏸', CRICKET: '🏏', FOOTBALL: '⚽', TENNIS: '🎾',
   TABLE_TENNIS: '🏓', PICKLEBALL: '🏓', SWIMMING: '🏊',
-  SWIMMING_POOL: '🏊', BASKETBALL: '🏀', GYM: '💪', SQUASH: '🎾',
+  SWIMMING_POOL: '🏊', BASKETBALL: '🏀', VOLLEYBALL: '🏐',
+  CHESS: '♟️', CARROM: '🎯', GYM: '💪', SQUASH: '🎾',
 };
 
 const MEDAL_ICONS = ['🥇', '🥈', '🥉'];
@@ -49,6 +55,15 @@ const MEDAL_COLORS = ['#F59E0B', '#94A3B8', '#D97706'];
 
 // ── Sport-specific score formatting ───────────────────────────────
 function formatMatchScore(m: MatchDto): { home: string; away: string; detail?: string } {
+  const dispHome = (m as any).homeScoreDisplay;
+  const dispAway = (m as any).awayScoreDisplay;
+  if (dispHome != null && String(dispHome).trim() !== '' && dispAway != null && String(dispAway).trim() !== '') {
+    return {
+      home: String(dispHome).trim(),
+      away: String(dispAway).trim(),
+      detail: m.currentPeriod || undefined,
+    };
+  }
   const sport = (m.sport || '').toUpperCase();
   if (sport === 'CRICKET') {
     const homeOvers = m.homeOvers ? ` (${m.homeOvers} ov)` : '';
@@ -56,8 +71,8 @@ function formatMatchScore(m: MatchDto): { home: string; away: string; detail?: s
     const homeWkts = m.homeWickets != null ? `/${m.homeWickets}` : '';
     const awayWkts = m.awayWickets != null ? `/${m.awayWickets}` : '';
     return {
-      home: `${m.homeScore ?? 0}${homeWkts}${homeOvers}`,
-      away: `${m.awayScore ?? 0}${awayWkts}${awayOvers}`,
+      home: dispHome ? String(dispHome) : `${m.homeScore ?? 0}${homeWkts}${homeOvers}`,
+      away: dispAway ? String(dispAway) : `${m.awayScore ?? 0}${awayWkts}${awayOvers}`,
       detail: m.currentPeriod || undefined,
     };
   }
@@ -66,8 +81,8 @@ function formatMatchScore(m: MatchDto): { home: string; away: string; detail?: s
       ? `Sets: ${m.homeSetsWon}–${m.awaySetsWon}`
       : undefined;
     return {
-      home: String(m.homeScore ?? 0),
-      away: String(m.awayScore ?? 0),
+      home: dispHome ? String(dispHome) : String(m.homeScore ?? 0),
+      away: dispAway ? String(dispAway) : String(m.awayScore ?? 0),
       detail: sets || m.currentPeriod || undefined,
     };
   }
@@ -75,14 +90,14 @@ function formatMatchScore(m: MatchDto): { home: string; away: string; detail?: s
     const elapsed = m.elapsedMinutes ? `${m.elapsedMinutes}'` : undefined;
     const period = m.currentPeriod || undefined;
     return {
-      home: String(m.homeScore ?? 0),
-      away: String(m.awayScore ?? 0),
+      home: dispHome ? String(dispHome) : String(m.homeScore ?? 0),
+      away: dispAway ? String(dispAway) : String(m.awayScore ?? 0),
       detail: elapsed || period || undefined,
     };
   }
   return {
-    home: String(m.homeScore ?? 0),
-    away: String(m.awayScore ?? 0),
+    home: dispHome ? String(dispHome) : String(m.homeScore ?? 0),
+    away: dispAway ? String(dispAway) : String(m.awayScore ?? 0),
     detail: m.currentPeriod || undefined,
   };
 }
@@ -114,6 +129,7 @@ function getMatchStatusColor(status: string): string {
 export default function SportsHubScreen() {
   const router = useRouter();
   const { user, isAnyAdmin, isAdmin, isSuperAdmin, hasRole, hasAnyPermission } = useAuth();
+  useModuleGuard('SPORTS');
   const [selectedSport, setSelectedSport] = useState<string>('ALL');
   const [liveIndex, setLiveIndex] = useState(0);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -135,25 +151,25 @@ export default function SportsHubScreen() {
 
   // ── Data Queries ──────────────────────────────────────────────
   const { data: liveMatches = [], refetch: refetchLive, isRefetching: isRefetchingLive } = useQuery<MatchDto[]>({
-    queryKey: ['sports-live'],
-    queryFn: sportsService.getLiveMatches,
+    queryKey: ['sports-live', user?.communityId],
+    queryFn: () => sportsService.getLiveMatches(user?.communityId),
     refetchInterval: 15_000,
   });
 
   const { data: todayMatches = [], refetch: refetchToday } = useQuery<MatchDto[]>({
-    queryKey: ['sports-today'],
-    queryFn: sportsService.getTodayMatches,
+    queryKey: ['sports-today', user?.communityId],
+    queryFn: () => sportsService.getTodayMatches(user?.communityId),
     refetchInterval: 60_000,
   });
 
-  const { data: tournamentsPage, refetch: refetchTournaments } = useQuery({
-    queryKey: ['tournaments-hub', selectedSport],
-    queryFn: () => sportsService.getTournaments(selectedSport === 'ALL' ? undefined : (selectedSport as SportType), 'ONGOING'),
+  const { data: tournamentsPage, refetch: refetchTournaments } = useQuery<PageResponse<TournamentDto>>({
+    queryKey: ['tournaments-hub', selectedSport, user?.communityId],
+    queryFn: () => sportsService.getTournaments(selectedSport === 'ALL' ? undefined : (selectedSport as SportType), undefined, 0, user?.communityId),
   });
 
   const { data: openTournamentsDash = [], refetch: refetchOpenTournaments } = useQuery<DashboardTournamentCardDto[]>({
-    queryKey: ['tournaments-open-dash'],
-    queryFn: sportsService.getOpenTournaments,
+    queryKey: ['tournaments-open-dash', user?.communityId],
+    queryFn: () => sportsService.getOpenTournaments(user?.communityId),
     staleTime: 30_000,
   });
 
@@ -208,7 +224,7 @@ export default function SportsHubScreen() {
   useEffect(() => {
     if (!liveMatches || liveMatches.length === 0) return;
     const liveIds = liveMatches
-      .filter(m => m.status === 'LIVE' || m.status === 'IN_PROGRESS')
+      .filter(m => m.status === 'LIVE' || (m.status as string) === 'IN_PROGRESS')
       .map(m => m.id);
     if (liveIds.length === 0) return;
 
@@ -264,20 +280,31 @@ export default function SportsHubScreen() {
   // ── Derived Data ──────────────────────────────────────────────
   const filteredLive = useMemo(() => {
     if (!liveMatches) return [];
-    return selectedSport === 'ALL' ? liveMatches : liveMatches.filter((m) => m.sport?.toUpperCase() === selectedSport);
+    return selectedSport === 'ALL'
+      ? liveMatches
+      : liveMatches.filter((m) => doesSportMatchFilter((m as any).rawSportName || m.sport, selectedSport));
   }, [liveMatches, selectedSport]);
 
   const filteredToday = useMemo(() => {
     if (!todayMatches) return [];
-    return selectedSport === 'ALL' ? todayMatches : todayMatches.filter((m) => m.sport?.toUpperCase() === selectedSport);
+    return selectedSport === 'ALL'
+      ? todayMatches
+      : todayMatches.filter((m) => doesSportMatchFilter((m as any).rawSportName || m.sport, selectedSport));
   }, [todayMatches, selectedSport]);
 
-  const scheduledMatches = useMemo(() => filteredToday.filter(m => m.status !== 'COMPLETED').slice(0, 5), [filteredToday]);
+  const scheduledMatches = useMemo(() => {
+    return filteredToday
+      .filter((m) => m.status !== 'COMPLETED' && m.status !== 'CANCELLED')
+      .sort((a, b) => new Date(a.scheduledAt || 0).getTime() - new Date(b.scheduledAt || 0).getTime())
+      .slice(0, 6);
+  }, [filteredToday]);
+
   const recentCompleted = useMemo(() => {
-    const list = todayMatches.filter(m => m.status === 'COMPLETED');
-    if (selectedSport === 'ALL') return list.slice(0, 5);
-    return list.filter(m => m.sport?.toUpperCase() === selectedSport).slice(0, 5);
-  }, [todayMatches, selectedSport]);
+    return filteredToday
+      .filter((m) => m.status === 'COMPLETED')
+      .sort((a, b) => new Date(b.endedAt || b.scheduledAt || 0).getTime() - new Date(a.endedAt || a.scheduledAt || 0).getTime())
+      .slice(0, 6);
+  }, [filteredToday]);
 
   const sportsFacilities = useMemo(() => {
     const keywords = ['BADMINTON', 'TENNIS', 'SWIMMING', 'CRICKET', 'GYM', 'SQUASH', 'TABLE_TENNIS', 'BASKETBALL', 'PICKLEBALL', 'FOOTBALL', 'COURT', 'TURF', 'POOL'];
@@ -286,7 +313,7 @@ export default function SportsHubScreen() {
       const match = keywords.some(k => up.includes(k));
       if (!match) return false;
       if (selectedSport === 'ALL') return true;
-      return up.includes(selectedSport);
+      return doesSportMatchFilter(up, selectedSport);
     });
   }, [facilities, selectedSport]);
 
@@ -300,30 +327,57 @@ export default function SportsHubScreen() {
   // Player profile derived
   const profileStats = useMemo(() => {
     const stats = playerProfile?.stats || playerProfile?.sportStats || [];
-    const totalMatches = playerProfile?.totalMatches ?? stats.reduce((a, s) => a + (s.matchesPlayed || s.matches || 0), 0);
+    const statsTotalMatches = stats.reduce((a, s) => a + (s.matchesPlayed || s.matches || 0), 0);
+    const totalMatches = playerProfile?.totalMatches ? playerProfile.totalMatches : statsTotalMatches;
     const totalWins = stats.reduce((a, s) => a + (s.wins || 0), 0);
-    const totalTrophies = playerProfile?.totalTrophies ?? stats.reduce((a, s) => a + (s.trophies || 0), 0);
+    const statsTotalTrophies = stats.reduce((a, s) => a + (s.trophies || 0), 0);
+    const totalTrophies = playerProfile?.totalTrophies ? playerProfile.totalTrophies : statsTotalTrophies;
     return { totalMatches, totalWins, totalTrophies, sportCount: stats.length, stats };
   }, [playerProfile]);
 
   // Merged registrations
   const allRegistrations = useMemo(() => {
-    const apiRecords: (RegistrationRecord & { eventDate?: string; categoryName?: string; matchType?: string; captainNomination?: boolean })[] =
-      (myRegistrationsApi || []).map((r: any) => ({
-        id: String(r.id),
-        tournamentName: r.eventName || 'Tournament',
-        sport: r.sportName || 'Sport',
-        team: r.playerName || user?.name || user?.fullName || 'Resident Team',
-        status: (r.status === 'CONFIRMED' || r.status === 'APPROVED' ? 'Confirmed' : 'Pending') as 'Confirmed' | 'Pending',
-        players: r.matchType === 'DOUBLES' ? 2 : 1,
-        plan: 'Community Registration',
-        fee: 0,
-        eventDate: r.eventDateStart || null,
-        categoryName: r.categoryName || null,
-        matchType: r.matchType || null,
-        captainNomination: r.captainNomination || false,
-        venueName: r.venueName || null,
-      }));
+    const apiRecords: (RegistrationRecord & {
+      eventId?: number | null;
+      tournamentId?: number | null;
+      eventDate?: string;
+      startTime?: string | null;
+      categoryName?: string;
+      matchType?: string;
+      captainNomination?: boolean;
+      playerName?: string | null;
+      relation?: string | null;
+      flatNumber?: string | null;
+      partnerName?: string | null;
+      partnerStatus?: string | null;
+    })[] =
+      (myRegistrationsApi || []).map((r: any) => {
+        const st = String(r.status || '').toUpperCase();
+        const isConfirmed = ['CONFIRMED', 'APPROVED', 'REGISTERED', 'ACTIVE'].includes(st);
+        return {
+          id: String(r.id),
+          eventId: r.eventId ?? null,
+          tournamentId: r.tournamentId ?? r.eventId ?? null,
+          tournamentName: r.tournamentName || r.eventName || 'Tournament',
+          sport: r.sportName || 'Sport',
+          team: r.proposedTeamName || r.teamName || r.playerName || user?.name || user?.fullName || 'Resident Team',
+          status: (isConfirmed ? 'Confirmed' : 'Pending') as 'Confirmed' | 'Pending',
+          players: r.matchType === 'DOUBLES' ? 2 : 1,
+          plan: 'Community Registration',
+          fee: 0,
+          eventDate: r.eventDateStart || null,
+          startTime: r.startTime || null,
+          categoryName: r.categoryName || null,
+          matchType: r.matchType || null,
+          captainNomination: r.captainNomination || false,
+          venueName: r.venueName || null,
+          playerName: r.playerName || user?.fullName || user?.name || null,
+          relation: r.relation || null,
+          flatNumber: r.flatNumber || r.flatNo || null,
+          partnerName: r.partnerName || null,
+          partnerStatus: r.partnerStatus || r.partnerConfirmationStatus || null,
+        };
+      });
     const existingIds = new Set(apiRecords.map(a => a.id));
     return [...customRegistrations.filter(c => !existingIds.has(c.id)), ...apiRecords];
   }, [myRegistrationsApi, customRegistrations, user?.name, user?.fullName]);
@@ -350,7 +404,7 @@ export default function SportsHubScreen() {
               sportName: t.sport || t.sportType || 'Sports',
               categoryName: t.category || '', venueName: t.venue?.name || t.venueName || '',
               maxParticipants: t.maxParticipants ?? null, registeredCount: t.registeredCount ?? 0,
-              registrationStatus: t.status || 'REGISTRATION_OPEN',
+              registrationStatus: t.status || t.registrationStatus || 'REGISTRATION_OPEN',
               auctionStatus: null, teamSport: false,
               myRegistrationId: null, myRegistrationStatus: null,
             }]
@@ -366,20 +420,18 @@ export default function SportsHubScreen() {
           registrationStatus: ev.status || ev.registrationStatus || t.registrationStatus || 'REGISTRATION_OPEN',
           auctionStatus: ev.auctionStatus || null,
           teamSport: (ev.minPlayers && ev.minPlayers > 1) || false,
-          myRegistrationId: null, myRegistrationStatus: null,
+          myRegistrationId: ev.myRegistrationId ?? null, myRegistrationStatus: ev.myRegistrationStatus ?? null,
         })),
       })) as any;
     }
     return (baseList || [])
       .map(t => {
-        const events = (t.events || []).filter(ev => {
-          if (selectedSport === 'ALL') return true;
-          const sportUp = (ev.sportName || '').toUpperCase().replace(/\s+/g, '_');
-          return sportUp.includes(selectedSport) || selectedSport.includes(sportUp);
-        });
+        const events = (t.events || []).filter(ev =>
+          selectedSport === 'ALL' || doesSportMatchFilter(ev.sportName || ev.name, selectedSport)
+        );
         return { ...t, filteredEvents: events };
       })
-      .filter(t => t.filteredEvents.length > 0 || (selectedSport === 'ALL' && (t.events || []).length > 0));
+      .filter(t => t.filteredEvents.length > 0 || (selectedSport === 'ALL' && ((t.events || []).length > 0 || Boolean(t.name))));
   }, [openTournamentsDash, tournamentsPage, selectedSport]);
 
   const totalOpenEventsCount = useMemo(() =>
@@ -468,9 +520,15 @@ export default function SportsHubScreen() {
           <View style={s.heroScoreCol}>
             <View style={{ alignItems: 'center' }}>
               <Text style={[s.heroScoreBig, scoreFlash === activeLiveMatch.id && s.heroScoreFlash]}>
-                {activeLiveMatch.homeScore ?? 0}
-                <Text style={s.heroScoreColon}> : </Text>
-                {activeLiveMatch.awayScore ?? 0}
+                {(activeLiveMatch as any).homeScoreDisplay || (activeLiveMatch as any).awayScoreDisplay
+                  ? `${scoreInfo.home} : ${scoreInfo.away}`
+                  : (
+                    <>
+                      {activeLiveMatch.homeScore ?? 0}
+                      <Text style={s.heroScoreColon}> : </Text>
+                      {activeLiveMatch.awayScore ?? 0}
+                    </>
+                  )}
               </Text>
               {/* Sport-specific score detail below the main score */}
               {(activeLiveMatch.sport?.toUpperCase() === 'CRICKET') && (
@@ -580,13 +638,13 @@ export default function SportsHubScreen() {
         {playerProfile && (
           <TouchableOpacity
             style={s.profileCard}
-            onPress={() => router.push(`/sports/player/${playerProfile.userId}` as any)}
+            onPress={() => router.push(`/sports/player/${playerProfile.userId ?? user?.id}` as any)}
             activeOpacity={0.8}
           >
             <View style={s.profileTopRow}>
               <View style={s.profileAvatarWrap}>
                 {playerProfile.avatarUrl ? (
-                  <Image source={{ uri: playerProfile.avatarUrl }} style={s.profileAvatarImg} />
+                  <Image source={{ uri: resolveImageUrl(playerProfile.avatarUrl) }} style={s.profileAvatarImg} />
                 ) : (
                   <LinearGradient colors={['#4F46E5', '#6366F1']} style={s.profileAvatarFallback}>
                     <Text style={s.profileAvatarLetter}>
@@ -680,19 +738,19 @@ export default function SportsHubScreen() {
         {/* ── KPI Strip ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.kpiScroll}>
           {[
-            { label: 'Tournaments', value: String(dashStats?.openRegistrations ?? openTournamentsDash.length), sub: 'Open for entry', icon: 'trophy', color: COLORS.success, bg: '#ECFDF5' },
-            { label: 'Live Now', value: String(dashStats?.liveEvents ?? filteredLive.length), sub: 'Games ongoing', icon: 'flash', color: COLORS.error, bg: '#FEF2F2' },
-            { label: 'Upcoming', value: String(dashStats?.upcomingTournaments ?? scheduledMatches.length), sub: 'Scheduled', icon: 'calendar', color: COLORS.warning, bg: '#FFFBEB' },
-            { label: 'Courts', value: String(sportsFacilities.length), sub: 'Bookable', icon: 'football', color: COLORS.primary, bg: '#EEF2FF' },
+            { label: 'Tournaments', value: String(dashStats?.openRegistrations || openTournamentsWithFilteredEvents.length), sub: 'Open for entry', icon: 'trophy', color: COLORS.success, bg: '#ECFDF5', route: '/sports/tournaments' },
+            { label: 'Live Now', value: String(Math.max(dashStats?.liveEvents ?? 0, filteredLive.length)), sub: 'Games ongoing', icon: 'flash', color: COLORS.error, bg: '#FEF2F2', route: '/sports/matches' },
+            { label: 'Upcoming', value: String(scheduledMatches.length || dashStats?.upcomingTournaments || 0), sub: 'Scheduled', icon: 'calendar', color: COLORS.warning, bg: '#FFFBEB', route: '/sports/matches' },
+            { label: 'Courts', value: String(sportsFacilities.length), sub: 'Bookable', icon: 'football', color: COLORS.primary, bg: '#EEF2FF', route: '/sports/facility/my-bookings' },
           ].map(k => (
-            <View key={k.label} style={s.kpiCard}>
+            <TouchableOpacity key={k.label} style={s.kpiCard} onPress={() => router.push(k.route as any)} activeOpacity={0.82}>
               <View style={[s.kpiIcon, { backgroundColor: k.bg }]}>
                 <Ionicons name={k.icon as any} size={15} color={k.color} />
               </View>
               <Text style={s.kpiValue}>{k.value}</Text>
               <Text style={s.kpiLabel}>{k.label}</Text>
               <Text style={[s.kpiSub, { color: k.color }]}>{k.sub}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
@@ -780,7 +838,9 @@ export default function SportsHubScreen() {
                         <View style={s.tournTopRow}>
                           <View style={s.openBadge}>
                             <View style={s.openDot} />
-                            <Text style={s.openBadgeText}>REGISTRATION OPEN</Text>
+                            <Text style={s.openBadgeText}>
+                              {String(t.registrationStatus || 'REGISTRATION_OPEN').toUpperCase().replace(/_/g, ' ')}
+                            </Text>
                           </View>
                           {countdown && (
                             <View style={s.countdownBadge}>
@@ -810,7 +870,7 @@ export default function SportsHubScreen() {
                       </TouchableOpacity>
                     </LinearGradient>
 
-                    <View style={s.eventsListWrap}>
+                    {displayEvents.length > 0 && <View style={s.eventsListWrap}>
                       {displayEvents.map((ev: DashboardEventCardDto) => {
                         const sportUp = (ev.sportName || '').toUpperCase().replace(/\s+/g, '_');
                         const sportEmoji = SPORT_EMOJI_MAP[sportUp] || '🏅';
@@ -892,7 +952,7 @@ export default function SportsHubScreen() {
                           </View>
                         );
                       })}
-                    </View>
+                    </View>}
                   </View>
                 );
               })}
@@ -900,7 +960,7 @@ export default function SportsHubScreen() {
           )}
         </View>
 
-        {/* ── My Registrations (Enhanced) ── */}
+        {/* ── My Registrations (Horizontal Scroll + Dedicated Page) ── */}
         <View style={s.card}>
           <View style={s.sectionHeader}>
             <View style={s.row}>
@@ -910,9 +970,17 @@ export default function SportsHubScreen() {
                 <View style={[s.countBadge, { backgroundColor: '#ECFDF5' }]}><Text style={[s.countBadgeText, { color: '#065F46' }]}>{allRegistrations.length}</Text></View>
               )}
             </View>
-            <TouchableOpacity onPress={() => { setSelectedRegisterEventId(null); setShowRegisterModal(true); }}>
-              <Text style={s.linkText}>+ New</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              {allRegistrations.length > 0 && (
+                <TouchableOpacity onPress={() => router.push('/sports/registrations' as any)} style={s.row}>
+                  <Text style={s.linkText}>View All</Text>
+                  <Ionicons name="chevron-forward" size={13} color={COLORS.primary} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => { setSelectedRegisterEventId(null); setShowRegisterModal(true); }}>
+                <Text style={s.linkText}>+ New</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           {allRegistrations.length === 0 ? (
             <View style={s.emptyMini}>
@@ -921,64 +989,93 @@ export default function SportsHubScreen() {
               <Text style={s.emptySub}>Register for tournaments to track your participation.</Text>
             </View>
           ) : (
-            <View style={s.regList}>
-              {allRegistrations.map(r => {
-                const isConfirmed = r.status === 'Confirmed';
-                const emoji = SPORT_EMOJI_MAP[r.sport.toUpperCase()] || '🏅';
-                const reg = r as any;
-                return (
-                  <View key={r.id} style={s.regCard}>
-                    <View style={s.regTopRow}>
-                      <View style={s.regEmojiWrap}><Text style={{ fontSize: 20 }}>{emoji}</Text></View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={s.regTeamName} numberOfLines={1}>{r.tournamentName || r.team}</Text>
-                        <View style={s.regMetaRow}>
-                          <Text style={s.regMetaText}>{r.sport}</Text>
-                          {reg.categoryName && <><Text style={s.regMetaDot}>·</Text><Text style={s.regMetaText}>{reg.categoryName}</Text></>}
-                          {reg.matchType && <><Text style={s.regMetaDot}>·</Text><Text style={s.regMetaText}>{reg.matchType}</Text></>}
+            <>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 10, paddingRight: 4 }}
+              >
+                {allRegistrations.map(r => {
+                  const isConfirmed = r.status === 'Confirmed';
+                  const emoji = SPORT_EMOJI_MAP[r.sport.toUpperCase().replace(/\s+/g, '_')] || '🏅';
+                  const reg = r as any;
+                  const cardWidth = allRegistrations.length > 1 ? Math.min(284, SCREEN_W - 76) : Math.max(260, SCREEN_W - 58);
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={[s.regCard, { width: cardWidth }]}
+                      onPress={() => router.push('/sports/registrations' as any)}
+                      activeOpacity={0.82}
+                    >
+                      <View style={s.regTopRow}>
+                        <View style={s.regEmojiWrap}><Text style={{ fontSize: 20 }}>{emoji}</Text></View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={s.regTeamName} numberOfLines={1}>{r.tournamentName || r.team}</Text>
+                          <View style={s.regMetaRow}>
+                            <Text style={s.regMetaText}>{r.sport}</Text>
+                            {reg.categoryName && <><Text style={s.regMetaDot}>·</Text><Text style={s.regMetaText} numberOfLines={1}>{reg.categoryName}</Text></>}
+                            {reg.matchType && <><Text style={s.regMetaDot}>·</Text><Text style={s.regMetaText}>{reg.matchType}</Text></>}
+                          </View>
+                        </View>
+                        <View style={[s.statusBadge, isConfirmed ? s.statusConfirmed : s.statusPending]}>
+                          <Ionicons name={isConfirmed ? 'checkmark-circle' : 'time-outline'} size={10} color={isConfirmed ? '#065F46' : '#92400E'} />
+                          <Text style={[s.statusText, { color: isConfirmed ? '#065F46' : '#92400E' }]}>{r.status}</Text>
                         </View>
                       </View>
-                      <View style={[s.statusBadge, isConfirmed ? s.statusConfirmed : s.statusPending]}>
-                        <Ionicons name={isConfirmed ? 'checkmark-circle' : 'time-outline'} size={10} color={isConfirmed ? '#065F46' : '#92400E'} />
-                        <Text style={[s.statusText, { color: isConfirmed ? '#065F46' : '#92400E' }]}>{r.status}</Text>
+                      {/* Detail row */}
+                      <View style={s.regDetailRow}>
+                        {reg.playerName && (
+                          <View style={s.regDetailItem}>
+                            <Ionicons name="person-outline" size={10} color={COLORS.textMuted} />
+                            <Text style={s.regDetailText} numberOfLines={1}>
+                              {reg.playerName}{reg.relation && reg.relation.toUpperCase() !== 'SELF' ? ` (${reg.relation})` : ''}
+                            </Text>
+                          </View>
+                        )}
+                        {reg.partnerName && (
+                          <View style={s.regDetailItem}>
+                            <Ionicons name="people-outline" size={10} color={COLORS.primary} />
+                            <Text style={[s.regDetailText, { color: COLORS.primary }]} numberOfLines={1}>
+                              w/ {reg.partnerName}
+                            </Text>
+                          </View>
+                        )}
+                        {reg.eventDate && (
+                          <View style={s.regDetailItem}>
+                            <Ionicons name="calendar-outline" size={10} color={COLORS.textMuted} />
+                            <Text style={s.regDetailText}>
+                              {safeFormat(reg.eventDate, 'dd MMM', 'TBD')}{reg.startTime ? ` · ${reg.startTime}` : ''}
+                            </Text>
+                          </View>
+                        )}
+                        {r.venueName && (
+                          <View style={s.regDetailItem}>
+                            <Ionicons name="location-outline" size={10} color={COLORS.textMuted} />
+                            <Text style={s.regDetailText} numberOfLines={1}>{r.venueName}</Text>
+                          </View>
+                        )}
+                        {reg.captainNomination && (
+                          <View style={[s.regDetailItem, { backgroundColor: '#FEF3C7', borderRadius: 4, paddingHorizontal: 4 }]}>
+                            <Text style={{ fontSize: 9 }}>👑</Text>
+                            <Text style={[s.regDetailText, { color: '#92400E', fontWeight: '700' }]}>Captain</Text>
+                          </View>
+                        )}
                       </View>
-                    </View>
-                    {/* Detail row */}
-                    <View style={s.regDetailRow}>
-                      {reg.eventDate && (
-                        <View style={s.regDetailItem}>
-                          <Ionicons name="calendar-outline" size={10} color={COLORS.textMuted} />
-                          <Text style={s.regDetailText}>{safeFormat(reg.eventDate, 'dd MMM yyyy', 'TBD')}</Text>
-                        </View>
-                      )}
-                      {r.venueName && (
-                        <View style={s.regDetailItem}>
-                          <Ionicons name="location-outline" size={10} color={COLORS.textMuted} />
-                          <Text style={s.regDetailText} numberOfLines={1}>{r.venueName}</Text>
-                        </View>
-                      )}
-                      {r.players > 0 && (
-                        <View style={s.regDetailItem}>
-                          <Ionicons name="people-outline" size={10} color={COLORS.textMuted} />
-                          <Text style={s.regDetailText}>{r.players} player{r.players !== 1 ? 's' : ''}</Text>
-                        </View>
-                      )}
-                      {reg.captainNomination && (
-                        <View style={[s.regDetailItem, { backgroundColor: '#FEF3C7', borderRadius: 4, paddingHorizontal: 4 }]}>
-                          <Text style={{ fontSize: 9 }}>👑</Text>
-                          <Text style={[s.regDetailText, { color: '#92400E', fontWeight: '700' }]}>Captain</Text>
-                        </View>
-                      )}
-                      {r.fee > 0 && (
-                        <View style={s.regDetailItem}>
-                          <Text style={[s.regDetailText, { fontWeight: '700', color: COLORS.primary }]}>₹{r.fee.toLocaleString('en-IN')}</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              {allRegistrations.length > 1 && (
+                <TouchableOpacity
+                  onPress={() => router.push('/sports/registrations' as any)}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={{ fontSize: 10.5, color: COLORS.textMuted }}>Swipe horizontally or view all entries</Text>
+                  <Text style={s.linkText}>Open Full List ({allRegistrations.length}) →</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
 
@@ -1244,7 +1341,7 @@ export default function SportsHubScreen() {
               {leaderboard.slice(0, 5).map((pl, idx) => {
                 const name = pl.playerName || pl.name || 'Athlete';
                 const isTop3 = idx < 3;
-                const score = pl.score ?? 0;
+                const score = pl.score ?? (pl as any).value ?? 0;
                 const played = pl.matchesPlayed ?? 0;
                 const isCurrent = pl.isCurrentUser;
                 return (
@@ -1263,7 +1360,7 @@ export default function SportsHubScreen() {
                     </View>
                     <View style={[s.leaderAvatar, isTop3 && { borderWidth: 2, borderColor: MEDAL_COLORS[idx] }]}>
                       {pl.avatarUrl ? (
-                        <Image source={{ uri: pl.avatarUrl }} style={{ width: 32, height: 32, borderRadius: 16 }} />
+                        <Image source={{ uri: resolveImageUrl(pl.avatarUrl) }} style={{ width: 32, height: 32, borderRadius: 16 }} />
                       ) : (
                         <Text style={s.leaderAvatarText}>{name[0]?.toUpperCase()}</Text>
                       )}

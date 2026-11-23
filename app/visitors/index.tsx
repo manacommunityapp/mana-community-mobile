@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, BackHandler, Modal, TextInput, Share,
   RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
@@ -102,6 +102,7 @@ const INITIAL_VISITORS: VisitorEntry[] = [
 
 export default function VisitorsScreen() {
   const router = useRouter();
+  const { action, type, tab: initialTab } = useLocalSearchParams<{ action?: string; type?: string; tab?: string }>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -133,6 +134,21 @@ export default function VisitorsScreen() {
   const [guestPurpose, setGuestPurpose] = useState('');
   const [guestValidFrom, setGuestValidFrom] = useState('');
   const [guestValidUntil, setGuestValidUntil] = useState('');
+
+  useEffect(() => {
+    if (initialTab === 'active' || initialTab === 'history') {
+      setTab(initialTab);
+    }
+    if (type) {
+      const normalized = String(type).toUpperCase();
+      if (normalized === 'GUEST' || normalized === 'DELIVERY' || normalized === 'CAB' || normalized === 'SERVICE') {
+        setGuestType(normalized);
+      }
+    }
+    if (action === 'preapprove') {
+      setIsPreApproveModal(true);
+    }
+  }, [action, type, initialTab]);
 
   const goHome = useCallback(() => {
     if (router.canGoBack()) router.back();

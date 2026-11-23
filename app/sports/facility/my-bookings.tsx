@@ -7,8 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { facilityService, FacilityBookingDto } from '@/services/facilityService';
+import { facilityService, FacilityBookingDto, FacilityDto } from '@/services/facilityService';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
+
+const FACILITY_EMOJI: Record<string, string> = {
+  BADMINTON: '🏸', TENNIS: '🎾', SWIMMING_POOL: '🏊', GYM: '💪',
+  CRICKET: '🏏', FOOTBALL: '⚽', BASKETBALL: '🏀', PARTY_HALL: '🎉',
+  SQUASH: '🎾', TABLE_TENNIS: '🏓', CLUBHOUSE: '🏠', PICKLEBALL: '🏓',
+};
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   CONFIRMED:  { bg: '#ECFDF5', color: '#065F46' },
@@ -19,13 +25,19 @@ const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   WAITLISTED: { bg: '#FFF7ED', color: '#C2410C' },
 };
 
-const TABS = ['Upcoming', 'Past'] as const;
+const TABS = ['Book Courts', 'Upcoming', 'Past'] as const;
 
 export default function MyFacilityBookingsScreen() {
   const router = useRouter();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'Upcoming' | 'Past'>('Upcoming');
+  const [tab, setTab] = useState<'Book Courts' | 'Upcoming' | 'Past'>('Book Courts');
   const [cancelling, setCancelling] = useState<string | null>(null);
+
+  const { data: facilities = [], isLoading: loadingFacilities, refetch: refetchFacilities } = useQuery<FacilityDto[]>({
+    queryKey: ['facilities-sports'],
+    queryFn: facilityService.getFacilities,
+    staleTime: 60_000,
+  });
 
   const { data: allBookings = [], isLoading, refetch } = useQuery({
     queryKey: ['facility-my-bookings'],
@@ -129,7 +141,7 @@ export default function MyFacilityBookingsScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>My Facility Bookings</Text>
+        <Text style={s.headerTitle}>Courts & Bookings</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -146,7 +158,56 @@ export default function MyFacilityBookingsScreen() {
         ))}
       </View>
 
-      {isLoading ? (
+      {tab === 'Book Courts' ? (
+        loadingFacilities ? (
+          <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+        ) : facilities.length === 0 ? (
+          <View style={s.empty}>
+            <Ionicons name="tennisball-outline" size={36} color={COLORS.textMuted} />
+            <Text style={s.emptyTitle}>No Courts Available</Text>
+            <Text style={s.emptySub}>Community courts & amenities will appear here once configured.</Text>
+            <TouchableOpacity style={s.emptyBtn} onPress={() => router.push('/tabs/bookings' as any)}>
+              <Text style={s.emptyBtnText}>Open All Amenities</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={facilities}
+            keyExtractor={f => String(f.id)}
+            contentContainerStyle={s.list}
+            onRefresh={() => { void refetchFacilities(); }}
+            refreshing={false}
+            renderItem={({ item: court }) => {
+              const emoji = FACILITY_EMOJI[String(court.type || '').toUpperCase()] || '🏟️';
+              return (
+                <TouchableOpacity
+                  style={s.card}
+                  activeOpacity={0.84}
+                  onPress={() => router.push(`/sports/facility/${court.id}` as any)}
+                >
+                  <View style={s.cardHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                      <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.facilityName} numberOfLines={1}>{court.name}</Text>
+                        <Text style={s.meta}>
+                          {court.openTime && court.closeTime ? `${court.openTime} – ${court.closeTime}` : 'Open Daily'}
+                          {court.location ? ` · ${court.location}` : ''}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.full }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.primary }}>
+                        {court.hourlyRate > 0 ? `₹${court.hourlyRate}/hr` : 'Book Slot →'}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )
+      ) : isLoading ? (
         <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
       ) : bookings.length === 0 ? (
         <View style={s.empty}>
@@ -154,15 +215,15 @@ export default function MyFacilityBookingsScreen() {
           <Text style={s.emptyTitle}>No {tab.toLowerCase()} bookings</Text>
           <Text style={s.emptySub}>
             {tab === 'Upcoming'
-              ? 'Book a court or facility from the Sports Hub.'
+              ? 'Select a court under Book Courts to reserve your slot.'
               : 'Your completed and cancelled bookings will appear here.'}
           </Text>
           {tab === 'Upcoming' && (
             <TouchableOpacity
               style={s.emptyBtn}
-              onPress={() => router.push('/sports' as any)}
+              onPress={() => setTab('Book Courts')}
             >
-              <Text style={s.emptyBtnText}>Browse Facilities</Text>
+              <Text style={s.emptyBtnText}>Book a Court</Text>
             </TouchableOpacity>
           )}
         </View>

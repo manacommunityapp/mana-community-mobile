@@ -20,6 +20,8 @@ export default function FinanceLayout() {
       <Stack.Screen name="vendor-bills" />
       <Stack.Screen name="accounting" />
       <Stack.Screen name="unified-vendors" />
+      <Stack.Screen name="payment-success" />
+      <Stack.Screen name="payment-failed" />
     </Stack>
   );
 }

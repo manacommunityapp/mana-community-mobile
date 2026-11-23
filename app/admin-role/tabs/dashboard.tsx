@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppTheme } from '@/context/ThemeContext';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { ADMIN_COLORS } from '@/constants/adminTheme';
 import {
@@ -42,6 +43,7 @@ function StatCard({ icon, label, value, color, bg, sub }: StatCardProps) {
 
 export default function AdminDashboardScreen() {
   const { user } = useAuth();
+  const { palette } = useAppTheme();
   const router = useRouter();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [approvals, setApprovals] = useState<AdminApproval[]>([]);
@@ -73,7 +75,7 @@ export default function AdminDashboardScreen() {
   const netIncome = (stats?.monthlyRevenue ?? 0) - (stats?.monthlyExpenses ?? 0);
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
+    <SafeAreaView style={[s.container, { backgroundColor: palette.appBg }]} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ADMIN_COLORS.accent} />}
@@ -81,11 +83,11 @@ export default function AdminDashboardScreen() {
         {/* Welcome */}
         <View style={s.welcome}>
           <View>
-            <Text style={s.greeting}>Admin Dashboard</Text>
-            <Text style={s.userName}>{user?.communityName || 'Community'}</Text>
+            <Text style={[s.greeting, { color: palette.textMuted }]}>Admin Dashboard</Text>
+            <Text style={[s.userName, { color: palette.text }]}>{user?.communityName || 'Community'}</Text>
           </View>
           <View style={s.roleBadge}>
-            <Ionicons name="shield-checkmark" size={14} color={ADMIN_COLORS.accent} />
+            <Ionicons name="shield-checkmark" size={14} color={ADMIN_COLORS.badgeText} />
             <Text style={s.roleText}>{user?.role || 'ADMIN'}</Text>
           </View>
         </View>
@@ -331,7 +333,7 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: '#FAF8FF' },
   welcome: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
@@ -340,11 +342,10 @@ const s = StyleSheet.create({
   userName: { fontSize: 22, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 },
   roleBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: ADMIN_COLORS.accentLight, borderRadius: RADIUS.full,
+    backgroundColor: ADMIN_COLORS.badgeBg, borderRadius: RADIUS.full,
     paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: ADMIN_COLORS.accentMid,
   },
-  roleText: { fontSize: 11, fontWeight: '800', color: ADMIN_COLORS.accentDark },
+  roleText: { fontSize: 11, fontWeight: '800', color: ADMIN_COLORS.badgeText },
 
   statsGrid: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 8,

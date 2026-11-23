@@ -40,9 +40,9 @@ export function LiveScoringModal({ visible, match, onClose, onRefreshMatch }: Li
         isSix,
       });
       onRefreshMatch?.();
-    } catch {
-      Alert.alert('Scoring Note', `Recorded ${runs} run(s). Syncing live...`);
-      onRefreshMatch?.();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to record ball';
+      Alert.alert('Scoring Error', msg);
     } finally {
       setLoading(false);
     }
@@ -59,9 +59,9 @@ export function LiveScoringModal({ visible, match, onClose, onRefreshMatch }: Li
         extrasRuns: runs,
       });
       onRefreshMatch?.();
-    } catch {
-      Alert.alert('Scoring Note', `Recorded ${type} (+${runs}).`);
-      onRefreshMatch?.();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to record extra';
+      Alert.alert('Scoring Error', msg);
     } finally {
       setLoading(false);
     }
@@ -79,9 +79,9 @@ export function LiveScoringModal({ visible, match, onClose, onRefreshMatch }: Li
         dismissalType,
       });
       onRefreshMatch?.();
-    } catch {
-      Alert.alert('Wicket', `Wicket recorded (${dismissalType}).`);
-      onRefreshMatch?.();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to record wicket';
+      Alert.alert('Scoring Error', msg);
     } finally {
       setLoading(false);
     }
@@ -92,9 +92,9 @@ export function LiveScoringModal({ visible, match, onClose, onRefreshMatch }: Li
     try {
       await sportsService.undoCricketBall(match.id, innings);
       onRefreshMatch?.();
-    } catch {
-      Alert.alert('Undo', 'Undid last ball event.');
-      onRefreshMatch?.();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to undo delivery';
+      Alert.alert('Undo Error', msg);
     } finally {
       setLoading(false);
     }
@@ -112,9 +112,9 @@ export function LiveScoringModal({ visible, match, onClose, onRefreshMatch }: Li
         matchMinute: eventMinute ? parseInt(eventMinute) : undefined,
       });
       onRefreshMatch?.();
-    } catch {
-      Alert.alert('Score Updated', `${teamName} +${points}`);
-      onRefreshMatch?.();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to update score';
+      Alert.alert('Score Update Error', msg);
     } finally {
       setLoading(false);
     }
@@ -125,9 +125,9 @@ export function LiveScoringModal({ visible, match, onClose, onRefreshMatch }: Li
     try {
       await sportsService.undoGenericScore(match.id);
       onRefreshMatch?.();
-    } catch {
-      Alert.alert('Undo', 'Last score event removed.');
-      onRefreshMatch?.();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to undo score';
+      Alert.alert('Undo Error', msg);
     } finally {
       setLoading(false);
     }
@@ -142,13 +142,14 @@ export function LiveScoringModal({ visible, match, onClose, onRefreshMatch }: Li
         eventType: type,
         pointsAwarded: 0,
         matchMinute: eventMinute ? parseInt(eventMinute) : undefined,
+        description: customDesc || defaultDesc,
       });
       setCustomDesc('');
       setCustomPlayer('');
       onRefreshMatch?.();
-    } catch {
-      Alert.alert('Event Logged', `${type}: ${customDesc || defaultDesc}`);
-      onRefreshMatch?.();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to log event';
+      Alert.alert('Event Log Error', msg);
     } finally {
       setLoading(false);
     }

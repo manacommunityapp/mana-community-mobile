@@ -189,6 +189,14 @@ export default function MyTeamsScreen() {
                 <Ionicons name="trophy-outline" size={15} color="#fff" />
                 <Text style={s.emptyBtnText}>Browse Tournaments</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.emptyBtn, { backgroundColor: '#EEF2FF', marginTop: 4 }]}
+                onPress={() => router.push('/sports/registrations' as any)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="clipboard-outline" size={15} color={COLORS.primary} />
+                <Text style={[s.emptyBtnText, { color: COLORS.primary }]}>View My Registrations</Text>
+              </TouchableOpacity>
             </View>
           }
         />

@@ -13,26 +13,29 @@ import { sportsTrainerService, SportsTrainerDto } from '@/services/sportsTrainer
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 
 const SPORTS = [
-  { key: 'ALL',       label: 'All',        emoji: '🏅' },
-  { key: 'Badminton', label: 'Badminton',  emoji: '🏸' },
-  { key: 'Cricket',   label: 'Cricket',    emoji: '🏏' },
-  { key: 'Tennis',    label: 'Tennis',     emoji: '🎾' },
-  { key: 'Football',  label: 'Football',   emoji: '⚽' },
-  { key: 'Basketball',label: 'Basketball', emoji: '🏀' },
-  { key: 'Yoga',      label: 'Yoga',       emoji: '🧘' },
-  { key: 'Fitness',   label: 'Fitness',    emoji: '💪' },
-  { key: 'Swimming',  label: 'Swimming',   emoji: '🏊' },
-  { key: 'Chess',     label: 'Chess',      emoji: '♟️' },
+  { key: 'ALL',          label: 'All',          emoji: '🏅' },
+  { key: 'Badminton',    label: 'Badminton',    emoji: '🏸' },
+  { key: 'Cricket',      label: 'Cricket',      emoji: '🏏' },
+  { key: 'Pickleball',   label: 'Pickleball',   emoji: '🏓' },
+  { key: 'Tennis',       label: 'Tennis',       emoji: '🎾' },
+  { key: 'Table Tennis', label: 'Table Tennis', emoji: '🏓' },
+  { key: 'Football',     label: 'Football',     emoji: '⚽' },
+  { key: 'Basketball',   label: 'Basketball',   emoji: '🏀' },
+  { key: 'Yoga',         label: 'Yoga',         emoji: '🧘' },
+  { key: 'Fitness',      label: 'Fitness',      emoji: '💪' },
+  { key: 'Swimming',     label: 'Swimming',     emoji: '🏊' },
+  { key: 'Chess',        label: 'Chess',        emoji: '♟️' },
 ];
 
 function sportEmoji(sport: string): string {
-  return SPORTS.find(s => s.key.toLowerCase() === sport.toLowerCase())?.emoji ?? '🏅';
+  const s = (sport || '').toLowerCase();
+  return SPORTS.find(sp => sp.key !== 'ALL' && s.includes(sp.key.toLowerCase()))?.emoji ?? '🏅';
 }
 
 export default function TrainersScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const communityId = (user as any)?.communityId ?? (user as any)?.community?.id;
+  const communityId = (user as any)?.communityId ?? (user as any)?.community?.id ?? 0;
 
   const [sportFilter, setSportFilter] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -40,14 +43,14 @@ export default function TrainersScreen() {
   const { data: trainers = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey:  ['sports-trainers', communityId],
     queryFn:   () => sportsTrainerService.listApproved(communityId),
-    enabled:   !!communityId,
     staleTime: 2 * 60 * 1000,
   });
 
   const filtered = trainers.filter(t => {
-    const matchSport  = sportFilter === 'ALL' || t.sport.toLowerCase() === sportFilter.toLowerCase();
-    const matchSearch = !search || t.fullName.toLowerCase().includes(search.toLowerCase()) ||
-                        t.sport.toLowerCase().includes(search.toLowerCase());
+    const sp = (t.sport || '').toLowerCase();
+    const matchSport  = sportFilter === 'ALL' || sp.includes(sportFilter.toLowerCase());
+    const matchSearch = !search || (t.fullName || '').toLowerCase().includes(search.toLowerCase()) ||
+                        sp.includes(search.toLowerCase());
     return matchSport && matchSearch;
   });
 

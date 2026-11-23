@@ -9,17 +9,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
 import { TournamentCard, SPORT_EMOJI } from '@/components/sports/TournamentCard';
+import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import type { SportType } from '@/types/api';
 
 const SPORTS_LIST: { key: SportType | 'ALL'; label: string; emoji: string }[] = [
   { key: 'ALL',          label: 'All Sports',    emoji: '🏅' },
   { key: 'CRICKET',      label: 'Cricket',       emoji: '🏏' },
-  { key: 'FOOTBALL',     label: 'Football',      emoji: '⚽' },
   { key: 'BADMINTON',    label: 'Badminton',     emoji: '🏸' },
+  { key: 'FOOTBALL',     label: 'Football',      emoji: '⚽' },
+  { key: 'PICKLEBALL' as SportType, label: 'Pickleball', emoji: '🏓' },
+  { key: 'TENNIS' as SportType,     label: 'Tennis',     emoji: '🎾' },
   { key: 'TABLE_TENNIS', label: 'Table Tennis',  emoji: '🏓' },
   { key: 'BASKETBALL',   label: 'Basketball',    emoji: '🏀' },
   { key: 'VOLLEYBALL',   label: 'Volleyball',    emoji: '🏐' },
+  { key: 'SWIMMING' as SportType,   label: 'Swimming',   emoji: '🏊' },
   { key: 'CHESS',        label: 'Chess',         emoji: '♟️' },
   { key: 'CARROM',       label: 'Carrom',        emoji: '🎯' },
 ];
@@ -34,6 +38,7 @@ const STATUS_TABS = [
 
 export default function TournamentsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{ sport?: string }>();
   const [sport,  setSport]  = useState<SportType | 'ALL'>((params.sport as SportType) || 'ALL');
   const [status, setStatus] = useState<string | undefined>(undefined);
@@ -48,9 +53,9 @@ export default function TournamentsScreen() {
     data, isLoading, fetchNextPage, hasNextPage,
     isFetchingNextPage, refetch, isRefetching,
   } = useInfiniteQuery({
-    queryKey:        ['tournaments', sport, status],
+    queryKey:        ['tournaments', sport, status, user?.communityId],
     queryFn:         ({ pageParam = 0 }) =>
-      sportsService.getTournaments(sport === 'ALL' ? undefined : sport, status, pageParam),
+      sportsService.getTournaments(sport === 'ALL' ? undefined : sport, status, pageParam, user?.communityId),
     initialPageParam: 0,
     getNextPageParam: (last) =>
       last.page + 1 < last.totalPages ? last.page + 1 : undefined,

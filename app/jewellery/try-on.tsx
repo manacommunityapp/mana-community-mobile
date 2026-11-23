@@ -435,8 +435,8 @@ const styles = StyleSheet.create({
 
   // LOADING (upload/processing)
   loadingWrap:      { flex: 1, position: 'relative' },
-  loadingBg:        { ...StyleSheet.absoluteFillObject, opacity: 0.35 },
-  loadingOverlay:   { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 12, padding: SPACING.lg },
+  loadingBg:        { ...(StyleSheet.absoluteFill as object), opacity: 0.35 },
+  loadingOverlay:   { ...(StyleSheet.absoluteFill as object), alignItems: 'center', justifyContent: 'center', gap: 12, padding: SPACING.lg },
   loadingTitle:     { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   loadingSub:       { color: '#CBD5E1', fontSize: 12 },
   progressBar:      { width: '78%', height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden' },

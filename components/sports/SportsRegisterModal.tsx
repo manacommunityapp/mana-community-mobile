@@ -129,9 +129,9 @@ export function SportsRegisterModal({ visible, onClose, onRegistered, initialEve
   const payment = usePayment();
 
   // Fetch real tournaments and categories
-  const { data: openTournaments = [], isLoading: loadingTournaments } = useQuery({
+  const { data: openTournaments = [], isLoading: loadingTournaments } = useQuery<DashboardTournamentCardDto[]>({
     queryKey: ['tournaments-open-dash'],
-    queryFn: sportsService.getOpenTournaments,
+    queryFn: () => sportsService.getOpenTournaments(),
     staleTime: 30_000,
   });
 

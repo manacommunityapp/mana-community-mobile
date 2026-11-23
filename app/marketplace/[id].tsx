@@ -6,6 +6,7 @@ import {
   NativeSyntheticEvent,
 } from 'react-native';
 import { CachedImage as Image } from '@/components/common/CachedImage';
+import { resolveImageUrl } from '@/utils/imageUrlUtils';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -61,7 +62,7 @@ function ImageGallery({ urls }: { urls: string[] }) {
         onScroll={onScroll}
         scrollEventThrottle={16}
         renderItem={({ item }) => (
-          <Image source={{ uri: item }} style={g.image} resizeMode="cover" />
+          <Image source={{ uri: resolveImageUrl(item) }} style={g.image} resizeMode="cover" />
         )}
       />
       {/* Dots */}

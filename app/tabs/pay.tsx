@@ -9,7 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { THEME } from '@/constants/theme';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '@/constants/config';
+import { useAppTheme } from '@/context/ThemeContext';
 import { societyFinanceService, type SocietyInvoiceDto } from '@/services/societyFinanceService';
+import { useAuth } from '@/hooks/useAuth';
+import { useModuleGuard } from '@/hooks/useRoleGuard';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -19,36 +22,48 @@ interface PayOption {
   icon: IoniconsName;
   route: string;
   color: string;
+  module?: string;
 }
 
 const PAY_OPTIONS: PayOption[] = [
-  { key: 'wallet', label: 'Mana Wallet', icon: 'wallet-outline', route: '/wallet', color: '#7C3AED' },
-  { key: 'dues', label: 'Pay Dues', icon: 'receipt-outline', route: '/payments', color: '#059669' },
-  { key: 'bbps', label: 'Bill Pay (BBPS)', icon: 'flash-outline', route: '/bbps', color: '#D97706' },
-  { key: 'upi', label: 'UPI / Transfer', icon: 'send-outline', route: '/payments/upi', color: '#4F46E5' },
-  { key: 'auto', label: 'Auto-Debit', icon: 'repeat-outline', route: '/payments/auto-debit', color: '#7C3AED' },
-  { key: 'history', label: 'History', icon: 'time-outline', route: '/payments/history', color: '#0369A1' },
-  { key: 'rewards', label: 'Rewards', icon: 'gift-outline', route: '/payments/rewards', color: '#BE185D' },
+  { key: 'wallet', label: 'Mana Wallet', icon: 'wallet-outline', route: '/wallet', color: '#7C3AED', module: 'PAYMENTS' },
+  { key: 'dues', label: 'Pay Dues', icon: 'receipt-outline', route: '/payments', color: '#059669', module: 'FINANCE_MGMT' },
+  { key: 'bbps', label: 'Bill Pay (BBPS)', icon: 'flash-outline', route: '/bbps', color: '#D97706', module: 'PAYMENTS' },
+  { key: 'upi', label: 'UPI / Transfer', icon: 'send-outline', route: '/send-money', color: '#4F46E5', module: 'PAYMENTS' },
+  { key: 'auto', label: 'Auto-Debit', icon: 'repeat-outline', route: '/payments/auto-debit', color: '#7C3AED', module: 'FINANCE_MGMT' },
+  { key: 'history', label: 'History', icon: 'time-outline', route: '/payments/history', color: '#0369A1', module: 'PAYMENTS' },
+  { key: 'rewards', label: 'Rewards', icon: 'gift-outline', route: '/payments/rewards', color: '#BE185D', module: 'PAYMENTS' },
 ];
 
 function InvoiceRow({ invoice }: { invoice: SocietyInvoiceDto }) {
   const router = useRouter();
+  const { palette } = useAppTheme();
   const isOverdue = invoice.status === 'OVERDUE';
   return (
     <Pressable
-      style={styles.invoiceRow}
+      style={[styles.invoiceRow, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}
       onPress={() => router.push('/payments' as any)}
     >
       <View style={styles.invoiceLeft}>
-        <Text style={styles.invoiceNumber}>{invoice.invoiceNumber}</Text>
-        <Text style={styles.invoiceDue}>Due {invoice.dueDate}</Text>
+        <Text style={[styles.invoiceNumber, { color: palette.text }]}>{invoice.invoiceNumber}</Text>
+        <Text style={[styles.invoiceDue, { color: palette.textMuted }]}>Due {invoice.dueDate}</Text>
       </View>
       <View style={styles.invoiceRight}>
-        <Text style={[styles.invoiceAmount, isOverdue && styles.invoiceAmountOverdue]}>
+        <Text style={[styles.invoiceAmount, { color: palette.text }, isOverdue && styles.invoiceAmountOverdue]}>
           ₹{(invoice.balanceDue ?? 0).toLocaleString('en-IN')}
         </Text>
-        <View style={[styles.invoiceStatus, isOverdue && styles.invoiceStatusOverdue]}>
-          <Text style={[styles.invoiceStatusText, isOverdue && styles.invoiceStatusTextOverdue]}>
+        <View
+          style={[
+            styles.invoiceStatus,
+            { backgroundColor: isOverdue ? palette.dangerLight : palette.surfaceMuted },
+          ]}
+        >
+          <Text
+            style={[
+              styles.invoiceStatusText,
+              { color: isOverdue ? palette.danger : palette.textSecondary },
+            ]}
+          >
             {invoice.status}
           </Text>
         </View>
@@ -59,24 +74,34 @@ function InvoiceRow({ invoice }: { invoice: SocietyInvoiceDto }) {
 
 export default function PayScreen() {
   const router = useRouter();
+  const { hasModule, isSuperAdmin } = useAuth();
+  const { palette } = useAppTheme();
+  useModuleGuard('PAYMENTS', 'FINANCE_MGMT');
+  const canViewDues = isSuperAdmin || hasModule('FINANCE_MGMT');
+
+  const visibleOptions = React.useMemo(() => {
+    return PAY_OPTIONS.filter((opt) => isSuperAdmin || !opt.module || hasModule(opt.module));
+  }, [hasModule, isSuperAdmin]);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['pay-tab-invoices'],
     queryFn: () => societyFinanceService.getInvoices(),
     staleTime: 60_000,
+    enabled: canViewDues,
   });
 
-  const pending = invoices.filter((inv) =>
+  const pending = canViewDues ? invoices.filter((inv) =>
     inv.status === 'OVERDUE' || inv.status === 'SENT' || inv.status === 'DRAFT',
-  );
+  ) : [];
   const totalDue = pending.reduce((s, inv) => s + (inv.balanceDue ?? 0), 0);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Pay</Text>
-        <Text style={styles.subtitle}>Payments & billing</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: palette.dockBg }]} edges={['top']}>
+      <View style={[styles.header, { backgroundColor: palette.dockBg, borderBottomColor: palette.dockBorder }]}>
+        <Text style={[styles.title, { color: palette.text }]}>Pay</Text>
+        <Text style={[styles.subtitle, { color: palette.textSecondary }]}>Payments & billing</Text>
       </View>
+      <View style={{ flex: 1, backgroundColor: palette.appBg }}>
 
       <FlatList
         data={pending.slice(0, 5)}
@@ -87,11 +112,11 @@ export default function PayScreen() {
           <>
             {totalDue > 0 && (
               <Pressable
-                style={styles.dueBanner}
+                style={[styles.dueBanner, { backgroundColor: palette.dangerLight }]}
                 onPress={() => router.push('/payments' as any)}
               >
                 <View>
-                  <Text style={styles.dueBannerLabel}>Total Outstanding</Text>
+                  <Text style={[styles.dueBannerLabel, { color: palette.danger }]}>Total Outstanding</Text>
                   <Text style={styles.dueBannerAmount}>₹{totalDue.toLocaleString('en-IN')}</Text>
                 </View>
                 <View style={styles.payAllBtn}>
@@ -101,56 +126,65 @@ export default function PayScreen() {
               </Pressable>
             )}
 
-            <Text style={styles.sectionTitle}>Payment Options</Text>
-            <View style={styles.optionsGrid}>
-              {PAY_OPTIONS.map((opt) => (
-                <Pressable
-                  key={opt.key}
-                  style={styles.optionTile}
-                  onPress={() => router.push(opt.route as any)}
-                  accessibilityLabel={opt.label}
-                >
-                  <View style={[styles.optionIcon, { backgroundColor: opt.color + '18' }]}>
-                    <Ionicons name={opt.icon} size={22} color={opt.color} />
-                  </View>
-                  <Text style={styles.optionLabel}>{opt.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+            {visibleOptions.length > 0 && (
+              <>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>Payment Options</Text>
+                <View style={styles.optionsGrid}>
+                  {visibleOptions.map((opt) => (
+                    <Pressable
+                      key={opt.key}
+                      style={[styles.optionTile, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}
+                      onPress={() => router.push(opt.route as any)}
+                      accessibilityLabel={opt.label}
+                    >
+                      <View style={[styles.optionIcon, { backgroundColor: opt.color + '20' }]}>
+                        <Ionicons name={opt.icon} size={22} color={opt.color} />
+                      </View>
+                      <Text style={[styles.optionLabel, { color: palette.text }]}>{opt.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             {pending.length > 0 && (
-              <Text style={styles.sectionTitle}>Pending Invoices</Text>
+              <Text style={[styles.sectionTitle, { color: palette.text }]}>Pending Invoices</Text>
             )}
           </>
         }
         renderItem={({ item }) => <InvoiceRow invoice={item} />}
         ListFooterComponent={
           isLoading ? (
-            <ActivityIndicator style={{ marginTop: 24 }} color={THEME.brandDark} />
+            <ActivityIndicator style={{ marginTop: 24 }} color={palette.link} />
           ) : pending.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="checkmark-circle" size={40} color="#059669" />
-              <Text style={styles.emptyText}>All dues paid</Text>
+              <Ionicons name="checkmark-circle" size={40} color={palette.success} />
+              <Text style={[styles.emptyText, { color: palette.success }]}>All dues paid</Text>
             </View>
           ) : undefined
         }
       />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background ?? '#F8FAFC' },
+  container: { flex: 1, backgroundColor: COLORS.background ?? '#FAF8FF' },
   header: {
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1, borderBottomColor: THEME.border,
+    width: '100%',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+    backgroundColor: THEME.surface,
     ...SHADOWS.sm,
   },
-  title: { fontSize: 24, fontWeight: '800', color: COLORS.text ?? '#1E293B', fontFamily: FONTS.bold },
+  title: { fontSize: 25, color: COLORS.text ?? '#131B2E', fontFamily: FONTS.displayBold },
   subtitle: { fontSize: 13, color: COLORS.textMuted, marginTop: 2, fontFamily: FONTS.regular },
-  scroll: { padding: 16, paddingBottom: 32 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text ?? '#1E293B', fontFamily: FONTS.bold, marginBottom: 10, marginTop: 8 },
+  scroll: { padding: 16, paddingBottom: 108 },
+  sectionTitle: { fontSize: 15.5, color: COLORS.text ?? '#131B2E', fontFamily: FONTS.displayBold, marginBottom: 10, marginTop: 8 },
 
   dueBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

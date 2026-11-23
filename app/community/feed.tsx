@@ -24,23 +24,37 @@ import { CreatePostModal } from '@/components/feed/CreatePostModal';
 import { PostCommentSheet } from '@/components/feed/PostCommentSheet';
 import { RichPostContent } from '@/components/feed/RichPostContent';
 import { CachedImage as Image } from '@/components/common/CachedImage';
+import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import { formatDistanceToNow } from 'date-fns';
 
-type CategoryFilter = 'ALL' | 'ANNOUNCEMENT' | 'POST' | 'QUESTION' | 'CLASSIFIED' | 'LOST_FOUND';
+type CategoryFilter =
+  | 'ALL'
+  | 'ANNOUNCEMENT'
+  | 'POLL'
+  | 'POST'
+  | 'SPORTS'
+  | 'EVENT'
+  | 'CLASSIFIED'
+  | 'LOST_FOUND'
+  | 'EMERGENCY';
 
 const FILTER_TABS: { key: CategoryFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'ALL', label: 'All', icon: 'grid-outline' },
-  { key: 'ANNOUNCEMENT', label: 'Notices', icon: 'megaphone-outline' },
-  { key: 'POST', label: 'Discussions', icon: 'chatbubbles-outline' },
-  { key: 'QUESTION', label: 'Questions', icon: 'help-circle-outline' },
-  { key: 'CLASSIFIED', label: 'Buy & Sell', icon: 'pricetag-outline' },
-  { key: 'LOST_FOUND', label: 'Lost & Found', icon: 'search-outline' },
+  { key: 'ALL',          label: 'All',          icon: 'grid-outline' },
+  { key: 'ANNOUNCEMENT', label: 'Notices',      icon: 'megaphone-outline' },
+  { key: 'POLL',         label: 'Polls',        icon: 'bar-chart-outline' },
+  { key: 'POST',         label: 'Community',    icon: 'chatbubbles-outline' },
+  { key: 'SPORTS',       label: 'Sports',       icon: 'trophy-outline' },
+  { key: 'EVENT',        label: 'Events',       icon: 'calendar-outline' },
+  { key: 'CLASSIFIED',   label: 'Classifieds',  icon: 'pricetag-outline' },
+  { key: 'LOST_FOUND',   label: 'Lost & Found', icon: 'search-outline' },
+  { key: 'EMERGENCY',    label: 'Emergency',    icon: 'alert-circle-outline' },
 ];
 
 export default function CommunityFeedScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, hasPermission, isAdmin, isSuperAdmin, isAnyAdmin } = useAuth();
+  const canCreatePost = isSuperAdmin || isAdmin || isAnyAdmin || hasPermission('Create Post') || hasPermission('Create Notice') || hasPermission('Create Poll');
 
   const [activeTab, setActiveTab] = useState<CategoryFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,7 +80,7 @@ export default function CommunityFeedScreen() {
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
-      if (!lastPage || lastPage.hasNext === false) return undefined;
+      if (!lastPage) return undefined;
       const currentPage = lastPage.page ?? lastPage.number ?? 0;
       const totalPages = lastPage.totalPages ?? 1;
       return currentPage + 1 < totalPages ? currentPage + 1 : undefined;
@@ -79,8 +93,9 @@ export default function CommunityFeedScreen() {
     if (activeTab === 'ALL') return rawList;
     return rawList.filter((p) => {
       const type = (p.type || p.postType || '').toUpperCase();
-      if (activeTab === 'ANNOUNCEMENT') return type === 'ANNOUNCEMENT' || p.official;
-      if (activeTab === 'POST') return type === 'POST' || type === 'GENERAL';
+      if (activeTab === 'ANNOUNCEMENT') return type === 'ANNOUNCEMENT' || type === 'COMMITTEE_NOTICE' || p.official;
+      if (activeTab === 'POLL') return type === 'POLL' || Boolean(p.poll || (p as any).pollQuestion);
+      if (activeTab === 'POST') return (type === 'POST' || type === 'GENERAL') && !p.official;
       return type === activeTab;
     });
   }, [data, activeTab]);
@@ -155,7 +170,7 @@ export default function CommunityFeedScreen() {
     const authorName = item.authorName || (item as any).author?.name || 'Neighbor';
     const initials = getInitials(authorName);
     const avatarColor = getAvatarColor(authorName);
-    const unit = item.flatNumber || (item as any).author?.flatNumber;
+    const unit = item.authorFlat || (item as any).flatNumber || (item as any).author?.flatNumber;
     const isOfficial = item.official || item.type === 'announcement';
 
     let timeAgo = '';
@@ -165,13 +180,21 @@ export default function CommunityFeedScreen() {
       timeAgo = 'recently';
     }
 
+    const rawImageSrc = (item.mediaUrls && item.mediaUrls[0]) || item.linkImage || (item as any).imageUrl;
+    const imageSrc = rawImageSrc ? resolveImageUrl(rawImageSrc) : null;
+    const authorAvatar = resolveUserAvatar(item);
+
     return (
       <View style={s.postCard}>
         {/* Author Header */}
         <View style={s.postHeader}>
-          <View style={[s.avatar, { backgroundColor: avatarColor }]}>
-            <Text style={s.avatarText}>{initials}</Text>
-          </View>
+          {authorAvatar ? (
+            <Image source={{ uri: authorAvatar }} style={s.avatarImage} />
+          ) : (
+            <View style={[s.avatar, { backgroundColor: avatarColor.bg }]}>
+              <Text style={[s.avatarText, { color: avatarColor.text }]}>{initials}</Text>
+            </View>
+          )}
           <View style={s.authorMeta}>
             <View style={s.nameRow}>
               <Text style={s.authorName} numberOfLines={1}>
@@ -207,10 +230,10 @@ export default function CommunityFeedScreen() {
         <RichPostContent post={item} />
 
         {/* Attached Image */}
-        {!!item.imageUrl && (
+        {!!imageSrc && (
           <View style={s.imageWrap}>
             <Image
-              source={{ uri: item.imageUrl }}
+              source={{ uri: imageSrc }}
               style={s.postImage}
               resizeMode="cover"
             />
@@ -301,14 +324,16 @@ export default function CommunityFeedScreen() {
           <Text style={s.headerSub}>{user?.communityName || 'Your Community'}</Text>
         </View>
 
-        <TouchableOpacity
-          onPress={() => setShowCreateModal(true)}
-          style={s.newPostBtn}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <Text style={s.newPostBtnText}>Post</Text>
-        </TouchableOpacity>
+        {canCreatePost && (
+          <TouchableOpacity
+            onPress={() => setShowCreateModal(true)}
+            style={s.newPostBtn}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Text style={s.newPostBtnText}>+ Create Post</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Search Bar ── */}
@@ -348,9 +373,9 @@ export default function CommunityFeedScreen() {
               >
                 <Ionicons
                   name={item.icon}
-                  size={14}
+                  size={12}
                   color={active ? '#FFFFFF' : COLORS.textSecondary}
-                  style={{ marginRight: 5 }}
+                  style={{ marginRight: 4 }}
                 />
                 <Text style={[s.filterChipText, active && s.filterChipTextActive]}>
                   {item.label}
@@ -371,7 +396,7 @@ export default function CommunityFeedScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefetching && !isFetchingNextPage}
-            onRefresh={refetch}
+            onRefresh={() => { refetch(); }}
             tintColor={THEME.brandDark}
           />
         }
@@ -386,23 +411,26 @@ export default function CommunityFeedScreen() {
             <View style={s.footerLoading}>
               <ActivityIndicator size="small" color={THEME.brandDark} />
             </View>
-          ) : null
+          ) : undefined
         }
       />
 
       {/* ── Floating Action Button for New Post ── */}
-      <TouchableOpacity
-        style={s.fab}
-        onPress={() => setShowCreateModal(true)}
-        activeOpacity={0.9}
-        accessibilityLabel="Create New Post"
-      >
-        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+      {canCreatePost && (
+        <TouchableOpacity
+          style={s.fab}
+          onPress={() => setShowCreateModal(true)}
+          activeOpacity={0.9}
+          accessibilityLabel="Create New Post"
+        >
+          <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
 
       {/* ── Modals & Sheets ── */}
       <CreatePostModal
         visible={showCreateModal}
+        initialFilter={activeTab === 'ANNOUNCEMENT' ? 'Notices' : activeTab === 'POLL' ? 'Polls' : 'Community'}
         onClose={() => {
           setShowCreateModal(false);
           refetch();
@@ -496,11 +524,11 @@ const s = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
+    height: 28,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
+    paddingHorizontal: 11,
+    borderRadius: 14,
     backgroundColor: '#F1F5F9',
     marginRight: 6,
   },
@@ -508,13 +536,13 @@ const s = StyleSheet.create({
     backgroundColor: '#4F46E5',
   },
   filterChipText: {
-    fontSize: 13,
+    fontSize: 11.5,
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   filterChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   listContent: {
     padding: 16,
@@ -546,6 +574,12 @@ const s = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 10,
+  },
+  avatarImage: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     marginRight: 10,
   },
   avatarText: {
