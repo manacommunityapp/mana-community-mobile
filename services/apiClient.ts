@@ -64,12 +64,24 @@ const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
+let _cachedAccessToken: string | null = null;
+export function getAccessTokenSync(): string | null {
+  return _cachedAccessToken;
+}
+
 // ── Token helpers ──────────────────────────────────────────────
 export const tokenStore = {
-  getAccess:          () => store.getItemAsync(ACCESS_TOKEN_KEY),
+  getAccess:          async () => {
+    const t = await store.getItemAsync(ACCESS_TOKEN_KEY);
+    _cachedAccessToken = t;
+    return t;
+  },
   getRefresh:         () => store.getItemAsync(REFRESH_TOKEN_KEY),
   getPushToken:       () => store.getItemAsync(PUSH_TOKEN_KEY),
-  setAccess:          (t: string) => store.setItemAsync(ACCESS_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
+  setAccess:          (t: string) => {
+    _cachedAccessToken = t;
+    return store.setItemAsync(ACCESS_TOKEN_KEY, t, SECURE_STORE_OPTIONS);
+  },
   setRefresh:         (t: string) => store.setItemAsync(REFRESH_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
   setPushToken:       (t: string) => store.setItemAsync(PUSH_TOKEN_KEY, t, SECURE_STORE_OPTIONS),
   clearPushToken:     () => store.deleteItemAsync(PUSH_TOKEN_KEY),
@@ -78,12 +90,18 @@ export const tokenStore = {
   setCachedProfile:   (json: string) => store.setItemAsync(CACHED_PROFILE_KEY, json, SECURE_STORE_OPTIONS),
   clearCachedProfile: () => store.deleteItemAsync(CACHED_PROFILE_KEY),
   clearAll:           async () => {
+    _cachedAccessToken = null;
     await store.deleteItemAsync(ACCESS_TOKEN_KEY);
     await store.deleteItemAsync(REFRESH_TOKEN_KEY);
     await store.deleteItemAsync(PUSH_TOKEN_KEY);
     await store.deleteItemAsync(CACHED_PROFILE_KEY);
   },
 };
+
+// Eagerly hydrate access token cache
+store.getItemAsync(ACCESS_TOKEN_KEY).then((token) => {
+  if (token) _cachedAccessToken = token;
+}).catch(() => {});
 
 // ── Axios instance ─────────────────────────────────────────────
 const api: AxiosInstance = axios.create({

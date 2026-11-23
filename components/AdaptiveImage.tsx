@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { Image, View, Animated, StyleSheet, ImageStyle, ViewStyle, StyleProp } from 'react-native';
 import { useAdaptiveImage } from '@/hooks/useAdaptiveImage';
+import { getImageHeaders } from '@/utils/imageUrlUtils';
 
 interface Props {
   uri: string;
@@ -8,6 +9,7 @@ interface Props {
   placeholderColor?: string;
   style?: StyleProp<ImageStyle>;
   containerStyle?: StyleProp<ViewStyle>;
+  headers?: Record<string, string>;
 }
 
 function appendQuality(uri: string, quality: 'full' | 'reduced'): string {
@@ -15,7 +17,7 @@ function appendQuality(uri: string, quality: 'full' | 'reduced'): string {
   return uri;
 }
 
-export function AdaptiveImage({ uri, reducedUri, placeholderColor = '#E2E8F0', style, containerStyle }: Props) {
+export function AdaptiveImage({ uri, reducedUri, placeholderColor = '#E2E8F0', style, containerStyle, headers }: Props) {
   const quality = useAdaptiveImage();
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -32,10 +34,12 @@ export function AdaptiveImage({ uri, reducedUri, placeholderColor = '#E2E8F0', s
       ? (reducedUri ?? appendQuality(uri, 'reduced'))
       : uri;
 
+  const authHeaders = headers ?? getImageHeaders(resolvedUri);
+
   return (
     <View style={containerStyle}>
       <Animated.Image
-        source={{ uri: resolvedUri }}
+        source={{ uri: resolvedUri, ...(authHeaders ? { headers: authHeaders } : {}) }}
         style={[style, { opacity }]}
         onLoad={() =>
           Animated.timing(opacity, {
