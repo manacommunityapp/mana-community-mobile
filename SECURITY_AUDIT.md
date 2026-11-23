@@ -1,9 +1,9 @@
 # Mana Community Super App — Security Audit Report
 
 ## Audit Scope
-- **Codebase**: React Native 0.86.3 / Expo 57 / TypeScript frontend
+- **Codebase**: React Native 0.88.0 / Expo SDK 58 / TypeScript frontend
 - **Standards**: OWASP MASVS, OWASP API Security Top 10, OWASP ASVS
-- **Branch**: `claude/stoic-dijkstra-4o67yt`
+- **Branch**: `codex/sports-multiregister-unregister-status`
 
 ---
 
@@ -33,14 +33,19 @@
 | H7b | No file upload validation — arbitrary file types/sizes accepted | `app/profile/edit.tsx`, `app/onboarding/verify.tsx`, `app/marketplace/create.tsx`, `app/sports/photos/[id].tsx` | Wired `validateProfilePhoto()`, `validateDocumentFile()`, `validateImageFile()` with MIME and size checks before upload |
 | H8b | Weak password validation (only length >= 8) in onboarding | `app/onboarding/account.tsx` | Replaced with Zod validator requiring uppercase, lowercase, and digit |
 
+### HIGH — Fixed (Backend)
+
+| # | Finding | File(s) | Fix Applied |
+|---|---------|---------|-------------|
+| H7 | No rate limiting on login/register/forgot-password endpoints | API layer | Redis-backed distributed rate limiting implemented — per-IP and per-account keys; login 5/min, OTP 3/5min, password-reset 3/hr, registration 10/hr; graceful in-memory fallback when Redis unavailable |
+| H9 | STOMP WebSocket subscribes to arbitrary topic strings without server-side authorization | `hooks/useWebSocket.ts` | `TopicRegistry` maps all patterns to `TopicPermission`; fail-closed for unknown destinations; SEND to `/topic/` blocked from clients; 5-connection limit per user; 60 msg/min rate limit — both Redis-backed |
+
 ### HIGH — Requires Backend Changes
 
 | # | Finding | Affected Area | Required Action |
 |---|---------|---------------|-----------------|
 | H6 | Web platform uses `localStorage` for JWT tokens (XSS-vulnerable) | `services/apiClient.ts` | Backend: implement HTTP-only secure cookies for web; Frontend: remove localStorage fallback |
-| H7 | No rate limiting on login/register/forgot-password endpoints | API layer | Backend: implement rate limiting (e.g., 5 attempts per 15 min per IP) |
 | H8 | No CSRF protection for state-changing API calls | API layer | Backend: implement CSRF tokens or SameSite cookie policy |
-| H9 | STOMP WebSocket subscribes to arbitrary topic strings without server-side authorization | `hooks/useWebSocket.ts` | Backend: validate topic subscriptions against user permissions |
 
 ### MEDIUM — Fixed
 
@@ -69,12 +74,17 @@
 |---|---------|---------|-------------|
 | L1 | Push token partially logged (`token.slice(0, 24)`) | `hooks/usePushNotifications.ts` | Token no longer logged at all |
 
+### LOW — Fixed
+
+| # | Finding | File(s) | Fix Applied |
+|---|---------|---------|-------------|
+| L3 | No Content Security Policy headers for web platform | Web: `index.html`; Mobile: `utils/security.ts` | Web: CSP, X-Content-Type-Options, X-Frame-Options DENY, Referrer-Policy, Permissions-Policy meta tags added to `index.html`; Mobile: `validateEnvConfig()` and `assertNoLocalhostInProd()` enforced on startup; deep link allowlist via `isValidDeepLink()` |
+
 ### LOW — Requires Backend/Infrastructure Changes
 
 | # | Finding | Affected Area | Required Action |
 |---|---------|---------------|-----------------|
 | L2 | `RegisterRequest` type includes `aadharNumber` field — PII collected client-side | `types/api.ts` | Evaluate necessity; if required, ensure backend encrypts at rest and masks in responses |
-| L3 | No Content Security Policy headers for web platform | Infrastructure | Configure CSP headers on API gateway/CDN |
 | L4 | No app integrity verification (SafetyNet/App Attest) | Native layer | Implement platform attestation for API requests |
 
 ---
@@ -131,8 +141,8 @@
 |----------|--------|
 | MASVS-STORAGE | Partial — expo-secure-store for native; web localStorage still vulnerable (H6) |
 | MASVS-CRYPTO | N/A client-side — relies on TLS for transport |
-| MASVS-AUTH | Improved — admin guards added; rate limiting needs backend (H7) |
-| MASVS-NETWORK | Partial — HTTPS enforced for prod; cert pinning needed (M8) |
+| MASVS-AUTH | Improved — admin guards added; Redis rate limiting implemented (H7 ✅); CSRF still open (H8) |
+| MASVS-NETWORK | Improved — HTTPS enforced for prod; WebSocket topic authorization implemented (H9 ✅); cert pinning needed (M8) |
 | MASVS-PLATFORM | Improved — screen capture prevention, emulator detection active |
 | MASVS-CODE | Improved — no mock data in prod, safe logging, input validation ready |
 | MASVS-RESILIENCE | Partial — basic emulator detection; full root/jailbreak needs native module |

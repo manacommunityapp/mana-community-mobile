@@ -8,7 +8,7 @@ import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { emergencyService } from '@/services/emergencyService';
 import type { EmergencyAlertDto, EmergencyContact } from '@/services/emergencyService';
-import { showSafeError } from '@/security';
+import { showSafeError, secureLog } from '@/security';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -87,7 +87,20 @@ export default function EmergencyScreen() {
         [{ text: 'OK' }]
       );
     } catch (err) {
-      showSafeError(err, 'Failed to send emergency alert. Please call security directly.');
+      // The server never received the SOS — nobody has been notified. Say so plainly
+      // and put a direct phone fallback in front of the resident.
+      secureLog.warn('[emergency] SOS trigger failed — alert NOT sent', err);
+      const securityPhone =
+        contacts.find(c => /security|control/i.test(c.role))?.phone || '112';
+      Alert.alert(
+        'SOS NOT SENT',
+        'Your emergency alert could not reach the server, so NO ONE has been notified. Call security or emergency services directly right now.',
+        [
+          { text: `Call ${securityPhone}`, style: 'destructive', onPress: () => handleCall(securityPhone) },
+          { text: 'Retry', onPress: () => handleConfirmSOS() },
+          { text: 'Close', style: 'cancel' },
+        ]
+      );
     } finally {
       setIsSubmitting(false);
     }

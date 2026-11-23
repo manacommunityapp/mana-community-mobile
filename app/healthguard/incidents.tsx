@@ -79,6 +79,11 @@ export default function IncidentsScreen() {
           try {
             await healthGuardService.resolveIncident(id);
             load();
+          } catch {
+            Alert.alert(
+              'Could Not Resolve',
+              'The server did not confirm this. The incident is still ACTIVE. Please try again.'
+            );
           } finally { setActionId(null); }
         },
       },
@@ -94,6 +99,11 @@ export default function IncidentsScreen() {
           try {
             await healthGuardService.cancelIncident(id);
             load();
+          } catch {
+            Alert.alert(
+              'Could Not Cancel',
+              'The server did not confirm the cancellation. The emergency alert is still ACTIVE. Please try again.'
+            );
           } finally { setActionId(null); }
         },
       },

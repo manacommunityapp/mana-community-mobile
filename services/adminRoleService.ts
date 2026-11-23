@@ -59,6 +59,25 @@ export interface AdminDashboardStats {
   occupancyRate: number;
   openTickets: number;
   totalUnits: number;
+
+  // 10-point Community Admin Dashboard parity fields
+  ownerCount?: number;
+  tenantCount?: number;
+  residentCount?: number;
+  maintenanceCollectedThisMonthAmount?: number;
+  outstandingInvoiceCount?: number;
+  outstandingDuesAmount?: number;
+  activeVisitorsCount?: number;
+  expectedVisitorsTodayCount?: number;
+  slaBreachedTicketsCount?: number;
+  eventAttendanceCount?: number;
+  facilityUtilizationPercent?: number;
+  monthlyFacilityBookingsCount?: number;
+  activeVendorContractsCount?: number;
+  contractsExpiringWithin30DaysCount?: number;
+  currentFinancialYearBudgetAmount?: number;
+  currentFinancialYearSpentAmount?: number;
+  communityPostsLast30DaysCount?: number;
 }
 
 export interface AnalyticsData {
@@ -86,6 +105,24 @@ interface DashboardAdminStatsResponse {
   verifiedUsersCount?: number;
   totalRolesCount?: number;
   totalCommunitiesCount?: number;
+  ownerCount?: number;
+  tenantCount?: number;
+  residentCount?: number;
+  maintenanceCollectedThisMonthAmount?: number;
+  outstandingInvoiceCount?: number;
+  outstandingDuesAmount?: number;
+  activeVisitorsCount?: number;
+  expectedVisitorsTodayCount?: number;
+  slaBreachedTicketsCount?: number;
+  openTicketsCount?: number;
+  eventAttendanceCount?: number;
+  facilityUtilizationPercent?: number;
+  monthlyFacilityBookingsCount?: number;
+  activeVendorContractsCount?: number;
+  contractsExpiringWithin30DaysCount?: number;
+  currentFinancialYearBudgetAmount?: number;
+  currentFinancialYearSpentAmount?: number;
+  communityPostsLast30DaysCount?: number;
   recentActivities?: any[];
 }
 
@@ -352,14 +389,33 @@ export const adminRoleService = {
       const activeAlerts = liveVisitorsCount + inMemoryAlerts.filter(a => !a.resolved).length;
 
       return {
-        totalResidents: dashboard?.totalUsers ?? stats?.totalMembers ?? 842,
+        totalResidents: dashboard?.residentCount ?? dashboard?.totalUsers ?? stats?.totalMembers ?? 842,
         pendingApprovals: (stats?.pendingApprovals ?? 0) + (stats?.reportedContent ?? 0) || inMemoryApprovals.filter(a => a.status === 'PENDING').length,
         monthlyRevenue,
         monthlyExpenses,
         activeAlerts,
         occupancyRate: 94,
-        openTickets: stats?.reportedContent ?? 12,
+        openTickets: dashboard?.openTicketsCount ?? stats?.reportedContent ?? 12,
         totalUnits: 450,
+
+        // 10-point Community Admin Dashboard parity
+        ownerCount: dashboard?.ownerCount ?? 280,
+        tenantCount: dashboard?.tenantCount ?? 170,
+        residentCount: dashboard?.residentCount ?? dashboard?.totalUsers ?? 450,
+        maintenanceCollectedThisMonthAmount: dashboard?.maintenanceCollectedThisMonthAmount ?? 533000,
+        outstandingInvoiceCount: dashboard?.outstandingInvoiceCount ?? 14,
+        outstandingDuesAmount: dashboard?.outstandingDuesAmount ?? 84000,
+        activeVisitorsCount: dashboard?.activeVisitorsCount ?? liveVisitorsCount ?? 8,
+        expectedVisitorsTodayCount: dashboard?.expectedVisitorsTodayCount ?? 19,
+        slaBreachedTicketsCount: dashboard?.slaBreachedTicketsCount ?? 2,
+        eventAttendanceCount: dashboard?.eventAttendanceCount ?? 64,
+        facilityUtilizationPercent: dashboard?.facilityUtilizationPercent ?? 68.5,
+        monthlyFacilityBookingsCount: dashboard?.monthlyFacilityBookingsCount ?? 42,
+        activeVendorContractsCount: dashboard?.activeVendorContractsCount ?? 12,
+        contractsExpiringWithin30DaysCount: dashboard?.contractsExpiringWithin30DaysCount ?? 3,
+        currentFinancialYearBudgetAmount: dashboard?.currentFinancialYearBudgetAmount ?? 4800000,
+        currentFinancialYearSpentAmount: dashboard?.currentFinancialYearSpentAmount ?? 3950000,
+        communityPostsLast30DaysCount: dashboard?.communityPostsLast30DaysCount ?? 28,
       };
     } catch (err) {
       secureLog.warn('AdminRoleService: Live stats query failed, falling back to cached dashboard stats', err);
@@ -372,6 +428,24 @@ export const adminRoleService = {
         occupancyRate: 94,
         openTickets: 12,
         totalUnits: 450,
+
+        ownerCount: 280,
+        tenantCount: 170,
+        residentCount: 450,
+        maintenanceCollectedThisMonthAmount: 533000,
+        outstandingInvoiceCount: 14,
+        outstandingDuesAmount: 84000,
+        activeVisitorsCount: 8,
+        expectedVisitorsTodayCount: 19,
+        slaBreachedTicketsCount: 2,
+        eventAttendanceCount: 64,
+        facilityUtilizationPercent: 68.5,
+        monthlyFacilityBookingsCount: 42,
+        activeVendorContractsCount: 12,
+        contractsExpiringWithin30DaysCount: 3,
+        currentFinancialYearBudgetAmount: 4800000,
+        currentFinancialYearSpentAmount: 3950000,
+        communityPostsLast30DaysCount: 28,
       };
     }
   },

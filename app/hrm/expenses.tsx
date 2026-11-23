@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -85,7 +85,7 @@ export default function ExpensesScreen() {
           keyExtractor={item => String(item.id)}
           renderItem={({ item }) => <ClaimRow item={item} onSubmit={id => submitMutation.mutate(id)} />}
           contentContainerStyle={{ padding: 16, gap: 12 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
           ListEmptyComponent={<Text style={styles.empty}>No expense claims yet.</Text>}
         />
       )}
@@ -108,7 +108,7 @@ export default function ExpensesScreen() {
               </View>
             ))}
             <TouchableOpacity onPress={() => setItems(arr => [...arr, { description: '', amount: 0 }])} style={{ marginBottom: 8 }}>
-              <Text style={{ color: COLORS.primary, ...FONTS.medium, fontSize: 13 }}>+ Add Item</Text>
+              <Text style={{ color: COLORS.primary, fontFamily: FONTS.medium, fontSize: 13 }}>+ Add Item</Text>
             </TouchableOpacity>
             <Text style={styles.total}>Total: ₹{total.toLocaleString('en-IN')}</Text>
             <TouchableOpacity style={[styles.saveBtn, createMutation.isPending && { opacity: 0.6 }]} onPress={() => createMutation.mutate()} disabled={createMutation.isPending || !form.claimTitle}>
@@ -124,22 +124,22 @@ export default function ExpensesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', margin: 16, backgroundColor: COLORS.primary, borderRadius: RADIUS.sm, paddingHorizontal: 14, paddingVertical: 8 },
-  addBtnText: { color: COLORS.white, ...FONTS.medium, fontSize: 14 },
+  addBtnText: { color: COLORS.white, fontFamily: FONTS.medium, fontSize: 14 },
   card: { backgroundColor: COLORS.white, borderRadius: RADIUS.md, padding: 14, ...SHADOWS.sm, gap: 8 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { ...FONTS.semibold, fontSize: 14, color: COLORS.text },
-  sub: { ...FONTS.regular, fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  badge: { ...FONTS.medium, fontSize: 11 },
-  amount: { ...FONTS.semibold, fontSize: 15, color: COLORS.text },
+  title: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.text },
+  sub: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  badge: { fontFamily: FONTS.medium, fontSize: 11 },
+  amount: { fontFamily: FONTS.semibold, fontSize: 15, color: COLORS.text },
   btn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.xs, paddingHorizontal: 12, paddingVertical: 5 },
-  btnText: { color: COLORS.white, ...FONTS.medium, fontSize: 12 },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, ...FONTS.regular },
+  btnText: { color: COLORS.white, fontFamily: FONTS.medium, fontSize: 12 },
+  empty: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, fontFamily: FONTS.regular },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  modalTitle: { ...FONTS.semibold, fontSize: 17, color: COLORS.text },
-  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: 10, marginBottom: 10, ...FONTS.regular, fontSize: 14, color: COLORS.text, backgroundColor: COLORS.white },
-  sectionLabel: { ...FONTS.semibold, fontSize: 13, color: COLORS.text, marginBottom: 6 },
+  modalTitle: { fontFamily: FONTS.semibold, fontSize: 17, color: COLORS.text },
+  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: 10, marginBottom: 10, fontFamily: FONTS.regular, fontSize: 14, color: COLORS.text, backgroundColor: COLORS.white },
+  sectionLabel: { fontFamily: FONTS.semibold, fontSize: 13, color: COLORS.text, marginBottom: 6 },
   itemRow: { flexDirection: 'row', marginBottom: 8 },
-  total: { ...FONTS.semibold, fontSize: 14, color: COLORS.text, textAlign: 'right', marginBottom: 16 },
+  total: { fontFamily: FONTS.semibold, fontSize: 14, color: COLORS.text, textAlign: 'right', marginBottom: 16 },
   saveBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, padding: 14, alignItems: 'center', marginBottom: 32 },
-  saveBtnText: { color: COLORS.white, ...FONTS.semibold, fontSize: 15 },
+  saveBtnText: { color: COLORS.white, fontFamily: FONTS.semibold, fontSize: 15 },
 });

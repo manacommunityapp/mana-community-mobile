@@ -1,72 +1,114 @@
 import api from './apiClient';
 import type { NotificationDto } from '@/types/api';
 
+export type NotificationPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type NotificationCategory =
+  | 'SAFETY'
+  | 'FINANCE'
+  | 'COMMUNITY'
+  | 'SPORTS'
+  | 'FOOD'
+  | 'VISITORS'
+  | 'HELPDESK'
+  | 'EVENTS'
+  | 'OTHER';
+
+export interface NotificationPreferences {
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  dailyDigestEnabled: boolean;
+  dailyDigestTime: string;
+  categorySettings: Record<NotificationCategory, { push: boolean; inApp: boolean }>;
+}
+
+export interface NotificationPage {
+  content: NotificationDto[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+}
+
+const DEFAULT_PREFS: NotificationPreferences = {
+  quietHoursEnabled: false,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '07:00',
+  dailyDigestEnabled: false,
+  dailyDigestTime: '08:00',
+  categorySettings: {
+    SAFETY:    { push: true,  inApp: true },
+    FINANCE:   { push: true,  inApp: true },
+    COMMUNITY: { push: true,  inApp: true },
+    SPORTS:    { push: true,  inApp: true },
+    FOOD:      { push: true,  inApp: true },
+    VISITORS:  { push: true,  inApp: true },
+    HELPDESK:  { push: true,  inApp: true },
+    EVENTS:    { push: true,  inApp: true },
+    OTHER:     { push: false, inApp: true },
+  },
+};
+
+export function inferPriority(type: string): NotificationPriority {
+  const t = type?.toUpperCase() ?? '';
+  if (t.includes('SAFETY') || t.includes('EMERGENCY') || t.includes('SOS') || t.includes('FIRE') || t.includes('MEDICAL'))
+    return 'CRITICAL';
+  if (t.includes('PAYMENT') || t.includes('FINANCE') || t.includes('INVOICE') || t.includes('OVERDUE') || t.includes('SECURITY'))
+    return 'HIGH';
+  if (t.includes('BOOKING') || t.includes('VISITOR') || t.includes('HELPDESK') || t.includes('EVENT') || t.includes('SPORTS'))
+    return 'MEDIUM';
+  return 'LOW';
+}
+
+export function inferCategory(type: string): NotificationCategory {
+  const t = type?.toUpperCase() ?? '';
+  if (t.includes('SAFETY') || t.includes('EMERGENCY') || t.includes('SOS')) return 'SAFETY';
+  if (t.includes('PAYMENT') || t.includes('FINANCE') || t.includes('INVOICE') || t.includes('BILLING')) return 'FINANCE';
+  if (t.includes('SPORTS') || t.includes('TOURNAMENT') || t.includes('MATCH')) return 'SPORTS';
+  if (t.includes('FOOD') || t.includes('ORDER') || t.includes('DELIVERY')) return 'FOOD';
+  if (t.includes('VISITOR') || t.includes('GATE') || t.includes('ENTRY')) return 'VISITORS';
+  if (t.includes('HELPDESK') || t.includes('TICKET') || t.includes('WORK_ORDER')) return 'HELPDESK';
+  if (t.includes('EVENT') || t.includes('COMMUNITY') || t.includes('POST') || t.includes('MESSAGE')) return 'COMMUNITY';
+  if (t.includes('AUCTION') || t.includes('MARKETPLACE') || t.includes('SERVICE')) return 'OTHER';
+  return 'OTHER';
+}
+
 export const notificationService = {
-  async getAll(page = 0): Promise<{ content: NotificationDto[]; unreadCount: number }> {
+  async getAll(page = 0): Promise<NotificationPage> {
     try {
-      const res = await api.get('/notifications', { params: { page, size: 30 } });
-      if (res.data) {
-        const content = Array.isArray(res.data.content)
-          ? res.data.content
-          : Array.isArray(res.data)
-            ? res.data
-            : [];
-        const unreadCount = typeof res.data.unreadCount === 'number'
-          ? res.data.unreadCount
-          : typeof res.data.count === 'number'
-            ? res.data.count
-            : 0;
-        return { content, unreadCount };
-      }
-      return { content: [], unreadCount: 0 };
+      const res = await api.get<NotificationPage>('/notifications', { params: { page, size: 50 } });
+      return res.data;
     } catch {
-      return { content: [], unreadCount: 0 };
-    }
-  },
-
-  async markRead(notificationId: number): Promise<void> {
-    try {
-      await api.post('/notifications/mark-read', { notificationIds: [notificationId] });
-    } catch {
-      try {
-        await api.put(`/notifications/${notificationId}/read`);
-      } catch {}
-    }
-  },
-
-  async markAllRead(): Promise<void> {
-    try {
-      await api.post('/notifications/mark-all-read');
-    } catch {
-      try {
-        await api.put('/notifications/read-all');
-      } catch {}
+      return { content: [], totalElements: 0, totalPages: 0, number: 0 };
     }
   },
 
   async getUnreadCount(): Promise<number> {
     try {
-      // Backend exposes GET /api/notifications/count returning { unreadCount: number }
-      const res = await api.get<{ unreadCount?: number; count?: number }>('/notifications/count');
-      const data = res.data;
-      if (typeof data === 'number') return data;
-      if (data && typeof data.unreadCount === 'number') return data.unreadCount;
-      if (data && typeof data.count === 'number') return data.count;
-      return 0;
+      const res = await api.get<{ count: number }>('/notifications/unread-count');
+      return res.data?.count ?? 0;
     } catch {
-      try {
-        // Fallback for alternate endpoint /notifications/unread-count
-        const res2 = await api.get<{ unreadCount?: number; count?: number }>('/notifications/unread-count');
-        const data2 = res2.data;
-        if (typeof data2 === 'number') return data2;
-        if (data2 && typeof data2.unreadCount === 'number') return data2.unreadCount;
-        if (data2 && typeof data2.count === 'number') return data2.count;
-        return 0;
-      } catch {
-        return 0;
-      }
+      return 0;
     }
   },
-};
 
-export default notificationService;
+  async markRead(id: number): Promise<void> {
+    await api.put(`/notifications/${id}/read`, {});
+  },
+
+  async markAllRead(): Promise<void> {
+    await api.put('/notifications/read-all', {});
+  },
+
+  async getPreferences(): Promise<NotificationPreferences> {
+    try {
+      const res = await api.get<NotificationPreferences>('/notifications/preferences');
+      return { ...DEFAULT_PREFS, ...res.data };
+    } catch {
+      return DEFAULT_PREFS;
+    }
+  },
+
+  async savePreferences(prefs: NotificationPreferences): Promise<void> {
+    await api.put('/notifications/preferences', prefs);
+  },
+};

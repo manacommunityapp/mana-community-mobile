@@ -109,28 +109,10 @@ export const healthGuardService = {
   },
 
   async triggerSos(request: TriggerSosRequest): Promise<EmergencyIncidentDto> {
-    try {
-      const res = await apiClient.post<EmergencyIncidentDto>(`${BASE}/sos`, request);
-      return res.data;
-    } catch {
-      const incident: EmergencyIncidentDto = {
-        id: Date.now(),
-        incidentUuid: `local-${Date.now()}`,
-        severity: request.severity ?? 'LEVEL_3_POSSIBLE_EMERGENCY',
-        status: 'ACTIVE',
-        description: request.description,
-        triggerType: request.triggerType ?? 'MANUAL_SOS',
-        latitude: request.latitude,
-        longitude: request.longitude,
-        locationAddress: request.locationAddress,
-        triggeredAt: new Date().toISOString(),
-        alertsSent: contactsState.filter(c => c.notifyOnSos && c.isActive).length,
-        notifications: [],
-      };
-      activeIncident = incident;
-      incidentsState = [incident, ...incidentsState];
-      return incident;
-    }
+    // Only the server can open an incident and notify contacts. If this call fails,
+    // zero alerts were sent — never fabricate an ACTIVE incident or an alertsSent count.
+    const res = await apiClient.post<EmergencyIncidentDto>(`${BASE}/sos`, request);
+    return res.data;
   },
 
   async getActiveIncident(): Promise<EmergencyIncidentDto | null> {
@@ -152,29 +134,14 @@ export const healthGuardService = {
   },
 
   async resolveIncident(id: number, notes?: string): Promise<EmergencyIncidentDto> {
-    try {
-      const res = await apiClient.put<EmergencyIncidentDto>(`${BASE}/incidents/${id}/resolve`, { notes });
-      return res.data;
-    } catch {
-      incidentsState = incidentsState.map(i =>
-        i.id === id ? { ...i, status: 'RESOLVED' as const, resolvedAt: new Date().toISOString(), notes } : i
-      );
-      if (activeIncident?.id === id) activeIncident = null;
-      return incidentsState.find(i => i.id === id)!;
-    }
+    // Resolving an emergency is a security action — only the server may record it.
+    const res = await apiClient.put<EmergencyIncidentDto>(`${BASE}/incidents/${id}/resolve`, { notes });
+    return res.data;
   },
 
   async cancelIncident(id: number): Promise<EmergencyIncidentDto> {
-    try {
-      const res = await apiClient.put<EmergencyIncidentDto>(`${BASE}/incidents/${id}/cancel`, {});
-      return res.data;
-    } catch {
-      incidentsState = incidentsState.map(i =>
-        i.id === id ? { ...i, status: 'CANCELLED' as const, resolvedAt: new Date().toISOString() } : i
-      );
-      if (activeIncident?.id === id) activeIncident = null;
-      return incidentsState.find(i => i.id === id)!;
-    }
+    const res = await apiClient.put<EmergencyIncidentDto>(`${BASE}/incidents/${id}/cancel`, {});
+    return res.data;
   },
 
   // Phase 2 — Community Responders

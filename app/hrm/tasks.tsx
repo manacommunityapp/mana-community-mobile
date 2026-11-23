@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useHrmOrg } from '@/hooks/useHrmOrg';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -77,7 +77,7 @@ export default function TasksScreen() {
             <TaskCard item={item} onStatusChange={(id, status) => updateStatus.mutate({ taskId: id, status })} />
           )}
           contentContainerStyle={{ padding: 16, gap: 12 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
           ListEmptyComponent={<Text style={styles.empty}>No tasks assigned to you.</Text>}
         />
       )}
@@ -89,13 +89,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   card: { backgroundColor: COLORS.white, borderRadius: RADIUS.md, padding: 14, ...SHADOWS.sm, gap: 6 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  priority: { ...FONTS.semibold, fontSize: 11 },
-  status: { ...FONTS.medium, fontSize: 11 },
-  title: { ...FONTS.semibold, fontSize: 15, color: COLORS.text },
-  desc: { ...FONTS.regular, fontSize: 13, color: COLORS.textSecondary },
-  due: { ...FONTS.regular, fontSize: 12, color: COLORS.textSecondary },
+  priority: { fontFamily: FONTS.semibold, fontSize: 11 },
+  status: { fontFamily: FONTS.medium, fontSize: 11 },
+  title: { fontFamily: FONTS.semibold, fontSize: 15, color: COLORS.text },
+  desc: { fontFamily: FONTS.regular, fontSize: 13, color: COLORS.textSecondary },
+  due: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textSecondary },
   actionBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.xs, paddingHorizontal: 12, paddingVertical: 5 },
-  actionBtnText: { color: COLORS.white, ...FONTS.medium, fontSize: 12 },
-  meta: { ...FONTS.regular, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, ...FONTS.regular },
+  actionBtnText: { color: COLORS.white, fontFamily: FONTS.medium, fontSize: 12 },
+  meta: { fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
+  empty: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, fontFamily: FONTS.regular },
 });

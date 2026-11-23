@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useHrmOrg } from '@/hooks/useHrmOrg';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,

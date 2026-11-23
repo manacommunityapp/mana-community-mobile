@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, ScrollView, Platform, TextInput as TI,
+  KeyboardAvoidingView, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -47,9 +47,9 @@ export default function AccountStep() {
   const [showPwd, setShowPwd] = useState(false);
   const [errors,  setErrors]  = useState<Record<string, string>>({});
 
-  const emailRef = useRef<TI>(null);
-  const phoneRef = useRef<TI>(null);
-  const pwdRef   = useRef<TI>(null);
+  const emailRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  const phoneRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  const pwdRef   = useRef<React.ElementRef<typeof TextInput>>(null);
 
   function validate() {
     const e: Record<string, string> = {};

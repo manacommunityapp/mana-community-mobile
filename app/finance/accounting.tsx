@@ -307,7 +307,7 @@ function TrialBalanceView() {
   });
 
   const groupedLines = useMemo(() => {
-    if (!tb) return {} as Partial<Record<AccountType, typeof tb.lines>>;
+    if (!tb) return {} as Partial<Record<AccountType, { accountType: string; accountCode: string; accountName: string; debit: number; credit: number; }[]>>;
     const order: AccountType[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'];
     const result: Partial<Record<AccountType, typeof tb.lines>> = {};
     for (const t of order) {

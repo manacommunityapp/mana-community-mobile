@@ -360,7 +360,7 @@ export default function LiveMatchScreen() {
               <Text style={scr.actionBtnText}>⭐ Rate Players</Text>
             </TouchableOpacity>
           )}
-          {match.sport === 'ATHLETICS' || match.sport === 'SWIMMING' ? (
+          {((match.sport as string) === 'ATHLETICS' || match.sport === 'SWIMMING') ? (
             <TouchableOpacity
               style={scr.actionBtn}
               onPress={() => router.push(`/sports/match/race-results?id=${match.id}` as never)}

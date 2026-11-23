@@ -290,7 +290,7 @@ export default function CarpoolScreen() {
             />
           )}
           contentContainerStyle={s.list}
-          onRefresh={refetch}
+          onRefresh={() => { void refetch(); }}
           refreshing={isRefetching}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={

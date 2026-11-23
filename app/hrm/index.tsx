@@ -173,7 +173,7 @@ export default function HrmHomeScreen() {
                   onPress={() => setActiveOrgId(org.id)}
                   style={[s.orgChip, orgId === org.id && s.orgChipActive]}
                 >
-                  <Text style={[s.orgChipText, orgId === org.id && s.orgChipTextActive]}>{org.name}</Text>
+                  <Text style={[s.orgChipText, orgId === org.id && s.orgChipTextActive]}>{org.organizationName}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>

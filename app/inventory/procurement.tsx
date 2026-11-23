@@ -129,7 +129,7 @@ export default function ProcurementScreen() {
         data={filtered}
         keyExtractor={item => String(item.id || Math.random())}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { void refetch(); }} colors={['#4F46E5']} />}
         renderItem={({ item }) => {
           const scfg = STATUS_CONFIG[item.status || 'REQUESTED'] || STATUS_CONFIG.REQUESTED;
 

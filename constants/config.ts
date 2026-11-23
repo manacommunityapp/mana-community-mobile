@@ -3,14 +3,40 @@ export * from './theme';
 // Switch between dev (local Spring Boot) and prod (Lightsail) easily.
 
 const DEV_API_URL  = "http://3.111.198.165:8081";   // dev Lightsail (PostgreSQL-backed)
+const DEV_WS_URL   = "ws://3.111.198.165:8081/ws";  // dev only — cleartext
 const PROD_API_URL = "https://api.manacommunity.in";
+const PROD_WS_URL  = "wss://api.manacommunity.in/ws";
 
-const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
+// Fail safe: when `__DEV__` is not defined (a misconfigured or stripped bundle)
+// assume production, so such a build can never silently point at the cleartext
+// dev host and send JWTs over plain HTTP.
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+
+/**
+ * Cleartext HTTP/WS is only tolerated against the local/dev host. Any non-dev
+ * configuration must be TLS, otherwise bearer tokens travel in the clear.
+ * These are compile-time constants, so this assertion only ever fires if
+ * someone edits the production endpoints above to a non-TLS scheme.
+ */
+function requireSecureTransport(url: string, label: string): string {
+  if (/^(https|wss):\/\//i.test(url)) return url;
+  throw new Error(
+    `[config] ${label} must use https:// or wss:// outside development (got "${url}").`
+  );
+}
+
+const API_BASE_URL: string = isDev
+  ? DEV_API_URL
+  : requireSecureTransport(PROD_API_URL, 'API_BASE_URL');
+
+const WS_URL: string = isDev
+  ? DEV_WS_URL
+  : requireSecureTransport(PROD_WS_URL, 'WS_URL');
 
 export const CONFIG = {
   N8N_AI_WEBHOOK_URL: process.env.EXPO_PUBLIC_N8N_AI_WEBHOOK_URL || "",
-  API_BASE_URL: isDev ? DEV_API_URL : PROD_API_URL,
-  WS_URL:       isDev ? `ws://3.111.198.165:8081/ws` : `wss://api.manacommunity.in/ws`,
+  API_BASE_URL,
+  WS_URL,
   APP_NAME:     "Mana Community",
   VERSION:      "1.0.0",
 
@@ -38,6 +64,8 @@ export const COLORS = {
   surface:      "#FFFFFF",  // white card
   surfaceAlt:   "#F8FAFC",  // soft slate surface
   surfaceCard:  "#FFFFFF",  // card surface
+  white:        "#FFFFFF",  // alias for surface
+  card:         "#FFFFFF",  // alias for surfaceCard
   border:       "rgba(99, 102, 241, 0.14)",  // refined border
   borderLight:  "rgba(99, 102, 241, 0.08)",  // subtle border
   borderSlate:  "#EBEFF2",  // hairline border
@@ -139,7 +167,14 @@ export const FONTS = {
   regular:        "DMSans-Regular",
   medium:         "DMSans-Medium",
   semiBold:       "DMSans-SemiBold",
+  semibold:       "DMSans-SemiBold",  // alias (case-insensitive compat)
   bold:           "DMSans-Bold",
+  // Typography scale objects — use as spreads in StyleSheet: { ...FONTS.sm, color: X }
+  xs:   { fontSize: 11, lineHeight: 16 },
+  sm:   { fontSize: 13, lineHeight: 18 },
+  base: { fontSize: 15, lineHeight: 22 },
+  body: { fontSize: 14, lineHeight: 20 },
+  heading: { fontSize: 18, lineHeight: 26 },
 } as const;
 
 // ── Typography Scale ──────────────────────────────────────────
@@ -207,6 +242,7 @@ export const THEME = {
   text:         "#0F172A",
   muted:        "#64748B",
   primary:      "#4F46E5",
+  card:         "#FFFFFF",  // card surface alias
 } as const;
 
 export const SHADOWS = {
@@ -265,6 +301,21 @@ export const SHADOWS = {
     shadowOpacity: 0.30,
     shadowRadius: 12,
     elevation: 5,
+  },
+  // Aliases
+  small: {
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  xs: {
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
 } as const;
 

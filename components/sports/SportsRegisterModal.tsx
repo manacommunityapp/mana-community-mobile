@@ -434,7 +434,7 @@ export function SportsRegisterModal({ visible, onClose, onRegistered, initialEve
                 activeOpacity={0.85}
                 onPress={() => {
                   handleClose();
-                  router.push(`/commute/offer-ride?to=${encodeURIComponent(done.venueName)}` as never);
+                  router.push(`/commute/offer-ride?to=${encodeURIComponent(done.venueName ?? '')}` as never);
                 }}
               >
                 <Text style={s.offerRideCtaEmoji}>🚗</Text>

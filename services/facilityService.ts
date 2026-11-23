@@ -74,6 +74,15 @@ function mapResourceToFacility(r: any): FacilityDto {
   };
 }
 
+const KNOWN_BOOKING_STATUSES: FacilityBookingDto['status'][] = [
+  'CONFIRMED',
+  'CANCELLED',
+  'COMPLETED',
+  'PENDING',
+  'NO_SHOW',
+  'WAITLISTED',
+];
+
 function mapBookingResponseToDto(b: any): FacilityBookingDto {
   return {
     id: String(b.id),
@@ -89,7 +98,10 @@ function mapBookingResponseToDto(b: any): FacilityBookingDto {
     penaltyAmount: typeof b.penaltyAmount === 'number' ? b.penaltyAmount : undefined,
     isRecurring: b.isRecurring === true,
     recurringPattern: b.recurringPattern,
-    status: (['CANCELLED', 'COMPLETED', 'NO_SHOW', 'WAITLISTED'].includes(b.status)) ? b.status : 'CONFIRMED',
+    // Pass the server's status through unchanged. An unrecognised or missing status
+    // defaults to PENDING — never to CONFIRMED, which would launder an unapproved
+    // booking into a confirmed one.
+    status: KNOWN_BOOKING_STATUSES.includes(b.status) ? b.status : 'PENDING',
     bookingRef: b.bookingNumber || b.bookingRef || `FAC-${b.id}`,
     qrCode: b.qrCode,
     createdAt: b.createdAt,

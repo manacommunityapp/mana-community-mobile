@@ -169,7 +169,7 @@ export default function EntryLogScreen() {
         data={entries}
         keyExtractor={i => String(i.id)}
         renderItem={renderEntry}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { void refetch(); }} />}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           isLoading ? (

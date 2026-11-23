@@ -231,7 +231,7 @@ export default function IntercomScreen() {
           data={calls}
           keyExtractor={i => String(i.id)}
           renderItem={renderCall}
-          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { void refetch(); }} />}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.empty}>
