@@ -211,7 +211,7 @@ export default function ServicesScreen({ isTab = false }: { isTab?: boolean }) {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (bookingId: string) => homeServicesService.cancelBooking(bookingId),
+    mutationFn: (bookingId: string | number) => homeServicesService.cancelBooking(bookingId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['home-services-bookings'] });
       Alert.alert('Cancelled', 'Service request cancelled.');

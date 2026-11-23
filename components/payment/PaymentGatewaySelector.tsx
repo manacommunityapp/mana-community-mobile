@@ -5,6 +5,7 @@ import { COLORS, RADIUS } from '@/constants/config';
 import { CheckoutOptions } from '@/services/paymentConfigService';
 
 interface Props {
+  loading?: false;
   options: CheckoutOptions;
   selectedGateway: string;
   selectedManualMode?: string;
@@ -44,7 +45,7 @@ export interface GatewayLoadingProps {
 
 export type PaymentGatewaySelectorProps = Props | GatewayLoadingProps;
 
-export default function PaymentGatewaySelector(props: PaymentGatewaySelectorProps) {
+export function PaymentGatewaySelector(props: PaymentGatewaySelectorProps) {
   if (props.loading) {
     return (
       <View style={s.loadingRow}>
@@ -55,6 +56,7 @@ export default function PaymentGatewaySelector(props: PaymentGatewaySelectorProp
   }
 
   const { options, selectedGateway, selectedManualMode, onChange } = props;
+  if (!options) return null;
 
   const onlineGateways = options.gatewayOptions.filter((g) => g !== 'MANUAL');
 
@@ -203,3 +205,4 @@ const s = StyleSheet.create({
     color: COLORS.textMuted,
   },
 });
+export default PaymentGatewaySelector;

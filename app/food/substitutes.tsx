@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  SafeAreaView, Alert,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProductSubstituteDto } from '@/services/foodOpsService';
 
 export interface SubstituteDecision {
@@ -61,7 +62,7 @@ export default function SubstitutesScreen({ substitutes = [], onConfirm }: Subst
 
   if (substitutes.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <Text style={styles.heading}>Out-of-stock items</Text>
         <View style={styles.emptyWrap}><Text style={styles.empty}>No substitutions needed.</Text></View>
       </SafeAreaView>
@@ -69,7 +70,7 @@ export default function SubstitutesScreen({ substitutes = [], onConfirm }: Subst
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.heading}>Out-of-stock items</Text>
       <Text style={styles.sub}>{substitutes.length} items unavailable — accept a substitute or remove from order</Text>
 

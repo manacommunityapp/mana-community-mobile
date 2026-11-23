@@ -1,8 +1,9 @@
 import React, { useRef } from 'react';
 import {
   View, Text, TextInput, FlatList, ActivityIndicator,
-  TouchableOpacity, StyleSheet, SafeAreaView, ScrollView,
+  TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SearchResultCard } from '@/components/discover/SearchResultCard';
 import { ModuleFilterChips } from '@/components/discover/ModuleFilterChips';
@@ -13,7 +14,7 @@ import { COLORS, SPACING, RADIUS } from '@/constants/config';
 
 export default function ManaDiscoverScreen() {
   const router = useRouter();
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<any>(null);
 
   const {
     query,
@@ -50,7 +51,7 @@ export default function ManaDiscoverScreen() {
   const showResults = query.trim().length > 0;
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top']}>
       {/* Search bar */}
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
@@ -101,7 +102,7 @@ export default function ManaDiscoverScreen() {
                   {response.total} result{response.total !== 1 ? 's' : ''} for "{query}"
                 </Text>
               </View>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             loading ? (
@@ -110,10 +111,10 @@ export default function ManaDiscoverScreen() {
               <Text style={styles.emptyText}>{error}</Text>
             ) : response != null ? (
               <Text style={styles.emptyText}>No results for "{query}"</Text>
-            ) : null
+            ) : undefined
           }
           ListFooterComponent={
-            hasMore ? <ActivityIndicator style={{ padding: 16 }} color="#7C3AED" /> : null
+            hasMore ? <ActivityIndicator style={{ padding: 16 }} color="#7C3AED" /> : undefined
           }
         />
       ) : (
@@ -152,7 +153,7 @@ export default function ManaDiscoverScreen() {
                   }}
                   style={[
                     styles.categoryCard,
-                    activeModules.includes(m.value) && styles.categoryCardActive,
+                    activeModules.includes(m.value as SearchModule) && styles.categoryCardActive,
                   ]}
                 >
                   <Text style={styles.categoryEmoji}>{m.icon}</Text>

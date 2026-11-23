@@ -4,11 +4,41 @@ import type { PostDto, CommentDto, CreatePostRequest, PageResponse } from '@/typ
 const EMPTY_PAGE: PageResponse<any> = { content: [], totalElements: 0, totalPages: 0, page: 0, number: 0, size: 20 };
 
 export const feedService = {
-  async getPosts(page = 0, size = 20): Promise<PageResponse<PostDto>> {
+  async getPosts(page = 0, size = 20, type?: string): Promise<PageResponse<PostDto>> {
     try {
-      const res = await api.get<PageResponse<PostDto>>('/posts', { params: { page, size } });
-      return res.data;
-    } catch {
+      const params: Record<string, any> = { page, size };
+      if (type && type !== 'ALL') params.type = type;
+      const res = await api.get<any>('/posts', { params });
+      const raw = res.data;
+      if (Array.isArray(raw)) {
+        return { content: raw, totalElements: raw.length, totalPages: 1, page, number: page, size };
+      }
+      if (raw && Array.isArray(raw.content)) {
+        return raw;
+      }
+      if (raw && Array.isArray(raw.items)) {
+        return {
+          content: raw.items,
+          totalElements: raw.totalElements ?? raw.items.length,
+          totalPages: raw.totalPages ?? 1,
+          page,
+          number: page,
+          size,
+        };
+      }
+      return EMPTY_PAGE;
+    } catch (err: any) {
+      console.warn('[feedService.getPosts] /posts request error, trying /posts/stream:', err?.message);
+      try {
+        const streamRes = await api.get<any>('/posts/stream', { params: { page, size } });
+        const raw = streamRes.data;
+        if (Array.isArray(raw)) {
+          return { content: raw, totalElements: raw.length, totalPages: 1, page, number: page, size };
+        }
+        if (raw && Array.isArray(raw.content)) {
+          return raw;
+        }
+      } catch {}
       return EMPTY_PAGE;
     }
   },
@@ -82,8 +112,15 @@ export const feedService = {
 
   async searchPosts(q: string, page = 0, size = 20): Promise<PageResponse<PostDto>> {
     try {
-      const res = await api.get<PageResponse<PostDto>>('/posts/search', { params: { q, page, size } });
-      return res.data;
+      const res = await api.get<any>('/posts/search', { params: { q, page, size } });
+      const raw = res.data;
+      if (Array.isArray(raw)) {
+        return { content: raw, totalElements: raw.length, totalPages: 1, page, number: page, size };
+      }
+      if (raw && Array.isArray(raw.content)) {
+        return raw;
+      }
+      return EMPTY_PAGE;
     } catch {
       return EMPTY_PAGE;
     }

@@ -1,8 +1,9 @@
 import React from 'react';
 import {
   View, Text, FlatList, Pressable, StyleSheet,
-  ActivityIndicator, SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -71,7 +72,7 @@ export default function PayScreen() {
   const totalDue = pending.reduce((s, inv) => s + (inv.balanceDue ?? 0), 0);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Pay</Text>
         <Text style={styles.subtitle}>Payments & billing</Text>
@@ -131,7 +132,7 @@ export default function PayScreen() {
               <Ionicons name="checkmark-circle" size={40} color="#059669" />
               <Text style={styles.emptyText}>All dues paid</Text>
             </View>
-          ) : null
+          ) : undefined
         }
       />
     </SafeAreaView>
