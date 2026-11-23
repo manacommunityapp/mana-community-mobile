@@ -1,4 +1,28 @@
 import { CONFIG } from '@/constants/config';
+import { getAccessTokenSync } from '@/services/apiClient';
+
+/**
+ * Returns authorization headers if the URL points to the backend /api/files/** endpoint.
+ */
+export function getImageHeaders(url?: string | null): Record<string, string> | undefined {
+  if (!url) return undefined;
+  if (url.includes('/api/files/') || url.includes('/files/')) {
+    const token = getAccessTokenSync();
+    if (token) {
+      return { Authorization: `Bearer ${token}` };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Returns an ImageSourcePropType object with uri and Authorization headers if pointing to /api/files/**.
+ */
+export function getImageSource(url?: string | null, fallback: string = ''): { uri: string; headers?: Record<string, string> } {
+  const uri = resolveImageUrl(url, fallback);
+  const headers = getImageHeaders(uri);
+  return headers ? { uri, headers } : { uri };
+}
 
 /**
  * Checks whether an AWS S3 pre-signed URL has expired or is within 5 minutes of expiring.

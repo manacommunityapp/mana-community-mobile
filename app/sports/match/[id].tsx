@@ -166,7 +166,7 @@ const er = StyleSheet.create({
 export default function LiveMatchScreen() {
   const { id }    = useLocalSearchParams<{ id: string }>();
   const router    = useRouter();
-  const { user }  = useAuth();
+  const { user, hasRole, isAnyAdmin }  = useAuth();
   const flashAnim = useRef(new Animated.Value(0)).current;
   const [showScorer, setShowScorer] = useState(false);
 
@@ -189,7 +189,8 @@ export default function LiveMatchScreen() {
   const nearbyRides = (ridesPage?.content ?? []).slice(0, 3);
 
   const canScore = user != null && (
-    ['ADMIN', 'SUPER_ADMIN', 'SPORTS_ADMIN', 'SPORTS_REFEREE', 'MODERATOR'].includes(user.role) ||
+    isAnyAdmin ||
+    hasRole('ADMIN', 'SUPER_ADMIN', 'SPORTS_ADMIN', 'SPORTS_REFEREE', 'MODERATOR') ||
     __DEV__
   );
 

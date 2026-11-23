@@ -170,20 +170,41 @@ export const sportsAdminService = {
 
   async getTournaments(sport?: string, status?: string): Promise<TournamentSummary[]> {
     try {
-      const res = await api.get<{ content: any[] }>('/sports/tournaments', {
-        params: { sport, status, page: 0, size: 50 },
-      });
-      return res.data.content.map(t => ({
+      let rawList: any[] = [];
+      try {
+        const commRes = await api.get<any>('/tournaments/community');
+        rawList = Array.isArray(commRes.data) ? commRes.data : (commRes.data?.content || []);
+      } catch {}
+
+      if (rawList.length === 0) {
+        try {
+          const allRes = await api.get<any>('/tournaments/all');
+          rawList = Array.isArray(allRes.data) ? allRes.data : (allRes.data?.content || []);
+        } catch {}
+      }
+
+      if (rawList.length === 0) {
+        const res = await api.get<{ content: any[] }>('/sports/tournaments', {
+          params: { sport, status, page: 0, size: 50 },
+        });
+        rawList = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      }
+
+      let filtered = rawList;
+      if (sport) filtered = filtered.filter((t: any) => (t.sport || t.sportType || '').toUpperCase().includes(sport.toUpperCase()));
+      if (status) filtered = filtered.filter((t: any) => (t.status || t.registrationStatus || '').toUpperCase() === status.toUpperCase());
+
+      return filtered.map(t => ({
         id: t.id,
         name: t.name || t.title || '',
         sport: t.sport || t.sportType || '',
-        status: t.status || '',
+        status: t.status || t.registrationStatus || '',
         format: t.format || t.tournamentFormat || '',
         teamsRegistered: t.registeredTeams ?? t.teamsCount ?? 0,
         maxTeams: t.maxTeams ?? 0,
-        startDate: t.startDate || '',
-        endDate: t.endDate,
-        registrationDeadline: t.registrationDeadline,
+        startDate: t.startDate || t.eventDateStart || '',
+        endDate: t.endDate || t.eventDateEnd,
+        registrationDeadline: t.registrationDeadline || t.registrationDateEnd,
       }));
     } catch {
       let filtered = sampleTournaments;

@@ -7,9 +7,9 @@ import {
   Animated,
   StyleSheet,
   Dimensions,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
@@ -125,7 +125,7 @@ export default function DiscoverScreen() {
   }, [isAdmin, isGuard, isVendor, hasModule, isSuperAdmin, user?.enabledModules]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
         <Text style={styles.title}>Discover</Text>

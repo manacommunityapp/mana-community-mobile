@@ -1,6 +1,7 @@
 import { THEME } from '@/constants/theme';
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { notificationService } from '@/services/notificationService';
@@ -27,7 +28,7 @@ function TabIcon({
         <Ionicons
           name={focused ? iconFocused : icon}
           size={22}
-          color={focused ? THEME.brandDark : THEME.textSecondary}
+          color={focused ? COLORS.primary : COLORS.textMuted}
         />
         {badgeCount != null && badgeCount > 0 && (
           <View style={styles.badge}>
@@ -46,6 +47,10 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 8);
+  const tabBarHeight = 54 + bottomPadding;
+
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationService.getUnreadCount().catch(() => 0),
@@ -56,9 +61,15 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: tabBarHeight,
+            paddingBottom: bottomPadding,
+          },
+        ],
         tabBarShowLabel: false,
-        tabBarActiveTintColor: THEME.brandDark,
+        tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarHideOnKeyboard: true,
       }}
@@ -126,9 +137,7 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: Platform.OS === 'ios' ? 86 : 66,
     paddingTop: 6,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 6,
     borderTopWidth: 1,
     borderTopColor: THEME.border,
     backgroundColor: COLORS.surface,
@@ -151,7 +160,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconBgActive: {
-    backgroundColor: THEME.brandLight,
+    backgroundColor: COLORS.primaryLight,
   },
   iconLabel: {
     fontSize: 10,
@@ -170,7 +179,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: COLORS.primary,
-    marginTop: 1,
+    marginTop: 2,
   },
   badge: {
     position: 'absolute',

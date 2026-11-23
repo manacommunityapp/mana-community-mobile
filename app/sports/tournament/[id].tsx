@@ -15,7 +15,7 @@ import { COLORS } from '@/constants/config';
 import { safeFormat, formatTournamentDateRange } from '@/utils/dateUtils';
 import { shareTournament } from '@/utils/sportsShare';
 import { TournamentBracketView } from '@/components/sports/TournamentBracketView';
-import type { DashboardEventCardDto } from '@/types/api';
+import type { DashboardEventCardDto, DashboardTournamentCardDto } from '@/types/api';
 
 const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings', 'Brackets'] as const;
 type Tab = typeof TABS[number];
@@ -200,9 +200,9 @@ export default function TournamentDetailScreen() {
   });
 
   // Open tournament events/categories from open tournaments API
-  const { data: openTournamentsDash = [] } = useQuery({
+  const { data: openTournamentsDash = [] } = useQuery<DashboardTournamentCardDto[]>({
     queryKey: ['tournaments-open-dash'],
-    queryFn: sportsService.getOpenTournaments,
+    queryFn: () => sportsService.getOpenTournaments(),
     staleTime: 30_000,
   });
 
