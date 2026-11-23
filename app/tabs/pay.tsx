@@ -131,7 +131,7 @@ export default function PayScreen() {
               <Ionicons name="checkmark-circle" size={40} color="#059669" />
               <Text style={styles.emptyText}>All dues paid</Text>
             </View>
-          ) : null
+          ) : undefined
         }
       />
     </SafeAreaView>

@@ -113,7 +113,7 @@ const FALLBACK_TOWERS: TowerSummary[] = [
 
 const FALLBACK_KYC: TenantKycDocument[] = [
   { id: 'kyc-1', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'AADHAAR', status: 'VERIFIED', documentNumber: 'XXXX-XXXX-4532', uploadedAt: '2025-10-15', verifiedAt: '2025-10-16' },
-  { id: 'kyc-2', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'PAN', status: 'VERIFIED', documentNumber: 'ABCDE1234F', uploadedAt: '2025-10-15', verifiedAt: '2025-10-16' },
+  { id: 'kyc-2', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'PAN', status: 'VERIFIED', documentNumber: 'XXXXX1234F', uploadedAt: '2025-10-15', verifiedAt: '2025-10-16' },
   { id: 'kyc-3', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'POLICE_VERIFICATION', status: 'VERIFIED', uploadedAt: '2025-10-20', verifiedAt: '2025-10-25' },
   { id: 'kyc-4', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'RENTAL_AGREEMENT', status: 'VERIFIED', uploadedAt: '2025-11-01', verifiedAt: '2025-11-01', expiryDate: '2026-10-31' },
   { id: 'kyc-5', tenantId: 't-2', tenantName: 'Neha Gupta', unitNumber: 'B-102', docType: 'AADHAAR', status: 'PENDING', uploadedAt: '2026-09-25' },

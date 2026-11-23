@@ -9,6 +9,7 @@ interface Props {
   selectedGateway: string;
   selectedManualMode?: string;
   onChange: (gateway: string, manualMode?: string) => void;
+  loading?: false;
 }
 
 const GATEWAY_LABELS: Record<string, string> = {
@@ -203,3 +204,5 @@ const s = StyleSheet.create({
     color: COLORS.textMuted,
   },
 });
+
+export { PaymentGatewaySelector };

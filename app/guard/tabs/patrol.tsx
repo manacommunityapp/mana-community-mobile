@@ -671,7 +671,7 @@ const s = StyleSheet.create({
   errorBannerText: { flex: 1, fontSize: 13, color: COLORS.error, lineHeight: 18 },
 
   modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   confirmSheet: {

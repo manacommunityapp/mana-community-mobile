@@ -13,7 +13,7 @@ import { COLORS, SPACING, RADIUS } from '@/constants/config';
 
 export default function ManaDiscoverScreen() {
   const router = useRouter();
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<any>(null);
 
   const {
     query,
@@ -101,7 +101,7 @@ export default function ManaDiscoverScreen() {
                   {response.total} result{response.total !== 1 ? 's' : ''} for "{query}"
                 </Text>
               </View>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             loading ? (
@@ -110,10 +110,10 @@ export default function ManaDiscoverScreen() {
               <Text style={styles.emptyText}>{error}</Text>
             ) : response != null ? (
               <Text style={styles.emptyText}>No results for "{query}"</Text>
-            ) : null
+            ) : undefined
           }
           ListFooterComponent={
-            hasMore ? <ActivityIndicator style={{ padding: 16 }} color="#7C3AED" /> : null
+            hasMore ? <ActivityIndicator style={{ padding: 16 }} color="#7C3AED" /> : undefined
           }
         />
       ) : (
@@ -152,7 +152,7 @@ export default function ManaDiscoverScreen() {
                   }}
                   style={[
                     styles.categoryCard,
-                    activeModules.includes(m.value) && styles.categoryCardActive,
+                    activeModules.includes(m.value as SearchModule) && styles.categoryCardActive,
                   ]}
                 >
                   <Text style={styles.categoryEmoji}>{m.icon}</Text>

@@ -2,8 +2,8 @@ export * from './theme';
 // ── API Configuration ──────────────────────────────────────────
 // Switch between dev (local Spring Boot) and prod (Lightsail) easily.
 
-const DEV_API_URL  = "http://3.111.198.165:8081";   // dev Lightsail (PostgreSQL-backed)
-const DEV_WS_URL   = "ws://3.111.198.165:8081/ws";  // dev only — cleartext
+const DEV_API_URL  = process.env.EXPO_PUBLIC_API_URL || "http://3.111.198.165:8081";   // dev Lightsail (PostgreSQL-backed) or local override
+const DEV_WS_URL   = process.env.EXPO_PUBLIC_WS_URL  || "ws://3.111.198.165:8081/ws";  // dev only — cleartext
 const PROD_API_URL = "https://api.manacommunity.in";
 const PROD_WS_URL  = "wss://api.manacommunity.in/ws";
 

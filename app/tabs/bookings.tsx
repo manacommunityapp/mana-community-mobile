@@ -118,7 +118,7 @@ export default function BookingsScreen() {
         keyExtractor={() => ''}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
-        renderItem={null}
+        renderItem={() => null}
         ListHeaderComponent={
           <>
             {/* Categories */}
