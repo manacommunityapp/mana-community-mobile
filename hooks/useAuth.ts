@@ -2,47 +2,61 @@ import { create } from 'zustand';
 import { authService } from '@/services/authService';
 import { tokenStore, setTenantCommunityId } from '@/services/apiClient';
 import type { UserProfileResponse, LoginRequest, RegisterRequest } from '@/types/api';
+import { ROLE_PERMISSIONS, type UserRole } from '@/constants/permissions';
 
 export type UserPersona = 'RESIDENT' | 'ADMIN' | 'STAFF' | 'VENDOR';
 
 const MODULE_ALIASES: Record<string, string[]> = {
   COMMUNITY_FEED: ['COMMUNITY_FEED', 'FEED', 'FORUM', 'COMMUNITY'],
-  SPORTS: ['SPORTS'],
+  SPORTS: ['SPORTS', 'TOURNAMENTS'],
   MARKETPLACE: ['MARKETPLACE', 'COMMERCE', 'AUCTIONS', 'MARKET'],
-  VISITORS: ['VISITORS', 'SECURITY', 'GATE', 'SAFETY'],
+  VISITORS: ['VISITORS', 'SECURITY', 'GATE', 'SAFETY', 'PARKING'],
   NOTICES: ['NOTICES', 'BROADCAST', 'ANNOUNCEMENT'],
   BOOKINGS: ['BOOKINGS', 'FACILITIES', 'AMENITIES'],
-  FACILITIES: ['BOOKINGS', 'FACILITIES', 'AMENITIES'],
+  FACILITIES: ['BOOKINGS', 'FACILITIES', 'AMENITIES', 'INVENTORY', 'SMART_HOME', 'IOT'],
   HELPDESK: ['HELPDESK', 'COMPLAINTS', 'ISSUES'],
-  POLLS: ['POLLS'],
+  POLLS: ['POLLS', 'VOTING'],
   JOBS: ['JOBS', 'CPN'],
   EVENTS: ['EVENTS', 'CALENDAR', 'EXPERIENCES'],
   CALENDAR: ['EVENTS', 'CALENDAR'],
   ENTERTAINMENT: ['ENTERTAINMENT', 'MOVIES'],
-  COMMUNITY_MGMT: ['COMMUNITY_MGMT', 'GOVERNANCE'],
+  COMMUNITY_MGMT: ['COMMUNITY_MGMT', 'GOVERNANCE', 'PROJECTS'],
   GOVERNANCE: ['COMMUNITY_MGMT', 'GOVERNANCE'],
-  FINANCE_MGMT: ['FINANCE_MGMT', 'PAYMENTS', 'PERSONAL_FINANCE'],
-  PERSONAL_FINANCE: ['FINANCE_MGMT', 'PAYMENTS', 'PERSONAL_FINANCE'],
-  ADMIN_HUB: ['ADMIN_HUB'],
-  FOOD_OS: ['FOOD_OS', 'FOOD', 'FRESH_KITCHEN', 'DAILY_BASKET'],
+  PROJECTS: ['PROJECTS', 'COMMUNITY_MGMT', 'GOVERNANCE'],
+  FINANCE_MGMT: ['FINANCE_MGMT', 'PAYMENTS', 'PERSONAL_FINANCE', 'BILLING'],
+  PERSONAL_FINANCE: ['FINANCE_MGMT', 'PAYMENTS', 'PERSONAL_FINANCE', 'MY_MONEY'],
+  ADMIN_HUB: ['ADMIN_HUB', 'ADMIN'],
+  FOOD_OS: ['FOOD_OS', 'FOOD', 'FRESH_KITCHEN', 'DAILY_BASKET', 'MANA_FRESH'],
   FOOD: ['FOOD_OS', 'FOOD'],
+  MANA_FRESH: ['FOOD_OS', 'FOOD', 'MANA_FRESH', 'FRESH_KITCHEN', 'DAILY_BASKET'],
   VENDOR_MANAGEMENT: ['VENDOR_MANAGEMENT', 'VENDOR'],
   GROUP_BUYING: ['GROUP_BUYING'],
   SERVICE_PLATFORM: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
   HOME_SERVICES: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
   SERVICES: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
-  EMERGENCY: ['EMERGENCY', 'SAFETY'],
+  EMERGENCY: ['EMERGENCY', 'SAFETY', 'SOS'],
   TRIPS: ['TRIPS', 'COMMUTE', 'MOBILITY'],
   COMMUTE: ['TRIPS', 'COMMUTE', 'MOBILITY'],
   DISCOVER: ['DISCOVER'],
-  MAINTENANCE: ['MAINTENANCE', 'CPOS', 'AMC'],
+  MAINTENANCE: ['MAINTENANCE', 'CPOS', 'AMC', 'ASSETS'],
+  AMC: ['AMC', 'MAINTENANCE', 'CPOS', 'FACILITIES'],
   INSURANCE: ['INSURANCE'],
   COMMERCE: ['COMMERCE', 'MARKETPLACE'],
-  ACADEMY: ['ACADEMY'],
-  SAFETY: ['SAFETY', 'VISITORS', 'EMERGENCY'],
-  PAYMENTS: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT'],
+  ACADEMY: ['ACADEMY', 'LEARNING'],
+  SAFETY: ['SAFETY', 'VISITORS', 'EMERGENCY', 'HEALTH'],
+  HEALTH: ['HEALTH', 'SAFETY', 'WELLNESS'],
+  WELLNESS: ['WELLNESS', 'HEALTH', 'SAFETY', 'FOOD_OS'],
+  PAYMENTS: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT', 'WALLET', 'BBPS'],
   MANA_PAY: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT'],
   CPOS: ['CPOS', 'MAINTENANCE'],
+  PARKING: ['PARKING', 'FACILITIES', 'VISITORS'],
+  SMART_HOME: ['SMART_HOME', 'AUTOMATION', 'FACILITIES', 'IOT'],
+  AUTOMATION: ['SMART_HOME', 'AUTOMATION', 'FACILITIES', 'IOT'],
+  IOT: ['IOT', 'SUBMETERS', 'FACILITIES', 'SMART_HOME'],
+  INVENTORY: ['INVENTORY', 'FACILITIES', 'MAINTENANCE'],
+  PETS: ['PETS', 'COMMUNITY_FEED', 'COMMUNITY'],
+  AI_CONCIERGE: ['AI_CONCIERGE', 'AI_CHAT', 'SAFETY'],
+  AI_CHAT: ['AI_CONCIERGE', 'AI_CHAT', 'SAFETY'],
 };
 
 interface AuthState {
@@ -78,6 +92,22 @@ interface AuthState {
   loadUser: () => Promise<void>;
   updateUser: (user: UserProfileResponse) => void;
   switchPersona: (persona: UserPersona) => void;
+}
+
+export function computeEffectivePermissions(roles: string[], directPermissions?: string[]): string[] {
+  const perms = new Set<string>(directPermissions || []);
+  for (const r of roles) {
+    const roleKey = r.trim().toUpperCase() as UserRole;
+    const rp = ROLE_PERMISSIONS[roleKey];
+    if (!rp) continue;
+    if (rp.includes('*')) {
+      return ['*'];
+    }
+    for (const p of rp) {
+      perms.add(p);
+    }
+  }
+  return Array.from(perms);
 }
 
 function computeRoles(user: UserProfileResponse | null): string[] {
@@ -159,13 +189,13 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   hasPermission: (permission: string): boolean => {
     const { permissions, isSuperAdmin } = get();
-    if (isSuperAdmin) return true;
+    if (isSuperAdmin || permissions.includes('*')) return true;
     return permissions.includes(permission);
   },
 
   hasAnyPermission: (...perms: string[]): boolean => {
     const { permissions, isSuperAdmin } = get();
-    if (isSuperAdmin) return true;
+    if (isSuperAdmin || permissions.includes('*')) return true;
     return perms.some(p => permissions.includes(p));
   },
 
@@ -174,9 +204,10 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (isSuperAdmin) return true;
     if (!enabledModules || enabledModules.length === 0) return true;
     const normalizedKey = moduleKey.trim().toUpperCase();
-    if (enabledModules.includes(normalizedKey)) return true;
-    const aliases = MODULE_ALIASES[normalizedKey] || [];
-    return aliases.some(alias => enabledModules.includes(alias));
+    const upperMods = enabledModules.map(m => (m || '').trim().toUpperCase());
+    if (upperMods.includes(normalizedKey)) return true;
+    const aliases = MODULE_ALIASES[normalizedKey] || [normalizedKey];
+    return aliases.some(alias => upperMods.includes(alias.toUpperCase()));
   },
 
   hasRole: (...checkRoles: string[]): boolean => {
@@ -205,6 +236,11 @@ export const useAuth = create<AuthState>((set, get) => ({
       const roles = computeRoles(user);
       const roleSet = new Set(roles);
       const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
+      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
+      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
+      const isVendor = roleSet.has('VENDOR');
+      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+      const permissions = computeEffectivePermissions(roles, user.permissions);
       setTenantCommunityId(user.communityId ?? null);
       set({
         user,
@@ -212,7 +248,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         isLoading: false,
         isOffline: offline,
         roles,
-        permissions: user.permissions || [],
+        permissions,
         enabledModules: user.enabledModules || [],
         activePersona: resolvePrimaryPersona(roles),
         isAdmin: isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN'),
@@ -297,12 +333,14 @@ export const useAuth = create<AuthState>((set, get) => ({
       permissions: res.permissions || [],
     };
 
+    const permissions = computeEffectivePermissions(roles, res.permissions);
+
     set({
       user: initialUser,
       isAuthenticated: true,
       isLoading: false,
       roles,
-      permissions: initialUser.permissions || [],
+      permissions,
       enabledModules: initialUser.enabledModules || [],
       activePersona: resolvePrimaryPersona(roles),
       isAdmin,
@@ -318,11 +356,15 @@ export const useAuth = create<AuthState>((set, get) => ({
         const enrichedUser = await enrichUserProfile(fullUser, res.communityId, res.enabledModules);
         const fullRoles = computeRoles(enrichedUser);
         const fullRoleSet = new Set(fullRoles);
+        const fullPermissions = computeEffectivePermissions(
+          fullRoles,
+          (enrichedUser.permissions && enrichedUser.permissions.length > 0) ? enrichedUser.permissions : res.permissions
+        );
         setTenantCommunityId(enrichedUser.communityId ?? null);
         set({
           user: enrichedUser,
           roles: fullRoles,
-          permissions: (enrichedUser.permissions && enrichedUser.permissions.length > 0) ? enrichedUser.permissions : (res.permissions || []),
+          permissions: fullPermissions,
           enabledModules: enrichedUser.enabledModules || res.enabledModules || [],
           activePersona: resolvePrimaryPersona(fullRoles),
           isAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('ADMIN') || fullRoleSet.has('COMMUNITY_ADMIN'),
@@ -369,12 +411,14 @@ export const useAuth = create<AuthState>((set, get) => ({
       permissions: res.permissions || [],
     };
 
+    const permissions = computeEffectivePermissions(roles, res.permissions);
+
     set({
       user: initialUser,
       isAuthenticated: true,
       isLoading: false,
       roles,
-      permissions: initialUser.permissions || [],
+      permissions,
       enabledModules: initialUser.enabledModules || [],
       activePersona: resolvePrimaryPersona(roles),
       isAdmin,
@@ -390,11 +434,15 @@ export const useAuth = create<AuthState>((set, get) => ({
         const enrichedUser = await enrichUserProfile(fullUser, res.communityId, res.enabledModules);
         const fullRoles = computeRoles(enrichedUser);
         const fullRoleSet = new Set(fullRoles);
+        const fullPermissions = computeEffectivePermissions(
+          fullRoles,
+          (enrichedUser.permissions && enrichedUser.permissions.length > 0) ? enrichedUser.permissions : res.permissions
+        );
         setTenantCommunityId(enrichedUser.communityId ?? null);
         set({
           user: enrichedUser,
           roles: fullRoles,
-          permissions: (enrichedUser.permissions && enrichedUser.permissions.length > 0) ? enrichedUser.permissions : (res.permissions || []),
+          permissions: fullPermissions,
           enabledModules: enrichedUser.enabledModules || res.enabledModules || [],
           activePersona: resolvePrimaryPersona(fullRoles),
           isAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('ADMIN') || fullRoleSet.has('COMMUNITY_ADMIN'),
@@ -437,6 +485,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
     const isVendor = roleSet.has('VENDOR');
     const isAnyAdmin = isSuperAdmin || roles.some((r: string) => r.includes('ADMIN'));
+    const permissions = computeEffectivePermissions(roles, user.permissions);
 
     if (user.communityId != null) {
       setTenantCommunityId(user.communityId);
@@ -445,7 +494,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({
       user,
       roles,
-      permissions: user.permissions || [],
+      permissions,
       enabledModules: user.enabledModules || [],
       isAdmin,
       isSuperAdmin,

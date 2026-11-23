@@ -22,7 +22,7 @@ export function handleDeepLinkUrl(url: string) {
       const eventId = path.replace('events/', '');
       router.push(`/events/${eventId}` as any);
     } else if (path.startsWith('calendar')) {
-      router.push('/tabs/calendar' as any);
+      router.push('/calendar' as any);
     } else if (path.startsWith('guard')) {
       router.push('/guard/tabs/dashboard' as any);
     } else if (path.startsWith('vendor')) {

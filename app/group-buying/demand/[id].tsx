@@ -57,7 +57,7 @@ export default function DemandDetailScreen() {
               Alert.alert('Success!', 'Group deal created from community demand.', [
                 {
                   text: 'View Deal',
-                  onPress: () => router.replace(`/group-buying/${deal.id}` as any),
+                  onPress: () => router.replace(`/group-buying/deal/${deal.id}` as any),
                 },
               ]);
             } catch (e) {

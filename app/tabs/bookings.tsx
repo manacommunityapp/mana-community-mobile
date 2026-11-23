@@ -13,6 +13,8 @@ import { facilityService, type FacilityBookingDto } from '@/services/facilitySer
 import { eventService } from '@/services/eventService';
 import type { EventDto } from '@/types/api';
 
+import { useAuth } from '@/hooks/useAuth';
+
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
 interface BookingCategory {
@@ -21,15 +23,16 @@ interface BookingCategory {
   icon: IoniconsName;
   route: string;
   color: string;
+  module?: string;
 }
 
 const BOOKING_CATEGORIES: BookingCategory[] = [
-  { key: 'facility', label: 'Facilities', icon: 'grid-outline', route: '/facilities', color: '#4F46E5' },
-  { key: 'events', label: 'Events', icon: 'calendar-outline', route: '/events', color: '#059669' },
-  { key: 'sports', label: 'Sports', icon: 'football-outline', route: '/sports', color: '#D97706' },
-  { key: 'trips', label: 'Trips', icon: 'airplane-outline', route: '/trips', color: '#1D4ED8' },
-  { key: 'amenity', label: 'Amenities', icon: 'business-outline', route: '/amenity', color: '#7C3AED' },
-  { key: 'helpdesk', label: 'Service Requests', icon: 'construct-outline', route: '/helpdesk', color: '#0369A1' },
+  { key: 'facility', label: 'Facilities', icon: 'grid-outline', route: '/facilities', color: '#4F46E5', module: 'FACILITIES' },
+  { key: 'events', label: 'Events', icon: 'calendar-outline', route: '/events', color: '#059669', module: 'EVENTS' },
+  { key: 'sports', label: 'Sports', icon: 'football-outline', route: '/sports', color: '#D97706', module: 'SPORTS' },
+  { key: 'trips', label: 'Trips', icon: 'airplane-outline', route: '/trips', color: '#1D4ED8', module: 'TRIPS' },
+  { key: 'amenity', label: 'Amenities', icon: 'business-outline', route: '/facilities', color: '#7C3AED', module: 'FACILITIES' },
+  { key: 'helpdesk', label: 'Service Requests', icon: 'construct-outline', route: '/helpdesk', color: '#0369A1', module: 'HELPDESK' },
 ];
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
@@ -90,6 +93,11 @@ function EventBookingCard({ event }: { event: EventDto }) {
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const { hasModule, isSuperAdmin } = useAuth();
+
+  const visibleCategories = React.useMemo(() => {
+    return BOOKING_CATEGORIES.filter((c) => isSuperAdmin || !c.module || hasModule(c.module));
+  }, [hasModule, isSuperAdmin]);
 
   const { data: facilityBookings = [], isLoading: loadingFacility } = useQuery({
     queryKey: ['bookings-tab-facility'],
@@ -123,22 +131,26 @@ export default function BookingsScreen() {
         ListHeaderComponent={
           <>
             {/* Categories */}
-            <Text style={styles.sectionTitle}>Book Something</Text>
-            <View style={styles.catGrid}>
-              {BOOKING_CATEGORIES.map((cat) => (
-                <Pressable
-                  key={cat.key}
-                  style={styles.catTile}
-                  onPress={() => router.push(cat.route as any)}
-                  accessibilityLabel={cat.label}
-                >
-                  <View style={[styles.catIcon, { backgroundColor: cat.color + '18' }]}>
-                    <Ionicons name={cat.icon} size={22} color={cat.color} />
-                  </View>
-                  <Text style={styles.catLabel}>{cat.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+            {visibleCategories.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Book Something</Text>
+                <View style={styles.catGrid}>
+                  {visibleCategories.map((cat) => (
+                    <Pressable
+                      key={cat.key}
+                      style={styles.catTile}
+                      onPress={() => router.push(cat.route as any)}
+                      accessibilityLabel={cat.label}
+                    >
+                      <View style={[styles.catIcon, { backgroundColor: cat.color + '18' }]}>
+                        <Ionicons name={cat.icon} size={22} color={cat.color} />
+                      </View>
+                      <Text style={styles.catLabel}>{cat.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             {isLoading && (
               <ActivityIndicator style={{ marginTop: 24 }} color={THEME.brandDark} />

@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { Image, View, Animated, StyleSheet, ImageStyle, ViewStyle, StyleProp } from 'react-native';
 import { useAdaptiveImage } from '@/hooks/useAdaptiveImage';
-import { getImageHeaders } from '@/utils/imageUrlUtils';
+import { resolveImageUrl, getImageHeaders } from '@/utils/imageUrlUtils';
 
 interface Props {
   uri: string;
@@ -29,11 +29,11 @@ export function AdaptiveImage({ uri, reducedUri, placeholderColor = '#E2E8F0', s
     return <View style={[style as ViewStyle, { backgroundColor: placeholderColor }, containerStyle]} />;
   }
 
-  const resolvedUri =
+  const rawTargetUri =
     quality === 'reduced'
       ? (reducedUri ?? appendQuality(uri, 'reduced'))
       : uri;
-
+  const resolvedUri = resolveImageUrl(rawTargetUri);
   const authHeaders = headers ?? getImageHeaders(resolvedUri);
 
   return (

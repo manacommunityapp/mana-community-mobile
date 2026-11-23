@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { THEME } from '@/constants/theme';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '@/constants/config';
 import { societyFinanceService, type SocietyInvoiceDto } from '@/services/societyFinanceService';
+import { useAuth } from '@/hooks/useAuth';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -19,16 +20,17 @@ interface PayOption {
   icon: IoniconsName;
   route: string;
   color: string;
+  module?: string;
 }
 
 const PAY_OPTIONS: PayOption[] = [
-  { key: 'wallet', label: 'Mana Wallet', icon: 'wallet-outline', route: '/wallet', color: '#7C3AED' },
-  { key: 'dues', label: 'Pay Dues', icon: 'receipt-outline', route: '/payments', color: '#059669' },
-  { key: 'bbps', label: 'Bill Pay (BBPS)', icon: 'flash-outline', route: '/bbps', color: '#D97706' },
-  { key: 'upi', label: 'UPI / Transfer', icon: 'send-outline', route: '/payments/upi', color: '#4F46E5' },
-  { key: 'auto', label: 'Auto-Debit', icon: 'repeat-outline', route: '/payments/auto-debit', color: '#7C3AED' },
-  { key: 'history', label: 'History', icon: 'time-outline', route: '/payments/history', color: '#0369A1' },
-  { key: 'rewards', label: 'Rewards', icon: 'gift-outline', route: '/payments/rewards', color: '#BE185D' },
+  { key: 'wallet', label: 'Mana Wallet', icon: 'wallet-outline', route: '/wallet', color: '#7C3AED', module: 'PAYMENTS' },
+  { key: 'dues', label: 'Pay Dues', icon: 'receipt-outline', route: '/payments', color: '#059669', module: 'FINANCE_MGMT' },
+  { key: 'bbps', label: 'Bill Pay (BBPS)', icon: 'flash-outline', route: '/bbps', color: '#D97706', module: 'PAYMENTS' },
+  { key: 'upi', label: 'UPI / Transfer', icon: 'send-outline', route: '/send-money', color: '#4F46E5', module: 'PAYMENTS' },
+  { key: 'auto', label: 'Auto-Debit', icon: 'repeat-outline', route: '/payments/auto-debit', color: '#7C3AED', module: 'FINANCE_MGMT' },
+  { key: 'history', label: 'History', icon: 'time-outline', route: '/payments/history', color: '#0369A1', module: 'PAYMENTS' },
+  { key: 'rewards', label: 'Rewards', icon: 'gift-outline', route: '/payments/rewards', color: '#BE185D', module: 'PAYMENTS' },
 ];
 
 function InvoiceRow({ invoice }: { invoice: SocietyInvoiceDto }) {
@@ -59,6 +61,11 @@ function InvoiceRow({ invoice }: { invoice: SocietyInvoiceDto }) {
 
 export default function PayScreen() {
   const router = useRouter();
+  const { hasModule, isSuperAdmin } = useAuth();
+
+  const visibleOptions = React.useMemo(() => {
+    return PAY_OPTIONS.filter((opt) => isSuperAdmin || !opt.module || hasModule(opt.module));
+  }, [hasModule, isSuperAdmin]);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['pay-tab-invoices'],
@@ -101,22 +108,26 @@ export default function PayScreen() {
               </Pressable>
             )}
 
-            <Text style={styles.sectionTitle}>Payment Options</Text>
-            <View style={styles.optionsGrid}>
-              {PAY_OPTIONS.map((opt) => (
-                <Pressable
-                  key={opt.key}
-                  style={styles.optionTile}
-                  onPress={() => router.push(opt.route as any)}
-                  accessibilityLabel={opt.label}
-                >
-                  <View style={[styles.optionIcon, { backgroundColor: opt.color + '18' }]}>
-                    <Ionicons name={opt.icon} size={22} color={opt.color} />
-                  </View>
-                  <Text style={styles.optionLabel}>{opt.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+            {visibleOptions.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Payment Options</Text>
+                <View style={styles.optionsGrid}>
+                  {visibleOptions.map((opt) => (
+                    <Pressable
+                      key={opt.key}
+                      style={styles.optionTile}
+                      onPress={() => router.push(opt.route as any)}
+                      accessibilityLabel={opt.label}
+                    >
+                      <View style={[styles.optionIcon, { backgroundColor: opt.color + '18' }]}>
+                        <Ionicons name={opt.icon} size={22} color={opt.color} />
+                      </View>
+                      <Text style={styles.optionLabel}>{opt.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             {pending.length > 0 && (
               <Text style={styles.sectionTitle}>Pending Invoices</Text>
