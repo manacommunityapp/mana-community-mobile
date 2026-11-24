@@ -11,17 +11,20 @@ import {
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { vendorService } from '@/services/vendorService';
 import type { VendorSettlement } from '@/types/vendor';
 
 export default function VendorSettlementsScreen() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'ALL' | 'ESCROW' | 'PAID'>('ALL');
+  const vendorId = (user as any)?.vendorId || (user?.id ? String(user.id) : 'v1');
 
   const { data: settlements = [], isLoading } = useQuery({
-    queryKey: ['vendor-settlements'],
-    queryFn: () => vendorService.getSettlements('v1'),
+    queryKey: ['vendor-settlements', vendorId],
+    queryFn: () => vendorService.getSettlements(vendorId),
   });
 
   const payoutMutation = useMutation({

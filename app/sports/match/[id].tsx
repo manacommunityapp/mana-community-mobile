@@ -8,17 +8,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLiveScore } from '@/hooks/useLiveScore';
 import { useAuth } from '@/hooks/useAuth';
+import { useModuleGuard } from '@/hooks/useRoleGuard';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { SPORT_EMOJI, getVenueName, getVenueDisplay } from '@/constants/sports';
 import { format, formatDistanceToNow } from 'date-fns';
 import { safeFormat } from '@/utils/dateUtils';
 import { shareMatch } from '@/utils/sportsShare';
 import { LiveScoringModal } from '@/components/sports/LiveScoringModal';
-import type { MatchDto, MatchEventDto } from '@/types/api';
-
-const SPORT_EMOJI: Record<string, string> = {
-  CRICKET:'🏏', FOOTBALL:'⚽', BADMINTON:'🏸', TABLE_TENNIS:'🏓',
-  BASKETBALL:'🏀', VOLLEYBALL:'🏐', CHESS:'♟️', CARROM:'🎯', OTHER:'🏅',
-};
+import { commuteService } from '@/services/commuteService';
+import { useQuery } from '@tanstack/react-query';
+import type { MatchDto, MatchEventDto, CommuteRideDto } from '@/types/api';
 
 const EVENT_ICON: Record<string, string> = {
   GOAL:        '⚽', WICKET:    '🏏', POINT:  '🎯',
@@ -31,26 +30,28 @@ function Scoreboard({ match }: { match: MatchDto }) {
   const sport = match.sport;
   const isLive = match.status === 'LIVE';
   const isDone = match.status === 'COMPLETED';
+  const dispHome = match.homeScoreDisplay;
+  const dispAway = match.awayScoreDisplay;
 
   if (sport === 'CRICKET') {
     return (
       <View style={sb.cricketWrap}>
         {/* Home batting */}
         <View style={sb.inning}>
-          <Text style={sb.inningTeam}>{match.homeTeamEmoji} {match.homeTeamName}</Text>
+          <Text style={sb.inningTeam}>{match.homeTeamEmoji || '🏏'} {match.homeTeamName}</Text>
           <Text style={sb.runs}>
-            {match.homeScore}/{match.homeWickets ?? 0}
-            {match.homeOvers ? <Text style={sb.overs}> ({match.homeOvers} ov)</Text> : null}
+            {dispHome ? String(dispHome) : `${match.homeScore}/${match.homeWickets ?? 0}`}
+            {match.homeOvers && !String(dispHome || '').includes('ov') ? <Text style={sb.overs}> ({match.homeOvers} ov)</Text> : null}
           </Text>
         </View>
         <View style={sb.divider} />
         {/* Away */}
         <View style={sb.inning}>
-          <Text style={sb.inningTeam}>{match.awayTeamEmoji} {match.awayTeamName}</Text>
-          {isDone || match.awayOvers ? (
+          <Text style={sb.inningTeam}>{match.awayTeamEmoji || '🏏'} {match.awayTeamName}</Text>
+          {isDone || dispAway || match.awayOvers ? (
             <Text style={sb.runs}>
-              {match.awayScore}/{match.awayWickets ?? 0}
-              {match.awayOvers ? <Text style={sb.overs}> ({match.awayOvers} ov)</Text> : null}
+              {dispAway ? String(dispAway) : `${match.awayScore}/${match.awayWickets ?? 0}`}
+              {match.awayOvers && !String(dispAway || '').includes('ov') ? <Text style={sb.overs}> ({match.awayOvers} ov)</Text> : null}
             </Text>
           ) : (
             <Text style={sb.pending}>Yet to bat</Text>
@@ -64,22 +65,22 @@ function Scoreboard({ match }: { match: MatchDto }) {
     return (
       <View style={sb.setsWrap}>
         <View style={sb.setsTeamCol}>
-          <Text style={sb.setsTeam}>{match.homeTeamEmoji} {match.homeTeamName}</Text>
-          <Text style={sb.setsTeam}>{match.awayTeamEmoji} {match.awayTeamName}</Text>
+          <Text style={sb.setsTeam}>{match.homeTeamEmoji || '🏸'} {match.homeTeamName}</Text>
+          <Text style={sb.setsTeam}>{match.awayTeamEmoji || '🏸'} {match.awayTeamName}</Text>
         </View>
         <View style={sb.setsScoreCol}>
           <Text style={[sb.setsScore, match.homeSetsWon! > match.awaySetsWon! && sb.setsWinner]}>
-            {match.homeSetsWon ?? 0}
+            {match.homeSetsWon ?? match.homeScore ?? 0}
           </Text>
           <Text style={[sb.setsScore, match.awaySetsWon! > match.homeSetsWon! && sb.setsWinner]}>
-            {match.awaySetsWon ?? 0}
+            {match.awaySetsWon ?? match.awayScore ?? 0}
           </Text>
         </View>
         {isLive && (
           <View style={sb.setsGameCol}>
-            <Text style={sb.gameScore}>{match.homeScore}</Text>
-            <Text style={sb.gameScore}>{match.awayScore}</Text>
-            <Text style={sb.gameLabel}>Current{'\n'}game</Text>
+            <Text style={sb.gameScore}>{dispHome || match.homeScore}</Text>
+            <Text style={sb.gameScore}>{dispAway || match.awayScore}</Text>
+            <Text style={sb.gameLabel}>Current{'\n'}score</Text>
           </View>
         )}
       </View>
@@ -90,16 +91,16 @@ function Scoreboard({ match }: { match: MatchDto }) {
   return (
     <View style={sb.genericWrap}>
       <View style={sb.teamBlock}>
-        <Text style={sb.bigEmoji}>{match.homeTeamEmoji}</Text>
+        <Text style={sb.bigEmoji}>{match.homeTeamEmoji || '🏅'}</Text>
         <Text style={sb.teamLabel} numberOfLines={2}>{match.homeTeamName}</Text>
       </View>
       <View style={sb.scoreBlock}>
-        <Text style={sb.bigScore}>{match.homeScore}</Text>
+        <Text style={sb.bigScore}>{dispHome || match.homeScore}</Text>
         <Text style={sb.scoreDash}>–</Text>
-        <Text style={sb.bigScore}>{match.awayScore}</Text>
+        <Text style={sb.bigScore}>{dispAway || match.awayScore}</Text>
       </View>
       <View style={sb.teamBlock}>
-        <Text style={sb.bigEmoji}>{match.awayTeamEmoji}</Text>
+        <Text style={sb.bigEmoji}>{match.awayTeamEmoji || '🏅'}</Text>
         <Text style={sb.teamLabel} numberOfLines={2}>{match.awayTeamName}</Text>
       </View>
     </View>
@@ -164,15 +165,28 @@ const er = StyleSheet.create({
 export default function LiveMatchScreen() {
   const { id }    = useLocalSearchParams<{ id: string }>();
   const router    = useRouter();
-  const { user }  = useAuth();
+  const { user, hasRole, isAnyAdmin }  = useAuth();
   const flashAnim = useRef(new Animated.Value(0)).current;
   const [showScorer, setShowScorer] = useState(false);
 
   const { match, events, isLoading, connected, matchEnded, refetch } = useLiveScore(Number(id));
+  useModuleGuard('SPORTS');
+
+  // Derive venue string for ride search
+  const venueStr = match ? getVenueName(match.venue) : '';
+
+  // Fetch rides to this venue only when match is scheduled
+  const { data: ridesPage } = useQuery({
+    queryKey: ['rides-to-venue', venueStr],
+    queryFn:  () => commuteService.searchRides(venueStr, 0),
+    enabled:  Boolean(venueStr) && match?.status === 'SCHEDULED',
+    staleTime: 60_000,
+  });
+  const nearbyRides = (ridesPage?.content ?? []).slice(0, 3);
 
   const canScore = user != null && (
-    ['ADMIN', 'SUPER_ADMIN', 'SPORTS_ADMIN', 'SPORTS_REFEREE', 'MODERATOR'].includes(user.role) ||
-    __DEV__
+    isAnyAdmin ||
+    hasRole('ADMIN', 'SUPER_ADMIN', 'SPORTS_ADMIN', 'SPORTS_REFEREE', 'MODERATOR')
   );
 
   const prevEventsLen = useRef(0);
@@ -195,7 +209,25 @@ export default function LiveMatchScreen() {
       </SafeAreaView>
     );
   }
-  if (!match) return null;
+  if (!match) {
+    return (
+      <SafeAreaView style={scr.container} edges={['top']}>
+        <View style={scr.topBar}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={scr.back}>‹</Text>
+          </TouchableOpacity>
+          <Text style={scr.sport}>Match Detail</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 }}>
+          <Text style={{ fontSize: 34 }}>🏟️</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.text }}>Match details unavailable</Text>
+          <TouchableOpacity onPress={() => { void refetch(); }} style={{ backgroundColor: COLORS.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999 }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const isLive  = match.status === 'LIVE';
   const isDone  = match.status === 'COMPLETED';
@@ -208,7 +240,7 @@ export default function LiveMatchScreen() {
           <Text style={scr.back}>‹</Text>
         </TouchableOpacity>
         <View style={scr.topMid}>
-          <Text style={scr.sport}>{SPORT_EMOJI[match.sport]} {match.tournamentName}</Text>
+          <Text style={scr.sport}>{SPORT_EMOJI[match.sport] ?? '🏅'} {match.tournamentName}</Text>
           {match.round && <Text style={scr.round}>{match.round}</Text>}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -218,6 +250,17 @@ export default function LiveMatchScreen() {
               <Text style={scr.liveText}>LIVE</Text>
               {!connected && <Text style={scr.reconnect}> ·Reconnecting</Text>}
             </View>
+          )}
+          {isLive && (
+            <TouchableOpacity
+              style={scr.watchLiveBtn}
+              onPress={() => router.push(`/sports/stream/${id}` as never)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Watch live stream"
+            >
+              <Ionicons name="videocam" size={12} color="#fff" />
+              <Text style={scr.watchLiveText}>Watch Live</Text>
+            </TouchableOpacity>
           )}
           {isDone && <Text style={scr.doneBadge}>FT</Text>}
           <TouchableOpacity
@@ -247,9 +290,7 @@ export default function LiveMatchScreen() {
             </Text>
           )}
           {(() => {
-            const venueStr = typeof match.venue === 'object' && match.venue !== null
-              ? [(match.venue as any).name, (match.venue as any).area, (match.venue as any).city].filter(Boolean).join(', ') || (match.venue as any).address || ''
-              : typeof match.venue === 'string' ? match.venue : '';
+            const venueStr = getVenueDisplay(match.venue);
             return venueStr ? (
               <Text style={scr.venue}>📍 {venueStr}</Text>
             ) : null;
@@ -277,7 +318,9 @@ export default function LiveMatchScreen() {
           {isDone && (
             <View style={scr.resultBanner}>
               <Text style={scr.resultText}>
-                {match.homeScore > match.awayScore
+                {match.winnerTeamName
+                  ? `${match.winnerTeamName} won!`
+                  : match.homeScore > match.awayScore
                   ? `${match.homeTeamName} won!`
                   : match.awayScore > match.homeScore
                   ? `${match.awayTeamName} won!`
@@ -331,6 +374,14 @@ export default function LiveMatchScreen() {
               <Text style={scr.actionBtnText}>⭐ Rate Players</Text>
             </TouchableOpacity>
           )}
+          {((match.sport as string) === 'ATHLETICS' || match.sport === 'SWIMMING') ? (
+            <TouchableOpacity
+              style={scr.actionBtn}
+              onPress={() => router.push(`/sports/match/race-results?id=${match.id}` as never)}
+            >
+              <Text style={scr.actionBtnText}>🏁 Race Results</Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={scr.actionBtn}
             onPress={() => shareMatch(match)}
@@ -349,6 +400,58 @@ export default function LiveMatchScreen() {
             </Text>
           </View>
         )}
+
+        {/* ── Rides to Venue ── */}
+        {match.status === 'SCHEDULED' && venueStr ? (
+          <View style={scr.ridesCard}>
+            <View style={scr.ridesHeader}>
+              <Text style={scr.ridesTitle}>🚗  Rides to Venue</Text>
+              <TouchableOpacity
+                onPress={() => router.push(`/commute/find-rides?destination=${encodeURIComponent(venueStr)}` as never)}
+              >
+                <Text style={scr.ridesLink}>Find more →</Text>
+              </TouchableOpacity>
+            </View>
+            {nearbyRides.length === 0 ? (
+              <TouchableOpacity
+                style={scr.offerRideBtn}
+                onPress={() => router.push(`/commute/offer-ride?to=${encodeURIComponent(venueStr)}` as never)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle-outline" size={16} color={COLORS.primary} />
+                <Text style={scr.offerRideBtnText}>Be the first to offer a ride to this venue</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                {nearbyRides.map((ride: CommuteRideDto) => (
+                  <TouchableOpacity
+                    key={ride.id}
+                    style={scr.rideRow}
+                    onPress={() => router.push(`/commute/ride/${ride.id}` as never)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={scr.rideAvatar}>
+                      <Text style={scr.rideAvatarText}>{ride.driverName?.[0] ?? '?'}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={scr.rideDriver} numberOfLines={1}>{ride.driverName}</Text>
+                      <Text style={scr.rideMeta}>{safeFormat(ride.departureTime, 'h:mm a')}  ·  {ride.availableSeats} seat{ride.availableSeats !== 1 ? 's' : ''} left</Text>
+                    </View>
+                    <Text style={scr.ridePrice}>{ride.free ? 'Free' : `₹${ride.pricePerSeat}`}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  style={[scr.offerRideBtn, { marginTop: 4 }]}
+                  onPress={() => router.push(`/commute/offer-ride?to=${encodeURIComponent(venueStr)}` as never)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="add-circle-outline" size={15} color={COLORS.primary} />
+                  <Text style={scr.offerRideBtnText}>Offer a ride to this match</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        ) : null}
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -377,6 +480,8 @@ const scr = StyleSheet.create({
   liveBadge:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   liveDot:        { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.error },
   liveText:       { fontSize: 11, fontWeight: '800', color: COLORS.error },
+  watchLiveBtn:   { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#dc2626', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  watchLiveText:  { fontSize: 11, fontWeight: '700', color: '#fff' },
   reconnect:      { fontSize: 10, color: COLORS.textMuted },
   doneBadge:      { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   scoreSection:   { backgroundColor: COLORS.surface, padding: 20, gap: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
@@ -425,5 +530,18 @@ const scr = StyleSheet.create({
   scheduledEmoji: { fontSize: 48 },
   scheduledTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
   scheduledSub:   { fontSize: 14, color: COLORS.textMuted, textAlign: 'center' },
+
+  ridesCard:      { backgroundColor: COLORS.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 10, marginHorizontal: 14 },
+  ridesHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  ridesTitle:     { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  ridesLink:      { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+  rideRow:        { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, borderTopWidth: 1, borderTopColor: COLORS.border },
+  rideAvatar:     { width: 34, height: 34, borderRadius: 17, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  rideAvatarText: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  rideDriver:     { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  rideMeta:       { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  ridePrice:      { fontSize: 13, fontWeight: '800', color: '#059669' },
+  offerRideBtn:   { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: COLORS.border },
+  offerRideBtnText:{ fontSize: 12, fontWeight: '600', color: COLORS.primary, flex: 1 },
 });
 

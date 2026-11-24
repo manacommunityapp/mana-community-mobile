@@ -17,6 +17,7 @@ import {
   MaintenanceBillDto,
   PaymentVerificationRequest,
 } from '@/services/maintenanceDuesService';
+import { PaymentStatusBadge } from '@/components/payment/PaymentStatusBadge';
 
 const FINANCE_HUBS = [
   { emoji: '🏦', label: 'Treasury',   color: THEME.indigo,   bg: THEME.indigoLight, route: '/finance/society-dashboard' },
@@ -37,9 +38,20 @@ const FINANCE_HUBS = [
   { emoji: '👥', label: 'Vendors',    color: '#7C3AED',            bg: '#F5F3FF',              route: '/finance/vendors' },
   { emoji: '✅', label: 'Approvals',  color: '#DC2626',            bg: '#FEF2F2',              route: '/finance/expenses' },
   { emoji: '🧾', label: 'Vendor Bills', color: '#7C3AED',          bg: '#F5F3FF',              route: '/finance/vendor-bills' },
+  { emoji: '🔁', label: 'Bulk Billing',    color: '#0369A1',       bg: '#E0F2FE',              route: '/finance/bulk-billing' },
+  { emoji: '🏦', label: 'Bank Recon',      color: '#065F46',       bg: '#D1FAE5',              route: '/finance/bank-reconciliation' },
+  { emoji: '🧾', label: 'Cheques',         color: '#92400E',       bg: '#FEF3C7',              route: '/finance/cheque-tracking' },
+  { emoji: '📤', label: 'Tally Export',    color: '#1E1B4B',       bg: '#EDE9FE',              route: '/finance/tally-export' },
+  { emoji: '📅', label: 'TDS Challans',    color: '#7F1D1D',       bg: '#FEE2E2',              route: '/finance/tds-challan' },
+  { emoji: '💳', label: 'PG Settlements',  color: '#1D4ED8',       bg: '#DBEAFE',              route: '/finance/pg-settlements' },
+  { emoji: '🔒', label: 'Audit Freeze',    color: '#374151',       bg: '#F3F4F6',              route: '/finance/accounting-periods' },
   { emoji: '🏦', label: 'Fixed Deposit', color: '#1D4ED8',         bg: '#EFF6FF',              route: '/fd' },
   { emoji: '💸', label: 'Loans',         color: '#DC2626',         bg: '#FEF2F2',              route: '/loans' },
   { emoji: '💰', label: 'My Money',   color: THEME.brandDark, bg: THEME.brandLight,  route: '/personal-finance' },
+  { emoji: '📒', label: 'My Khata',   color: '#7C3AED',            bg: '#F5F3FF',              route: '/vendor-finance' },
+  { emoji: '🤝', label: 'Udhaar',     color: '#0284C7',            bg: '#E0F2FE',              route: '/personal-finance/khata' },
+  { emoji: '📚', label: 'Accounting', color: '#5367FF',            bg: '#EEF2FF',              route: '/finance/accounting' },
+  { emoji: '🏢', label: 'Vendor Master', color: '#16A34A',         bg: '#F0FDF4',              route: '/finance/unified-vendors' },
 ] as const;
 
 export default function MaintenanceDuesScreen() {
@@ -119,28 +131,23 @@ export default function MaintenanceDuesScreen() {
   const initiatePaymentMutation = useMutation({
     mutationFn: (billId: string) => maintenanceDuesService.initiatePayment(billId),
     onSuccess: (order) => {
+      // The Razorpay order is ready (key + orderId + amount).
+      // To complete UPI/Card payment, integrate react-native-razorpay:
+      //   npx expo install react-native-razorpay
+      // Then open RazorpayCheckout.open({ key: order.key, order_id: order.orderId, amount: order.amount * 100 })
+      // and on success call verifyPaymentMutation.mutate with the real
+      // handler.razorpay_payment_id and handler.razorpay_signature.
       Alert.alert(
-        'Payment Gateway Initiated',
-        'Order ID: ' + order.orderId + '\nAmount: ₹' + order.amount.toLocaleString('en-IN') + '\nOpening payment checkout...',
-        [
-          {
-            text: 'Simulate Success',
-            onPress: () => {
-              verifyPaymentMutation.mutate({
-                billId: activeBill?.id || 'bill-1',
-                orderId: order.orderId,
-                paymentId: 'pay_mock_' + Math.random().toString(36).substring(2, 9),
-                signature: 'sig_mock_verified',
-                method: selectedMethod,
-              });
-            },
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ]
+        'Payment Gateway Ready',
+        `Order created (₹${order.amount.toLocaleString('en-IN')}).\n\nIn-app UPI/Card checkout requires the Razorpay SDK to be installed. Please pay via Wallet until it is set up, or contact the society office.`,
+        [{ text: 'OK' }]
       );
     },
     onError: (err: any) => {
-      Alert.alert('Payment Error', err?.message || 'Failed to initiate payment.');
+      Alert.alert(
+        'Payment Error',
+        `${err?.message || 'Failed to initiate payment.'}\n\nNo payment order was created. Please try again when you are back online.`
+      );
     },
   });
 
@@ -155,7 +162,11 @@ export default function MaintenanceDuesScreen() {
       Alert.alert('Payment Successful', 'Bill cleared using Advance Wallet balance.');
     },
     onError: (err: any) => {
-      Alert.alert('Wallet Payment Failed', err?.message || 'Insufficient wallet balance or error.');
+      queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
+      Alert.alert(
+        'Wallet Payment Failed',
+        `${err?.message || 'The server did not confirm this payment.'}\n\nNothing has been debited and the bill is still outstanding. Please check your connection and try again.`
+      );
     },
   });
 
@@ -168,7 +179,10 @@ export default function MaintenanceDuesScreen() {
       Alert.alert('Payment Verified', 'Your maintenance payment has been successfully recorded.');
     },
     onError: (err: any) => {
-      Alert.alert('Verification Failed', err?.message || 'Payment could not be verified.');
+      Alert.alert(
+        'Verification Failed',
+        `${err?.message || 'Payment could not be verified.'}\n\nThis payment is NOT confirmed and no receipt has been issued. If money was debited, contact the society office before paying again.`
+      );
     },
   });
 
@@ -195,6 +209,10 @@ export default function MaintenanceDuesScreen() {
         setReceiptModalBill(bill);
       }
     } catch {
+      Alert.alert(
+        'Receipt Unavailable',
+        'The official receipt could not be fetched from the server. Showing the bill details on record instead.'
+      );
       setReceiptModalBill(bill);
     }
   };
@@ -323,11 +341,7 @@ export default function MaintenanceDuesScreen() {
                 <Text style={s.billTitle}>{activeBill.billNumber || activeBill.monthYear + ' Maintenance'}</Text>
                 <Text style={s.billSubtitle}>Due Date: {activeBill.dueDate ? new Date(activeBill.dueDate).toLocaleDateString() : '15th of month'}</Text>
               </View>
-              <View style={[s.billStatusPill, activeBill.status === 'PAID' ? s.pillPaid : s.pillPending]}>
-                <Text style={[s.billStatusPillText, activeBill.status === 'PAID' ? s.textPaid : s.textPending]}>
-                  {activeBill.status === 'PAID' ? 'PAID' : 'PENDING'}
-                </Text>
-              </View>
+              <PaymentStatusBadge status={activeBill.status === 'PAID' ? 'PAID' : 'PENDING'} />
             </View>
 
             <View style={s.chargesDivider} />

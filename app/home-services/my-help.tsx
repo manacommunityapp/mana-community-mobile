@@ -81,9 +81,9 @@ export default function MyHelpScreen() {
       <FlatList
         style={{ flex: 1 }}
         data={staffList}
-        keyExtractor={item => item.id}
+        keyExtractor={item => String(item.id)}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); }} colors={['#4F46E5']} />}
         renderItem={({ item }) => {
           const rcfg = ROLE_CONFIG[item.role] || ROLE_CONFIG.HELPER;
           const todayAtt = attendance.find(a => a.staffId === item.id);
@@ -152,7 +152,7 @@ export default function MyHelpScreen() {
                   style={styles.salaryBtn}
                   onPress={() => router.push('/home-services/packages')}
                 >
-                  <Text style={styles.salaryBtnText}>💰 ₹{item.monthlySalary.toLocaleString()}</Text>
+                  <Text style={styles.salaryBtnText}>💰 ₹{(item.monthlySalary ?? 0).toLocaleString()}</Text>
                 </TouchableOpacity>
               </View>
             </View>

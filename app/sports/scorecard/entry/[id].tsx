@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
+import { useAppBack } from '@/hooks/useAppBack';
 import { COLORS } from '@/constants/config';
 
 type BattingRow = { playerName: string; runs: string; balls: string; fours: string; sixes: string; dismissal: string; isNotOut: boolean };
@@ -36,7 +37,7 @@ function BatterInput({ row, onChange, onRemove }: { row: BattingRow; onChange: (
               <Text style={ei.statLabel}>{label}</Text>
               <TextInput
                 style={ei.statInput}
-                value={(row as any)[key]}
+                value={row[key as keyof BattingRow] as string}
                 onChangeText={(v) => onChange({ ...row, [key]: v.replace(/\D/g, '') })}
                 keyboardType="numeric"
                 maxLength={4}
@@ -72,7 +73,7 @@ function BowlerInput({ row, onChange, onRemove }: { row: BowlingRow; onChange: (
               <Text style={ei.statLabel}>{label}</Text>
               <TextInput
                 style={ei.statInput}
-                value={(row as any)[key]}
+                value={row[key as keyof BowlingRow] as string}
                 onChangeText={(v) => onChange({ ...row, [key]: v.replace(/[^\d.]/g, '') })}
                 keyboardType="decimal-pad"
                 maxLength={5}
@@ -106,7 +107,18 @@ const ei = StyleSheet.create({
 export default function ScorecardEntryScreen() {
   const { id }   = useLocalSearchParams<{ id: string }>();
   const router   = useRouter();
+  const { goBack } = useAppBack({ fallbackRoute: `/sports/scorecard/${id}` });
   const qc       = useQueryClient();
+
+  const { data: match } = useQuery({
+    queryKey: ['match', id],
+    queryFn: () => sportsService.getMatch(Number(id)),
+  });
+
+  const { data: existingCard } = useQuery({
+    queryKey: ['scorecard', id],
+    queryFn: () => sportsService.getScorecard(Number(id)),
+  });
 
   const [team1Name, setTeam1Name] = useState('');
   const [team2Name, setTeam2Name] = useState('');
@@ -122,6 +134,78 @@ export default function ScorecardEntryScreen() {
   const [bowlers2, setBowlers2] = useState<BowlingRow[]>([emptyBowler()]);
   const [manOfMatch, setManOfMatch] = useState('');
   const [result,     setResult]     = useState('');
+
+  // Pre-fill from existing card or match details
+  useEffect(() => {
+    if (existingCard) {
+      const inn1 = existingCard.firstInnings || existingCard.innings?.[0];
+      const inn2 = existingCard.secondInnings || existingCard.innings?.[1];
+      if (inn1) {
+        setTeam1Name(inn1.battingTeamName || inn1.teamName || '');
+        if (inn1.totalRuns != null) setTeam1Total(String(inn1.totalRuns));
+        if (inn1.wickets != null) setTeam1Wkts(String(inn1.wickets));
+        if (inn1.overs != null) setTeam1Overs(String(inn1.overs));
+        if (Array.isArray(inn1.batting) && inn1.batting.length > 0) {
+          setBatters1(inn1.batting.map((b: any) => ({
+            playerName: b.playerName || '',
+            runs: String(b.runs ?? 0),
+            balls: String(b.balls ?? 0),
+            fours: String(b.fours ?? 0),
+            sixes: String(b.sixes ?? 0),
+            dismissal: b.dismissal || '',
+            isNotOut: Boolean(b.isNotOut),
+          })));
+        }
+        if (Array.isArray(inn1.bowling) && inn1.bowling.length > 0) {
+          setBowlers1(inn1.bowling.map((b: any) => ({
+            playerName: b.playerName || '',
+            overs: String(b.overs ?? 0),
+            maidens: String(b.maidens ?? 0),
+            runs: String(b.runs ?? 0),
+            wickets: String(b.wickets ?? 0),
+          })));
+        }
+      }
+      if (inn2) {
+        setTeam2Name(inn2.battingTeamName || inn2.teamName || '');
+        if (inn2.totalRuns != null) setTeam2Total(String(inn2.totalRuns));
+        if (inn2.wickets != null) setTeam2Wkts(String(inn2.wickets));
+        if (inn2.overs != null) setTeam2Overs(String(inn2.overs));
+        if (Array.isArray(inn2.batting) && inn2.batting.length > 0) {
+          setBatters2(inn2.batting.map((b: any) => ({
+            playerName: b.playerName || '',
+            runs: String(b.runs ?? 0),
+            balls: String(b.balls ?? 0),
+            fours: String(b.fours ?? 0),
+            sixes: String(b.sixes ?? 0),
+            dismissal: b.dismissal || '',
+            isNotOut: Boolean(b.isNotOut),
+          })));
+        }
+        if (Array.isArray(inn2.bowling) && inn2.bowling.length > 0) {
+          setBowlers2(inn2.bowling.map((b: any) => ({
+            playerName: b.playerName || '',
+            overs: String(b.overs ?? 0),
+            maidens: String(b.maidens ?? 0),
+            runs: String(b.runs ?? 0),
+            wickets: String(b.wickets ?? 0),
+          })));
+        }
+      }
+      if (existingCard.result) setResult(existingCard.result);
+      const mom = existingCard.manOfMatch?.playerName || existingCard.manOfMatch?.name;
+      if (mom) setManOfMatch(mom);
+    } else if (match) {
+      if (match.homeTeamName && !team1Name) setTeam1Name(match.homeTeamName);
+      if (match.awayTeamName && !team2Name) setTeam2Name(match.awayTeamName);
+      if (match.homeScore != null && !team1Total) setTeam1Total(String(match.homeScore));
+      if (match.awayScore != null && !team2Total) setTeam2Total(String(match.awayScore));
+      if (match.homeWickets != null && !team1Wkts) setTeam1Wkts(String(match.homeWickets));
+      if (match.awayWickets != null && !team2Wkts) setTeam2Wkts(String(match.awayWickets));
+      if (match.homeOvers != null && !team1Overs) setTeam1Overs(String(match.homeOvers));
+      if (match.awayOvers != null && !team2Overs) setTeam2Overs(String(match.awayOvers));
+    }
+  }, [existingCard, match]);
 
   const saveMutation = useMutation({
     mutationFn: () => sportsService.saveScorecard(Number(id), {
@@ -173,10 +257,13 @@ export default function ScorecardEntryScreen() {
     onError: (err: any) => Alert.alert('Error', err?.response?.data?.message ?? 'Failed to save scorecard.'),
   });
 
-  function InningsSection({
-    label, teamName, setTeamName, total, setTotal, wkts, setWkts, overs, setOvers,
-    batters, setBatters, bowlers, setBowlers,
-  }: any) {
+  function InningsSection({ label, teamName, setTeamName, total, setTotal, wkts, setWkts, overs, setOvers, batters, setBatters, bowlers, setBowlers }: {
+    label: string; teamName: string; setTeamName: (v: string) => void;
+    total: string; setTotal: (v: string) => void; wkts: string; setWkts: (v: string) => void;
+    overs: string; setOvers: (v: string) => void;
+    batters: BattingRow[]; setBatters: React.Dispatch<React.SetStateAction<BattingRow[]>>;
+    bowlers: BowlingRow[]; setBowlers: React.Dispatch<React.SetStateAction<BowlingRow[]>>;
+  }) {
     return (
       <View style={sec.wrap}>
         <Text style={sec.inningsLabel}>{label}</Text>
@@ -207,9 +294,15 @@ export default function ScorecardEntryScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={s.cancel}>Cancel</Text></TouchableOpacity>
+        <TouchableOpacity onPress={goBack} hitSlop={8}><Text style={s.cancel}>Cancel</Text></TouchableOpacity>
         <Text style={s.title}>Enter Scorecard</Text>
-        <TouchableOpacity onPress={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+        <TouchableOpacity onPress={() => {
+          if (!team1Name.trim() && !team1Total.trim()) {
+            Alert.alert('Validation', 'Please enter at least the 1st innings team name and total.');
+            return;
+          }
+          saveMutation.mutate();
+        }} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={s.save}>Save</Text>}
         </TouchableOpacity>
       </View>

@@ -97,10 +97,10 @@ export default function ProviderDeckScreen() {
       <FlatList
         style={{ flex: 1 }}
         data={displayList}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         refreshing={isLoading}
-        onRefresh={refetch}
+        onRefresh={() => { refetch(); }}
         renderItem={({ item }) => {
           const isDone = item.status === 'COMPLETED';
 
@@ -110,7 +110,7 @@ export default function ProviderDeckScreen() {
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.jobCategory}>🏷️ {item.category}</Text>
-                  <Text style={styles.jobFlat}>🏠 Flat #{item.id.replace(/\D/g, '') || 'A-204'} • Tower B</Text>
+                  <Text style={styles.jobFlat}>🏠 Flat #{String(item.id)} • Tower B</Text>
                 </View>
                 <View style={[styles.badge, isDone ? styles.badgeDone : styles.badgePending]}>
                   <Text style={styles.badgeEmoji}>{isDone ? '✅' : '⏳'}</Text>
@@ -177,7 +177,7 @@ export default function ProviderDeckScreen() {
               <View style={styles.modalAccent} />
               <View style={styles.modalHeader}>
                 <View>
-                  <Text style={styles.modalTitle}>🔐 Complete Job #{selectedJob.id.slice(0, 6)}</Text>
+                  <Text style={styles.modalTitle}>🔐 Complete Job #{String(selectedJob.id).slice(0, 6)}</Text>
                   <Text style={styles.modalSub}>🏷️ {selectedJob.category} • 🏠 Flat A-204</Text>
                 </View>
                 <TouchableOpacity

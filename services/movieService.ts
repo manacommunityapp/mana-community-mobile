@@ -1,4 +1,4 @@
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080/api';
+import api from './apiClient';
 
 export type MovieLanguage = 'Hindi' | 'English' | 'Tamil' | 'Telugu' | 'Malayalam' | 'Kannada';
 export type MovieGenre = 'Action' | 'Drama' | 'Comedy' | 'Thriller' | 'Romance' | 'Sci-Fi' | 'Horror' | 'Family' | 'Animation' | 'Fantasy';
@@ -52,7 +52,7 @@ export interface BookingResult {
   qr_data: string;
 }
 
-// ── Fallback Data ────────────────────────────────────────────────────────────
+// ── Fallback Data ─────────────────────────────────────────────────
 
 const NOW_SHOWING: Movie[] = [
   { id: 'm1', title: 'Pushpa 2: The Rule', language: 'Telugu', genre: ['Action', 'Drama'], rating: '8.5', duration_mins: 179, poster_emoji: '🔥', backdrop_color: '#7C2D12', cast: 'Allu Arjun, Rashmika Mandanna', director: 'Sukumar', release_date: '2024-12-05', certificate: 'UA', status: 'NOW_SHOWING' },
@@ -83,8 +83,7 @@ function makeShowtimes(movieId: string): Showtime[] {
   const result: Showtime[] = [];
   dates.forEach(date => {
     theaters.forEach((theater, ti) => {
-      const timeSubset = times.slice(ti, ti + 3);
-      timeSubset.forEach((time, idx) => {
+      times.slice(ti, ti + 3).forEach((time, idx) => {
         result.push({
           id: `st-${movieId}-${date}-${ti}-${idx}`,
           movie_id: movieId,
@@ -108,7 +107,6 @@ function makeShowtimes(movieId: string): Showtime[] {
 function makeSeatLayout(): SeatRow[] {
   const rows: SeatRow[] = [];
   const occupied = new Set<string>();
-  // randomly mark ~35% occupied
   for (let r = 0; r < 10; r++) {
     for (let s = 1; s <= 12; s++) {
       if (Math.random() < 0.35) occupied.add(`${r}-${s}`);
@@ -137,29 +135,29 @@ function makeSeatLayout(): SeatRow[] {
   return rows;
 }
 
-// ── Service ──────────────────────────────────────────────────────────────────
+// ── Service ───────────────────────────────────────────────────────
 
 export const movieService = {
   async getMovies(): Promise<{ now_showing: Movie[]; coming_soon: Movie[] }> {
     try {
-      const r = await fetch(`${API_BASE}/v1/movies`);
-      if (r.ok) { const d = await r.json(); if (d?.now_showing?.length > 0) return d; }
+      const res = await api.get<{ now_showing: Movie[]; coming_soon: Movie[] }>('/movies');
+      if (res.data?.now_showing?.length > 0) return res.data;
     } catch {}
     return { now_showing: NOW_SHOWING, coming_soon: COMING_SOON };
   },
 
   async getShowtimes(movieId: string): Promise<Showtime[]> {
     try {
-      const r = await fetch(`${API_BASE}/v1/movies/${movieId}/showtimes`);
-      if (r.ok) { const d = await r.json(); if (Array.isArray(d) && d.length > 0) return d; }
+      const res = await api.get<Showtime[]>(`/movies/${movieId}/showtimes`);
+      if (res.data?.length > 0) return res.data;
     } catch {}
     return makeShowtimes(movieId);
   },
 
   async getSeatLayout(showtimeId: string): Promise<SeatRow[]> {
     try {
-      const r = await fetch(`${API_BASE}/v1/movies/showtimes/${showtimeId}/seats`);
-      if (r.ok) { const d = await r.json(); if (Array.isArray(d) && d.length > 0) return d; }
+      const res = await api.get<SeatRow[]>(`/movies/showtimes/${showtimeId}/seats`);
+      if (res.data?.length > 0) return res.data;
     } catch {}
     return makeSeatLayout();
   },
@@ -172,12 +170,8 @@ export const movieService = {
     amount: number;
   }): Promise<BookingResult> {
     try {
-      const r = await fetch(`${API_BASE}/v1/movies/book`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (r.ok) { const d = await r.json(); if (d?.booking_id) return d; }
+      const res = await api.post<BookingResult>('/movies/book', payload);
+      if (res.data?.booking_id) return res.data;
     } catch {}
     const bookingId = `BMS-MANA-${Date.now()}`;
     const tr = `MANA-MOVIE-${Date.now()}`;

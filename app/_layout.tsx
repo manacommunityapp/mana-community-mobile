@@ -24,14 +24,18 @@ import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
 import { setupGlobalFonts } from '@/utils/globalFonts';
 import { initSentry, setUser, clearUser } from '@/utils/sentry';
+import { validateEnvConfig } from '@/utils/security';
 import { offlineSyncService } from '@/services/offlineSyncService';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { getPortalForRole } from '@/hooks/useRoleSwitcher';
 import { useAppBiometrics } from '@/hooks/useAppBiometrics';
 import { BiometricLockModal } from '@/components/security/BiometricLockModal';
+import { TenantProvider } from '@/context/TenantContext';
+import { ThemeProvider, useAppTheme } from '@/context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
+validateEnvConfig();
 offlineSyncService.init();
 
 const queryClient = new QueryClient({
@@ -90,8 +94,20 @@ function AuthGuard() {
 
     // Fully verified — send to role-appropriate home
     if (inOnboarding || inAuth) {
-      const portal = getPortalForRole(user?.role ?? '');
-      router.replace((portal?.route ?? '/tabs/feed') as any);
+      const rawRoles = (user?.roles && user.roles.length > 0)
+        ? user.roles
+        : (user?.role ? [user.role] : []);
+      const upperRoles = rawRoles.map((r) => String(r).trim().toUpperCase());
+
+      // If user has USER or any resident role among their roles, land in resident home
+      const RESIDENT_ROLES = new Set(['USER', 'RESIDENT', 'MEMBER', 'OWNER', 'TENANT']);
+      if (upperRoles.length === 0 || upperRoles.some((r) => RESIDENT_ROLES.has(r))) {
+        router.replace('/tabs/feed');
+      } else {
+        const primaryRole = upperRoles[0] || 'RESIDENT';
+        const portal = getPortalForRole(primaryRole);
+        router.replace((portal?.route ?? '/tabs/feed') as any);
+      }
     }
   }, [isAuthenticated, isLoading, isPending, segments]);
 
@@ -103,6 +119,11 @@ function AuthGuard() {
       onUnlock={unlock}
     />
   );
+}
+
+function ThemedStatusBar() {
+  const { palette } = useAppTheme();
+  return <StatusBar style={palette.statusBar} />;
 }
 
 function RootLayout() {
@@ -132,10 +153,12 @@ function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <ThemeProvider>
+        <TenantProvider>
         <QueryClientProvider client={queryClient}>
           <AuthGuard />
-          <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <ThemedStatusBar />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FAF8FF' } }}>
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="auth" />
             <Stack.Screen name="tabs" />
@@ -151,6 +174,9 @@ function RootLayout() {
             <Stack.Screen name="food" />
             <Stack.Screen name="visitors" />
             <Stack.Screen name="parking" />
+            <Stack.Screen name="vehicles" />
+            <Stack.Screen name="packages" />
+            <Stack.Screen name="intercom" />
             <Stack.Screen name="facilities" />
             <Stack.Screen name="inventory" />
             <Stack.Screen name="safety" />
@@ -194,9 +220,56 @@ function RootLayout() {
             <Stack.Screen name="projects" />
             <Stack.Screen name="mobility" />
             <Stack.Screen name="experiences" />
+            <Stack.Screen name="fd" />
+            <Stack.Screen name="gold" />
+            <Stack.Screen name="loans" />
+            <Stack.Screen name="mutual-funds" />
+            <Stack.Screen name="movies" />
+            <Stack.Screen name="split-bill" />
+            <Stack.Screen name="scan-and-pay" />
+            <Stack.Screen name="send-money" />
+            <Stack.Screen name="upi-history" />
             <Stack.Screen name="vehicle-care" />
+            <Stack.Screen name="calendar" />
+            <Stack.Screen name="healthguard" />
+            <Stack.Screen name="procurement" />
+            <Stack.Screen name="amenity" />
+            <Stack.Screen name="payment-result" />
+            <Stack.Screen name="privacy" />
+            <Stack.Screen name="sync" />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="payments" />
+            <Stack.Screen name="staff" />
+            <Stack.Screen name="school-bus" />
+            <Stack.Screen name="amc" />
+            <Stack.Screen name="wallet" />
+            <Stack.Screen name="social" />
+            <Stack.Screen name="forum" />
+            <Stack.Screen name="daily-basket" />
+            <Stack.Screen name="fresh-kitchen" />
+            <Stack.Screen name="fresh" />
+            <Stack.Screen name="wellness-basket" />
+            <Stack.Screen name="documents" />
+            <Stack.Screen name="devices" />
+            <Stack.Screen name="household" />
+            <Stack.Screen name="maintenance" />
+            <Stack.Screen name="search" />
+            <Stack.Screen name="orders" />
+            <Stack.Screen name="bazaar" />
+            <Stack.Screen name="deals" />
+            <Stack.Screen name="interiors" />
+            <Stack.Screen name="kitty-party" />
+            <Stack.Screen name="healthcare" />
+            <Stack.Screen name="hrm" />
+            <Stack.Screen name="ops" />
+            <Stack.Screen name="sports-ops" />
+            <Stack.Screen name="vendor-finance" />
+            <Stack.Screen name="my-money" />
+            <Stack.Screen name="bookings" />
           </Stack>
         </QueryClientProvider>
+        </TenantProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

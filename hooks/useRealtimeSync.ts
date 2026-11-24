@@ -120,7 +120,7 @@ export function useRealtimeSync(enabled: boolean = true) {
           };
 
           // ── Subscribe to Live Community Topics ──────────────────────
-          const communityId = (user as any).communityId || 1;
+          const communityId = (user as any).communityId;
           const topics = [
             `/topic/community.${communityId}`,
             `/topic/community/${communityId}`,

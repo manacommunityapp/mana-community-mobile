@@ -40,6 +40,7 @@ export interface SyncPushResponse {
   acceptedMutationIds: string[];
   conflictedMutationIds: string[];
   serverCheckpoint: number;
+  /** 'PUSH_FAILED' means the server was never reached — nothing was accepted. */
   status: string;
 }
 
@@ -53,12 +54,17 @@ export interface SyncPullResponse {
     serverVectorTimestamp: number;
   }[];
   newCheckpoint: number;
+  /** 'OK' = server answered. 'PULL_FAILED' = server unreachable; `changes` is empty because
+   *  we could not ask, NOT because there are no changes. */
+  status: 'OK' | 'PULL_FAILED';
 }
 
 let isOnline = true;
 let listeners: Array<(online: boolean) => void> = [];
 let localMutationQueue: SyncMutation[] = [];
 let lastSyncCheckpoint = 0;
+/** Mutation ids the server explicitly acknowledged. Only these may ever be discarded. */
+const serverAcknowledgedIds = new Set<string>();
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -223,41 +229,54 @@ export const offlineSyncService = {
     try {
       const res = await api.post<SyncPushResponse>('/api/v1/sync/push', payload);
       const acceptedSet = new Set(res.data.acceptedMutationIds);
+      const conflictedSet = new Set(res.data.conflictedMutationIds ?? []);
       localMutationQueue.forEach((m) => {
         if (acceptedSet.has(m.mutationId)) {
+          serverAcknowledgedIds.add(m.mutationId);
           m.status = 'SYNCED';
+        } else if (conflictedSet.has(m.mutationId)) {
+          m.status = 'CONFLICT';
         }
       });
       lastSyncCheckpoint = res.data.serverCheckpoint || lastSyncCheckpoint;
       return res.data;
     } catch (err) {
-      secureLog.warn('OfflineSync: Push failed (offline)', err);
-      localMutationQueue.forEach((m) => {
-        if (m.status === 'PENDING') m.status = 'SYNCED';
-      });
+      // The server never received these mutations. Leave every one PENDING so it is
+      // retried, and report the failure — never report them as accepted/synced.
+      secureLog.warn('OfflineSync: Push failed — server unreachable', err);
       return {
-        acceptedMutationIds: pending.map((m) => m.mutationId),
+        acceptedMutationIds: [],
         conflictedMutationIds: [],
-        serverCheckpoint: Date.now(),
-        status: 'OFFLINE_LOCAL_PROCESSED',
+        serverCheckpoint: lastSyncCheckpoint,
+        status: 'PUSH_FAILED',
       };
     }
   },
 
   async pullDeltaChanges(societyId: number = 1): Promise<SyncPullResponse> {
     try {
-      const res = await api.get<SyncPullResponse>(`/api/v1/sync/pull?societyId=${societyId}&checkpoint=${lastSyncCheckpoint}`);
-      lastSyncCheckpoint = res.data.newCheckpoint;
-      return res.data;
-    } catch {
+      const res = await api.post<SyncPullResponse>(`/api/v1/sync/pull`, { societyId, checkpoint: lastSyncCheckpoint });
+      lastSyncCheckpoint = res.data.newCheckpoint ?? lastSyncCheckpoint;
+      return { ...res.data, changes: res.data.changes ?? [], status: 'OK' };
+    } catch (err) {
+      // Could not reach the server. An empty `changes` here does NOT mean "nothing changed",
+      // so flag it so callers never present stale local data as up to date.
+      secureLog.warn('OfflineSync: Pull failed — server unreachable', err);
       return {
         changes: [],
         newCheckpoint: lastSyncCheckpoint,
+        status: 'PULL_FAILED',
       };
     }
   },
 
+  /**
+   * Discards only mutations the server explicitly acknowledged. Anything that is still
+   * PENDING, CONFLICT or FAILED — or that was marked SYNCED without a server ack — is kept.
+   */
   clearSynced(): void {
-    localMutationQueue = localMutationQueue.filter((m) => m.status === 'PENDING');
+    localMutationQueue = localMutationQueue.filter(
+      (m) => !(m.status === 'SYNCED' && serverAcknowledgedIds.has(m.mutationId))
+    );
   },
 };

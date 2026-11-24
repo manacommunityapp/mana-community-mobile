@@ -94,7 +94,7 @@ export const biometricAccessService = {
     } catch (err) {
       secureLog.warn('BiometricAccess: using fallback turnstiles', err);
     }
-    return MOCK_TURNSTILES;
+    return [];
   },
 
   async verifyFace(req: FaceVerificationRequest): Promise<FaceVerificationResult> {
@@ -102,18 +102,8 @@ export const biometricAccessService = {
       const res = await api.post<FaceVerificationResult>('/api/v1/access/turnstiles/verify-face', req);
       return res.data;
     } catch (err) {
-      secureLog.warn('BiometricAccess: verifyFace fallback simulation', err);
-      const isMatch = req.confidenceScore >= 0.80;
-      return {
-        decision: isMatch ? 'ACCESS_GRANTED' : 'ACCESS_DENIED',
-        userId: isMatch ? 101 : undefined,
-        userFullName: isMatch ? 'Verified Resident / Staff' : undefined,
-        userType: 'RESIDENT',
-        confidenceScore: req.confidenceScore,
-        reason: isMatch ? 'Face verified with 94.2% confidence' : 'Confidence below threshold (< 80%)',
-        relayPulseDurationMs: isMatch ? 3000 : 0,
-        turnstileCode: req.turnstileCode,
-      };
+      secureLog.warn('BiometricAccess: verifyFace unavailable', err);
+      throw new Error('Face verification service is unavailable.');
     }
   },
 
@@ -121,8 +111,6 @@ export const biometricAccessService = {
     try {
       const res = await api.post(`/v1/access/turnstiles/${turnstileId}/relay-unlock`, { durationSeconds: durationSec });
       return res.data;
-    } catch {
-      return { success: true, message: `Turnstile #${turnstileId} relay pulsed for ${durationSec}s` };
-    }
+    } catch { throw new Error('Turnstile relay service is unavailable.'); }
   },
 };

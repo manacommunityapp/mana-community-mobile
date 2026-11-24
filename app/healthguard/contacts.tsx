@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: 13, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center' },
   emptyAdd: { marginTop: SPACING.lg, backgroundColor: COLORS.primary, paddingHorizontal: 32, paddingVertical: 12, borderRadius: RADIUS.md },
   emptyAddText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  card: { backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.sm },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOWS.sm },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, marginBottom: SPACING.xs },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primary + '20', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 18, fontWeight: '700', color: COLORS.primary },

@@ -74,6 +74,15 @@ function mapResourceToFacility(r: any): FacilityDto {
   };
 }
 
+const KNOWN_BOOKING_STATUSES: FacilityBookingDto['status'][] = [
+  'CONFIRMED',
+  'CANCELLED',
+  'COMPLETED',
+  'PENDING',
+  'NO_SHOW',
+  'WAITLISTED',
+];
+
 function mapBookingResponseToDto(b: any): FacilityBookingDto {
   return {
     id: String(b.id),
@@ -89,14 +98,37 @@ function mapBookingResponseToDto(b: any): FacilityBookingDto {
     penaltyAmount: typeof b.penaltyAmount === 'number' ? b.penaltyAmount : undefined,
     isRecurring: b.isRecurring === true,
     recurringPattern: b.recurringPattern,
-    status: (['CANCELLED', 'COMPLETED', 'NO_SHOW', 'WAITLISTED'].includes(b.status)) ? b.status : 'CONFIRMED',
+    // Pass the server's status through unchanged. An unrecognised or missing status
+    // defaults to PENDING — never to CONFIRMED, which would launder an unapproved
+    // booking into a confirmed one.
+    status: KNOWN_BOOKING_STATUSES.includes(b.status) ? b.status : 'PENDING',
     bookingRef: b.bookingNumber || b.bookingRef || `FAC-${b.id}`,
     qrCode: b.qrCode,
     createdAt: b.createdAt,
   };
 }
 
+export interface SlotDto {
+  startTime: string;
+  endTime: string;
+  available: boolean;
+  bookingId?: number;
+  bookedByName?: string;
+}
+
 export const facilityService = {
+  /**
+   * GET /resource-booking/resources/{id}
+   */
+  async getFacility(facilityId: string): Promise<FacilityDto | null> {
+    try {
+      const res = await api.get(`/resource-booking/resources/${facilityId}`);
+      return mapResourceToFacility(res.data);
+    } catch {
+      return null;
+    }
+  },
+
   /**
    * GET /facilities or /resource-booking/resources
    */
@@ -114,6 +146,29 @@ export const facilityService = {
         secureLog.warn('[facilityService] Unable to fetch facilities', err);
         return [];
       }
+    }
+  },
+
+  /**
+   * GET /resource-booking/resources/{id}/slots?date= — returns rich SlotDto[]
+   */
+  async getSlots(facilityId: string, date: string): Promise<SlotDto[]> {
+    try {
+      const res = await api.get<any[]>(`/resource-booking/resources/${facilityId}/slots`, { params: { date } });
+      const data = res.data;
+      if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object' && 'startTime' in data[0]) {
+        return data.map((s: any) => ({
+          startTime: s.startTime,
+          endTime: s.endTime,
+          available: s.available !== false,
+          bookingId: s.bookingId,
+          bookedByName: s.bookedByName,
+        }));
+      }
+      return [];
+    } catch (err) {
+      secureLog.error('[facilityService] Failed to load slots', err);
+      return [];
     }
   },
 

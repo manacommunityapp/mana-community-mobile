@@ -13,7 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constants/config";
-import { healthGuardService } from "@/services/healthguard/healthGuardService";
+import { healthGuardService } from "@/services/healthGuardService";
 
 type BookingStatus = "REQUESTED" | "CONFIRMED" | "DISPATCHED" | "ARRIVED" | "COMPLETED" | "CANCELLED";
 

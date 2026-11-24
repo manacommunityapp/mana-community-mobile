@@ -13,7 +13,7 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { COLORS, SPACING, RADIUS, SHADOWS, GRADIENTS } from '@/constants/config';
 import { groupBuyingService } from '@/services/groupBuyingService';
 import PriceTierCard from '@/components/group-buying/PriceTierCard';
@@ -22,16 +22,14 @@ import PricingModelBadge from '@/components/group-buying/PricingModelBadge';
 import Countdown from '@/components/group-buying/Countdown';
 import QuantitySelector from '@/components/group-buying/QuantitySelector';
 import NeighborJoinFeed from '@/components/group-buying/NeighborJoinFeed';
-import type { GroupDealDto, GroupOrderDto } from '@/types/groupBuying';
+import type { GroupDealDto } from '@/types/groupBuying';
 
 export default function DealDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const [quantity, setQuantity] = useState(1);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [createdOrder, setCreatedOrder] = useState<GroupOrderDto | null>(null);
 
   const { data: deal, isLoading, isError, refetch } = useQuery({
     queryKey: ['deal-detail', id],
@@ -39,32 +37,6 @@ export default function DealDetailScreen() {
     enabled: !!id,
   });
 
-  const joinMutation = useMutation({
-    mutationFn: (qty: number) => groupBuyingService.joinDeal(id as string, qty),
-    onSuccess: (order) => {
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['group-deals'] });
-      queryClient.invalidateQueries({ queryKey: ['deal-detail', id] });
-      setCreatedOrder(order);
-      setShowConfirmModal(false);
-      const savings = deal ? (deal.mrp - deal.currentTierPrice) * quantity : 0;
-      router.replace({
-        pathname: '/group-buying/join-success/[orderId]',
-        params: {
-          orderId: order.id,
-          dealId: String(id),
-          qty: String(quantity),
-          savings: String(savings.toFixed(0)),
-          dealTitle: deal?.title || '',
-          nextUnits: String(deal?.nextTierUnitsNeeded ?? 0),
-          nextPrice: String(deal?.nextTierPrice ?? 0),
-        },
-      } as any);
-    },
-    onError: (err: any) => {
-      Alert.alert('Error', err?.message || 'Could not join deal. Please try again.');
-    },
-  });
 
   const discPct = deal
     ? Math.round(((deal.mrp - deal.currentTierPrice) / deal.mrp) * 100)
@@ -88,8 +60,13 @@ export default function DealDetailScreen() {
     setShowConfirmModal(true);
   };
 
+  // ── Join confirmation: navigate to checkout where payment is handled ──────────
   const handleConfirmJoin = () => {
-    joinMutation.mutate(quantity);
+    setShowConfirmModal(false);
+    router.push({
+      pathname: '/group-buying/checkout/[id]',
+      params: { id: String(id), qty: String(quantity) },
+    } as any);
   };
 
   if (isLoading) {
@@ -378,118 +355,55 @@ export default function DealDetailScreen() {
       <Modal visible={showConfirmModal} transparent animationType="slide">
         <View style={s.modalOverlay}>
           <View style={s.modalContent}>
-            {createdOrder ? (
-              // Order Success State
-              <View style={s.modalSuccess}>
-                <View style={s.successIconCircle}>
-                  <Ionicons name="checkmark-circle" size={48} color="#059669" />
-                </View>
-                <Text style={s.successTitle}>You're In the Group Buy!</Text>
-                <Text style={s.successSub}>
-                  Order #{createdOrder.id} has been registered at the locked rate of ?{deal.currentTierPrice}/unit.
-                </Text>
-
-                <View style={s.orderSummaryBox}>
-                  <View style={s.orderSummaryRow}>
-                    <Text style={s.summaryLabel}>Item</Text>
-                    <Text style={s.summaryValue}>{createdOrder.title}</Text>
-                  </View>
-                  <View style={s.orderSummaryRow}>
-                    <Text style={s.summaryLabel}>Quantity</Text>
-                    <Text style={s.summaryValue}>{createdOrder.qty} units</Text>
-                  </View>
-                  <View style={s.orderSummaryRow}>
-                    <Text style={s.summaryLabel}>Total Amount</Text>
-                    <Text style={[s.summaryValue, s.boldPrimary]}>?{createdOrder.total}</Text>
-                  </View>
-                  <View style={s.orderSummaryRow}>
-                    <Text style={s.summaryLabel}>Pickup</Text>
-                    <Text style={s.summaryValue}>{createdOrder.pickupPoint ?? deal.pickupPoint}</Text>
-                  </View>
-                </View>
-
-                <View style={s.successActions}>
-                  <TouchableOpacity
-                    style={s.pickupPassBtn}
-                    onPress={() => {
-                      setShowConfirmModal(false);
-                      setCreatedOrder(null);
-                      router.push((`/group-buying/pickup/${createdOrder.id}`) as any);
-                    }}
-                  >
-                    <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" />
-                    <Text style={s.pickupPassBtnText}>View Digital Pickup Pass</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={s.doneBtn}
-                    onPress={() => {
-                      setShowConfirmModal(false);
-                      setCreatedOrder(null);
-                      router.push('/group-buying' as any);
-                    }}
-                  >
-                    <Text style={s.doneBtnText}>Back to Deals</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              // Confirm Joining Deal State
-              <View style={s.modalConfirm}>
-                <View style={s.modalHeader}>
-                  <Text style={s.modalTitle}>Confirm Group Buy Order</Text>
-                  <TouchableOpacity
-                    onPress={() => setShowConfirmModal(false)}
-                    style={s.modalCloseBtn}
-                  >
-                    <Ionicons name="close" size={20} color={COLORS.textMuted} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={s.confirmDetails}>
-                  <Text style={s.confirmProductTitle}>{deal.title}</Text>
-                  <View style={s.confirmRow}>
-                    <Text style={s.confirmLabel}>Quantity</Text>
-                    <Text style={s.confirmValue}>{quantity} unit(s)</Text>
-                  </View>
-                  <View style={s.confirmRow}>
-                    <Text style={s.confirmLabel}>Locked Rate</Text>
-                    <Text style={s.confirmValue}>?{deal.currentTierPrice} / unit</Text>
-                  </View>
-                  <View style={s.confirmRow}>
-                    <Text style={s.confirmLabel}>Total Payable</Text>
-                    <Text style={[s.confirmValue, s.boldPrimary]}>?{totalCost}</Text>
-                  </View>
-                  <View style={s.confirmRow}>
-                    <Text style={s.confirmLabel}>Total Savings</Text>
-                    <Text style={[s.confirmValue, s.savingsText]}>?{totalSavings}</Text>
-                  </View>
-                  <View style={s.confirmRow}>
-                    <Text style={s.confirmLabel}>Pickup At</Text>
-                    <Text style={s.confirmValue}>{deal.pickupPoint}</Text>
-                  </View>
-                </View>
-
-                <View style={s.confirmNotice}>
-                  <Ionicons name="information-circle-outline" size={16} color={COLORS.primary} />
-                  <Text style={s.confirmNoticeText}>
-                    If more neighbours join and unlock a lower price tier, your final charge will automatically adjust downwards.
-                  </Text>
-                </View>
-
+            <View style={s.modalConfirm}>
+              <View style={s.modalHeader}>
+                <Text style={s.modalTitle}>Confirm Group Buy Order</Text>
                 <TouchableOpacity
-                  style={[s.confirmSubmitBtn, joinMutation.isPending && s.btnDisabled]}
-                  onPress={handleConfirmJoin}
-                  disabled={joinMutation.isPending}
+                  onPress={() => setShowConfirmModal(false)}
+                  style={s.modalCloseBtn}
                 >
-                  {joinMutation.isPending ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={s.confirmSubmitBtnText}>Confirm Commitment (?{totalCost})</Text>
-                  )}
+                  <Ionicons name="close" size={20} color={COLORS.textMuted} />
                 </TouchableOpacity>
               </View>
-            )}
+
+              <View style={s.confirmDetails}>
+                <Text style={s.confirmProductTitle}>{deal.title}</Text>
+                <View style={s.confirmRow}>
+                  <Text style={s.confirmLabel}>Quantity</Text>
+                  <Text style={s.confirmValue}>{quantity} unit(s)</Text>
+                </View>
+                <View style={s.confirmRow}>
+                  <Text style={s.confirmLabel}>Locked Rate</Text>
+                  <Text style={s.confirmValue}>₹{deal.currentTierPrice} / unit</Text>
+                </View>
+                <View style={s.confirmRow}>
+                  <Text style={s.confirmLabel}>Total Payable</Text>
+                  <Text style={[s.confirmValue, s.boldPrimary]}>₹{totalCost}</Text>
+                </View>
+                <View style={s.confirmRow}>
+                  <Text style={s.confirmLabel}>Total Savings</Text>
+                  <Text style={[s.confirmValue, s.savingsText]}>₹{totalSavings}</Text>
+                </View>
+                <View style={s.confirmRow}>
+                  <Text style={s.confirmLabel}>Pickup At</Text>
+                  <Text style={s.confirmValue}>{deal.pickupPoint}</Text>
+                </View>
+              </View>
+
+              <View style={s.confirmNotice}>
+                <Ionicons name="information-circle-outline" size={16} color={COLORS.primary} />
+                <Text style={s.confirmNoticeText}>
+                  If more neighbours join and unlock a lower price tier, your final charge will automatically adjust downwards.
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={s.confirmSubmitBtn}
+                onPress={handleConfirmJoin}
+              >
+                <Text style={s.confirmSubmitBtnText}>Proceed to Checkout (₹{totalCost})</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

@@ -113,7 +113,7 @@ const FALLBACK_TOWERS: TowerSummary[] = [
 
 const FALLBACK_KYC: TenantKycDocument[] = [
   { id: 'kyc-1', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'AADHAAR', status: 'VERIFIED', documentNumber: 'XXXX-XXXX-4532', uploadedAt: '2025-10-15', verifiedAt: '2025-10-16' },
-  { id: 'kyc-2', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'PAN', status: 'VERIFIED', documentNumber: 'ABCDE1234F', uploadedAt: '2025-10-15', verifiedAt: '2025-10-16' },
+  { id: 'kyc-2', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'PAN', status: 'VERIFIED', documentNumber: 'XXXXX1234X', uploadedAt: '2025-10-15', verifiedAt: '2025-10-16' },
   { id: 'kyc-3', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'POLICE_VERIFICATION', status: 'VERIFIED', uploadedAt: '2025-10-20', verifiedAt: '2025-10-25' },
   { id: 'kyc-4', tenantId: 't-1', tenantName: 'Venkatesh Rao', unitNumber: 'A-1204', docType: 'RENTAL_AGREEMENT', status: 'VERIFIED', uploadedAt: '2025-11-01', verifiedAt: '2025-11-01', expiryDate: '2026-10-31' },
   { id: 'kyc-5', tenantId: 't-2', tenantName: 'Neha Gupta', unitNumber: 'B-102', docType: 'AADHAAR', status: 'PENDING', uploadedAt: '2026-09-25' },
@@ -377,4 +377,39 @@ export const cposService = {
     const res = await api.post<CrmLead>(`/v1/cpos/crm/leads/${id}/approve`, { approved, comment });
     return res.data;
   },
+
+  // ── Broker Commissions & Leases ──────────────────────────────────
+  async getBrokers(): Promise<import('@/types/cpos').BrokerDto[]> {
+    try {
+      const res = await api.get<import('@/types/cpos').BrokerDto[]>('/cpos/crm/brokers');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return [
+      { id: 'brk-1', name: 'Rajesh Sharma', agency: 'Sharma Estates', phone: '+91 98450 11223', dealsClosed: 14, rating: 4.8 },
+      { id: 'brk-2', name: 'Pooja Hegde', agency: 'Apex Property Partners', phone: '+91 97410 44556', dealsClosed: 9, rating: 4.9 },
+    ];
+  },
+
+  async getBrokerCommissions(): Promise<import('@/types/cpos').BrokerCommissionDto[]> {
+    try {
+      const res = await api.get<import('@/types/cpos').BrokerCommissionDto[]>('/cpos/crm/commissions');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return [
+      { id: 'comm-1', brokerId: 'brk-1', brokerName: 'Rajesh Sharma', leadName: 'Amit Verma', unitNumber: 'A-1204', dealValue: '₹2.45 Cr', commissionPercentage: 1.0, commissionAmount: 245000, status: 'APPROVED', invoiceNumber: 'INV-BRK-102' },
+      { id: 'comm-2', brokerId: 'brk-2', brokerName: 'Pooja Hegde', leadName: 'Dr. Suresh Kumar', unitNumber: 'C-302', dealValue: '₹1.15 Cr', commissionPercentage: 1.0, commissionAmount: 115000, status: 'PENDING_REVIEW' },
+    ];
+  },
+
+  async getLeaseAgreements(): Promise<import('@/types/cpos').LeaseAgreementDto[]> {
+    try {
+      const res = await api.get<import('@/types/cpos').LeaseAgreementDto[]>('/cpos/rental/leases');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return [
+      { id: 'lease-1', unitNumber: 'A-1204', tenantName: 'Venkatesh Rao', tenantPhone: '+91 98450 12345', monthlyRent: 48000, depositAmount: 200000, startDate: '2025-11-01', endDate: '2026-10-31', daysToExpiry: 346, renewalStatus: 'ACTIVE', policeVerification: true },
+      { id: 'lease-2', unitNumber: 'B-701', tenantName: 'Sneha Patel', tenantPhone: '+91 99000 88776', monthlyRent: 38000, depositAmount: 150000, startDate: '2025-01-15', endDate: '2025-12-31', daysToExpiry: 42, renewalStatus: 'RENEWAL_DUE', policeVerification: true },
+    ];
+  },
 };
+

@@ -268,12 +268,12 @@ export const safetyService = {
 
   async updateIncidentStatus(id: number, status: IncidentStatus): Promise<SecurityIncident> {
     try {
-      const res = await api.put<SecurityIncident>(`/guard/incidents/${id}/status`, null, {
+      const res = await api.patch<SecurityIncident>(`/guard/incidents/${id}/status`, null, {
         params: { status },
       });
       return res.data;
     } catch {
-      const res = await api.put<SecurityIncident>(`/security/incidents/${id}/status`, null, {
+      const res = await api.patch<SecurityIncident>(`/security/incidents/${id}/status`, null, {
         params: { status },
       });
       return res.data;
@@ -284,11 +284,11 @@ export const safetyService = {
 
   async getPatrolSession(): Promise<PatrolSession | null> {
     try {
-      const res = await api.get<PatrolSession>('/guard/patrol/session');
+      const res = await api.post<PatrolSession>('/guard/patrol/session', {});
       return res.data;
     } catch {
       try {
-        const res = await api.get<PatrolSession>('/security/patrol/session');
+        const res = await api.post<PatrolSession>('/security/patrol/session', {});
         return res.data;
       } catch {
         return null;
@@ -317,5 +317,15 @@ export const safetyService = {
     } catch {
       return [];
     }
+  },
+
+  async checkInShift(id: number): Promise<GuardShift> {
+    const res = await api.post<GuardShift>(`/guards/shifts/${id}/check-in`);
+    return res.data;
+  },
+
+  async checkOutShift(id: number): Promise<GuardShift> {
+    const res = await api.post<GuardShift>(`/guards/shifts/${id}/check-out`);
+    return res.data;
   },
 };

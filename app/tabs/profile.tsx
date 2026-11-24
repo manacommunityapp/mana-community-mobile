@@ -11,9 +11,12 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useTenantContext } from '@/context/TenantContext';
+import { useAppTheme } from '@/context/ThemeContext';
+import { authService } from '@/services/authService';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRoleSwitcher } from '@/hooks/useRoleSwitcher';
-import { COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getInitials } from '@/constants/config';
+import { CONFIG, COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getInitials } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import { profileService } from '@/services/profileService';
 import { eventService } from '@/services/eventService';
@@ -23,7 +26,17 @@ import { maintenanceDuesService } from '@/services/maintenanceDuesService';
 import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { notificationService } from '@/services/notificationService';
 import { ProfileImageModal } from '@/components/common/ProfileImageModal';
+import { JoinCommunityModal } from '@/components/community/JoinCommunityModal';
+import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import {
+  VIEW_FEED,
+  VIEW_HOME_SERVICE,
+  VIEW_VISITORS,
+  VIEW_AMENITIES,
+  VIEW_NOTICES,
+  VIEW_JOBS,
+  VIEW_EVENTS,
+  VIEW_FOOD_MENU,
   VIEW_EMERGENCY,
   VIEW_GROUP_BUYING,
   VIEW_TRIPS,
@@ -34,6 +47,22 @@ import {
   VIEW_POLLS,
   VIEW_MARKETPLACE,
   VIEW_ADMIN,
+  // Wealth & investments
+  VIEW_PERSONAL_FINANCE,
+  VIEW_FIXED_DEPOSITS,
+  VIEW_DIGITAL_GOLD,
+  VIEW_MUTUAL_FUNDS,
+  VIEW_LOANS,
+  // Payments & transfers
+  VIEW_SPLIT_BILL,
+  VIEW_SCAN_PAY,
+  VIEW_SEND_MONEY,
+  VIEW_UPI_HISTORY,
+  // Lifestyle
+  VIEW_MOVIES,
+  VIEW_VEHICLE_CARE,
+  VIEW_CALENDAR,
+  VIEW_HEALTH_GUARD,
 } from '@/constants/permissions';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
@@ -65,42 +94,52 @@ function MenuItem({
   badgeColor,
   isLast,
 }: MenuItemProps) {
+  const { palette } = useAppTheme();
   return (
     <TouchableOpacity
-      style={[styles.menuItem, isLast && styles.menuItemLast]}
+      style={[
+        styles.menuItem,
+        { borderBottomColor: palette.borderLight },
+        isLast && styles.menuItemLast,
+      ]}
       onPress={onPress}
       activeOpacity={0.65}
     >
-      <View style={[styles.menuIconWrap, { backgroundColor: iconBg || '#F3F4F6' }]}>
+      <View
+        style={[
+          styles.menuIconWrap,
+          { backgroundColor: palette.isDark && iconColor ? iconColor + '26' : (iconBg || palette.surfaceMuted) },
+        ]}
+      >
         <Ionicons
           name={icon}
           size={18}
-          color={danger ? COLORS.error : iconColor || COLORS.primary}
+          color={danger ? COLORS.error : iconColor || palette.link}
         />
       </View>
 
       <View style={styles.menuLabelWrap}>
-        <Text style={[styles.menuLabel, danger && styles.dangerText]} numberOfLines={1}>
+        <Text style={[styles.menuLabel, { color: palette.text }, danger && styles.dangerText]} numberOfLines={1}>
           {label}
         </Text>
         {sublabel && (
-          <Text style={styles.menuSublabel} numberOfLines={1}>
+          <Text style={[styles.menuSublabel, { color: palette.textMuted }]} numberOfLines={1}>
             {sublabel}
           </Text>
         )}
       </View>
 
       {badge && (
-        <View style={[styles.menuBadge, badgeBg ? { backgroundColor: badgeBg } : undefined]}>
+        <View style={[styles.menuBadge, badgeBg ? { backgroundColor: badgeBg } : { backgroundColor: palette.primaryLight }]}>
           <Text
-            style={[styles.menuBadgeText, badgeColor ? { color: badgeColor } : undefined]}
+            style={[styles.menuBadgeText, badgeColor ? { color: badgeColor } : { color: palette.link }]}
           >
             {badge}
           </Text>
         </View>
       )}
 
-      <Ionicons name="chevron-forward" size={15} color="#D1D5DB" />
+      <Ionicons name="chevron-forward" size={15} color={palette.textMuted} />
     </TouchableOpacity>
   );
 }
@@ -114,27 +153,75 @@ function HubSectionHeader({
   icon?: IoniconsName;
   iconColor?: string;
 }) {
+  const { palette } = useAppTheme();
   return (
     <View style={styles.sectionHeaderRow}>
       {icon && (
         <Ionicons
           name={icon}
           size={15}
-          color={iconColor || COLORS.primary}
+          color={iconColor || palette.link}
           style={{ marginRight: 6 }}
         />
       )}
-      <Text style={styles.sectionHeader}>{title}</Text>
+      <Text style={[styles.sectionHeader, { color: palette.eyebrow }]}>{title}</Text>
     </View>
   );
 }
 
+type HubMenuItemConfig = Omit<MenuItemProps, 'isLast'> & { key: string; visible?: boolean };
+
+function HubMenuSection({
+  title,
+  icon,
+  iconColor,
+  items,
+  sectionStyle,
+}: {
+  title: string;
+  icon?: IoniconsName;
+  iconColor?: string;
+  items: HubMenuItemConfig[];
+  sectionStyle: any;
+}) {
+  const { palette } = useAppTheme();
+  const visibleItems = items.filter((item) => item.visible !== false);
+  if (visibleItems.length === 0) return null;
+
+  return (
+    <>
+      <HubSectionHeader title={title} icon={icon} iconColor={iconColor} />
+      <View style={[sectionStyle, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}>
+        {visibleItems.map(({ key, visible: _visible, ...itemProps }, idx) => (
+          <MenuItem key={key} {...itemProps} isLast={idx === visibleItems.length - 1} />
+        ))}
+      </View>
+    </>
+  );
+}
+
 export default function ProfileScreen() {
-  const { user: authUser, logout, isLoading: isAuthLoading, loadUser } = useAuth();
+  const { user: authUser, logout, isLoading: isAuthLoading, loadUser, hasModule } = useAuth();
+  const { communityName: tenantCommunityName } = useTenantContext();
+  const { palette, isDark, toggleTheme } = useAppTheme();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [passModalVisible, setPassModalVisible] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+
+  const { hasPerm, isAdmin, isSuperAdmin, hasMultiplePortals, availablePortals, switchToRole } = {
+    ...usePermissions(),
+    ...useRoleSwitcher(),
+  };
+
+  // Module-gated data: don't fetch (or show) activity for modules the
+  // community has disabled.
+  const modEvents   = hasModule('EVENTS');
+  const modMarket   = hasModule('MARKETPLACE');
+  const modSports   = hasModule('SPORTS');
+  const modFinance  = hasModule('FINANCE_MGMT');
+  const modHelpdesk = hasModule('HELPDESK');
 
   // ── Database Queries ──────────────────────────────────────────────
   // 1. Fresh Profile from /api/users/me
@@ -144,11 +231,27 @@ export default function ProfileScreen() {
     staleTime: 30_000,
   });
 
+  const resolvedCommunityId = dbProfile?.communityId ?? authUser?.communityId;
+  const knownCommunityName =
+    dbProfile?.communityName ||
+    authUser?.communityName ||
+    tenantCommunityName ||
+    (typeof (dbProfile as any)?.community === 'object' ? (dbProfile as any)?.community?.name : null) ||
+    (typeof (authUser as any)?.community === 'object' ? (authUser as any)?.community?.name : null);
+
+  const { data: communityDetails } = useQuery({
+    queryKey: ['community-details', resolvedCommunityId],
+    queryFn: () => authService.getCommunityDetails(Number(resolvedCommunityId)).catch(() => null),
+    enabled: Boolean(!knownCommunityName && resolvedCommunityId),
+    staleTime: 5 * 60_000,
+  });
+
   // 2. My Events from /api/events/mine
   const { data: myEvents = [], refetch: refetchEvents } = useQuery({
     queryKey: ['events', 'mine'],
     queryFn: () => eventService.getMyEvents(),
     staleTime: 30_000,
+    enabled: modEvents,
   });
 
   // 3. My Marketplace Listings from /api/marketplace/listings/mine
@@ -156,6 +259,7 @@ export default function ProfileScreen() {
     queryKey: ['marketplace', 'mine'],
     queryFn: () => marketplaceService.getMyListings(),
     staleTime: 30_000,
+    enabled: modMarket,
   });
 
   // 4. My Sports Teams from /api/sports/teams/my
@@ -163,6 +267,7 @@ export default function ProfileScreen() {
     queryKey: ['sports', 'my-teams'],
     queryFn: () => sportsService.getMyTeams(),
     staleTime: 30_000,
+    enabled: modSports,
   });
 
   // 5. Maintenance Pending Bills from /api/finance/maintenance/bills/pending
@@ -170,6 +275,7 @@ export default function ProfileScreen() {
     queryKey: ['finance', 'pending-bills'],
     queryFn: () => maintenanceDuesService.getPendingBills(),
     staleTime: 60_000,
+    enabled: modFinance,
   });
 
   // 6. My Open Tickets from /api/helpdesk/tickets
@@ -177,6 +283,7 @@ export default function ProfileScreen() {
     queryKey: ['helpdesk', 'my-open'],
     queryFn: () => smartHelpdeskService.getTickets('OPEN'),
     staleTime: 60_000,
+    enabled: modHelpdesk,
   });
 
   // 7. Unread Notifications Count
@@ -193,11 +300,11 @@ export default function ProfileScreen() {
     setRefreshing(true);
     await Promise.allSettled([
       refetchProfile(),
-      refetchEvents(),
-      refetchListings(),
-      refetchTeams(),
-      refetchBills(),
-      refetchTickets(),
+      modEvents && refetchEvents(),
+      modMarket && refetchListings(),
+      modSports && refetchTeams(),
+      modFinance && refetchBills(),
+      modHelpdesk && refetchTickets(),
       refetchNotifs(),
       loadUser(),
     ]);
@@ -211,6 +318,11 @@ export default function ProfileScreen() {
     refetchTickets,
     refetchNotifs,
     loadUser,
+    modEvents,
+    modMarket,
+    modSports,
+    modFinance,
+    modHelpdesk,
   ]);
 
   const handleLogout = () => {
@@ -228,9 +340,11 @@ export default function ProfileScreen() {
 
   const handleSharePass = async () => {
     try {
+      const unitText = [tower, flatNumber].filter(Boolean).join(' - ') || 'Unit not assigned';
+      const statusText = user?.status === 'ACTIVE' ? 'Verified Active' : (user?.status || 'Active');
       await Share.share({
-        title: 'Mana Community Resident Pass',
-        message: `🛡️ *Mana Community Resident Pass*\nName: ${displayName}\nUnit: ${tower || 'Tower'} - ${flatNumber || 'Flat'}\nSociety: ${communityName || 'Mana Residency'}\nStatus: Verified Active Resident`,
+        title: `${communityName} Pass`,
+        message: `🛡️ *${communityName} Resident Pass*\nName: ${displayName}\nUnit: ${unitText}\nSociety: ${communityName}\nStatus: ${statusText}`,
       });
     } catch {
       // Ignored
@@ -247,41 +361,91 @@ export default function ProfileScreen() {
     );
   }
 
-  const { hasPerm, isAdmin, isSuperAdmin, hasMultiplePortals, availablePortals, switchToRole } = {
-    ...usePermissions(),
-    ...useRoleSwitcher(),
-  };
-
-  // Community service permissions
-  const showEmergency = hasPerm(VIEW_EMERGENCY);
-  const showFinance = hasPerm(VIEW_MAINTENANCE_DUES);
-  const showHelpdesk = hasPerm(VIEW_TICKETS);
-  const showGroupBuying = hasPerm(VIEW_GROUP_BUYING);
-  const showTrips = hasPerm(VIEW_TRIPS);
-  const showDiscover = hasPerm(VIEW_DISCOVER);
-
-  // Explore items permissions
-  const showSports = hasPerm(VIEW_SPORTS_MENU);
-  const showPolls = hasPerm(VIEW_POLLS);
-  const showMarketplace = hasPerm(VIEW_MARKETPLACE);
+  const {
+    showEmergency, showFinance, showHelpdesk, showGroupBuying, showTrips,
+    showDiscover, showVisitors, showFeedItems, showAmenities, showHealth,
+    showWellness, showHomeServices, showParking, showFood, showSmartHome,
+    showNotices, showGovernance, showProcurement, showKittyCircles, showCommute,
+    showPets, showOffers, showAcademy, showCpos, showJobs, showAiAssistant,
+    showHousehold, showSports, showPolls, showMarketplace,
+    showPersonalFinance, showFixedDeposits, showDigitalGold, showMutualFunds, showLoans,
+    showSplitBill, showScanPay, showSendMoney, showUpiHistory, showPayments,
+    showMovies, showVehicleCare, showCalendar, showHealthGuard,
+  } = useMemo(() => {
+    const p = (perm: string) => hasPerm(perm);
+    const m = (mod: string) => hasModule(mod);
+    const adm = isAdmin;
+    const _showPersonalFinance = (p(VIEW_PERSONAL_FINANCE) || p('Manage Personal Finance')) && m('PERSONAL_FINANCE');
+    const _showScanPay   = p(VIEW_SCAN_PAY) && m('PAYMENTS');
+    const _showSendMoney = p(VIEW_SEND_MONEY) && m('PAYMENTS');
+    const _showUpiHistory = p(VIEW_UPI_HISTORY) && m('PAYMENTS');
+    return {
+      showEmergency:      p(VIEW_EMERGENCY) && m('EMERGENCY'),
+      showFinance:        p(VIEW_MAINTENANCE_DUES) && m('FINANCE_MGMT'),
+      showHelpdesk:       p(VIEW_TICKETS) && m('HELPDESK'),
+      showGroupBuying:    p(VIEW_GROUP_BUYING) && m('GROUP_BUYING'),
+      showTrips:          p(VIEW_TRIPS) && m('TRIPS'),
+      showDiscover:       p(VIEW_DISCOVER) && m('DISCOVER'),
+      showVisitors:       (adm || p(VIEW_VISITORS)) && m('VISITORS'),
+      showFeedItems:      (adm || p(VIEW_FEED)) && m('COMMUNITY_FEED'),
+      showAmenities:      p(VIEW_AMENITIES) && m('FACILITIES'),
+      showHealth:         (adm || p(VIEW_HEALTH_GUARD)) && m('HEALTH'),
+      showWellness:       (adm || p(VIEW_HEALTH_GUARD)) && m('WELLNESS'),
+      showHomeServices:   (adm || p(VIEW_HOME_SERVICE)) && m('SERVICE_PLATFORM'),
+      showParking:        (adm || p(VIEW_VISITORS) || p(VIEW_AMENITIES)) && m('PARKING'),
+      showFood:           (adm || p(VIEW_FOOD_MENU)) && m('FOOD_OS'),
+      showSmartHome:      (adm || p(VIEW_AMENITIES)) && m('SMART_HOME'),
+      showNotices:        p(VIEW_NOTICES) && m('NOTICES'),
+      showGovernance:     (adm || p(VIEW_NOTICES) || p(VIEW_POLLS)) && m('GOVERNANCE'),
+      showProcurement:    (adm || p(VIEW_HOME_SERVICE) || p(VIEW_MARKETPLACE)) && m('MAINTENANCE'),
+      showKittyCircles:   (adm || p(VIEW_EVENTS) || p(VIEW_FEED)) && (m('EVENTS') || m('COMMUNITY_FEED')),
+      showCommute:        (adm || p(VIEW_TRIPS) || p(VIEW_FEED)) && m('COMMUTE'),
+      showPets:           (adm || p(VIEW_FEED)) && m('PETS'),
+      showOffers:         (adm || p(VIEW_MARKETPLACE)) && m('COMMERCE'),
+      showAcademy:        (adm || p(VIEW_FEED)) && m('ACADEMY'),
+      showCpos:           (adm || p(VIEW_MARKETPLACE) || p(VIEW_AMENITIES)) && m('CPOS'),
+      showJobs:           p(VIEW_JOBS) && m('JOBS'),
+      showAiAssistant:    (adm || p(VIEW_FEED) || p(VIEW_VISITORS)) && m('AI_CONCIERGE'),
+      showHousehold:      adm || p(VIEW_VISITORS) || p(VIEW_FEED),
+      showSports:         p(VIEW_SPORTS_MENU) && m('SPORTS'),
+      showPolls:          p(VIEW_POLLS) && m('POLLS'),
+      showMarketplace:    p(VIEW_MARKETPLACE) && m('MARKETPLACE'),
+      showPersonalFinance: _showPersonalFinance,
+      showFixedDeposits:  (p(VIEW_FIXED_DEPOSITS) || _showPersonalFinance) && m('PERSONAL_FINANCE'),
+      showDigitalGold:    (p(VIEW_DIGITAL_GOLD) || _showPersonalFinance) && m('PERSONAL_FINANCE'),
+      showMutualFunds:    (p(VIEW_MUTUAL_FUNDS) || _showPersonalFinance) && m('PERSONAL_FINANCE'),
+      showLoans:          (p(VIEW_LOANS) || _showPersonalFinance) && m('PERSONAL_FINANCE'),
+      showSplitBill:      p(VIEW_SPLIT_BILL) && m('PAYMENTS'),
+      showScanPay:        _showScanPay,
+      showSendMoney:      _showSendMoney,
+      showUpiHistory:     _showUpiHistory,
+      showPayments:       (adm || _showScanPay || _showSendMoney || _showUpiHistory) && m('PAYMENTS'),
+      showMovies:         p(VIEW_MOVIES) && m('ENTERTAINMENT'),
+      showVehicleCare:    p(VIEW_VEHICLE_CARE) && m('VISITORS'),
+      showCalendar:       p(VIEW_CALENDAR) && m('CALENDAR'),
+      showHealthGuard:    p(VIEW_HEALTH_GUARD) && m('SAFETY'),
+    };
+  }, [isAdmin, hasPerm, hasModule]);
 
   const flatNumber = user.flatNumber || user.flatNo;
   const tower = user.tower || user.block;
-  const communityName = user.communityName || 'Mana Residency';
-  const profilePhoto = user.profilePicUrl || user.profilePhoto;
+  const hasCommunity = Boolean(resolvedCommunityId);
+  const communityName =
+    hasCommunity
+      ? knownCommunityName ||
+        communityDetails?.name ||
+        communityDetails?.communityName ||
+        'My Community'
+      : 'Mana Standalone';
+  const profilePhoto = resolveUserAvatar(user);
   const displayName =
-    user.fullName || user.name || (user.email ? user.email.split('@')[0] : 'Resident');
-  const hasPhoto =
-    !photoError &&
-    !!profilePhoto &&
-    typeof profilePhoto === 'string' &&
-    profilePhoto.trim().length > 0 &&
-    !profilePhoto.includes('null') &&
-    !profilePhoto.includes('undefined') &&
-    (profilePhoto.startsWith('http') ||
-      profilePhoto.startsWith('/') ||
-      profilePhoto.startsWith('file://') ||
-      profilePhoto.startsWith('data:'));
+    user.fullName || user.name || authUser?.fullName || authUser?.name || (user.email ? user.email.split('@')[0] : 'Member');
+  const hasPhoto = !photoError && !!profilePhoto;
+  const primaryRoleLabel = (user.role || 'RESIDENT').replace(/_/g, ' ').toUpperCase();
+  const verifiedBadgeLabel =
+    !hasCommunity
+      ? 'STANDALONE ACCOUNT'
+      : (user.status === 'ACTIVE' ? `VERIFIED ${primaryRoleLabel}` : 'PENDING VERIFICATION');
 
   const totalEventsCount = myEvents.length;
   const totalListingsCount =
@@ -296,23 +460,32 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* ── Top Bar ────────────────────────────────────────────── */}
-      <View style={styles.topBar}>
+    <SafeAreaView style={[styles.container, { backgroundColor: palette.dockBg }]} edges={['top']}>
+      {/* ── Top Bar (Flush top dock, structured bottom curve matching Footer) ── */}
+      <View style={[styles.topBar, { backgroundColor: palette.dockBg, borderColor: palette.dockBorder }]}>
         <View style={styles.topBarLeft}>
-          <Text style={styles.topBarTitle}>My Profile</Text>
-          <Text style={styles.topBarSubtitle}>
-            {communityName} • ID #{user.id || '104'}
+          <Text style={[styles.topBarTitle, { color: palette.text }]}>My Profile</Text>
+          <Text style={[styles.topBarSubtitle, { color: palette.textSecondary }]} numberOfLines={1}>
+            {communityName}
           </Text>
         </View>
 
         <View style={styles.topBarActions}>
           <TouchableOpacity
-            style={styles.topBarIconBtn}
+            style={[styles.topBarIconBtn, { backgroundColor: palette.surfaceSubtle, borderColor: palette.borderLight }]}
+            onPress={toggleTheme}
+            activeOpacity={0.75}
+            accessibilityLabel={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+          >
+            <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={19} color={palette.link} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.topBarIconBtn, { backgroundColor: palette.surfaceSubtle, borderColor: palette.borderLight }]}
             onPress={() => router.push('/notifications')}
             activeOpacity={0.75}
           >
-            <Ionicons name="notifications-outline" size={20} color={COLORS.text} />
+            <Ionicons name="notifications-outline" size={20} color={palette.text} />
             {unreadNotifsCount > 0 && (
               <View style={styles.notifBadge}>
                 <Text style={styles.notifBadgeText}>
@@ -323,15 +496,16 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.topBarIconBtn}
+            style={[styles.topBarIconBtn, { backgroundColor: palette.surfaceSubtle, borderColor: palette.borderLight }]}
             onPress={() => router.push('/settings')}
             activeOpacity={0.75}
           >
-            <Ionicons name="settings-outline" size={20} color={COLORS.text} />
+            <Ionicons name="settings-outline" size={20} color={palette.text} />
           </TouchableOpacity>
         </View>
       </View>
 
+      <View style={[styles.bodyWrap, { backgroundColor: palette.appBg }]}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -339,15 +513,15 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={palette.link}
+            colors={[palette.link]}
           />
         }
       >
         {/* ── Executive Resident Identity Card ─────────────────────── */}
         <View style={styles.heroCardWrap}>
           <LinearGradient
-            colors={['#1E1B4B', '#312E81', '#4338CA']}
+            colors={isDark ? ['#1E1B4B', '#312E81', '#4338CA'] : ['#00174B', '#004AC6', '#2563EB']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
@@ -394,7 +568,7 @@ export default function ProfileScreen() {
                 <View style={styles.residentBadgeRow}>
                   <View style={styles.verifiedPill}>
                     <Ionicons name="shield-checkmark" size={11} color="#34D399" />
-                    <Text style={styles.verifiedPillText}>VERIFIED RESIDENT</Text>
+                    <Text style={styles.verifiedPillText}>{verifiedBadgeLabel}</Text>
                   </View>
 
                   <View
@@ -423,7 +597,14 @@ export default function ProfileScreen() {
 
             {/* Unit Details & Tags Pill Row */}
             <View style={styles.unitPillsRow}>
-              {tower && flatNumber && (
+              {!hasCommunity && (
+                <View style={styles.unitPill}>
+                  <Ionicons name="compass-outline" size={12} color="#A5B4FC" />
+                  <Text style={styles.unitPillText}>Standalone Account</Text>
+                </View>
+              )}
+
+              {hasCommunity && tower && flatNumber && (
                 <View style={styles.unitPill}>
                   <Ionicons name="home" size={12} color="#A5B4FC" />
                   <Text style={styles.unitPillText}>
@@ -449,14 +630,25 @@ export default function ProfileScreen() {
 
             {/* Quick Hero Actions */}
             <View style={styles.heroActionsRow}>
-              <TouchableOpacity
-                style={styles.heroPassBtn}
-                onPress={() => setPassModalVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="qr-code-outline" size={16} color="#fff" />
-                <Text style={styles.heroPassBtnText}>Resident Pass</Text>
-              </TouchableOpacity>
+              {!hasCommunity ? (
+                <TouchableOpacity
+                  style={styles.heroPassBtn}
+                  onPress={() => setJoinModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="add-circle-outline" size={16} color="#fff" />
+                  <Text style={styles.heroPassBtnText}>Join Community</Text>
+                </TouchableOpacity>
+              ) : showVisitors ? (
+                <TouchableOpacity
+                  style={styles.heroPassBtn}
+                  onPress={() => setPassModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="qr-code-outline" size={16} color="#fff" />
+                  <Text style={styles.heroPassBtnText}>Resident Pass</Text>
+                </TouchableOpacity>
+              ) : null}
 
               <TouchableOpacity
                 style={styles.heroEditBtn}
@@ -470,8 +662,48 @@ export default function ProfileScreen() {
           </LinearGradient>
         </View>
 
+        {/* ── Standalone Join Community Action Card ────────────────── */}
+        {!hasCommunity && (
+          <View style={styles.joinCommCardWrap}>
+            <View
+              style={[
+                styles.joinCommCard,
+                { backgroundColor: palette.surface, borderColor: palette.primaryBorder },
+              ]}
+            >
+              <View style={styles.joinCommRow}>
+                <View style={[styles.joinCommIconWrap, { backgroundColor: palette.primaryLight }]}>
+                  <Ionicons name="business" size={24} color={palette.link} />
+                </View>
+                <View style={styles.joinCommInfo}>
+                  <Text style={[styles.joinCommTitle, { color: palette.text }]}>Join Your Community</Text>
+                  <Text style={[styles.joinCommSub, { color: palette.textMuted }]}>
+                    Have an invite code from your housing society or apartment? Link your flat now to access security gate passes, visitor approvals, society billing & amenities.
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.joinCommBtnWrap}
+                onPress={() => setJoinModalVisible(true)}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={palette.primaryGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.joinCommBtn}
+                >
+                  <Ionicons name="key-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+                  <Text style={styles.joinCommBtnText}>Enter Invite Code</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* ── Pending Dues Quick Alert Banner (Conditional) ───────── */}
-        {pendingDuesTotal > 0 && (
+        {showFinance && pendingDuesTotal > 0 && (
           <View style={styles.duesCardWrap}>
             <TouchableOpacity
               style={styles.duesCard}
@@ -498,62 +730,72 @@ export default function ProfileScreen() {
         )}
 
         {/* ── Community Activity KPI Grid ─────────────────────────── */}
+        {(modEvents || modMarket || modSports || modHelpdesk) && (
         <View style={styles.kpiSection}>
-          <Text style={styles.kpiHeading}>Community Activity</Text>
+          <Text style={[styles.kpiHeading, { color: palette.eyebrow }]}>Community Activity</Text>
           <View style={styles.kpiRow}>
             {/* Events */}
+            {modEvents && (
             <TouchableOpacity
-              style={styles.kpiCard}
+              style={[styles.kpiCard, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}
               onPress={() => router.push('/tabs/events')}
               activeOpacity={0.75}
             >
               <View style={[styles.kpiIconWrap, { backgroundColor: '#FEF3C7' }]}>
                 <Ionicons name="calendar-outline" size={16} color="#D97706" />
               </View>
-              <Text style={styles.kpiNumber}>{totalEventsCount}</Text>
-              <Text style={styles.kpiLabel}>Events</Text>
+              <Text style={[styles.kpiNumber, { color: palette.text }]}>{totalEventsCount}</Text>
+              <Text style={[styles.kpiLabel, { color: palette.textMuted }]}>Events</Text>
             </TouchableOpacity>
+            )}
 
             {/* Marketplace */}
+            {modMarket && (
             <TouchableOpacity
-              style={styles.kpiCard}
+              style={[styles.kpiCard, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}
               onPress={() => router.push('/tabs/marketplace')}
               activeOpacity={0.75}
             >
-              <View style={[styles.kpiIconWrap, { backgroundColor: '#EEF2FF' }]}>
-                <Ionicons name="storefront-outline" size={16} color="#4F46E5" />
+              <View style={[styles.kpiIconWrap, { backgroundColor: palette.primaryLight }]}>
+                <Ionicons name="storefront-outline" size={16} color={palette.link} />
               </View>
-              <Text style={styles.kpiNumber}>{totalListingsCount}</Text>
-              <Text style={styles.kpiLabel}>Listings</Text>
+              <Text style={[styles.kpiNumber, { color: palette.text }]}>{totalListingsCount}</Text>
+              <Text style={[styles.kpiLabel, { color: palette.textMuted }]}>Listings</Text>
             </TouchableOpacity>
+            )}
 
             {/* Sports Teams */}
+            {modSports && (
             <TouchableOpacity
-              style={styles.kpiCard}
+              style={[styles.kpiCard, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}
               onPress={() => router.push('/sports/my-teams')}
               activeOpacity={0.75}
             >
               <View style={[styles.kpiIconWrap, { backgroundColor: '#D1FAE5' }]}>
                 <Ionicons name="trophy-outline" size={16} color="#059669" />
               </View>
-              <Text style={styles.kpiNumber}>{totalTeamsCount}</Text>
-              <Text style={styles.kpiLabel}>Teams</Text>
+              <Text style={[styles.kpiNumber, { color: palette.text }]}>{totalTeamsCount}</Text>
+              <Text style={[styles.kpiLabel, { color: palette.textMuted }]}>Teams</Text>
             </TouchableOpacity>
+            )}
 
             {/* Helpdesk */}
+            {modHelpdesk && (
             <TouchableOpacity
-              style={styles.kpiCard}
+              style={[styles.kpiCard, { backgroundColor: palette.surface, borderColor: palette.borderLight }]}
               onPress={() => router.push('/helpdesk')}
               activeOpacity={0.75}
             >
               <View style={[styles.kpiIconWrap, { backgroundColor: '#FFE4E6' }]}>
                 <Ionicons name="headset-outline" size={16} color="#E11D48" />
               </View>
-              <Text style={styles.kpiNumber}>{totalTicketsCount}</Text>
-              <Text style={styles.kpiLabel}>Tickets</Text>
+              <Text style={[styles.kpiNumber, { color: palette.text }]}>{totalTicketsCount}</Text>
+              <Text style={[styles.kpiLabel, { color: palette.textMuted }]}>Tickets</Text>
             </TouchableOpacity>
+            )}
           </View>
         </View>
+        )}
 
         {/* ── Role Portal Cards ─────────────────── */}
         {hasMultiplePortals && availablePortals.length > 1 && (
@@ -625,423 +867,105 @@ export default function ProfileScreen() {
         )}
 
         {/* ── Section 1: Community Living & Amenities ─────────────── */}
-        <HubSectionHeader
+        <HubMenuSection
           title="Community Living & Amenities"
           icon="business-outline"
           iconColor="#4F46E5"
+          sectionStyle={styles.menuSection}
+          items={[
+            { key: 'visitors', visible: showVisitors, icon: 'shield-checkmark-outline', label: 'Gate & Visitors', sublabel: 'Manage guest passes & delivery entry', onPress: () => router.push('/visitors'), iconColor: '#0891B2', iconBg: '#CFFAFE' },
+            { key: 'entry-log', visible: showVisitors, icon: 'document-text-outline', label: 'Entry / Exit Log', sublabel: 'View all gate entry and exit records', onPress: () => router.push('/profile/entry-log'), iconColor: '#059669', iconBg: '#D1FAE5' },
+            { key: 'directory', visible: showFeedItems, icon: 'people-circle-outline', label: 'Resident Directory', sublabel: 'Browse flat-wise residents in your society', onPress: () => router.push('/community/directory'), iconColor: '#6366F1', iconBg: '#EEF2FF' },
+            { key: 'calendar', visible: showCalendar, icon: 'calendar-outline', label: 'Master Calendar', sublabel: 'Poojas, sports, events, maintenance & dues', onPress: () => router.push('/calendar'), iconColor: '#4F46E5', iconBg: '#EEF2FF', badge: 'NEW', badgeBg: '#EEF2FF', badgeColor: '#4F46E5' },
+            { key: 'facilities', visible: showAmenities, icon: 'fitness-outline', label: 'Facility Bookings', sublabel: 'Clubhouse, tennis, gym & pool slots', onPress: () => router.push('/facilities'), iconColor: '#0D9488', iconBg: '#CCFBF1' },
+            { key: 'health', visible: showHealth, icon: 'medkit-outline', label: 'Mana Health', sublabel: 'Doctors, appointments, records & emergency', onPress: () => router.push('/health'), iconColor: '#0D9488', iconBg: '#CCFBF1' },
+            { key: 'wellness', visible: showWellness, icon: 'nutrition-outline', label: 'Health Buddy', sublabel: 'AI nutrition, meal tracking & wellness challenges', onPress: () => router.push('/wellness'), iconColor: '#10B981', iconBg: '#D1FAE5', badge: 'NEW', badgeBg: '#D1FAE5', badgeColor: '#059669' },
+            { key: 'services', visible: showHomeServices, icon: 'construct-outline', label: 'Home Services & Techs', sublabel: 'Electrician, plumber, AC repair & maids', onPress: () => router.push('/services'), iconColor: '#DB2777', iconBg: '#FCE7F3' },
+            { key: 'parking', visible: showParking, icon: 'car-outline', label: 'Parking Management', sublabel: 'Bay allocation & guest vehicle permits', onPress: () => router.push('/parking'), iconColor: '#4338CA', iconBg: '#E0E7FF' },
+            { key: 'vehicles', visible: showParking, icon: 'car-sport-outline', label: 'My Vehicles', sublabel: 'Register plates for resident gate access', onPress: () => router.push('/profile/vehicles'), iconColor: '#2563EB', iconBg: '#DBEAFE' },
+            { key: 'vehicle-care', visible: showVehicleCare, icon: 'car-sport-outline', label: 'Vehicle Care & Wash', sublabel: 'Doorstep wash, detailing & monthly plans', onPress: () => router.push('/vehicle-care'), iconColor: '#2563EB', iconBg: '#EFF6FF', badge: 'WASH', badgeBg: '#DBEAFE', badgeColor: '#2563EB' },
+            { key: 'trusted', visible: showVisitors, icon: 'people-circle-outline', label: 'Trusted Visitors', sublabel: 'Recurring maid, driver and family entry', onPress: () => router.push('/visitors/trusted'), iconColor: '#059669', iconBg: '#D1FAE5' },
+            { key: 'packages', visible: showVisitors, icon: 'cube-outline', label: 'Package Room', sublabel: 'Delivery collection and OTPs', onPress: () => router.push('/packages'), iconColor: '#D97706', iconBg: '#FEF3C7' },
+            { key: 'intercom', visible: showVisitors, icon: 'videocam-outline', label: 'Resident Intercom', sublabel: 'Call the gate guard before entry', onPress: () => router.push('/intercom'), iconColor: '#4F46E5', iconBg: '#E0E7FF' },
+            { key: 'helpdesk', visible: showHelpdesk, icon: 'headset-outline', label: 'Smart Helpdesk', sublabel: 'Society maintenance complaints & support', onPress: () => router.push('/helpdesk'), iconColor: '#D97706', iconBg: '#FEF3C7', badge: totalTicketsCount > 0 ? `${totalTicketsCount} Open` : undefined, badgeBg: '#FEF3C7', badgeColor: '#D97706' },
+            { key: 'food', visible: showFood, icon: 'restaurant-outline', label: 'Community Kitchen', sublabel: 'Home chefs, catering & daily meal orders', onPress: () => router.push('/food'), iconColor: '#E11D48', iconBg: '#FFE4E6' },
+            { key: 'automation', visible: showSmartHome, icon: 'hardware-chip-outline', label: 'Smart Home & IoT', sublabel: 'Automations, scenes & smart device schedules', onPress: () => router.push('/automation'), iconColor: '#7C3AED', iconBg: '#EDE9FE', badge: 'IoT', badgeBg: '#EDE9FE', badgeColor: '#7C3AED' },
+          ]}
         />
-        <View style={styles.menuSection}>
-          <MenuItem
-            icon="shield-checkmark-outline"
-            label="Gate & Visitors"
-            sublabel="Manage guest passes & delivery entry"
-            onPress={() => router.push('/visitors')}
-            iconColor="#0891B2"
-            iconBg="#CFFAFE"
-          />
-          <MenuItem
-            icon="fitness-outline"
-            label="Facility Bookings"
-            sublabel="Clubhouse, tennis, gym & pool slots"
-            onPress={() => router.push('/facilities')}
-            iconColor="#0D9488"
-            iconBg="#CCFBF1"
-          />
-                    <MenuItem
-            icon="medkit-outline"
-            label="Mana Health"
-            sublabel="Doctors, appointments, records & emergency"
-            onPress={() => router.push('/health')}
-            iconColor="#0D9488"
-            iconBg="#CCFBF1"
-          />
-          <MenuItem
-            icon="nutrition-outline"
-            label="Health Buddy"
-            sublabel="AI nutrition, meal tracking & wellness challenges"
-            onPress={() => router.push('/wellness')}
-            iconColor="#10B981"
-            iconBg="#D1FAE5"
-            badge="NEW"
-            badgeBg="#D1FAE5"
-            badgeColor="#059669"
-          />
-          <MenuItem
-            icon="construct-outline"
-            label="Home Services & Techs"
-            sublabel="Electrician, plumber, AC repair & maids"
-            onPress={() => router.push('/services')}
-            iconColor="#DB2777"
-            iconBg="#FCE7F3"
-          />
-          <MenuItem
-            icon="car-outline"
-            label="Parking Management"
-            sublabel="Bay allocation & guest vehicle permits"
-            onPress={() => router.push('/parking')}
-            iconColor="#4338CA"
-            iconBg="#E0E7FF"
-          />
-          {showHelpdesk && (
-            <MenuItem
-              icon="headset-outline"
-              label="Smart Helpdesk"
-              sublabel="Society maintenance complaints & support"
-              onPress={() => router.push('/helpdesk')}
-              iconColor="#D97706"
-              iconBg="#FEF3C7"
-              badge={totalTicketsCount > 0 ? `${totalTicketsCount} Open` : undefined}
-              badgeBg="#FEF3C7"
-              badgeColor="#D97706"
-            />
-          )}
-          <MenuItem
-            icon="restaurant-outline"
-            label="Community Kitchen"
-            sublabel="Home chefs, catering & daily meal orders"
-            onPress={() => router.push('/food')}
-            iconColor="#E11D48"
-            iconBg="#FFE4E6"
-          />
-          <MenuItem
-            icon="hardware-chip-outline"
-            label="Smart Home & IoT"
-            sublabel="Automations, scenes & smart device schedules"
-            onPress={() => router.push('/automation')}
-            iconColor="#7C3AED"
-            iconBg="#EDE9FE"
-            badge="IoT"
-            badgeBg="#EDE9FE"
-            badgeColor="#7C3AED"
-            isLast
-          />
-        </View>
 
         {/* ── Section 2: Finance & Society Governance ─────────────── */}
-        <HubSectionHeader
+        <HubMenuSection
           title="Finance & Governance"
           icon="card-outline"
           iconColor="#059669"
+          sectionStyle={styles.menuSection}
+          items={[
+            { key: 'finance', visible: showFinance, icon: 'card-outline', label: 'Maintenance & Bills', sublabel: 'Monthly dues, ledger & instant online pay', onPress: () => router.push('/finance'), iconColor: '#4F46E5', iconBg: '#EEF2FF', badge: pendingDuesTotal > 0 ? `₹${pendingDuesTotal}` : undefined, badgeBg: pendingDuesTotal > 0 ? '#FEE2E2' : '#DCFCE7', badgeColor: pendingDuesTotal > 0 ? '#DC2626' : '#059669' },
+            { key: 'bbps', visible: showPayments, icon: 'flash-outline', label: 'Mana Pay (BBPS Bills)', sublabel: 'Electricity, water, gas & broadband payments', onPress: () => router.push('/bbps'), iconColor: '#2563EB', iconBg: '#EFF6FF', badge: 'BBPS', badgeBg: '#EDE9FE', badgeColor: '#4F46E5' },
+            { key: 'recharge', visible: showPayments, icon: 'phone-portrait-outline', label: 'Mobile Recharge', sublabel: 'Jio, Airtel, Vi & BSNL instant plans', onPress: () => router.push('/recharge'), iconColor: '#0284C7', iconBg: '#F0F9FF', badge: 'NEW', badgeBg: '#DCFCE7', badgeColor: '#059669' },
+            { key: 'personal-finance', visible: showPersonalFinance, icon: 'wallet-outline', label: 'My Finance (Personal)', sublabel: 'Track income, expenses, budgets & savings', onPress: () => router.push('/personal-finance'), iconColor: '#10B981', iconBg: '#D1FAE5', badge: 'NEW', badgeBg: '#D1FAE5', badgeColor: '#059669' },
+            { key: 'fd', visible: showFixedDeposits, icon: 'business-outline', label: 'Fixed Deposits & Wealth', sublabel: 'Compare bank & NBFC rates', onPress: () => router.push('/fd'), iconColor: '#1D4ED8', iconBg: '#EFF6FF' },
+            { key: 'gold', visible: showDigitalGold, icon: 'sparkles-outline', label: 'Digital Gold & Vault', sublabel: 'Live 24K gold rates, buy & sell instantly', onPress: () => router.push('/gold'), iconColor: '#D97706', iconBg: '#FFFBEB', badge: '24K', badgeBg: '#FEF3C7', badgeColor: '#D97706' },
+            { key: 'mutual-funds', visible: showMutualFunds, icon: 'trending-up-outline', label: 'Mutual Funds & SIPs', sublabel: 'ELSS tax saving, index & equity funds', onPress: () => router.push('/mutual-funds'), iconColor: '#16A34A', iconBg: '#F0FDF4', badge: 'SIP', badgeBg: '#DCFCE7', badgeColor: '#16A34A' },
+            { key: 'loans', visible: showLoans, icon: 'cash-outline', label: 'Personal Loans', sublabel: 'Check loan offers & EMI calculator', onPress: () => router.push('/loans'), iconColor: '#DC2626', iconBg: '#FEF2F2' },
+            { key: 'split-bill', visible: showSplitBill, icon: 'pie-chart-outline', label: 'Mana Split (Group Bills)', sublabel: 'Split shared flat & event expenses with neighbors', onPress: () => router.push('/split-bill'), iconColor: '#7C3AED', iconBg: '#F5F3FF', badge: 'NEW', badgeBg: '#EDE9FE', badgeColor: '#7C3AED' },
+            { key: 'notices', visible: showNotices, icon: 'newspaper-outline', label: 'Notices & Circulars', sublabel: 'Official RWA announcements & guidelines', onPress: () => router.push('/notices'), iconColor: '#0284C7', iconBg: '#E0F2FE' },
+            { key: 'governance', visible: showGovernance, icon: 'business-outline', label: 'Society Governance & AGM', sublabel: 'Committee meetings, agenda & resolutions', onPress: () => router.push('/governance'), iconColor: '#7C3AED', iconBg: '#EDE9FE' },
+            { key: 'polls', visible: showPolls, icon: 'bar-chart-outline', label: 'Polls & Voting', sublabel: 'Participate in community decisions', onPress: () => router.push('/polls'), iconColor: '#9333EA', iconBg: '#F3E8FF' },
+          ]}
         />
-        <View style={styles.menuSection}>
-          {showFinance && (
-            <MenuItem
-              icon="card-outline"
-              label="Maintenance & Bills"
-              sublabel="Monthly dues, ledger & instant online pay"
-              onPress={() => router.push('/finance')}
-              iconColor="#4F46E5"
-              iconBg="#EEF2FF"
-              badge={pendingDuesTotal > 0 ? `₹${pendingDuesTotal}` : undefined}
-              badgeBg={pendingDuesTotal > 0 ? '#FEE2E2' : '#DCFCE7'}
-              badgeColor={pendingDuesTotal > 0 ? '#DC2626' : '#059669'}
-            />
-          )}
-          <MenuItem
-            icon="flash-outline"
-            label="Mana Pay (BBPS Bills)"
-            sublabel="Electricity, water, gas & broadband payments"
-            onPress={() => router.push('/bbps')}
-            iconColor="#2563EB"
-            iconBg="#EFF6FF"
-            badge="BBPS"
-            badgeBg="#EDE9FE"
-            badgeColor="#4F46E5"
-          />
-          <MenuItem
-            icon="phone-portrait-outline"
-            label="Mobile Recharge"
-            sublabel="Jio, Airtel, Vi & BSNL instant plans"
-            onPress={() => router.push('/recharge')}
-            iconColor="#0284C7"
-            iconBg="#F0F9FF"
-            badge="NEW"
-            badgeBg="#DCFCE7"
-            badgeColor="#059669"
-          />
-          <MenuItem
-            icon="wallet-outline"
-            label="My Finance (Personal)"
-            sublabel="Track income, expenses, budgets & savings"
-            onPress={() => router.push('/personal-finance')}
-            iconColor="#10B981"
-            iconBg="#D1FAE5"
-            badge="NEW"
-            badgeBg="#D1FAE5"
-            badgeColor="#059669"
-          />
-          <MenuItem
-            icon="newspaper-outline"
-            label="Notices & Circulars"
-            sublabel="Official RWA announcements & guidelines"
-            onPress={() => router.push('/notices')}
-            iconColor="#0284C7"
-            iconBg="#E0F2FE"
-            badge="ACTIVE"
-            badgeBg="#E0F2FE"
-            badgeColor="#0284C7"
-          />
-          <MenuItem
-            icon="business-outline"
-            label="Society Governance & AGM"
-            sublabel="Committee meetings, agenda & resolutions"
-            onPress={() => router.push('/governance')}
-            iconColor="#7C3AED"
-            iconBg="#EDE9FE"
-          />
-          {showPolls && (
-            <MenuItem
-              icon="bar-chart-outline"
-              label="Polls & Voting"
-              sublabel="Participate in community decisions"
-              onPress={() => router.push('/polls')}
-              iconColor="#9333EA"
-              iconBg="#F3E8FF"
-              isLast
-            />
-          )}
-        </View>
 
         {/* ── Section 3: Commerce & Community Social ──────────────── */}
-        <HubSectionHeader
+        <HubMenuSection
           title="Commerce & Social"
           icon="people-outline"
           iconColor="#DB2777"
+          sectionStyle={styles.menuSection}
+          items={[
+            { key: 'marketplace', visible: showMarketplace, icon: 'storefront-outline', label: 'Resident Marketplace', sublabel: 'Buy & sell verified pre-owned items', onPress: () => router.push('/tabs/marketplace'), iconColor: '#059669', iconBg: '#D1FAE5', badge: totalListingsCount > 0 ? `${totalListingsCount} Active` : undefined },
+            { key: 'group-buying', visible: showGroupBuying, icon: 'bag-handle-outline', label: 'Group Buying', sublabel: 'Wholesale bulk deals & discounts', onPress: () => router.push('/group-buying'), iconColor: '#059669', iconBg: '#ECFDF5' },
+            { key: 'procurement', visible: showProcurement, icon: 'business-outline', label: 'Procurement Hub', sublabel: 'RFQs, supplier quotes & purchase orders', onPress: () => router.push('/procurement' as any), iconColor: '#2563EB', iconBg: '#EFF6FF' },
+            { key: 'trips', visible: showTrips, icon: 'compass-outline', label: 'Community Trips & Treks', sublabel: 'Weekend getaways with fellow residents', onPress: () => router.push('/trips'), iconColor: '#0D9488', iconBg: '#CCFBF1' },
+            { key: 'kitty', visible: showKittyCircles, icon: 'sparkles-outline', label: 'Kitty & Social Circles', sublabel: 'Monthly pools, meetups, Housie & party vendors', onPress: () => router.push('/kitty-party/kittyPartyIndex' as any), iconColor: '#BE185D', iconBg: '#FCE7F3', badge: 'NEW', badgeBg: '#FCE7F3', badgeColor: '#BE185D' },
+            { key: 'sports', visible: showSports, icon: 'trophy-outline', label: 'Sports Leagues & Teams', sublabel: 'Cricket, badminton & football clubs', onPress: () => router.push('/sports'), iconColor: '#059669', iconBg: '#DCFCE7', badge: totalTeamsCount > 0 ? `${totalTeamsCount} Teams` : undefined },
+            { key: 'mobility', visible: showCommute, icon: 'navigate-circle-outline', label: 'Mobility Hub', sublabel: 'Carpool, group rides & on-demand', onPress: () => router.push('/mobility' as any), iconColor: '#2563EB', iconBg: '#DBEAFE' },
+            { key: 'commute', visible: showCommute, icon: 'car-sport-outline', label: 'Commute Carpool', sublabel: 'Rideshare with neighbors', onPress: () => router.push('/commute'), iconColor: '#0284C7', iconBg: '#CFFAFE' },
+            { key: 'pets', visible: showPets, icon: 'paw-outline', label: 'Pet Corner', sublabel: 'Society pet directory & playdates', onPress: () => router.push('/pets'), iconColor: '#9333EA', iconBg: '#F3E8FF' },
+            { key: 'auctions', visible: showMarketplace, icon: 'pricetag-outline', label: 'Live Auctions', sublabel: 'Bid on verified household goods', onPress: () => router.push('/auction'), iconColor: '#D97706', iconBg: '#FEF3C7' },
+            { key: 'movies', visible: showMovies, icon: 'film-outline', label: 'Community Movie Night', sublabel: 'Weekend theater screenings & seat reservations', onPress: () => router.push('/movies'), iconColor: '#E11D48', iconBg: '#FFE4E6', badge: 'CINEMA', badgeBg: '#FFE4E6', badgeColor: '#E11D48' },
+            { key: 'offers', visible: showOffers, icon: 'gift-outline', label: 'Offers & Deals', sublabel: 'Exclusive neighborhood partner perks', onPress: () => router.push('/offers'), iconColor: '#D97706', iconBg: '#FEF3C7', badge: 'NEW' },
+            { key: 'academy', visible: showAcademy, icon: 'school-outline', label: 'Mana Academy', sublabel: 'Classes, workshops & tutoring', onPress: () => router.push('/academy'), iconColor: '#7C3AED', iconBg: '#F3E8FF', badge: 'NEW' },
+            { key: 'cpos', visible: showCpos, icon: 'home-outline', label: 'Property OS (CPOS)', sublabel: 'Real estate & rental listings', onPress: () => router.push('/cpos'), iconColor: '#059669', iconBg: '#DCFCE7' },
+            { key: 'discover', visible: showDiscover, icon: 'sparkles-outline', label: 'Community Discover', sublabel: 'Neighbor talent, sports buddies, and skills', onPress: () => router.push('/discover' as any), iconColor: '#7C3AED', iconBg: '#EDE9FE', badge: 'AI MATCH', badgeBg: '#EDE9FE', badgeColor: '#7C3AED' },
+            { key: 'cpn', visible: showJobs, icon: 'briefcase-outline', label: 'Pro Network (CPN)', sublabel: 'Resident business directory', onPress: () => router.push('/cpn'), iconColor: '#2563EB', iconBg: '#EFF6FF' },
+            { key: 'jobs', visible: showJobs, icon: 'megaphone-outline', label: 'Community Job Board', sublabel: 'Local society hiring, gigs & tutoring', onPress: () => router.push('/jobs'), iconColor: '#7C3AED', iconBg: '#F3E8FF', badge: 'NEW', badgeBg: '#F3E8FF', badgeColor: '#7C3AED' },
+          ]}
         />
-        <View style={styles.menuSection}>
-          {showMarketplace && (
-            <MenuItem
-              icon="storefront-outline"
-              label="Resident Marketplace"
-              sublabel="Buy & sell verified pre-owned items"
-              onPress={() => router.push('/tabs/marketplace')}
-              iconColor="#059669"
-              iconBg="#D1FAE5"
-              badge={totalListingsCount > 0 ? `${totalListingsCount} Active` : undefined}
-            />
-          )}
-          {showGroupBuying && (
-            <MenuItem
-              icon="bag-handle-outline"
-              label="Group Buying"
-              sublabel="Wholesale bulk deals & discounts"
-              onPress={() => router.push('/group-buying')}
-              iconColor="#059669"
-              iconBg="#ECFDF5"
-            />
-          )}
-          <MenuItem
-            icon="business-outline"
-            label="Procurement Hub"
-            sublabel="RFQs, supplier quotes & purchase orders"
-            onPress={() => router.push('/procurement' as any)}
-            iconColor="#2563EB"
-            iconBg="#EFF6FF"
-          />
-          {showTrips && (
-            <MenuItem
-              icon="compass-outline"
-              label="Community Trips & Treks"
-              sublabel="Weekend getaways with fellow residents"
-              onPress={() => router.push('/trips')}
-              iconColor="#0D9488"
-              iconBg="#CCFBF1"
-            />
-          )}
-          {showSports && (
-            <MenuItem
-              icon="trophy-outline"
-              label="Sports Leagues & Teams"
-              sublabel="Cricket, badminton & football clubs"
-              onPress={() => router.push('/sports')}
-              iconColor="#059669"
-              iconBg="#DCFCE7"
-              badge={totalTeamsCount > 0 ? `${totalTeamsCount} Teams` : undefined}
-            />
-          )}
-          <MenuItem
-            icon="navigate-circle-outline"
-            label="Mobility Hub"
-            sublabel="Carpool, group rides & on-demand"
-            onPress={() => router.push('/mobility' as any)}
-            iconColor="#2563EB"
-            iconBg="#DBEAFE"
-          />
-          <MenuItem
-            icon="car-sport-outline"
-            label="Commute Carpool"
-            sublabel="Rideshare with neighbors"
-            onPress={() => router.push('/commute')}
-            iconColor="#0284C7"
-            iconBg="#CFFAFE"
-          />
-          <MenuItem
-            icon="paw-outline"
-            label="Pet Corner"
-            sublabel="Society pet directory & playdates"
-            onPress={() => router.push('/pets')}
-            iconColor="#9333EA"
-            iconBg="#F3E8FF"
-          />
-          <MenuItem
-            icon="pricetag-outline"
-            label="Live Auctions"
-            sublabel="Bid on verified household goods"
-            onPress={() => router.push('/auction')}
-            iconColor="#D97706"
-            iconBg="#FEF3C7"
-          />
-          <MenuItem
-            icon="gift-outline"
-            label="Offers & Deals"
-            sublabel="Exclusive neighborhood partner perks"
-            onPress={() => router.push('/offers')}
-            iconColor="#D97706"
-            iconBg="#FEF3C7"
-            badge="NEW"
-          />
-          <MenuItem
-            icon="school-outline"
-            label="Mana Academy"
-            sublabel="Classes, workshops & tutoring"
-            onPress={() => router.push('/academy')}
-            iconColor="#7C3AED"
-            iconBg="#F3E8FF"
-            badge="NEW"
-          />
-          <MenuItem
-            icon="home-outline"
-            label="Property OS (CPOS)"
-            sublabel="Real estate & rental listings"
-            onPress={() => router.push('/cpos')}
-            iconColor="#059669"
-            iconBg="#DCFCE7"
-          />
-          {showDiscover && (
-            <MenuItem
-              icon="sparkles-outline"
-              label="Community Discover"
-              sublabel="Neighbor talent, sports buddies, and skills"
-              onPress={() => router.push('/discover' as any)}
-              iconColor="#7C3AED"
-              iconBg="#EDE9FE"
-              badge="AI MATCH"
-              badgeBg="#EDE9FE"
-              badgeColor="#7C3AED"
-            />
-          )}
-          <MenuItem
-            icon="briefcase-outline"
-            label="Pro Network (CPN)"
-            sublabel="Resident business directory"
-            onPress={() => router.push('/cpn')}
-            iconColor="#2563EB"
-            iconBg="#EFF6FF"
-          />
-          <MenuItem
-            icon="megaphone-outline"
-            label="Community Job Board"
-            sublabel="Local society hiring, gigs & tutoring"
-            onPress={() => router.push('/jobs')}
-            iconColor="#7C3AED"
-            iconBg="#F3E8FF"
-            badge="NEW"
-            badgeBg="#F3E8FF"
-            badgeColor="#7C3AED"
-            isLast
-          />
-        </View>
 
         {/* ── Section 4: Account & Security ───────────────────────── */}
-        <HubSectionHeader
+        <HubMenuSection
           title="Account & Security"
           icon="lock-closed-outline"
           iconColor="#4B5563"
+          sectionStyle={styles.menuSection}
+          items={[
+            { key: 'emergency', visible: showEmergency, icon: 'alert-circle', label: 'Emergency SOS', sublabel: 'Instant security alert & on-call contacts', onPress: () => router.push('/emergency'), iconColor: '#DC2626', iconBg: '#FEE2E2', badge: '24x7', badgeBg: '#FEE2E2', badgeColor: '#DC2626' },
+            { key: 'ai-chat', visible: showAiAssistant, icon: 'sparkles-outline', label: 'Mana AI Assistant', sublabel: 'Society bylaws, amenities & instant answers', onPress: () => router.push('/ai-chat'), iconColor: '#6366F1', iconBg: '#EEF2FF', badge: 'AI', badgeBg: '#EEF2FF', badgeColor: '#6366F1' },
+            { key: 'notifications', icon: 'notifications-outline', label: 'Notification Preferences', sublabel: 'Push alerts, SMS & WhatsApp delivery', onPress: () => router.push('/settings/notifications'), iconColor: '#4F46E5', iconBg: '#EEF2FF', badge: unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined },
+            { key: 'household', visible: showHousehold, icon: 'home-outline', label: 'My Household', sublabel: 'Flat, family members and vehicles in one place', onPress: () => router.push('/household'), iconColor: '#0D9488', iconBg: '#CCFBF1' },
+            { key: 'family', visible: showHousehold, icon: 'people-outline', label: 'Family Members', sublabel: 'Register family so security knows who can enter', onPress: () => router.push('/profile/family'), iconColor: '#7C3AED', iconBg: '#F5F3FF' },
+            { key: 'vehicles-anpr', visible: showVisitors, icon: 'car-outline', label: 'ANPR Vehicle Passes', sublabel: 'Register vehicles for ANPR auto gate entry', onPress: () => router.push('/vehicles'), iconColor: '#2563EB', iconBg: '#DBEAFE' },
+            { key: 'kyc', icon: 'finger-print-outline', label: 'KYC Verification', sublabel: 'Submit Aadhaar / PAN for identity verification', onPress: () => router.push('/profile/kyc'), iconColor: '#059669', iconBg: '#D1FAE5' },
+            { key: 'reputation', visible: showHousehold, icon: 'ribbon-outline', label: 'Reputation & Identity', sublabel: 'Community score, badges and moving token', onPress: () => router.push('/profile/reputation'), iconColor: '#6366F1', iconBg: '#EEF2FF' },
+            { key: 'privacy', icon: 'shield-checkmark-outline', label: 'Privacy & GDPR Settings', sublabel: 'Directory visibility, data export & erasure', onPress: () => router.push('/settings/privacy'), iconColor: '#059669', iconBg: '#D1FAE5' },
+            { key: 'security', icon: 'finger-print-outline', label: 'App Lock & Biometrics', sublabel: 'Fingerprint, Face ID, PIN & pattern protection', onPress: () => router.push('/settings/security' as any), iconColor: '#4F46E5', iconBg: '#EEF2FF' },
+            { key: 'password', icon: 'lock-closed-outline', label: 'Change Password', sublabel: 'Update your login credentials', onPress: () => router.push('/settings/password'), iconColor: '#4B5563', iconBg: '#F3F4F6' },
+            { key: 'community-info', icon: 'people-outline', label: 'My Community Info', sublabel: 'Society bylaws, contacts & office hours', onPress: () => router.push('/community'), iconColor: '#4B5563', iconBg: '#F3F4F6' },
+            { key: 'activity', icon: 'time-outline', label: 'My Activity Log', sublabel: 'Recent logins, bookings & transactions', onPress: () => router.push('/activity'), iconColor: '#4B5563', iconBg: '#F3F4F6' },
+            { key: 'appearance', icon: isDark ? 'sunny-outline' : 'moon-outline', label: 'App Theme Mode', sublabel: isDark ? 'Midnight Dark Theme active (tap for Light)' : 'Lavender Light & Cobalt Theme active (tap for Dark)', onPress: toggleTheme, iconColor: palette.link, iconBg: palette.primaryLight, badge: isDark ? 'DARK' : 'LIGHT', badgeBg: palette.primaryLight, badgeColor: palette.link },
+            { key: 'settings', icon: 'settings-outline', label: 'General App Settings', sublabel: 'Language, theme & offline cache', onPress: () => router.push('/settings'), iconColor: '#4B5563', iconBg: '#F3F4F6' },
+          ]}
         />
-        <View style={styles.menuSection}>
-          {showEmergency && (
-            <MenuItem
-              icon="alert-circle"
-              label="Emergency SOS"
-              sublabel="Instant security alert & on-call contacts"
-              onPress={() => router.push('/emergency')}
-              iconColor="#DC2626"
-              iconBg="#FEE2E2"
-              badge="24x7"
-              badgeBg="#FEE2E2"
-              badgeColor="#DC2626"
-            />
-          )}
-          <MenuItem
-            icon="sparkles-outline"
-            label="Mana AI Assistant"
-            sublabel="Society bylaws, amenities & instant answers"
-            onPress={() => router.push('/ai-chat')}
-            iconColor="#6366F1"
-            iconBg="#EEF2FF"
-            badge="AI"
-            badgeBg="#EEF2FF"
-            badgeColor="#6366F1"
-          />
-          <MenuItem
-            icon="notifications-outline"
-            label="Notification Preferences"
-            sublabel="Push alerts, SMS & WhatsApp delivery"
-            onPress={() => router.push('/settings/notifications')}
-            iconColor="#4F46E5"
-            iconBg="#EEF2FF"
-            badge={unreadNotifsCount > 0 ? `${unreadNotifsCount}` : undefined}
-          />
-          <MenuItem
-            icon="shield-checkmark-outline"
-            label="Privacy & GDPR Settings"
-            sublabel="Directory visibility, data export & erasure"
-            onPress={() => router.push('/settings/privacy')}
-            iconColor="#059669"
-            iconBg="#D1FAE5"
-          />
-          <MenuItem
-            icon="finger-print-outline"
-            label="App Lock & Biometrics"
-            sublabel="Fingerprint, Face ID, PIN & pattern protection"
-            onPress={() => router.push('/settings/security' as any)}
-            iconColor="#4F46E5"
-            iconBg="#EEF2FF"
-          />
-          <MenuItem
-            icon="lock-closed-outline"
-            label="Change Password"
-            sublabel="Update your login credentials"
-            onPress={() => router.push('/settings/password')}
-            iconColor="#4B5563"
-            iconBg="#F3F4F6"
-          />
-          <MenuItem
-            icon="people-outline"
-            label="My Community Info"
-            sublabel="Society bylaws, contacts & office hours"
-            onPress={() => router.push('/community')}
-            iconColor="#4B5563"
-            iconBg="#F3F4F6"
-          />
-          <MenuItem
-            icon="time-outline"
-            label="My Activity Log"
-            sublabel="Recent logins, bookings & transactions"
-            onPress={() => router.push('/activity')}
-            iconColor="#4B5563"
-            iconBg="#F3F4F6"
-          />
-          <MenuItem
-            icon="settings-outline"
-            label="General App Settings"
-            sublabel="Language, theme & offline cache"
-            onPress={() => router.push('/settings')}
-            iconColor="#4B5563"
-            iconBg="#F3F4F6"
-            isLast
-          />
-        </View>
 
         {/* ── Sign Out ────────────────────────────────────────────── */}
         <View style={styles.signOutWrap}>
@@ -1058,12 +982,13 @@ export default function ProfileScreen() {
         {/* App Version Info */}
         <View style={styles.footerWrap}>
           <Text style={styles.footerAppTitle}>Mana Community Mobile</Text>
-          <Text style={styles.footerVersion}>Version 1.0.0 (Build 2026.09)</Text>
+          <Text style={styles.footerVersion}>Version {CONFIG.VERSION}</Text>
           <Text style={styles.footerCopyright}>
             Connected to {communityName} • All rights reserved
           </Text>
         </View>
       </ScrollView>
+      </View>
 
       {/* ── Digital Resident Pass Modal ──────────────────────────── */}
       <Modal visible={passModalVisible} animationType="fade" transparent>
@@ -1079,7 +1004,7 @@ export default function ProfileScreen() {
               <View style={styles.passTopRow}>
                 <View style={styles.passLogoWrap}>
                   <Ionicons name="shield-checkmark" size={18} color="#FDE047" />
-                  <Text style={styles.passLogoText}>MANA RESIDENCY</Text>
+                  <Text style={styles.passLogoText}>{communityName.toUpperCase()}</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.passCloseBtn}
@@ -1109,11 +1034,11 @@ export default function ProfileScreen() {
                 <View style={styles.passProfileInfo}>
                   <Text style={styles.passName}>{displayName}</Text>
                   <Text style={styles.passUnit}>
-                    {tower || 'Tower A'} • Flat {flatNumber || '402'}
+                    {[tower, flatNumber ? `Flat ${flatNumber}` : null].filter(Boolean).join(' • ') || 'Unit not assigned'}
                   </Text>
                   <View style={styles.passRoleTag}>
                     <Text style={styles.passRoleText}>
-                      {user.residentType || 'RESIDENT OWNER'}
+                      {user.residentType || primaryRoleLabel}
                     </Text>
                   </View>
                 </View>
@@ -1127,25 +1052,29 @@ export default function ProfileScreen() {
               </View>
 
               <Text style={styles.passBarcodeInstruction}>
-                Scan at Security Gate 1 & 2 for Priority Entry
+                Scan at Security Gate for Priority Entry
               </Text>
 
               <View style={styles.passMetaDetails}>
                 <View style={styles.passMetaItem}>
                   <Text style={styles.passMetaLabel}>MEMBER ID</Text>
                   <Text style={styles.passMetaVal}>
-                    MANA-{user.id ? String(user.id).padStart(4, '0') : '0104'}
+                    {user.id ? `MANA-${String(user.id).padStart(4, '0')}` : 'PENDING'}
                   </Text>
                 </View>
                 <View style={styles.passMetaDivider} />
                 <View style={styles.passMetaItem}>
                   <Text style={styles.passMetaLabel}>VALIDITY</Text>
-                  <Text style={styles.passMetaVal}>2026 - 2027</Text>
+                  <Text style={styles.passMetaVal}>
+                    {`${new Date().getFullYear()} - ${new Date().getFullYear() + 1}`}
+                  </Text>
                 </View>
                 <View style={styles.passMetaDivider} />
                 <View style={styles.passMetaItem}>
                   <Text style={styles.passMetaLabel}>STATUS</Text>
-                  <Text style={[styles.passMetaVal, { color: '#059669' }]}>VERIFIED</Text>
+                  <Text style={[styles.passMetaVal, { color: user.status === 'ACTIVE' ? '#059669' : '#D97706' }]}>
+                    {user.status === 'ACTIVE' ? 'VERIFIED' : (user.status || 'PENDING')}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -1181,12 +1110,79 @@ export default function ProfileScreen() {
         name={displayName}
         subtitle={[tower, flatNumber].filter(Boolean).join(' • ') || communityName}
       />
+
+      {/* Join Community Modal */}
+      <JoinCommunityModal
+        visible={joinModalVisible}
+        onClose={() => setJoinModalVisible(false)}
+        onSuccess={() => {
+          refetchProfile();
+          onRefresh();
+        }}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // ── Standalone Join Community Action Card ────────────────────────
+  joinCommCardWrap: {
+    paddingHorizontal: 16,
+    marginTop: 14,
+  },
+  joinCommCard: {
+    borderWidth: 1,
+    borderRadius: RADIUS.xl,
+    padding: 16,
+    ...SHADOWS.sm,
+  },
+  joinCommRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  joinCommIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinCommInfo: {
+    flex: 1,
+  },
+  joinCommTitle: {
+    fontSize: 15,
+    fontFamily: FONTS.displayBold,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  joinCommSub: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  joinCommBtnWrap: {
+    marginTop: 4,
+  },
+  joinCommBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 16,
+  },
+  joinCommBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  bodyWrap: {
     flex: 1,
     backgroundColor: THEME.background,
   },
@@ -1197,45 +1193,51 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   scroll: {
-    paddingBottom: 40,
+    paddingTop: 10,
+    paddingBottom: 108,
   },
 
   // ── Top Navigation Bar ──────────────────────────────────────────
   topBar: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: THEME.surface,
     borderBottomWidth: 1,
-    borderBottomColor: THEME.border,
+    borderColor: THEME.border,
+    ...SHADOWS.sm,
   },
   topBarLeft: {
     flex: 1,
   },
   topBarTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontFamily: FONTS.displayBold,
     fontWeight: '800',
     color: THEME.textPrimary,
     letterSpacing: -0.3,
   },
   topBarSubtitle: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: THEME.textSecondary,
     marginTop: 1,
+    fontFamily: FONTS.medium,
   },
   topBarActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
   },
   topBarIconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#F3F4F6',
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: '#F2F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',

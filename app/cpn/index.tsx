@@ -208,7 +208,14 @@ export default function CPNScreen() {
             {/* ── TAB 0: FEED ─────────────────────────────────────────── */}
             {activeTab === 'FEED' && (
               <View style={styles.tabContent}>
-                {filteredFeed.map((post) => (
+                {filteredFeed.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="newspaper-outline" size={44} color="#94A3B8" />
+                    <Text style={styles.emptyTitle}>No Posts Yet</Text>
+                    <Text style={styles.emptySub}>Be the first to share career updates or project insights with your community.</Text>
+                  </View>
+                ) : (
+                  filteredFeed.map((post) => (
                   <View key={post.id} style={styles.feedCard}>
                     <View style={styles.feedHeaderRow}>
                       <View style={styles.feedAvatar}>
@@ -303,14 +310,21 @@ export default function CPNScreen() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                ))}
+                )))}
               </View>
             )}
 
             {/* ── TAB 1: DIRECTORY ────────────────────────────────────── */}
             {activeTab === 'DIRECTORY' && (
               <View style={styles.tabContent}>
-                {filteredDirectory.map((p) => (
+                {filteredDirectory.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="people-outline" size={44} color="#94A3B8" />
+                    <Text style={styles.emptyTitle}>No Members Found</Text>
+                    <Text style={styles.emptySub}>No professional profiles matched your search or filters.</Text>
+                  </View>
+                ) : (
+                  filteredDirectory.map((p) => (
                   <View key={p.id} style={styles.profileCard}>
                     <View style={styles.profileTopRow}>
                       <View style={styles.profileAvatar}>
@@ -362,7 +376,7 @@ export default function CPNScreen() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                ))}
+                )))}
               </View>
             )}
 
@@ -374,7 +388,14 @@ export default function CPNScreen() {
                   <Text style={styles.sectionSub}>Get directly referred by flat owners at top tech & finance firms</Text>
                 </View>
 
-                {jobs.map((job) => (
+                {jobs.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="briefcase-outline" size={44} color="#94A3B8" />
+                    <Text style={styles.emptyTitle}>No Job Openings</Text>
+                    <Text style={styles.emptySub}>No active referral postings right now. Check back soon!</Text>
+                  </View>
+                ) : (
+                  jobs.map((job) => (
                   <View key={job.id} style={styles.jobCard}>
                     <View style={styles.jobHeader}>
                       <View style={{ flex: 1 }}>
@@ -417,7 +438,7 @@ export default function CPNScreen() {
                       <Text style={styles.applyReferralBtnText}>Request Neighbor Referral</Text>
                     </TouchableOpacity>
                   </View>
-                ))}
+                )))}
               </View>
             )}
 
@@ -429,7 +450,14 @@ export default function CPNScreen() {
                   <Text style={styles.sectionSub}>Book 30-min coffee chats or mock interviews with neighborhood leaders</Text>
                 </View>
 
-                {mentors.map((m) => (
+                {mentors.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="school-outline" size={44} color="#94A3B8" />
+                    <Text style={styles.emptyTitle}>No Mentors Available</Text>
+                    <Text style={styles.emptySub}>No resident mentors are currently accepting bookings.</Text>
+                  </View>
+                ) : (
+                  mentors.map((m) => (
                   <View key={m.id} style={styles.mentorCard}>
                     <View style={styles.mentorHeader}>
                       <View style={{ flex: 1 }}>
@@ -466,7 +494,7 @@ export default function CPNScreen() {
                       ))}
                     </View>
                   </View>
-                ))}
+                )))}
               </View>
             )}
 
@@ -914,5 +942,27 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: 'DMSans-Medium',
     fontWeight: '700',
+  },
+  emptyCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+    fontFamily: 'Outfit-Bold',
+    marginTop: 4,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    fontFamily: 'DMSans-Regular',
+    lineHeight: 18,
   },
 });

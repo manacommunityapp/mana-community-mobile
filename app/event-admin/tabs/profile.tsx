@@ -109,6 +109,7 @@ export default function EventAdminProfileScreen() {
 
         <Text style={s.sectionHeader}>Account</Text>
         <View style={s.menuSection}>
+          <MenuItem icon="arrow-back-outline" label="Return to Resident App" onPress={() => router.replace('/tabs/feed')} iconColor="#4F46E5" iconBg="#EEF2FF" />
           <MenuItem icon="notifications-outline" label="Notifications" onPress={() => router.push('/notifications')} />
           <MenuItem icon="lock-closed-outline" label="Change Password" onPress={() => {}} />
         </View>

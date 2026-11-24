@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  Switch,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -52,8 +51,6 @@ export default function PlansScreen() {
   const [selectedPlan, setSelectedPlan] = useState<RechargePlan | null>(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
-  const [enableExpiryReminder, setEnableExpiryReminder] = useState(true);
-  const [enableAutoQueue, setEnableAutoQueue] = useState(true);
 
   const operatorColor = params.operatorColor || COLORS.primary;
 
@@ -118,24 +115,27 @@ export default function PlansScreen() {
         rechargeType: (params.rechargeType as RechargeType) || 'PREPAID',
       });
 
-      // Attempt to open PhonePe or standard UPI app
+      // This is only a payment-app handoff until a provider order/status API is wired.
       const canPhonePe = await Linking.canOpenURL(result.phonePeUrl).catch(() => false);
+      let opened = false;
       if (canPhonePe) {
         await Linking.openURL(result.phonePeUrl);
+        opened = true;
       } else {
         const canUpi = await Linking.canOpenURL(result.upiIntentUrl).catch(() => false);
         if (canUpi) {
           await Linking.openURL(result.upiIntentUrl);
-        } else {
-          setShowCheckoutModal(false);
-          const expiryDateStr = getCalculatedExpiryDate(selectedPlan.validity);
-          Alert.alert(
-            'Recharge Queued Successfully',
-            `Recharge of ₹${selectedPlan.price} initiated for +91 ${params.mobile}.\n\nReference: ${result.transactionId}\nValid till: ${expiryDateStr || selectedPlan.validity}\n\n🛡️ Queued Activation: Your operator will activate this pack on expiry. You will receive an expiry reminder 24h prior.`,
-            [{ text: 'Back to Services', onPress: () => router.replace('/services') }]
-          );
+          opened = true;
         }
       }
+      setShowCheckoutModal(false);
+      Alert.alert(
+        opened ? 'Payment handoff started' : 'Payment app unavailable',
+        opened
+          ? `Complete payment in your UPI app. Mana has not confirmed the recharge yet. Reference: ${result.transactionId}`
+          : 'Install or enable a UPI app, then try again. No recharge was confirmed.',
+        [{ text: 'OK' }],
+      );
     } catch (err: any) {
       Alert.alert('Payment Error', err?.message || 'Unable to open payment app. Please try again.');
     } finally {
@@ -205,10 +205,10 @@ export default function PlansScreen() {
       </View>
 
       {/* ── Expiry Queuing Protection Assurance ───────────────── */}
-      <View style={s.queueAssuranceStrip}>
-        <Ionicons name="shield-checkmark" size={16} color="#059669" />
+      <View style={[s.queueAssuranceStrip, { backgroundColor: '#FFF7ED', borderBottomColor: '#FED7AA' }]}>
+        <Ionicons name="information-circle" size={16} color="#C2410C" />
         <Text style={s.queueAssuranceText}>
-          <Text style={{ fontFamily: FONTS.bold, color: '#065F46' }}>Zero Days Lost:</Text> Recharges queue automatically with your operator. New pack activates the minute your current pack ends.
+          <Text style={{ fontFamily: FONTS.bold, color: '#9A3412' }}>Provider confirmation pending:</Text> this app currently hands payment to UPI and cannot confirm operator activation.
         </Text>
       </View>
 
@@ -499,22 +499,9 @@ export default function PlansScreen() {
                   <Text style={s.summaryValue}>₹{selectedPlan.price}.00</Text>
                 </View>
                 <View style={s.summaryRow}>
-                  <Text style={s.summaryLabel}>Calculated Expiry Date</Text>
+                  <Text style={s.summaryLabel}>Plan validity</Text>
                   <Text style={[s.summaryValue, { color: COLORS.primary, fontFamily: FONTS.bold }]}>
-                    Valid till {getCalculatedExpiryDate(selectedPlan.validity) || selectedPlan.validity}
-                  </Text>
-                </View>
-                <View style={s.summaryRow}>
-                  <Text style={s.summaryLabel}>Platform & Convenience Fee</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={s.feeStrikethrough}>₹3.00</Text>
-                    <Text style={s.feeFreeText}>FREE</Text>
-                  </View>
-                </View>
-                <View style={s.summaryRow}>
-                  <Text style={s.summaryLabel}>Society Cashback (2%)</Text>
-                  <Text style={s.cashbackValue}>
-                    + ₹{Math.round(selectedPlan.price * 0.02)} Points
+                    {selectedPlan.validity}
                   </Text>
                 </View>
 
@@ -526,39 +513,6 @@ export default function PlansScreen() {
                 </View>
               </View>
             )}
-
-            {/* Expiry Intelligence Toggles */}
-            <View style={s.expirySettingsBox}>
-              <View style={s.toggleSettingRow}>
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={s.settingTitle}>Auto-Queue on Current Expiry</Text>
-                  <Text style={s.settingDesc}>
-                    Avoid losing remaining days. Operator activates pack when current pack ends.
-                  </Text>
-                </View>
-                <Switch
-                  value={enableAutoQueue}
-                  onValueChange={setEnableAutoQueue}
-                  trackColor={{ false: '#CBD5E1', true: COLORS.primaryLight }}
-                  thumbColor={enableAutoQueue ? COLORS.primary : '#F1F5F9'}
-                />
-              </View>
-
-              <View style={[s.toggleSettingRow, { borderTopWidth: 1, borderTopColor: COLORS.borderLight, paddingTop: 8 }]}>
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={s.settingTitle}>Notify 24h Before Expiry</Text>
-                  <Text style={s.settingDesc}>
-                    Get reminder via WhatsApp & Mana App before this pack expires.
-                  </Text>
-                </View>
-                <Switch
-                  value={enableExpiryReminder}
-                  onValueChange={setEnableExpiryReminder}
-                  trackColor={{ false: '#CBD5E1', true: COLORS.primaryLight }}
-                  thumbColor={enableExpiryReminder ? COLORS.primary : '#F1F5F9'}
-                />
-              </View>
-            </View>
 
             {/* Pay Button */}
             <TouchableOpacity

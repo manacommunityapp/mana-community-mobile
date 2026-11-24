@@ -62,11 +62,11 @@ export default function PackagesScreen() {
       <FlatList
         style={{ flex: 1 }}
         data={packages}
-        keyExtractor={item => item.id}
+        keyExtractor={item => String(item.id)}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#4F46E5']} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); }} colors={['#4F46E5']} />}
         renderItem={({ item }) => {
-          const pCfg = PAYMENT_STATUS[item.paymentStatus] || PAYMENT_STATUS.DUE;
+          const pCfg = PAYMENT_STATUS[item.paymentStatus ?? 'DUE'] || PAYMENT_STATUS.DUE;
 
           return (
             <View style={styles.card}>
@@ -77,13 +77,13 @@ export default function PackagesScreen() {
                   <Text style={styles.staffRole}>{item.role} • 🏠 Unit {item.flatNumber}</Text>
                 </View>
                 <View style={styles.salaryCol}>
-                  <Text style={styles.salaryAmount}>₹{item.monthlySalary.toLocaleString()}</Text>
-                  <Text style={styles.salaryFreq}>/{item.packageType.toLowerCase()}</Text>
+                  <Text style={styles.salaryAmount}>₹{(item.monthlySalary ?? 0).toLocaleString()}</Text>
+                  <Text style={styles.salaryFreq}>/{(item.packageType ?? 'monthly').toLowerCase()}</Text>
                 </View>
               </View>
 
               <View style={styles.servicesRow}>
-                {item.services.map((svc, i) => (
+                {(item.services ?? []).map((svc, i) => (
                   <View key={i} style={styles.serviceChip}>
                     <Text style={styles.serviceCheck}>✓</Text>
                     <Text style={styles.serviceChipText}>{svc}</Text>
@@ -101,7 +101,7 @@ export default function PackagesScreen() {
 
               <TouchableOpacity
                 style={styles.payBtn}
-                onPress={() => Alert.alert('Confirm Salary Payment', `Record payment of ₹${item.monthlySalary.toLocaleString()} to ${item.staffName}?`, [
+                onPress={() => Alert.alert('Confirm Salary Payment', `Record payment of ₹${(item.monthlySalary ?? 0).toLocaleString()} to ${item.staffName}?`, [
                   { text: 'Cancel' },
                   { text: 'Mark Paid', onPress: () => Alert.alert('Success', 'Payment recorded!') }
                 ])}

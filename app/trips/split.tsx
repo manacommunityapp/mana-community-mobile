@@ -11,7 +11,7 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +24,11 @@ import {
   ExpenseRequest,
   PaymentRequest,
 } from '@/services/tripSplitService';
+import {
+  tripP2PService,
+  P2PDebt,
+  P2PDebtStatus,
+} from '@/services/tripP2PService';
 
 const CATEGORIES = [
   { code: 'ACCOMMODATION', label: 'Hotel & Stay', icon: 'bed-outline' },
@@ -44,12 +49,15 @@ export default function TripSplitScreen() {
   const tripId = params.tripId || 'TRP-1';
   const tripTitle = params.tripTitle || 'Community Trip';
 
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'EXPENSES' | 'SETTLEMENTS'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'EXPENSES' | 'SETTLEMENTS' | 'P2P_COLLECT'>('OVERVIEW');
   const [refreshing, setRefreshing] = useState(false);
 
   // Modals state
   const [addExpenseModalVisible, setAddExpenseModalVisible] = useState(false);
   const [settleModalVisible, setSettleModalVisible] = useState(false);
+  const [addDebtModalVisible, setAddDebtModalVisible] = useState(false);
+  const [collectModalVisible, setCollectModalVisible] = useState(false);
+  const [selectedDebtForCollect, setSelectedDebtForCollect] = useState<P2PDebt | null>(null);
 
   // Form: Expense
   const [expenseCat, setExpenseCat] = useState('FOOD');
@@ -63,6 +71,12 @@ export default function TripSplitScreen() {
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState('UPI');
   const [payRef, setPayRef] = useState('');
+
+  // Form: P2P Debt & Collect
+  const [p2pDebtorId, setP2pDebtorId] = useState('');
+  const [p2pAmount, setP2pAmount] = useState('');
+  const [p2pDescription, setP2pDescription] = useState('');
+  const [p2pUpiVpa, setP2pUpiVpa] = useState('');
 
   // ── Queries ─────────────────────────────────────────────────────────
   const {
@@ -109,6 +123,15 @@ export default function TripSplitScreen() {
     queryFn: () => tripSplitService.getMyMoneyPrefs(tripId),
   });
 
+  const {
+    data: p2pDebts = [],
+    isLoading: loadingP2P,
+    refetch: refetchP2P,
+  } = useQuery({
+    queryKey: ['trip-p2p-debts', tripId],
+    queryFn: () => tripP2PService.listDebts(tripId),
+  });
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -118,11 +141,12 @@ export default function TripSplitScreen() {
         refetchSettlements(),
         refetchPayments(),
         refetchPrefs(),
+        refetchP2P(),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [refetchBudget, refetchExpenses, refetchSettlements, refetchPayments, refetchPrefs]);
+  }, [refetchBudget, refetchExpenses, refetchSettlements, refetchPayments, refetchPrefs, refetchP2P]);
 
   // ── Mutations ───────────────────────────────────────────────────────
   const createExpenseMutation = useMutation({
@@ -237,6 +261,79 @@ export default function TripSplitScreen() {
     });
   };
 
+  const createDebtMutation = useMutation({
+    mutationFn: async () => {
+      const uid = parseInt(p2pDebtorId, 10);
+      const amt = parseFloat(p2pAmount);
+      return await tripP2PService.createDebt(tripId, {
+        debtorUserId: uid,
+        amount: amt,
+        description: p2pDescription.trim(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trip-p2p-debts', tripId] });
+      setAddDebtModalVisible(false);
+      setP2pDebtorId('');
+      setP2pAmount('');
+      setP2pDescription('');
+      Alert.alert('Success', 'P2P debt record created.');
+    },
+    onError: (err: any) => {
+      Alert.alert('Error', err?.response?.data?.message || err?.message || 'Failed to create debt record.');
+    },
+  });
+
+  const initiateCollectMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedDebtForCollect) throw new Error('No debt selected');
+      return await tripP2PService.initiateCollect(selectedDebtForCollect.id, {
+        upiVpa: p2pUpiVpa.trim(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trip-p2p-debts', tripId] });
+      setCollectModalVisible(false);
+      setSelectedDebtForCollect(null);
+      setP2pUpiVpa('');
+      Alert.alert('Collect Sent', 'UPI Collect request has been initiated to the debtor.');
+    },
+    onError: (err: any) => {
+      Alert.alert('Error', err?.response?.data?.message || err?.message || 'Failed to initiate UPI collect.');
+    },
+  });
+
+  const cancelDebtMutation = useMutation({
+    mutationFn: async (debtId: number) => {
+      return await tripP2PService.cancelDebt(debtId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trip-p2p-debts', tripId] });
+      Alert.alert('Cancelled', 'Debt record cancelled.');
+    },
+    onError: (err: any) => {
+      Alert.alert('Error', err?.response?.data?.message || err?.message || 'Could not cancel debt.');
+    },
+  });
+
+  const handleCreateDebt = () => {
+    const uid = parseInt(p2pDebtorId, 10);
+    const amt = parseFloat(p2pAmount);
+    if (!uid || isNaN(amt) || amt <= 0 || !p2pDescription.trim()) {
+      Alert.alert('Invalid', 'All fields required. Debtor user ID and valid amount required.');
+      return;
+    }
+    createDebtMutation.mutate();
+  };
+
+  const handleInitiateCollect = () => {
+    if (!p2pUpiVpa.trim() || !p2pUpiVpa.includes('@')) {
+      Alert.alert('Invalid VPA', 'Please enter a valid UPI ID (e.g. name@upi).');
+      return;
+    }
+    initiateCollectMutation.mutate();
+  };
+
   const currentUserId = user?.id || (user as any)?.userId;
 
   return (
@@ -287,6 +384,15 @@ export default function TripSplitScreen() {
         >
           <Text style={[styles.tabText, activeTab === 'SETTLEMENTS' && styles.tabTextActive]}>
             Settlements ({settlements.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === 'P2P_COLLECT' && styles.tabItemActive]}
+          onPress={() => setActiveTab('P2P_COLLECT')}
+        >
+          <Text style={[styles.tabText, activeTab === 'P2P_COLLECT' && styles.tabTextActive]}>
+            UPI Collect ({p2pDebts.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -521,6 +627,22 @@ export default function TripSplitScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* P2P UPI Collect entry point */}
+          <Link
+            href={{ pathname: '/trips/p2p', params: { tripId, tripTitle } }}
+            asChild
+          >
+            <TouchableOpacity style={styles.p2pBanner}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.p2pBannerTitle}>P2P UPI Collect</Text>
+                <Text style={styles.p2pBannerSub}>
+                  Paid for someone's trip fee? Send them a UPI collect request.
+                </Text>
+              </View>
+              <Ionicons name="phone-portrait-outline" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
+          </Link>
+
           {settlements.length === 0 ? (
             <View style={styles.emptyWrap}>
               <Ionicons name="checkmark-circle" size={40} color="#059669" />
@@ -574,6 +696,103 @@ export default function TripSplitScreen() {
                 );
               })}
             </View>
+          )}
+        </View>
+      )}
+
+      {/* ════════ TAB 4: P2P UPI COLLECT ════════ */}
+      {activeTab === 'P2P_COLLECT' && (
+        <View style={styles.tabContentWrap}>
+          <TouchableOpacity
+            style={[styles.addExpenseBannerBtn, { backgroundColor: '#4F46E5' }]}
+            onPress={() => setAddDebtModalVisible(true)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+            <Text style={styles.addExpenseBannerText}>Add P2P Debt Record</Text>
+          </TouchableOpacity>
+
+          <View style={styles.infoBanner}>
+            <Ionicons name="information-circle-outline" size={16} color="#4F46E5" />
+            <Text style={styles.infoBannerText}>
+              Send UPI Collect requests directly to debited participants via BHIM/UPI. Real-time updates once approved.
+            </Text>
+          </View>
+
+          {loadingP2P ? (
+            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: SPACING.md }} />
+          ) : p2pDebts.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <Ionicons name="receipt-outline" size={44} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>No P2P Debts Recorded</Text>
+              <Text style={styles.emptySub}>
+                Add individual debt records for expenses paid on behalf of others to trigger UPI Collect.
+              </Text>
+            </View>
+          ) : (
+            p2pDebts.map((d) => {
+              const statusCfg: Record<P2PDebtStatus, { label: string; color: string; bg: string }> = {
+                PENDING_VPA: { label: 'Awaiting VPA', color: '#64748B', bg: '#F1F5F9' },
+                COLLECT_INITIATED: { label: 'Collect Sent', color: '#D97706', bg: '#FEF3C7' },
+                COLLECT_APPROVED: { label: 'Settled', color: '#059669', bg: '#D1FAE5' },
+                COLLECT_REJECTED: { label: 'Rejected', color: '#DC2626', bg: '#FEE2E2' },
+                COLLECT_EXPIRED: { label: 'Expired', color: '#6B7280', bg: '#F3F4F6' },
+                CANCELLED: { label: 'Cancelled', color: '#9CA3AF', bg: '#F3F4F6' },
+              };
+              const st = statusCfg[d.status] || statusCfg.PENDING_VPA;
+              const isCreditor = String(d.creditorUserId) === String(currentUserId);
+              const canInitiate = (d.status === 'PENDING_VPA' || d.status === 'COLLECT_REJECTED') && isCreditor;
+              const canCancel = d.status === 'PENDING_VPA' && isCreditor;
+
+              return (
+                <View key={d.id} style={styles.p2pCard}>
+                  <View style={styles.p2pCardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.p2pCardTitle}>
+                        {d.debtorName ? d.debtorName : `User #${d.debtorUserId}`}
+                      </Text>
+                      <Text style={styles.p2pCardSub}>
+                        {d.description || 'Trip expense debt'}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.p2pCardAmount}>₹{d.amount.toLocaleString()}</Text>
+                      <View style={[styles.p2pStatusBadge, { backgroundColor: st.bg }]}>
+                        <Text style={[styles.p2pStatusText, { color: st.color }]}>{st.label}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {d.upiVpa && (
+                    <Text style={styles.p2pVpaText}>VPA: {d.upiVpa}</Text>
+                  )}
+
+                  <View style={styles.p2pActionsRow}>
+                    {canInitiate && (
+                      <TouchableOpacity
+                        style={styles.p2pCollectBtn}
+                        onPress={() => {
+                          setSelectedDebtForCollect(d);
+                          setP2pUpiVpa(d.upiVpa || '');
+                          setCollectModalVisible(true);
+                        }}
+                      >
+                        <Ionicons name="send" size={13} color="#FFFFFF" />
+                        <Text style={styles.p2pCollectBtnText}>Request UPI Collect</Text>
+                      </TouchableOpacity>
+                    )}
+                    {canCancel && (
+                      <TouchableOpacity
+                        style={styles.p2pCancelBtn}
+                        onPress={() => cancelDebtMutation.mutate(d.id)}
+                      >
+                        <Text style={styles.p2pCancelBtnText}>Cancel</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              );
+            })
           )}
         </View>
       )}
@@ -728,6 +947,128 @@ export default function TripSplitScreen() {
                     <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
                     <Text style={styles.submitBtnText}>Record Payment</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── MODAL: ADD P2P DEBT ── */}
+      <Modal visible={addDebtModalVisible} transparent animationType="slide" onRequestClose={() => setAddDebtModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add P2P Debt Record</Text>
+              <TouchableOpacity onPress={() => setAddDebtModalVisible(false)}>
+                <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.fieldLabel}>Debtor User ID</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="User ID of debtor"
+                keyboardType="numeric"
+                placeholderTextColor={COLORS.textMuted}
+                value={p2pDebtorId}
+                onChangeText={setP2pDebtorId}
+              />
+
+              <Text style={styles.fieldLabel}>Amount (₹)</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="0.00"
+                keyboardType="numeric"
+                placeholderTextColor={COLORS.textMuted}
+                value={p2pAmount}
+                onChangeText={setP2pAmount}
+              />
+
+              <Text style={styles.fieldLabel}>Description</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Hotel advance paid on behalf"
+                placeholderTextColor={COLORS.textMuted}
+                value={p2pDescription}
+                onChangeText={setP2pDescription}
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setAddDebtModalVisible(false)}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.submitBtn, { backgroundColor: '#4F46E5' }]}
+                  onPress={handleCreateDebt}
+                  disabled={createDebtMutation.isPending}
+                >
+                  {createDebtMutation.isPending ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.submitBtnText}>Create Debt</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── MODAL: INITIATE UPI COLLECT ── */}
+      <Modal visible={collectModalVisible} transparent animationType="slide" onRequestClose={() => setCollectModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Request UPI Collect</Text>
+              <TouchableOpacity onPress={() => setCollectModalVisible(false)}>
+                <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {selectedDebtForCollect && (
+                <View style={[styles.infoBanner, { marginBottom: SPACING.md }]}>
+                  <Ionicons name="cash-outline" size={16} color="#4F46E5" />
+                  <Text style={styles.infoBannerText}>
+                    Requesting ₹{selectedDebtForCollect.amount.toLocaleString()} from {selectedDebtForCollect.debtorName || `User #${selectedDebtForCollect.debtorUserId}`}.
+                  </Text>
+                </View>
+              )}
+
+              <Text style={styles.fieldLabel}>Debtor's UPI VPA (ID)</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. mobile@upi or name@oksbi"
+                autoCapitalize="none"
+                placeholderTextColor={COLORS.textMuted}
+                value={p2pUpiVpa}
+                onChangeText={setP2pUpiVpa}
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setCollectModalVisible(false)}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.submitBtn, { backgroundColor: '#059669' }]}
+                  onPress={handleInitiateCollect}
+                  disabled={initiateCollectMutation.isPending}
+                >
+                  {initiateCollectMutation.isPending ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.submitBtnText}>Send Collect Request</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -1102,6 +1443,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  p2pBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+  },
+  p2pBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  p2pBannerSub: {
+    fontSize: 11,
+    color: '#3B82F6',
+    marginTop: 2,
+  },
   transferCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1308,5 +1669,99 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: RADIUS.md,
+    padding: 10,
+    gap: 8,
+  },
+  infoBannerText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#3730A3',
+    lineHeight: 16,
+  },
+  p2pCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 8,
+    ...SHADOWS.sm,
+  },
+  p2pCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  p2pCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  p2pCardSub: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  p2pCardAmount: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  p2pStatusBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+    marginTop: 4,
+  },
+  p2pStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  p2pVpaText: {
+    fontSize: 11,
+    color: '#4F46E5',
+    fontWeight: '600',
+  },
+  p2pActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 8,
+  },
+  p2pCollectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#059669',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.md,
+  },
+  p2pCollectBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  p2pCancelBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  p2pCancelBtnText: {
+    color: '#DC2626',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

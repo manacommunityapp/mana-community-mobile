@@ -5,18 +5,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useModuleGuard } from '@/hooks/useRoleGuard';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { sportsService } from '@/services/sportsService';
 import { ScoreCard } from '@/components/sports/ScoreCard';
-import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import { COLORS } from '@/constants/config';
 import { safeFormat, formatTournamentDateRange } from '@/utils/dateUtils';
 import { shareTournament } from '@/utils/sportsShare';
-import type { DashboardEventCardDto } from '@/types/api';
+import { TournamentBracketView } from '@/components/sports/TournamentBracketView';
+import { SPORT_EMOJI, getVenueDisplay } from '@/constants/sports';
+import type { DashboardEventCardDto, DashboardTournamentCardDto } from '@/types/api';
 
-const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings'] as const;
+const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings', 'Brackets'] as const;
 type Tab = typeof TABS[number];
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -24,15 +26,9 @@ const FORMAT_LABEL: Record<string, string> = {
   LEAGUE:   'League',   SWISS:       'Swiss',
 };
 
-const SPORT_EMOJI_MAP: Record<string, string> = {
-  BADMINTON: '🏸', CRICKET: '🏏', FOOTBALL: '⚽', TENNIS: '🎾',
-  TABLE_TENNIS: '🏓', PICKLEBALL: '🏓', SWIMMING: '🏊', BASKETBALL: '🏀',
-  GYM: '💪', SQUASH: '🎾',
-};
-
 // ── Category Card ──────────────────────────────────────────────
 function CategoryCard({ ev, onRegister }: { ev: DashboardEventCardDto; onRegister?: (ev: DashboardEventCardDto) => void }) {
-  const sportEmoji = SPORT_EMOJI_MAP[(ev.sportName ?? '').toUpperCase().replace(/\s+/g, '_')] ?? '🏅';
+  const sportEmoji = SPORT_EMOJI[(ev.sportName ?? '').toUpperCase().replace(/\s+/g, '_')] ?? '🏅';
   const isOpen = (ev.registrationStatus ?? '').toUpperCase() === 'REGISTRATION_OPEN';
   const isClosed = !isOpen;
   const isRegistered = ev.myRegistrationId != null;
@@ -191,6 +187,7 @@ const st = StyleSheet.create({
 export default function TournamentDetailScreen() {
   const { id }   = useLocalSearchParams<{ id: string }>();
   const router   = useRouter();
+  useModuleGuard('SPORTS');
   const [tab, setTab] = useState<Tab>('Overview');
 
   const { data: tournament, isLoading } = useQuery({
@@ -199,14 +196,33 @@ export default function TournamentDetailScreen() {
   });
 
   // Open tournament events/categories from open tournaments API
-  const { data: openTournamentsDash = [] } = useQuery({
+  const { data: openTournamentsDash = [] } = useQuery<DashboardTournamentCardDto[]>({
     queryKey: ['tournaments-open-dash'],
-    queryFn: sportsService.getOpenTournaments,
+    queryFn: () => sportsService.getOpenTournaments(),
     staleTime: 30_000,
   });
 
-  const dashTournament = openTournamentsDash.find(t => t.id === Number(id));
-  const events = dashTournament?.events ?? [];
+  const dashTournament = openTournamentsDash.find(t => Number(t.id) === Number(id));
+  const rawTournamentEvents = tournament?.sportsEvents || tournament?.events || [];
+  const events: DashboardEventCardDto[] = (dashTournament?.events && dashTournament.events.length > 0)
+    ? dashTournament.events
+    : rawTournamentEvents.map((ev: any) => ({
+        id: ev.id,
+        uuid: ev.uuid ?? null,
+        name: ev.name || tournament?.name || 'Event',
+        eventDateStart: ev.eventDateStart || tournament?.startDate || null,
+        eventDateEnd: ev.eventDateEnd || tournament?.endDate || null,
+        sportName: ev.sport?.name || ev.sportName || tournament?.sport || 'Sports',
+        categoryName: ev.categories?.[0]?.name || ev.categoryName || ev.name || '',
+        venueName: ev.venue?.name || ev.venueName || (typeof tournament?.venue === 'string' ? tournament.venue : ''),
+        maxParticipants: ev.maxParticipants ?? tournament?.maxTeams ?? null,
+        registeredCount: ev.registeredCount ?? 0,
+        registrationStatus: ev.status || ev.registrationStatus || tournament?.registrationStatus || tournament?.status || 'REGISTRATION_OPEN',
+        auctionStatus: ev.auctionStatus ?? null,
+        teamSport: (ev.minPlayers && ev.minPlayers > 1) || false,
+        myRegistrationId: ev.myRegistrationId ?? null,
+        myRegistrationStatus: ev.myRegistrationStatus ?? null,
+      }));
 
   // Group events by sport
   const sportGroupsMap = new Map<string, { emoji: string; events: DashboardEventCardDto[] }>();
@@ -214,7 +230,7 @@ export default function TournamentDetailScreen() {
     const sport = ev.sportName ?? 'Other';
     if (!sportGroupsMap.has(sport)) {
       sportGroupsMap.set(sport, {
-        emoji: SPORT_EMOJI_MAP[sport.toUpperCase().replace(/\s+/g, '_')] ?? '🏅',
+        emoji: SPORT_EMOJI[sport.toUpperCase().replace(/\s+/g, '_')] ?? '🏅',
         events: [],
       });
     }
@@ -231,7 +247,7 @@ export default function TournamentDetailScreen() {
   const { data: matchesPage, isLoading: loadingMatches } = useQuery({
     queryKey: ['tournament-matches', id],
     queryFn:  () => sportsService.getMatches(Number(id)),
-    enabled:  tab === 'Schedule',
+    enabled:  tab === 'Schedule' || tab === 'Brackets' || tab === 'Standings',
   });
   const matches = matchesPage?.content ?? [];
 
@@ -243,20 +259,34 @@ export default function TournamentDetailScreen() {
     );
   }
 
-  if (!tournament) return null;
+  if (!tournament) {
+    return (
+      <SafeAreaView style={scr.container} edges={['top']}>
+        <LinearGradient colors={['#1E1B4B', '#3730A3', '#4F46E5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={scr.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={scr.backBtn}>
+            <Ionicons name="arrow-back" size={18} color="#fff" />
+          </TouchableOpacity>
+          <Text style={scr.headerTitle}>Tournament</Text>
+        </LinearGradient>
+        <View style={scr.emptyBox}>
+          <Text style={{ fontSize: 36 }}>🏆</Text>
+          <Text style={scr.emptyText}>Tournament details unavailable</Text>
+          <Text style={scr.emptySubText}>Please pull to refresh on the Sports Hub and try again.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const canRegister = tournament.status === 'REGISTRATION_OPEN' && !tournament.myTeamRegistered;
   const isRegOpen = (dashTournament?.registrationStatus ?? tournament.status ?? '').toUpperCase() === 'REGISTRATION_OPEN';
 
-  const startDateVal = (tournament as any).startDate ?? (tournament as any).eventDateStart;
-  const endDateVal = (tournament as any).endDate ?? (tournament as any).eventDateEnd;
-  const regDeadlineVal = (tournament as any).registrationDeadline ?? (tournament as any).registrationDateEnd;
+  const startDateVal = tournament.startDate ?? tournament.eventDateStart;
+  const endDateVal = tournament.endDate ?? tournament.eventDateEnd;
+  const regDeadlineVal = tournament.registrationDeadline;
   const datesFormatted = formatTournamentDateRange(startDateVal, endDateVal);
   const regDeadlineFormatted = regDeadlineVal ? safeFormat(regDeadlineVal, 'dd MMM, h:mm a') : '';
 
-  const venueStr = typeof tournament.venue === 'object' && tournament.venue !== null
-    ? [(tournament.venue as any).name, (tournament.venue as any).area, (tournament.venue as any).city].filter(Boolean).join(', ') || (tournament.venue as any).address || ''
-    : typeof tournament.venue === 'string' ? tournament.venue : '';
+  const venueStr = getVenueDisplay(tournament.venue);
 
   const prizesStr = typeof tournament.prizes === 'object' && tournament.prizes !== null
     ? ((tournament.prizes as any).name || (tournament.prizes as any).description || JSON.stringify(tournament.prizes))
@@ -459,18 +489,55 @@ export default function TournamentDetailScreen() {
         {tab === 'Standings' && (
           <View style={scr.section}>
             {['KNOCKOUT'].includes(tournament.format) ? (
-              <View style={scr.card}>
-                <Text style={scr.cardTitle}>Bracket</Text>
-                <Text style={scr.desc}>
-                  Knockout bracket view is available once the tournament begins and matches are played.
-                  Track progress in the Schedule tab.
-                </Text>
-              </View>
+              <TournamentBracketView
+                tournamentId={Number(id)}
+                matches={matches}
+                loading={loadingMatches}
+              />
             ) : (
               <StandingsTable tournamentId={Number(id)} />
             )}
           </View>
         )}
+
+        {/* ── BRACKETS ── */}
+        {tab === 'Brackets' && (
+          <View style={scr.section}>
+            <TournamentBracketView
+              tournamentId={Number(id)}
+              matches={matches}
+              loading={loadingMatches}
+            />
+          </View>
+        )}
+
+        {/* ── QUICK LINKS (announcements / leaderboard) ── */}
+        <View style={scr.quickLinks}>
+          <TouchableOpacity
+            style={scr.quickLink}
+            onPress={() => router.push(`/sports/tournament/announcements?id=${id}` as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={scr.quickLinkEmoji}>📣</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={scr.quickLinkTitle}>Updates & Gallery</Text>
+              <Text style={scr.quickLinkSub}>Announcements, photos, timeline</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={15} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={scr.quickLink}
+            onPress={() => router.push(`/sports/tournament/leaderboard?id=${id}` as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={scr.quickLinkEmoji}>🏆</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={scr.quickLinkTitle}>Leaderboard</Text>
+              <Text style={scr.quickLinkSub}>Points table & rankings</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={15} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -626,4 +693,10 @@ const scr = StyleSheet.create({
   footer:         { padding: 16, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border },
   registerBtn:    { backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   registerBtnText:{ color: '#fff', fontWeight: '800', fontSize: 16 },
+
+  quickLinks:     { gap: 8 },
+  quickLink:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: COLORS.border },
+  quickLinkEmoji: { fontSize: 20 },
+  quickLinkTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  quickLinkSub:   { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
 });

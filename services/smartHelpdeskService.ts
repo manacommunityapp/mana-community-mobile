@@ -59,76 +59,7 @@ export interface WorkOrderDto {
   estimatedCost: number;
 }
 
-const FALLBACK_TICKETS: HelpdeskTicketDto[] = [
-  {
-    id: "tk-001",
-    ticketNumber: "TKT-2026-0101",
-    title: "Water leaking from master bathroom ceiling",
-    description: "Continuous water seepage and dripping from bathroom ceiling, likely from the apartment above.",
-    category: "PLUMBING",
-    subCategory: "Water Leakage",
-    status: "IN_PROGRESS",
-    priority: "HIGH",
-    assignedTo: "Raju Sharma (Chief Plumber)",
-    assignedPhone: "+91-98801-44332",
-    createdAt: new Date(Date.now() - 4 * 3600000).toISOString(),
-    slaHours: 8,
-    slaDeadline: new Date(Date.now() + 4 * 3600000).toISOString(),
-    locationArea: "My Flat",
-    location: "Tower A, Flat 1204, Master Bath",
-    escalationLevel: 1,
-    timeline: [
-      { id: "tl-1", action: "CREATED", note: "Incident logged by resident via app", author: "Resident", timestamp: "09:00 AM" },
-      { id: "tl-2", action: "ASSIGNED", note: "Assigned to on-duty plumbing team", author: "Helpdesk AI", timestamp: "09:05 AM" },
-      { id: "tl-3", action: "IN_PROGRESS", note: "Technician inspecting overhead shaft", author: "Raju Sharma", timestamp: "10:15 AM" },
-    ],
-  },
-  {
-    id: "tk-002",
-    ticketNumber: "TKT-2026-0098",
-    title: "Lift B-2 making loud grinding noise",
-    description: "Elevator B-2 is vibrating heavily between floors 4 and 8. Urgent check needed before someone gets stuck.",
-    category: "LIFT",
-    subCategory: "Strange Noise",
-    status: "OPEN",
-    priority: "URGENT",
-    assignedTo: "Otis Elevator AMC Response",
-    assignedPhone: "+91-98450-88123",
-    createdAt: new Date(Date.now() - 3 * 3600000).toISOString(),
-    slaHours: 2,
-    slaDeadline: new Date(Date.now() - 1 * 3600000).toISOString(),
-    locationArea: "Corridor / Staircase",
-    location: "Tower B, Passenger Lift 2",
-    escalationLevel: 2,
-    escalationNote: "SLA breached — auto-escalated to Facilities Manager",
-    timeline: [
-      { id: "tl-4", action: "CREATED", note: "Emergency elevator noise complaint", author: "Resident", timestamp: "11:30 AM" },
-      { id: "tl-5", action: "ASSIGNED", note: "Auto-dispatched to Otis emergency support", author: "Helpdesk AI", timestamp: "11:32 AM" },
-      { id: "tl-6", action: "ESCALATED", note: "SLA of 2h breached — escalated to L2: Facilities Manager notified", author: "System", timestamp: "01:32 PM" },
-    ],
-  },
-  {
-    id: "tk-003",
-    ticketNumber: "TKT-2026-0075",
-    title: "Balcony power socket sparking",
-    description: "Balcony weatherproof 16A socket showed spark when plugging in washing machine. Tripped MCB once.",
-    category: "ELECTRICAL",
-    status: "RESOLVED",
-    priority: "MEDIUM",
-    assignedTo: "Suresh Kumar (Electrician)",
-    assignedPhone: "+91-97400-55221",
-    createdAt: new Date(Date.now() - 24 * 3600000).toISOString(),
-    slaHours: 24,
-    slaDeadline: new Date(Date.now() - 10 * 3600000).toISOString(),
-    residentRating: 5,
-    residentComment: "Replaced the burned terminal block cleanly and restored power in 20 minutes. Excellent service!",
-    location: "Tower A, Flat 1204, Utility Balcony",
-    timeline: [
-      { id: "tl-6", action: "CREATED", note: "Ticket filed", author: "Resident", timestamp: "Yesterday, 10:00 AM" },
-      { id: "tl-7", action: "RESOLVED", note: "Socket replaced, grounding checked", author: "Suresh Kumar", timestamp: "Yesterday, 11:30 AM" },
-    ],
-  },
-];
+const FALLBACK_TICKETS: HelpdeskTicketDto[] = [];
 
 let LOCAL_TICKETS: HelpdeskTicketDto[] = [...FALLBACK_TICKETS];
 
@@ -163,13 +94,13 @@ export const smartHelpdeskService = {
   async getTickets(status?: string): Promise<HelpdeskTicketDto[]> {
     this._applyAutoEscalation();
     try {
-      const res = await api.get<HelpdeskTicketDto[]>('/helpdesk/tickets', {
+      const res = await api.get<HelpdeskTicketDto[]>('/v1/helpdesk/tickets', {
         params: status && status !== 'ALL' ? { status } : undefined,
       });
       const list = Array.isArray(res.data) ? res.data : (res.data as any)?.content || [];
-      if (list.length > 0) return list;
+      return list;
     } catch {
-      // Fallback to local tickets
+      // API unavailable or error
     }
     if (status && status !== 'ALL') {
       return LOCAL_TICKETS.filter(t => t.status === status);
@@ -188,7 +119,7 @@ export const smartHelpdeskService = {
     mediaUrls?: string[];
   }): Promise<HelpdeskTicketDto> {
     try {
-      const res = await api.post<HelpdeskTicketDto>('/helpdesk/tickets', payload);
+      const res = await api.post<HelpdeskTicketDto>('/v1/helpdesk/tickets', payload);
       const ticket = res.data;
       LOCAL_TICKETS.unshift(ticket);
       return ticket;
@@ -218,20 +149,20 @@ export const smartHelpdeskService = {
 
   /** 3. Get single ticket details */
   async getTicket(id: string): Promise<HelpdeskTicketDto> {
-    const res = await api.get<HelpdeskTicketDto>(`/helpdesk/tickets/${id}`);
+    const res = await api.get<HelpdeskTicketDto>(`/v1/helpdesk/tickets/${id}`);
     return res.data;
   },
 
   /** 4. Update ticket status */
   async updateTicketStatus(id: string, status: string, notes?: string): Promise<HelpdeskTicketDto> {
-    const res = await api.put<HelpdeskTicketDto>(`/helpdesk/tickets/${id}/status`, { status, notes });
+    const res = await api.patch<HelpdeskTicketDto>(`/v1/helpdesk/tickets/${id}/status`, null, { params: { status, remarks: notes } });
     return res.data;
   },
 
   /** 5. Submit resident rating and feedback */
   async submitFeedback(ticketId: string, rating: number, comments?: string): Promise<boolean> {
     try {
-      await api.post(`/helpdesk/tickets/${ticketId}/feedback`, { rating, comments });
+      await api.post(`/v1/helpdesk/tickets/${ticketId}/feedback`, { rating, comments });
     } catch {
       // Local fallback
     }
@@ -245,13 +176,13 @@ export const smartHelpdeskService = {
 
   /** 6. Add contextual discussion comment */
   async addComment(ticketId: string, message: string): Promise<TicketCommentDto> {
-    const res = await api.post<TicketCommentDto>(`/helpdesk/tickets/${ticketId}/comments`, { message });
+    const res = await api.post<TicketCommentDto>(`/v1/helpdesk/tickets/${ticketId}/comments`, null, { params: { message } });
     return res.data;
   },
 
   /** 7. Get ticket comments */
   async getComments(ticketId: string): Promise<TicketCommentDto[]> {
-    const res = await api.get<TicketCommentDto[]>(`/helpdesk/tickets/${ticketId}/comments`);
+    const res = await api.get<TicketCommentDto[]>(`/v1/helpdesk/tickets/${ticketId}/comments`);
     return res.data;
   },
 
@@ -273,10 +204,10 @@ export const smartHelpdeskService = {
     return res.data;
   },
 
-  /** 11. Reopen a resolved or closed ticket */
+  /** 11. Reopen a resolved or closed ticket via status update */
   async reopenTicket(ticketId: string, reason?: string): Promise<HelpdeskTicketDto> {
     try {
-      const res = await api.put<HelpdeskTicketDto>(`/helpdesk/tickets/${ticketId}/reopen`, { reason });
+      const res = await api.patch<HelpdeskTicketDto>(`/v1/helpdesk/tickets/${ticketId}/status`, null, { params: { status: 'OPEN', remarks: reason } });
       const found = LOCAL_TICKETS.find(t => t.id === ticketId);
       if (found) { found.status = 'OPEN'; }
       return res.data;

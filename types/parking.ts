@@ -42,6 +42,35 @@ export interface VisitorPassDto {
   status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 }
 
+/** Resident-owned vehicle returned by the parking service. */
+export interface ResidentVehicleDto {
+  id: number;
+  ownerId?: number;
+  ownerName?: string;
+  vehicleType: ParkingSpotType | string;
+  make?: string;
+  model?: string;
+  color?: string;
+  numberPlate: string;
+  parkingSlotId?: number;
+  parkingSlotNumber?: string;
+  stickerNumber?: string;
+  primary: boolean;
+  status?: string;
+  createdAt?: string;
+}
+
+export interface ResidentVehicleRequest {
+  vehicleType: ParkingSpotType;
+  make?: string;
+  model?: string;
+  color?: string;
+  numberPlate: string;
+  parkingSlotId?: number;
+  stickerNumber?: string;
+  primary: boolean;
+}
+
 export interface ReserveSpotRequest {
   spotId: number;
   vehicleNumber: string;

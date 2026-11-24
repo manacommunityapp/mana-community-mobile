@@ -4,6 +4,7 @@ import {
   ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import WorkspaceSwitcherBar from '@/components/common/WorkspaceSwitcherBar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -75,6 +76,7 @@ export default function VendorDashboardScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
+      <WorkspaceSwitcherBar />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={VENDOR_COLORS.accent} />}
@@ -121,6 +123,52 @@ export default function VendorDashboardScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={VENDOR_COLORS.accent} />
+        </TouchableOpacity>
+
+        {/* Sports Venues & Facility Management */}
+        <TouchableOpacity
+          style={[s.groupBuyBanner, { borderColor: '#10B981' }]}
+          onPress={() => router.push('/sports' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={[s.groupBuyIconWrap, { backgroundColor: '#10B981' }]}>
+            <Ionicons name="trophy" size={22} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={s.groupBuyTitleRow}>
+              <Text style={s.groupBuyTitle}>Sports & Arena Facilities</Text>
+              <View style={[s.groupBuyBadge, { backgroundColor: '#D1FAE5' }]}>
+                <Text style={[s.groupBuyBadgeText, { color: '#059669' }]}>FACILITIES</Text>
+              </View>
+            </View>
+            <Text style={s.groupBuySub}>
+              View court schedules, sports facilities, tournament bookings & matches
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#10B981" />
+        </TouchableOpacity>
+
+        {/* Mana Fresh Kitchen & Operations */}
+        <TouchableOpacity
+          style={[s.groupBuyBanner, { borderColor: '#0284C7' }]}
+          onPress={() => router.push('/vendor/fresh/production' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={[s.groupBuyIconWrap, { backgroundColor: '#0284C7' }]}>
+            <Ionicons name="nutrition" size={22} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={s.groupBuyTitleRow}>
+              <Text style={s.groupBuyTitle}>Mana Fresh Kitchen & Hub</Text>
+              <View style={[s.groupBuyBadge, { backgroundColor: '#E0F2FE' }]}>
+                <Text style={[s.groupBuyBadgeText, { color: '#0284C7' }]}>COLD CHAIN</Text>
+              </View>
+            </View>
+            <Text style={s.groupBuySub}>
+              Production runs, cold-chain gate release, packing manifests & delivery drops
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#0284C7" />
         </TouchableOpacity>
 
         {/* Availability toggle */}

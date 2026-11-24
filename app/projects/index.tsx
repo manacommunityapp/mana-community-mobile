@@ -128,7 +128,7 @@ export default function ProjectsScreen() {
             <TouchableOpacity
               key={p.id}
               style={s.projectCard}
-              onPress={() => router.push(`/projects/${p.id}`)}
+              onPress={() => router.push({ pathname: '/projects/detail', params: { id: p.id } } as any)}
               activeOpacity={0.85}
             >
               <View style={s.cardTop}>

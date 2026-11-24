@@ -106,7 +106,7 @@ export default function MyBookingsScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
@@ -160,8 +160,8 @@ export default function MyBookingsScreen() {
                 <MetaRow icon="car-outline" text={booking.vehicleDisplay} />
                 <MetaRow icon="calendar-outline" text={`${booking.date} at ${booking.startTime}`} />
                 <MetaRow icon="location-outline" text={booking.location} />
-                {booking.addonNames.length > 0 && (
-                  <MetaRow icon="add-circle-outline" text={`Add-ons: ${booking.addonNames.join(', ')}`} />
+                {(booking.addonNames || []).length > 0 && (
+                  <MetaRow icon="add-circle-outline" text={`Add-ons: ${(booking.addonNames || []).join(', ')}`} />
                 )}
                 {booking.technicianName && (
                   <MetaRow icon="person-outline" text={`Technician: ${booking.technicianName}`} />

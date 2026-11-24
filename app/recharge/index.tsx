@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Alert,
   Platform,
   Animated,
   Modal,
@@ -41,7 +42,11 @@ export interface SavedContact {
   category: 'household' | 'staff' | 'community';
 }
 
-const COMMUNITY_CONTACTS: SavedContact[] = [
+// Contacts and active plans must come from an authenticated API/native contacts
+// provider. Keep this empty until that integration exists; never show demo
+// household/staff numbers as if they belonged to the resident.
+const COMMUNITY_CONTACTS: SavedContact[] = [];
+/*
   {
     id: '1',
     name: 'Self',
@@ -131,6 +136,7 @@ const COMMUNITY_CONTACTS: SavedContact[] = [
     category: 'community',
   },
 ];
+*/
 
 const OPERATOR_META: Record<string, { tag: string; tagColor: string; bgTint: string }> = {
   JIO: { tag: 'True 5G', tagColor: '#0066CC', bgTint: '#EFF6FF' },
@@ -146,7 +152,7 @@ export default function RechargeScreen() {
 
   const [activeService, setActiveService] = useState<'mobile' | 'dth' | 'fastag' | 'bills'>('mobile');
   const [rechargeType, setRechargeType] = useState<RechargeType>('PREPAID');
-  const [mobile, setMobile] = useState('9845012345'); // Default to resident's own number
+  const [mobile, setMobile] = useState('');
   const [detectedOperator, setDetectedOperator] = useState<MobileOperator | null>(null);
   const [selectedOperator, setSelectedOperator] = useState<MobileOperator | null>(null);
   const [selectedCircle, setSelectedCircle] = useState('Karnataka');
@@ -183,14 +189,6 @@ export default function RechargeScreen() {
       }
     }
   }, [mobile]);
-
-  // Set default operator for initial number
-  useEffect(() => {
-    if (mobile === '9845012345' && !selectedOperator) {
-      const airtel = operators.find(o => o.id === 'AIRTEL');
-      if (airtel) setSelectedOperator(airtel);
-    }
-  }, []);
 
   const filteredCircles = useMemo(() => {
     if (!circleSearchQuery.trim()) return CIRCLES;
@@ -256,7 +254,7 @@ export default function RechargeScreen() {
 
         <View style={s.topNavTitleBox}>
           <Text style={s.topNavTitle}>Mobile Recharge</Text>
-          <Text style={s.topNavSubtitle}>Zero Convenience Fee · Auto Expiry Queue</Text>
+          <Text style={s.topNavSubtitle}>Live prepaid recharge plans · payment handoff</Text>
         </View>
 
         <TouchableOpacity
@@ -362,11 +360,11 @@ export default function RechargeScreen() {
           <View style={s.heroContent}>
             <View style={s.heroBadge}>
               <Ionicons name="flash" size={11} color="#FEF08A" />
-              <Text style={s.heroBadgeText}>MANA PAY CASHBACK</Text>
+              <Text style={s.heroBadgeText}>MANA PAY RECHARGE</Text>
             </View>
-            <Text style={s.heroHeading}>Flat ₹25 Off + 2% Society Credit</Text>
+            <Text style={s.heroHeading}>Recharge with a secure payment handoff</Text>
             <Text style={s.heroSubheading}>
-              Zero gateway fees. Instant receipt issued to your flat maintenance ledger.
+              Payment and operator confirmation will be shown once the live recharge provider is connected.
             </Text>
           </View>
           <View style={s.heroIconCircle}>
@@ -387,7 +385,13 @@ export default function RechargeScreen() {
               <TouchableOpacity
                 key={tab.key}
                 style={[s.serviceChip, isActive && s.serviceChipActive]}
-                onPress={() => setActiveService(tab.key as any)}
+              onPress={() => {
+                if (tab.key !== 'mobile') {
+                  Alert.alert('Coming soon', `${tab.label} recharge is not connected to a live biller yet.`);
+                  return;
+                }
+                setActiveService('mobile');
+              }}
                 activeOpacity={0.8}
               >
                 <Ionicons
@@ -411,7 +415,13 @@ export default function RechargeScreen() {
               <TouchableOpacity
                 key={type}
                 style={[s.toggleTab, isSelected && s.toggleTabActive]}
-                onPress={() => setRechargeType(type)}
+                onPress={() => {
+                  if (type === 'POSTPAID') {
+                    Alert.alert('Postpaid unavailable', 'Live postpaid bill fetching is not connected yet.');
+                    return;
+                  }
+                  setRechargeType(type);
+                }}
                 activeOpacity={0.85}
               >
                 <Ionicons
@@ -484,11 +494,11 @@ export default function RechargeScreen() {
               <View style={s.detectedPill}>
                 <Text style={{ fontSize: 13 }}>{detectedOperator.icon}</Text>
                 <Text style={s.detectedPillText}>
-                  Detected: <Text style={{ fontFamily: FONTS.bold, color: COLORS.text }}>{detectedOperator.name}</Text>
+                  Suggested: <Text style={{ fontFamily: FONTS.bold, color: COLORS.text }}>{detectedOperator.name}</Text>
                 </Text>
               </View>
               <TouchableOpacity
-                onPress={() => {}}
+                onPress={() => setSelectedOperator(null)}
                 style={s.detectedChangeBtn}
               >
                 <Text style={s.detectedChangeText}>Change below if ported</Text>
@@ -498,7 +508,8 @@ export default function RechargeScreen() {
         </View>
 
         {/* ── Frequent & Family Recharges Carousel with Expiry ──── */}
-        <View style={s.sectionHeader}>
+        {COMMUNITY_CONTACTS.length > 0 && <>
+          <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>Household & Staff Telecom</Text>
           <TouchableOpacity onPress={() => setShowContactPicker(true)}>
             <Text style={s.viewAllContactsText}>View All ({COMMUNITY_CONTACTS.length}) →</Text>
@@ -556,7 +567,8 @@ export default function RechargeScreen() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+          </ScrollView>
+        </>}
 
         {/* ── Select Operator Grid ───────────────────────────────── */}
         <View style={s.card}>
@@ -644,9 +656,9 @@ export default function RechargeScreen() {
             <MaterialCommunityIcons name="shield-check" size={24} color="#059669" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.trustHeading}>Official Bharat BillPay (BBPS) Partner</Text>
+          <Text style={s.trustHeading}>Recharge provider integration pending</Text>
             <Text style={s.trustSubtext}>
-              Instant receipt, real-time telecom confirmation & automatic auto-refund if connection fails.
+              Plans are currently informational. Payment confirmation, telecom status and refunds will be enabled after aggregator integration.
             </Text>
           </View>
         </View>
@@ -666,7 +678,7 @@ export default function RechargeScreen() {
             </Text>
           </View>
           <View style={s.zeroFeeBadge}>
-            <Text style={s.zeroFeeText}>₹0 Convenience Fee</Text>
+            <Text style={s.zeroFeeText}>Provider fee shown at checkout</Text>
           </View>
         </View>
 
@@ -927,21 +939,21 @@ export default function RechargeScreen() {
               <View style={s.faqItem}>
                 <Text style={s.faqQ}>What if my recharge fails?</Text>
                 <Text style={s.faqA}>
-                  If money is debited and the telecom circle reports a failure, your funds are automatically refunded to your original UPI payment method within 15 minutes.
+                  Recharge confirmation and automated refunds are not connected yet. Keep the payment reference and contact support if a payment is debited before provider status integration is enabled.
                 </Text>
               </View>
 
               <View style={s.faqItem}>
                 <Text style={s.faqQ}>Does recharging early waste remaining days?</Text>
                 <Text style={s.faqA}>
-                  No! Operators queue the new plan to activate automatically when your current plan validity finishes. You never lose active days.
+                  Activation timing depends on the telecom provider. Automatic queueing will be supported after the live provider integration is completed.
                 </Text>
               </View>
 
               <View style={s.faqItem}>
                 <Text style={s.faqQ}>How does Society Cashback work?</Text>
                 <Text style={s.faqA}>
-                  Recharge amounts qualify for 2% reward points credited directly to your Mana Community maintenance dues ledger.
+                  Society cashback is not active yet. The rewards ledger will only be shown after a backend rewards integration is available.
                 </Text>
               </View>
             </ScrollView>

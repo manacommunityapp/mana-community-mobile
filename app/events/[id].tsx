@@ -149,7 +149,7 @@ export default function EventDetailScreen() {
       <ScrollView
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#fff" />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor="#fff" />}
       >
         {/* Hero banner */}
         <LinearGradient

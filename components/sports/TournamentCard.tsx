@@ -2,21 +2,19 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { SPORT_EMOJI } from '@/constants/sports';
 import type { TournamentDto } from '@/types/api';
 
-export const SPORT_EMOJI: Record<string, string> = {
-  CRICKET: '🏏', FOOTBALL: '⚽', BADMINTON: '🏸',
-  TABLE_TENNIS: '🏓', BASKETBALL: '🏀', VOLLEYBALL: '🏐',
-  CHESS: '♟️', CARROM: '🎯', TENNIS: '🎾', SWIMMING: '🏊',
-  PICKLEBALL: '🏓', OTHER: '🏅',
-};
-
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  UPCOMING:          { label: 'Upcoming',    bg: '#EEF2FF', text: '#4F46E5', dot: '#818CF8' },
-  REGISTRATION_OPEN: { label: 'Registering', bg: '#ECFDF5', text: '#065F46', dot: '#10B981' },
-  ONGOING:           { label: 'Live Now',    bg: '#FEE2E2', text: '#DC2626', dot: '#EF4444' },
-  COMPLETED:         { label: 'Completed',   bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
-  CANCELLED:         { label: 'Cancelled',   bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
+  UPCOMING:            { label: 'Upcoming',    bg: '#EEF2FF', text: '#4F46E5', dot: '#818CF8' },
+  REGISTRATION_OPEN:   { label: 'Registering', bg: '#ECFDF5', text: '#065F46', dot: '#10B981' },
+  OPEN:                { label: 'Registering', bg: '#ECFDF5', text: '#065F46', dot: '#10B981' },
+  REGISTRATION_CLOSED: { label: 'Reg Closed',  bg: '#FEF3C7', text: '#92400E', dot: '#F59E0B' },
+  ONGOING:             { label: 'Live Now',    bg: '#FEE2E2', text: '#DC2626', dot: '#EF4444' },
+  LIVE:                { label: 'Live Now',    bg: '#FEE2E2', text: '#DC2626', dot: '#EF4444' },
+  IN_PROGRESS:         { label: 'Live Now',    bg: '#FEE2E2', text: '#DC2626', dot: '#EF4444' },
+  COMPLETED:           { label: 'Completed',   bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
+  CANCELLED:           { label: 'Cancelled',   bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
 };
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -25,8 +23,8 @@ const FORMAT_LABEL: Record<string, string> = {
 
 function getSportStr(sport: any): string {
   if (!sport) return 'OTHER';
-  if (typeof sport === 'object') return (sport.name ?? '').toUpperCase();
-  return String(sport).toUpperCase();
+  if (typeof sport === 'object') return (sport.name ?? '').toUpperCase().replace(/\s+/g, '_');
+  return String(sport).toUpperCase().replace(/\s+/g, '_');
 }
 
 interface TournamentCardProps {
@@ -36,17 +34,23 @@ interface TournamentCardProps {
 
 export function TournamentCard({ tournament: t }: TournamentCardProps) {
   const router   = useRouter();
-  const sportStr = getSportStr(t.sport);
-  const cfg      = STATUS_CONFIG[t.status] ?? STATUS_CONFIG.UPCOMING;
+  const rawEvents = (t as any).sportsEvents || (t as any).events || [];
+  const rawEv = rawEvents[0];
+  const sportStr = getSportStr(t.sport || rawEv?.sport || rawEv?.sportName);
+  const rawStatus = String(t.status || (t as any).registrationStatus || 'UPCOMING').toUpperCase();
+  const cfg      = STATUS_CONFIG[rawStatus] ?? STATUS_CONFIG.UPCOMING;
   const emoji    = SPORT_EMOJI[sportStr] ?? '🏅';
-  const isLive   = t.status === 'ONGOING';
+  const isLive   = ['ONGOING', 'LIVE', 'IN_PROGRESS'].includes(rawStatus);
 
   const dateLabel = (() => {
-    if (!(t as any).startDate) return null;
-    const start = new Date((t as any).startDate);
-    const end   = (t as any).endDate ? new Date((t as any).endDate) : null;
+    const startRaw = (t as any).startDate || (t as any).eventDateStart;
+    const endRaw = (t as any).endDate || (t as any).eventDateEnd;
+    if (!startRaw) return null;
+    const start = new Date(startRaw);
+    if (isNaN(start.getTime())) return null;
+    const end   = endRaw ? new Date(endRaw) : null;
     const fmt   = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-    return end ? `${fmt(start)} – ${fmt(end)}` : fmt(start);
+    return end && !isNaN(end.getTime()) ? `${fmt(start)} – ${fmt(end)}` : fmt(start);
   })();
 
   const venueStr = (() => {
@@ -112,6 +116,11 @@ export function TournamentCard({ tournament: t }: TournamentCardProps) {
               <View style={c.chip}>
                 <Ionicons name="people-outline" size={9} color={COLORS.textMuted} />
                 <Text style={c.chipText}>{regCount}/{maxTeams} teams</Text>
+              </View>
+            ) : rawEvents.length > 0 ? (
+              <View style={c.chip}>
+                <Ionicons name="layers-outline" size={9} color={COLORS.textMuted} />
+                <Text style={c.chipText}>{rawEvents.length} {rawEvents.length === 1 ? 'category' : 'categories'}</Text>
               </View>
             ) : null}
           </View>

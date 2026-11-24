@@ -1,6 +1,6 @@
 import { Image as ExpoImage, ImageProps as ExpoImageProps, ImageContentFit } from 'expo-image';
 import { ImageSourcePropType, ImageStyle, StyleProp } from 'react-native';
-import { resolveImageUrl } from '@/utils/imageUrlUtils';
+import { resolveImageUrl, getImageHeaders } from '@/utils/imageUrlUtils';
 
 const RESIZE_MAP: Record<string, ImageContentFit> = {
   cover: 'cover',
@@ -10,7 +10,7 @@ const RESIZE_MAP: Record<string, ImageContentFit> = {
 };
 
 type CachedImageProps = {
-  source: ImageSourcePropType | { uri: string } | string | number;
+  source: ImageSourcePropType | { uri: string; headers?: Record<string, string> } | string | number;
   style?: StyleProp<ImageStyle>;
   resizeMode?: 'cover' | 'contain' | 'stretch' | 'center';
   accessibilityLabel?: string;
@@ -20,12 +20,16 @@ type CachedImageProps = {
 export function CachedImage({ source, style, resizeMode = 'cover', accessibilityLabel, onError }: CachedImageProps) {
   let src: ExpoImageProps['source'];
   if (typeof source === 'string') {
-    src = { uri: resolveImageUrl(source) };
+    const uri = resolveImageUrl(source);
+    const headers = getImageHeaders(uri);
+    src = headers ? { uri, headers } : { uri };
   } else if (typeof source === 'number') {
     src = source;
   } else if (source && typeof source === 'object' && 'uri' in source) {
     const rawUri = (source as { uri: string }).uri;
-    src = { ...(source as object), uri: resolveImageUrl(rawUri) };
+    const uri = resolveImageUrl(rawUri);
+    const headers = (source as any).headers || getImageHeaders(uri);
+    src = headers ? { ...(source as object), uri, headers } : { ...(source as object), uri };
   } else {
     src = source as ExpoImageProps['source'];
   }

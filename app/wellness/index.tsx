@@ -136,6 +136,27 @@ export default function WellnessDashboard() {
           </TouchableOpacity>
         </View>
 
+        {/* Mana Fresh Nutrition Subscription Banner */}
+        <TouchableOpacity
+          style={styles.freshBasketBanner}
+          onPress={() => router.push("/wellness-basket")}
+        >
+          <View style={styles.freshBasketIconWrap}>
+            <Ionicons name="nutrition" size={24} color="#065F46" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={styles.freshBasketTag}>NEW VERTICAL</Text>
+              <Text style={styles.freshBasketTagSub}>Mana Fresh</Text>
+            </View>
+            <Text style={styles.freshBasketTitle}>Healthy Breakfast & Wellness Subscription</Text>
+            <Text style={styles.freshBasketSub}>
+              Dietitian-curated fruit bowls & sprout kits at your door before 8 AM
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#059669" />
+        </TouchableOpacity>
+
         {/* Daily Nutrition Summary */}
         {summary && (
           <View style={styles.card}>
@@ -472,4 +493,50 @@ const styles = StyleSheet.create({
 
   fab: { position: "absolute", bottom: 24, right: 20, ...SHADOWS.glowEmerald },
   fabGradient: { width: 56, height: 56, borderRadius: 28, justifyContent: "center", alignItems: "center" },
+
+  freshBasketBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    borderRadius: RADIUS.lg,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    marginBottom: 16,
+    ...SHADOWS.card,
+  },
+  freshBasketIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  freshBasketTag: {
+    fontSize: 9,
+    fontFamily: FONTS.bold,
+    backgroundColor: "#059669",
+    color: "#FFFFFF",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  freshBasketTagSub: {
+    fontSize: 10,
+    fontFamily: FONTS.semiBold,
+    color: "#065F46",
+  },
+  freshBasketTitle: {
+    fontSize: 13,
+    fontFamily: FONTS.bold,
+    color: "#064E3B",
+    marginTop: 2,
+  },
+  freshBasketSub: {
+    fontSize: 10.5,
+    fontFamily: FONTS.regular,
+    color: "#047857",
+    marginTop: 1,
+  },
 });

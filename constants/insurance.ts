@@ -13,7 +13,7 @@ export interface CategoryMeta {
   key: InsuranceCategory;
   label: string;
   icon: string;
-  group: 'HEALTH' | 'LIFE' | 'MOTOR' | 'HOME' | 'TRAVEL' | 'OTHER';
+  group: 'HEALTH' | 'LIFE' | 'MOTOR' | 'HOME' | 'TRAVEL' | 'SPORTS' | 'OTHER';
 }
 
 export const CATEGORIES: CategoryMeta[] = [
@@ -26,6 +26,9 @@ export const CATEGORIES: CategoryMeta[] = [
   { key: 'HOME',              label: 'Home & property',                icon: 'home-outline',       group: 'HOME' },
   { key: 'TRAVEL',            label: 'Travel insurance',               icon: 'airplane-outline',   group: 'TRAVEL' },
   { key: 'PERSONAL_ACCIDENT', label: 'Personal accident & other',      icon: 'bandage-outline',    group: 'OTHER' },
+  { key: 'SPORTS_PA',              label: 'Sports personal accident',       icon: 'fitness-outline',    group: 'SPORTS' },
+  { key: 'SPORTS_EVENT_LIABILITY', label: 'Sports event liability',         icon: 'shield-checkmark-outline', group: 'SPORTS' },
+  { key: 'SPORTS_TEAM_GROUP',      label: 'Team / group sports cover',      icon: 'people-circle-outline',    group: 'SPORTS' },
 ];
 
 export function categoryLabel(c: InsuranceCategory): string {
@@ -222,6 +225,24 @@ export function validateQuoteFields(
     }
     case 'PERSONAL_ACCIDENT':
       if (!int(f.age, 18, 70)) e.age = 'Age must be 18 to 70';
+      break;
+    case 'SPORTS_PA':
+      if (!int(f.age, 5, 70)) e.age = 'Age must be 5 to 70';
+      if (!String(f.sport ?? '').trim()) e.sport = 'Select a sport';
+      break;
+    case 'SPORTS_EVENT_LIABILITY': {
+      if (!String(f.eventName ?? '').trim()) e.eventName = 'Enter the event name';
+      if (!int(f.expectedParticipants, 1, 10_000)) e.expectedParticipants = 'Expected participants must be 1 to 10,000';
+      const evDate = Date.parse(String(f.eventDate ?? ''));
+      const t0s = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      if (Number.isNaN(evDate)) e.eventDate = 'Enter a valid event date (YYYY-MM-DD)';
+      else if (evDate < t0s) e.eventDate = 'Event date cannot be in the past';
+      break;
+    }
+    case 'SPORTS_TEAM_GROUP':
+      if (!String(f.teamName ?? '').trim()) e.teamName = 'Enter the team or club name';
+      if (!int(f.memberCount, 2, 500)) e.memberCount = 'Members must be 2 to 500';
+      if (!String(f.sport ?? '').trim()) e.sport = 'Select a sport';
       break;
     default:
       e.category = 'Quotes are not available for this category';

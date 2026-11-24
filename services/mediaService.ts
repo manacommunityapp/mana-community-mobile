@@ -83,7 +83,7 @@ export const mediaService = {
     const uploadMeta = {
       module: request.module || 'GENERAL',
       moduleId: request.moduleId || 'default',
-      communityId: request.communityId || 1,
+      communityId: request.communityId,
       mediaType: request.mediaType || 'IMAGE',
       caption: request.caption,
       altText: request.altText,

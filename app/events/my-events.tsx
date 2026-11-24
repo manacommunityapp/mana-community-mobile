@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { eventService } from '@/services/eventService';
+import { useAppBack } from '@/hooks/useAppBack';
 import { COLORS, GRADIENTS, SHADOWS, RADIUS, FONTS, SPACING } from '@/constants/config';
 import type { EventDto } from '@/types/api';
 import { format, parseISO, isToday, isPast } from 'date-fns';
@@ -34,6 +35,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; 
 
 export default function MyEventsScreen() {
   const router = useRouter();
+  const { goBack } = useAppBack({ fallbackRoute: '/events' });
   const [tab, setTab] = useState<Tab>('registered');
 
   const { data: myEvents = [], isLoading, refetch, isRefetching } = useQuery({
@@ -126,7 +128,7 @@ export default function MyEventsScreen() {
     <SafeAreaView style={st.container} edges={['top']}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => router.back()} style={st.navBtn} hitSlop={8}>
+        <TouchableOpacity onPress={goBack} style={st.navBtn} hitSlop={8}>
           <Ionicons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
@@ -174,7 +176,7 @@ export default function MyEventsScreen() {
           renderItem={renderEvent}
           contentContainerStyle={st.list}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={st.empty}>
               <View style={st.emptyCircle}>

@@ -158,3 +158,43 @@ export interface CreateCrmLeadRequest {
   monthlyRent?: number;
   notes?: string;
 }
+
+export interface BrokerDto {
+  id: string | number;
+  name: string;
+  agency?: string;
+  phone?: string;
+  email?: string;
+  rating?: number;
+  dealsClosed?: number;
+}
+
+export interface BrokerCommissionDto {
+  id: string | number;
+  brokerId: string | number;
+  brokerName: string;
+  leadName: string;
+  unitNumber: string;
+  dealValue: string | number;
+  commissionPercentage: number;
+  commissionAmount: number;
+  status: 'APPROVED' | 'PENDING_REVIEW' | 'PAID' | 'DISPUTED';
+  invoiceNumber?: string;
+  paidDate?: string;
+}
+
+export interface LeaseAgreementDto {
+  id: string | number;
+  unitNumber: string;
+  tenantName: string;
+  tenantPhone: string;
+  monthlyRent: number;
+  depositAmount: number;
+  startDate: string;
+  endDate: string;
+  daysToExpiry: number;
+  renewalStatus: 'ACTIVE' | 'RENEWAL_DUE' | 'EXPIRED' | 'RENEWED';
+  policeVerification: boolean;
+  documentUrl?: string;
+}
+

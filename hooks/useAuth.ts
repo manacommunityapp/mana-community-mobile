@@ -1,9 +1,67 @@
 import { create } from 'zustand';
 import { authService } from '@/services/authService';
-import { tokenStore } from '@/services/apiClient';
+import { tokenStore, setTenantCommunityId } from '@/services/apiClient';
 import type { UserProfileResponse, LoginRequest, RegisterRequest } from '@/types/api';
+import { ROLE_PERMISSIONS, ROLE_ALIASES, type UserRole } from '@/constants/permissions';
+import { normalizeRoles } from '@/constants/roleAliases';
 
 export type UserPersona = 'RESIDENT' | 'ADMIN' | 'STAFF' | 'VENDOR';
+
+const MODULE_ALIASES: Record<string, string[]> = {
+  COMMUNITY_FEED: ['COMMUNITY_FEED', 'FEED', 'FORUM', 'COMMUNITY'],
+  COMMUNITY_HIGHLIGHT: ['COMMUNITY_HIGHLIGHT', 'HIGHLIGHT_BANNER', 'HIGHLIGHTS'],
+  SPORTS: ['SPORTS', 'TOURNAMENTS', 'SPORTS_MAIN', 'SPORTS_LEAGUE'],
+  MARKETPLACE: ['MARKETPLACE', 'COMMERCE', 'AUCTIONS', 'MARKET'],
+  VISITORS: ['VISITORS', 'SECURITY', 'GATE', 'SAFETY', 'PARKING'],
+  NOTICES: ['NOTICES', 'BROADCAST', 'ANNOUNCEMENT'],
+  BOOKINGS: ['BOOKINGS', 'FACILITIES', 'AMENITIES'],
+  FACILITIES: ['BOOKINGS', 'FACILITIES', 'AMENITIES', 'INVENTORY', 'SMART_HOME', 'IOT'],
+  HELPDESK: ['HELPDESK', 'COMPLAINTS', 'ISSUES'],
+  POLLS: ['POLLS', 'VOTING'],
+  JOBS: ['JOBS', 'CPN'],
+  EVENTS: ['EVENTS', 'CALENDAR', 'EXPERIENCES'],
+  CALENDAR: ['EVENTS', 'CALENDAR'],
+  ENTERTAINMENT: ['ENTERTAINMENT', 'MOVIES'],
+  COMMUNITY_MGMT: ['COMMUNITY_MGMT', 'GOVERNANCE', 'PROJECTS'],
+  GOVERNANCE: ['COMMUNITY_MGMT', 'GOVERNANCE'],
+  PROJECTS: ['PROJECTS', 'COMMUNITY_MGMT', 'GOVERNANCE'],
+  FINANCE_MGMT: ['FINANCE_MGMT', 'PAYMENTS', 'PERSONAL_FINANCE', 'BILLING'],
+  PERSONAL_FINANCE: ['FINANCE_MGMT', 'PAYMENTS', 'PERSONAL_FINANCE', 'MY_MONEY'],
+  ADMIN_HUB: ['ADMIN_HUB', 'ADMIN'],
+  FOOD_OS: ['FOOD_OS', 'FOOD', 'FRESH_KITCHEN', 'DAILY_BASKET', 'MANA_FRESH'],
+  FOOD: ['FOOD_OS', 'FOOD'],
+  MANA_FRESH: ['FOOD_OS', 'FOOD', 'MANA_FRESH', 'FRESH_KITCHEN', 'DAILY_BASKET'],
+  VENDOR_MANAGEMENT: ['VENDOR_MANAGEMENT', 'VENDOR'],
+  GROUP_BUYING: ['GROUP_BUYING'],
+  SERVICE_PLATFORM: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
+  HOME_SERVICES: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
+  SERVICES: ['SERVICE_PLATFORM', 'HOME_SERVICES', 'SERVICES'],
+  EMERGENCY: ['EMERGENCY', 'SAFETY', 'SOS'],
+  TRIPS: ['TRIPS', 'COMMUTE', 'MOBILITY'],
+  COMMUTE: ['TRIPS', 'COMMUTE', 'MOBILITY'],
+  DISCOVER: ['DISCOVER'],
+  MAINTENANCE: ['MAINTENANCE', 'CPOS', 'AMC', 'ASSETS', 'FACILITIES'],
+  AMC: ['AMC', 'MAINTENANCE', 'CPOS', 'FACILITIES'],
+  INSURANCE: ['INSURANCE'],
+  COMMERCE: ['COMMERCE', 'MARKETPLACE'],
+  BAZAAR: ['BAZAAR', 'MARKETPLACE', 'COMMERCE'],
+  DOCUMENTS: ['DOCUMENTS', 'FINANCE_MGMT', 'COMMUNITY_MGMT', 'SAFETY'],
+  ACADEMY: ['ACADEMY', 'LEARNING'],
+  SAFETY: ['SAFETY', 'VISITORS', 'EMERGENCY', 'HEALTH'],
+  HEALTH: ['HEALTH', 'SAFETY', 'WELLNESS'],
+  WELLNESS: ['WELLNESS', 'HEALTH', 'SAFETY', 'FOOD_OS'],
+  PAYMENTS: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT', 'WALLET', 'BBPS'],
+  MANA_PAY: ['PAYMENTS', 'MANA_PAY', 'FINANCE_MGMT'],
+  CPOS: ['CPOS', 'MAINTENANCE', 'FACILITIES'],
+  PARKING: ['PARKING', 'FACILITIES', 'VISITORS'],
+  SMART_HOME: ['SMART_HOME', 'AUTOMATION', 'FACILITIES', 'IOT'],
+  AUTOMATION: ['SMART_HOME', 'AUTOMATION', 'FACILITIES', 'IOT'],
+  IOT: ['IOT', 'SUBMETERS', 'FACILITIES', 'SMART_HOME'],
+  INVENTORY: ['INVENTORY', 'FACILITIES', 'MAINTENANCE'],
+  PETS: ['PETS', 'SERVICE_PLATFORM', 'HOME_SERVICES'],
+  AI_CONCIERGE: ['AI_CONCIERGE', 'AI_CHAT', 'SAFETY'],
+  AI_CHAT: ['AI_CONCIERGE', 'AI_CHAT', 'SAFETY'],
+};
 
 interface AuthState {
   user: UserProfileResponse | null;
@@ -11,7 +69,9 @@ interface AuthState {
   isAuthenticated: boolean;
   isPending: boolean;
   isRejected: boolean;
-  
+  /** True when the app launched offline and is showing a cached profile */
+  isOffline: boolean;
+
   // Computed role & module state
   roles: string[];
   permissions: string[];
@@ -38,13 +98,38 @@ interface AuthState {
   switchPersona: (persona: UserPersona) => void;
 }
 
+export function computeEffectivePermissions(roles: string[], directPermissions?: string[]): string[] {
+  const perms = new Set<string>(directPermissions || []);
+  for (const r of roles) {
+    const roleKey = r.trim().toUpperCase() as UserRole;
+    let rp = ROLE_PERMISSIONS[roleKey];
+    if (!rp) {
+      const aliases = ROLE_ALIASES[roleKey] || [];
+      for (const alias of aliases) {
+        if (ROLE_PERMISSIONS[alias as UserRole]) {
+          rp = ROLE_PERMISSIONS[alias as UserRole];
+          break;
+        }
+      }
+    }
+    if (!rp) continue;
+    if (rp.includes('*')) {
+      return ['*'];
+    }
+    for (const p of rp) {
+      perms.add(p);
+    }
+  }
+  return Array.from(perms);
+}
+
 function computeRoles(user: UserProfileResponse | null): string[] {
   if (!user) return [];
   if (user.roles && user.roles.length > 0) {
-    return user.roles.map(r => r.trim().toUpperCase());
+    return normalizeRoles(user.roles);
   }
   if (user.role) {
-    return user.role.split(',').map(r => r.trim().toUpperCase()).filter(Boolean);
+    return normalizeRoles(user.role.split(','));
   }
   return [];
 }
@@ -57,10 +142,44 @@ function resolvePrimaryPersona(roles: string[]): UserPersona {
   if (roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD') || roleSet.has('STAFF') || roleSet.has('CASHIER')) {
     return 'STAFF';
   }
-  if (roleSet.has('VENDOR')) {
+  if (roleSet.has('VENDOR') || roleSet.has('SPORTS_VENDOR')) {
     return 'VENDOR';
   }
   return 'RESIDENT';
+}
+
+async function enrichUserProfile(
+  user: UserProfileResponse,
+  fallbackCid?: number,
+  fallbackModules?: string[]
+): Promise<UserProfileResponse> {
+  const cid = user.communityId ?? fallbackCid ?? null;
+  let enabledMods = (user.enabledModules && user.enabledModules.length > 0)
+    ? user.enabledModules
+    : (fallbackModules || []);
+  let commName = user.communityName ?? (typeof user.community === 'object' ? (user.community as any)?.name : null);
+
+  if (cid) {
+    setTenantCommunityId(cid);
+    if (!commName || enabledMods.length === 0) {
+      try {
+        const comm = await authService.getCommunityDetails(cid);
+        if (comm?.name) commName = comm.name;
+        if (enabledMods.length === 0 && comm?.enabledModules?.length) {
+          enabledMods = comm.enabledModules;
+        }
+      } catch {
+        // Graceful fallback if offline or backend route fails
+      }
+    }
+  }
+
+  return {
+    ...user,
+    communityId: cid ?? undefined,
+    communityName: commName,
+    enabledModules: enabledMods,
+  };
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -69,6 +188,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isPending: false,
   isRejected: false,
+  isOffline: false,
 
   roles: [],
   permissions: [],
@@ -82,28 +202,45 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   hasPermission: (permission: string): boolean => {
     const { permissions, isSuperAdmin } = get();
-    if (isSuperAdmin) return true;
+    if (isSuperAdmin || permissions.includes('*')) return true;
     return permissions.includes(permission);
   },
 
   hasAnyPermission: (...perms: string[]): boolean => {
     const { permissions, isSuperAdmin } = get();
-    if (isSuperAdmin) return true;
+    if (isSuperAdmin || permissions.includes('*')) return true;
     return perms.some(p => permissions.includes(p));
   },
 
   hasModule: (moduleKey: string): boolean => {
     const { enabledModules, isSuperAdmin } = get();
     if (isSuperAdmin) return true;
+    const normalizedKey = moduleKey.trim().toUpperCase();
+
+    // Community highlight banner is hidden by default unless explicitly enabled from admin side
+    if (normalizedKey === 'COMMUNITY_HIGHLIGHT' || normalizedKey === 'HIGHLIGHT_BANNER') {
+      if (!enabledModules || enabledModules.length === 0) return false;
+      const upperMods = enabledModules.map(m => (m || '').trim().toUpperCase());
+      const aliases = MODULE_ALIASES[normalizedKey] || [normalizedKey];
+      return aliases.some(alias => upperMods.includes(alias.toUpperCase()));
+    }
+
     if (!enabledModules || enabledModules.length === 0) return true;
-    return enabledModules.includes(moduleKey);
+    const upperMods = enabledModules.map(m => (m || '').trim().toUpperCase());
+    if (upperMods.includes(normalizedKey)) return true;
+    const aliases = MODULE_ALIASES[normalizedKey] || [normalizedKey];
+    return aliases.some(alias => upperMods.includes(alias.toUpperCase()));
   },
 
   hasRole: (...checkRoles: string[]): boolean => {
     const { roles, isSuperAdmin } = get();
     if (isSuperAdmin) return true;
     const upperRoles = checkRoles.map(r => r.trim().toUpperCase());
-    return upperRoles.some(r => roles.includes(r));
+    return upperRoles.some(r => {
+      if (roles.includes(r)) return true;
+      const aliases = ROLE_ALIASES[r] || [];
+      return aliases.some(alias => roles.includes(alias));
+    });
   },
 
   switchPersona: (persona: UserPersona) => {
@@ -111,25 +248,17 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   loadUser: async () => {
-    try {
-      const token = await tokenStore.getAccess();
-      if (!token) {
-        set({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          roles: [],
-          permissions: [],
-          enabledModules: [],
-          isAdmin: false,
-          isSuperAdmin: false,
-          isGuard: false,
-          isVendor: false,
-          isAnyAdmin: false,
-        });
-        return;
-      }
-      const user = await authService.getProfile();
+    const clearAndSignOut = async () => {
+      await tokenStore.clearAll();
+      setTenantCommunityId(null);
+      set({
+        user: null, isAuthenticated: false, isLoading: false, isOffline: false,
+        roles: [], permissions: [], enabledModules: [],
+        isAdmin: false, isSuperAdmin: false, isGuard: false, isVendor: false, isAnyAdmin: false,
+      });
+    };
+
+    const applyUser = (user: UserProfileResponse, offline: boolean) => {
       const roles = computeRoles(user);
       const roleSet = new Set(roles);
       const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
@@ -137,104 +266,232 @@ export const useAuth = create<AuthState>((set, get) => ({
       const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
       const isVendor = roleSet.has('VENDOR');
       const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
-
+      const permissions = computeEffectivePermissions(roles, user.permissions);
+      setTenantCommunityId(user.communityId ?? null);
       set({
         user,
         isAuthenticated: true,
         isLoading: false,
+        isOffline: offline,
         roles,
-        permissions: user.permissions || [],
+        permissions,
         enabledModules: user.enabledModules || [],
         activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
+        isAdmin: isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN'),
         isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
+        isGuard: roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD'),
+        isVendor: roleSet.has('VENDOR'),
+        isAnyAdmin: isSuperAdmin || roles.some(r => r.includes('ADMIN')),
       });
+    };
+
+    try {
+      const token = await tokenStore.getAccess();
+      if (!token) {
+        await clearAndSignOut();
+        return;
+      }
+
+      try {
+        let user = await authService.getProfile();
+        user = await enrichUserProfile(user);
+        applyUser(user, false);
+      } catch (err: any) {
+        const status: number | undefined = err?.response?.status;
+
+        // 401/403 means the server explicitly rejected the token — sign out.
+        if (status === 401 || status === 403) {
+          await clearAndSignOut();
+          return;
+        }
+
+        // Network error or other non-auth failure: try the encrypted profile cache so
+        // the user stays logged in and can use cached screens offline.
+        const cached = await tokenStore.getCachedProfile().catch(() => null);
+        if (cached) {
+          try {
+            const cachedUser = JSON.parse(cached) as UserProfileResponse;
+            const enriched = await enrichUserProfile(cachedUser).catch(() => cachedUser);
+            applyUser(enriched, true);
+            return;
+          } catch {
+            // Corrupt JSON (schema change from an app update) — clear and re-login.
+            await clearAndSignOut();
+            return;
+          }
+        }
+
+        // No cache available — cannot restore session offline.
+        await clearAndSignOut();
+      }
     } catch {
-      await tokenStore.clearAll();
-      set({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        roles: [],
-        permissions: [],
-        enabledModules: [],
-        isAdmin: false,
-        isSuperAdmin: false,
-        isGuard: false,
-        isVendor: false,
-        isAnyAdmin: false,
-      });
+      await clearAndSignOut();
     }
   },
 
   login: async (data) => {
-    await authService.login(data);
-    try {
-      const user = await authService.getProfile();
-      const roles = computeRoles(user);
-      const roleSet = new Set(roles);
-      const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
-      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
-      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
-      const isVendor = roleSet.has('VENDOR');
-      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
-
-      set({
-        user,
-        isAuthenticated: true,
-        roles,
-        permissions: user.permissions || [],
-        enabledModules: user.enabledModules || [],
-        activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
-        isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
-      });
-    } catch {
-      set({ isAuthenticated: true });
+    const res = await authService.login(data);
+    if (res?.communityId != null) {
+      setTenantCommunityId(res.communityId);
     }
+    const resolvedName = res.fullName || res.userId || 'Neighbor';
+    const roles = (res as any)?.roles && (res as any).roles.length > 0
+      ? (res as any).roles
+      : (res.role ? [res.role.toUpperCase()] : ['RESIDENT']);
+    const roleSet = new Set(roles);
+    const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
+    const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
+    const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
+    const isVendor = roleSet.has('VENDOR');
+    const isAnyAdmin = isSuperAdmin || roles.some((r: string) => r.includes('ADMIN'));
+
+    const initialUser: UserProfileResponse = {
+      id: Number(res.userId) || 0,
+      name: resolvedName,
+      fullName: resolvedName,
+      email: res.email || '',
+      role: res.role || 'RESIDENT',
+      roles,
+      communityId: res.communityId,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      enabledModules: res.enabledModules || [],
+      permissions: res.permissions || [],
+    };
+
+    const permissions = computeEffectivePermissions(roles, res.permissions);
+
+    set({
+      user: initialUser,
+      isAuthenticated: true,
+      isLoading: false,
+      roles,
+      permissions,
+      enabledModules: initialUser.enabledModules || [],
+      activePersona: resolvePrimaryPersona(roles),
+      isAdmin,
+      isSuperAdmin,
+      isGuard,
+      isVendor,
+      isAnyAdmin,
+    });
+
+    // Background profile hydration with community enrichment
+    authService.getProfile()
+      .then(async (fullUser) => {
+        const enrichedUser = await enrichUserProfile(fullUser, res.communityId, res.enabledModules);
+        const fullRoles = computeRoles(enrichedUser);
+        const fullRoleSet = new Set(fullRoles);
+        const fullPermissions = computeEffectivePermissions(
+          fullRoles,
+          (enrichedUser.permissions && enrichedUser.permissions.length > 0) ? enrichedUser.permissions : res.permissions
+        );
+        setTenantCommunityId(enrichedUser.communityId ?? null);
+        set({
+          user: enrichedUser,
+          roles: fullRoles,
+          permissions: fullPermissions,
+          enabledModules: enrichedUser.enabledModules || res.enabledModules || [],
+          activePersona: resolvePrimaryPersona(fullRoles),
+          isAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('ADMIN') || fullRoleSet.has('COMMUNITY_ADMIN'),
+          isSuperAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('SUPERADMIN'),
+          isGuard: fullRoleSet.has('GUARD') || fullRoleSet.has('SECURITY_GUARD'),
+          isVendor: fullRoleSet.has('VENDOR'),
+          isAnyAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoles.some(r => r.includes('ADMIN')),
+        });
+      })
+      .catch(async () => {
+        const enriched = await enrichUserProfile(initialUser, res.communityId, res.enabledModules);
+        setTenantCommunityId(enriched.communityId ?? null);
+        set({ user: enriched });
+      });
   },
 
   register: async (data) => {
-    await authService.register(data);
-    try {
-      const user = await authService.getProfile();
-      const roles = computeRoles(user);
-      const roleSet = new Set(roles);
-      const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
-      const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
-      const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
-      const isVendor = roleSet.has('VENDOR');
-      const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
-
-      set({
-        user,
-        isAuthenticated: true,
-        roles,
-        permissions: user.permissions || [],
-        enabledModules: user.enabledModules || [],
-        activePersona: resolvePrimaryPersona(roles),
-        isAdmin,
-        isSuperAdmin,
-        isGuard,
-        isVendor,
-        isAnyAdmin,
-      });
-    } catch {
-      set({ isAuthenticated: true });
+    const res = await authService.register(data);
+    if (res?.communityId != null) {
+      setTenantCommunityId(res.communityId);
     }
+    const resolvedName = res.fullName || res.userId || 'Neighbor';
+    const roles = (res as any)?.roles && (res as any).roles.length > 0
+      ? (res as any).roles
+      : (res.role ? [res.role.toUpperCase()] : ['RESIDENT']);
+    const roleSet = new Set(roles);
+    const isSuperAdmin = roleSet.has('SUPER_ADMIN') || roleSet.has('SUPERADMIN');
+    const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
+    const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
+    const isVendor = roleSet.has('VENDOR');
+    const isAnyAdmin = isSuperAdmin || roles.some((r: string) => r.includes('ADMIN'));
+
+    const initialUser: UserProfileResponse = {
+      id: Number(res.userId) || 0,
+      name: resolvedName,
+      fullName: resolvedName,
+      email: res.email || '',
+      role: res.role || 'RESIDENT',
+      roles,
+      communityId: res.communityId,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      enabledModules: res.enabledModules || [],
+      permissions: res.permissions || [],
+    };
+
+    const permissions = computeEffectivePermissions(roles, res.permissions);
+
+    set({
+      user: initialUser,
+      isAuthenticated: true,
+      isLoading: false,
+      roles,
+      permissions,
+      enabledModules: initialUser.enabledModules || [],
+      activePersona: resolvePrimaryPersona(roles),
+      isAdmin,
+      isSuperAdmin,
+      isGuard,
+      isVendor,
+      isAnyAdmin,
+    });
+
+    // Background profile hydration with community enrichment
+    authService.getProfile()
+      .then(async (fullUser) => {
+        const enrichedUser = await enrichUserProfile(fullUser, res.communityId, res.enabledModules);
+        const fullRoles = computeRoles(enrichedUser);
+        const fullRoleSet = new Set(fullRoles);
+        const fullPermissions = computeEffectivePermissions(
+          fullRoles,
+          (enrichedUser.permissions && enrichedUser.permissions.length > 0) ? enrichedUser.permissions : res.permissions
+        );
+        setTenantCommunityId(enrichedUser.communityId ?? null);
+        set({
+          user: enrichedUser,
+          roles: fullRoles,
+          permissions: fullPermissions,
+          enabledModules: enrichedUser.enabledModules || res.enabledModules || [],
+          activePersona: resolvePrimaryPersona(fullRoles),
+          isAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('ADMIN') || fullRoleSet.has('COMMUNITY_ADMIN'),
+          isSuperAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoleSet.has('SUPERADMIN'),
+          isGuard: fullRoleSet.has('GUARD') || fullRoleSet.has('SECURITY_GUARD'),
+          isVendor: fullRoleSet.has('VENDOR'),
+          isAnyAdmin: fullRoleSet.has('SUPER_ADMIN') || fullRoles.some(r => r.includes('ADMIN')),
+        });
+      })
+      .catch(async () => {
+        const enriched = await enrichUserProfile(initialUser, res.communityId, res.enabledModules);
+        setTenantCommunityId(enriched.communityId ?? null);
+        set({ user: enriched });
+      });
   },
 
   logout: async () => {
-    await authService.logout();
+    await authService.logout(); // also calls tokenStore.clearAll() which clears the cached profile
+    setTenantCommunityId(null);
     set({
       user: null,
       isAuthenticated: false,
+      isOffline: false,
       roles: [],
       permissions: [],
       enabledModules: [],
@@ -253,12 +510,17 @@ export const useAuth = create<AuthState>((set, get) => ({
     const isAdmin = isSuperAdmin || roleSet.has('ADMIN') || roleSet.has('COMMUNITY_ADMIN');
     const isGuard = roleSet.has('GUARD') || roleSet.has('SECURITY_GUARD');
     const isVendor = roleSet.has('VENDOR');
-    const isAnyAdmin = isSuperAdmin || roles.some(r => r.includes('ADMIN'));
+    const isAnyAdmin = isSuperAdmin || roles.some((r: string) => r.includes('ADMIN'));
+    const permissions = computeEffectivePermissions(roles, user.permissions);
+
+    if (user.communityId != null) {
+      setTenantCommunityId(user.communityId);
+    }
 
     set({
       user,
       roles,
-      permissions: user.permissions || [],
+      permissions,
       enabledModules: user.enabledModules || [],
       isAdmin,
       isSuperAdmin,
@@ -268,3 +530,4 @@ export const useAuth = create<AuthState>((set, get) => ({
     });
   },
 }));
+

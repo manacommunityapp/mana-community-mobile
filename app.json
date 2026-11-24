@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4F46E5"
+      "backgroundColor": "#2A024A"
     },
     "ios": {
       "supportsTablet": false,
@@ -22,10 +22,10 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4F46E5"
+        "backgroundColor": "#2A024A"
       },
       "package": "com.manacommunity.mobile",
-      "versionCode": 1,
+      "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -68,7 +68,20 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@sentry/react-native/expo",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "disableAutoUpload": true
+        }
+      ],
       [
         "expo-notifications",
         {
@@ -89,7 +102,6 @@
           "faceIDPermission": "Use Face ID to sign in to Mana Community."
         }
       ],
-      "@sentry/react-native",
       "expo-image",
       "expo-localization",
       [

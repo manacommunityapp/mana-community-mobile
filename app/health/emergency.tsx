@@ -2,9 +2,187 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Linking, TextInput, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { healthService } from "@/services/healthService";
 import { HealthEmergencyContactDto } from "@/types/health";
 import { RADIUS, SHADOWS, FONTS } from "@/constants/config";
+
+const BLOOD_TYPES = ["A+", "A−", "B+", "B−", "AB+", "AB−", "O+", "O−"];
+const BLOOD_AVAILABILITY = {
+  "A+": { units: 12, status: "available" }, "A−": { units: 3, status: "low" },
+  "B+": { units: 8, status: "available" }, "B−": { units: 1, status: "critical" },
+  "AB+": { units: 6, status: "available" }, "AB−": { units: 0, status: "unavailable" },
+  "O+": { units: 15, status: "available" }, "O−": { units: 2, status: "low" },
+} as const;
+
+const DONATION_DRIVES = [
+  { date: "8 Nov 2026", location: "Clubhouse Banquet Hall", slots: 40, booked: 28 },
+  { date: "22 Nov 2026", location: "Community Health Centre", slots: 30, booked: 12 },
+];
+
+function BloodBankSection() {
+  const [showDonate, setShowDonate] = useState(false);
+  const [donorName, setDonorName] = useState("");
+  const [donorPhone, setDonorPhone] = useState("");
+  const [donorBloodType, setDonorBloodType] = useState("");
+  const [donorDriveIdx, setDonorDriveIdx] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+
+  const statusColor: Record<string, string> = {
+    available: "#059669", low: "#D97706", critical: "#DC2626", unavailable: "#9CA3AF"
+  };
+  const statusBg: Record<string, string> = {
+    available: "#DCFCE7", low: "#FEF3C7", critical: "#FEE2E2", unavailable: "#F3F4F6"
+  };
+
+  return (
+    <View>
+      <LinearGradient colors={["#7F1D1D", "#DC2626"]} style={bbStyles.header}>
+        <Ionicons name="water" size={20} color="#FCA5A5" />
+        <View style={{ flex: 1 }}>
+          <Text style={bbStyles.headerTitle}>Community Blood Bank</Text>
+          <Text style={bbStyles.headerSub}>Real-time availability · Donate & save a life</Text>
+        </View>
+        <TouchableOpacity style={bbStyles.donateBtn} onPress={() => setShowDonate(true)}>
+          <Text style={bbStyles.donateBtnText}>Donate →</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+
+      <View style={bbStyles.availGrid}>
+        {BLOOD_TYPES.map(bt => {
+          const info = BLOOD_AVAILABILITY[bt as keyof typeof BLOOD_AVAILABILITY];
+          return (
+            <View key={bt} style={[bbStyles.btCard, { backgroundColor: statusBg[info.status] }]}>
+              <Text style={[bbStyles.btType, { color: statusColor[info.status] }]}>{bt}</Text>
+              <Text style={[bbStyles.btUnits, { color: statusColor[info.status] }]}>{info.units} units</Text>
+              <Text style={[bbStyles.btStatus, { color: statusColor[info.status] }]}>
+                {info.status === "unavailable" ? "Need" : info.status.charAt(0).toUpperCase() + info.status.slice(1)}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      <Text style={bbStyles.drivesTitle}>Upcoming Donation Drives</Text>
+      {DONATION_DRIVES.map((d, i) => (
+        <View key={i} style={bbStyles.driveRow}>
+          <Ionicons name="calendar" size={14} color="#DC2626" />
+          <View style={{ flex: 1 }}>
+            <Text style={bbStyles.driveDate}>{d.date} — {d.location}</Text>
+            <Text style={bbStyles.driveSlots}>{d.booked}/{d.slots} slots booked</Text>
+          </View>
+          <TouchableOpacity style={bbStyles.driveRegBtn} onPress={() => { setDonorDriveIdx(i); setShowDonate(true); }}>
+            <Text style={bbStyles.driveRegBtnText}>Register</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+
+      <Modal visible={showDonate} animationType="slide" transparent>
+        <View style={bbStyles.modalOverlay}>
+          <View style={bbStyles.modalCard}>
+            <View style={bbStyles.modalHeader}>
+              <Text style={bbStyles.modalTitle}>Register as Blood Donor</Text>
+              <TouchableOpacity onPress={() => { setShowDonate(false); setSubmitted(false); }}>
+                <Ionicons name="close" size={22} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            {submitted ? (
+              <View style={bbStyles.successWrap}>
+                <Ionicons name="heart" size={48} color="#DC2626" />
+                <Text style={bbStyles.successTitle}>Thank You! 🎉</Text>
+                <Text style={bbStyles.successDesc}>Your donor registration is confirmed for {DONATION_DRIVES[donorDriveIdx].date}. You'll receive a reminder 2 days before.</Text>
+                <TouchableOpacity style={bbStyles.doneBtn} onPress={() => { setShowDonate(false); setSubmitted(false); }}>
+                  <Text style={bbStyles.doneBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <View style={{ gap: 10 }}>
+                  <View style={{ gap: 4 }}>
+                    <Text style={bbStyles.fieldLabel}>Full Name</Text>
+                    <TextInput style={bbStyles.input} value={donorName} onChangeText={setDonorName} placeholder="Your name" />
+                  </View>
+                  <View style={{ gap: 4 }}>
+                    <Text style={bbStyles.fieldLabel}>Phone Number *</Text>
+                    <TextInput style={bbStyles.input} value={donorPhone} onChangeText={setDonorPhone} placeholder="+91 XXXXX XXXXX" keyboardType="phone-pad" />
+                  </View>
+                  <View style={{ gap: 4 }}>
+                    <Text style={bbStyles.fieldLabel}>Blood Type</Text>
+                    <View style={bbStyles.btPickerRow}>
+                      {BLOOD_TYPES.map(bt => (
+                        <TouchableOpacity key={bt} style={[bbStyles.btPicker, donorBloodType === bt && bbStyles.btPickerActive]} onPress={() => setDonorBloodType(bt)}>
+                          <Text style={[bbStyles.btPickerText, donorBloodType === bt && bbStyles.btPickerTextActive]}>{bt}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={{ gap: 4 }}>
+                    <Text style={bbStyles.fieldLabel}>Drive Date</Text>
+                    <View style={{ gap: 6 }}>
+                      {DONATION_DRIVES.map((d, i) => (
+                        <TouchableOpacity key={i} style={[bbStyles.drivePickRow, donorDriveIdx === i && bbStyles.drivePickRowActive]} onPress={() => setDonorDriveIdx(i)}>
+                          <Text style={[bbStyles.drivePickText, donorDriveIdx === i && { color: "#FFFFFF" }]}>{d.date} · {d.location}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[bbStyles.submitBtn, !donorPhone && { opacity: 0.5 }]}
+                  disabled={!donorPhone}
+                  onPress={() => setSubmitted(true)}
+                >
+                  <Ionicons name="heart" size={16} color="#FFFFFF" />
+                  <Text style={bbStyles.submitBtnText}>Confirm Donation Registration</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const bbStyles = StyleSheet.create({
+  header: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 16, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  headerTitle: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
+  headerSub: { color: "#FCA5A5", fontSize: 10, marginTop: 2 },
+  donateBtn: { backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  donateBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 11 },
+  availGrid: { flexDirection: "row", flexWrap: "wrap", gap: 0, borderWidth: 1, borderTopWidth: 0, borderColor: "#FEE2E2", borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: "hidden" },
+  btCard: { width: "25%", padding: 10, alignItems: "center", gap: 2 },
+  btType: { fontSize: 15, fontWeight: "800" },
+  btUnits: { fontSize: 10, fontWeight: "600" },
+  btStatus: { fontSize: 9, fontWeight: "600" },
+  drivesTitle: { fontSize: 13, fontWeight: "700", color: "#111827", marginTop: 12, marginBottom: 6 },
+  driveRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFFFFF", padding: 12, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 6 },
+  driveDate: { fontSize: 12, fontWeight: "700", color: "#111827" },
+  driveSlots: { fontSize: 10, color: "#6B7280", marginTop: 2 },
+  driveRegBtn: { backgroundColor: "#DC2626", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  driveRegBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 11 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalCard: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 14 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  modalTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
+  fieldLabel: { fontSize: 13, fontWeight: "700", color: "#374151" },
+  input: { backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 10, padding: 12, fontSize: 13, color: "#0F172A" },
+  btPickerRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  btPicker: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#FFFFFF" },
+  btPickerActive: { backgroundColor: "#DC2626", borderColor: "#DC2626" },
+  btPickerText: { fontSize: 12, fontWeight: "700", color: "#374151" },
+  btPickerTextActive: { color: "#FFFFFF" },
+  drivePickRow: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#FFFFFF" },
+  drivePickRowActive: { backgroundColor: "#DC2626", borderColor: "#DC2626" },
+  drivePickText: { fontSize: 12, fontWeight: "600", color: "#374151" },
+  submitBtn: { backgroundColor: "#DC2626", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 14, borderRadius: 12, marginTop: 4 },
+  submitBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
+  successWrap: { alignItems: "center", paddingVertical: 20, gap: 10 },
+  successTitle: { fontSize: 18, fontWeight: "800", color: "#DC2626" },
+  successDesc: { fontSize: 12, color: "#374151", textAlign: "center" },
+  doneBtn: { backgroundColor: "#DC2626", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+  doneBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
+});
 
 const EMERGENCY_SIGNS = [
   { sign: "Chest pain or difficulty breathing", icon: "heart" },
@@ -116,6 +294,9 @@ export default function EmergencyHealthScreen() {
             </View>
           ))}
         </View>
+
+        {/* Blood Bank */}
+        <BloodBankSection />
 
         {/* Emergency Contacts */}
         <Text style={styles.sectionHeader}>Verified Community Emergency Contacts</Text>

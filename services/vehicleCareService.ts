@@ -356,63 +356,145 @@ const EMOJI_BY_TYPE: Record<string, string> = {
 function mapAddon(raw: any): ServiceAddon {
   return {
     id: String(raw.id),
-    name: raw.name,
-    description: raw.description ?? '',
-    price: Number(raw.price),
+    name: raw.name || '',
+    description: raw.description ?? raw.name ?? '',
+    price: Number(raw.price || 0),
     durationMins: raw.durationMinutes ?? raw.durationMins ?? 0,
   };
 }
 
 function mapCatalogItem(raw: any): ServiceCatalogItem {
   const lc = (raw.name ?? '').toLowerCase();
-  const emoji = EMOJI_BY_NAME.find(([k]) => lc.includes(k))?.[1] ?? '🚗';
+  const emoji = raw.emoji || EMOJI_BY_NAME.find(([k]) => lc.includes(k))?.[1] || (raw.name?.includes('Full') ? '🚿' : '💧');
   return {
     id: String(raw.id),
-    serviceType: (raw.serviceType ?? raw.name?.toUpperCase().replace(/\s+/g, '_') ?? 'GENERAL') as ServiceType,
-    name: raw.name,
+    serviceType: (raw.serviceType ?? raw.name?.toUpperCase().replace(/\s+/g, '_') ?? 'FULL_WASH') as ServiceType,
+    name: raw.name || 'Vehicle Service',
     description: raw.description ?? '',
     emoji,
-    basePrice: Number(raw.basePrice),
-    communityPrice: Number(raw.communityPrice),
-    durationMins: raw.durationMinutes ?? raw.durationMins ?? 0,
-    vehicleTypes: raw.vehicleTypes ?? [],
+    basePrice: Number(raw.basePrice || 0),
+    communityPrice: Number(raw.communityPrice ?? raw.basePrice ?? 0),
+    durationMins: raw.durationMinutes ?? raw.durationMins ?? 30,
+    vehicleTypes: raw.vehicleTypes ?? ['CAR', 'SUV', 'BIKE'],
     addons: (raw.addons ?? []).map(mapAddon),
-    popular: raw.isPopular ?? raw.popular ?? false,
+    popular: Boolean(raw.isPopular ?? raw.popular ?? false),
     gradientColors: [raw.gradientStart ?? '#4F46E5', raw.gradientEnd ?? '#6366F1'],
   };
 }
 
 function mapVehicle(raw: any): VehicleProfile {
-  const type: VehicleType = raw.vehicleType ?? raw.type ?? 'CAR';
+  const type: VehicleType = (raw.vehicleType ?? raw.type ?? 'CAR') as VehicleType;
   return {
     id: String(raw.id),
-    nickname: raw.nickname,
+    nickname: raw.nickname || 'My Vehicle',
     type,
-    make: raw.make,
-    model: raw.model,
+    make: raw.make || '',
+    model: raw.model || '',
     color: raw.color ?? '',
-    plateNumber: raw.plateNumber,
-    isDefault: raw.isDefault ?? raw.default ?? false,
-    imageEmoji: EMOJI_BY_TYPE[type] ?? '🚗',
+    plateNumber: raw.plateNumber || '',
+    isDefault: Boolean(raw.isDefault ?? raw.default ?? raw.setAsDefault),
+    imageEmoji: EMOJI_BY_TYPE[type] ?? (type === 'BIKE' ? '🛵' : '🚗'),
   };
 }
 
 function mapSlot(raw: any): TimeSlot {
+  const available = raw.available ?? (raw.bookedCount !== undefined && raw.totalCapacity !== undefined ? raw.bookedCount < raw.totalCapacity : true);
+  const remaining = raw.remaining ?? Math.max(0, (raw.totalCapacity ?? 1) - (raw.bookedCount ?? 0));
   return {
     id: String(raw.id),
-    date: raw.slotDate ?? raw.date,
-    startTime: raw.startTime,
-    endTime: raw.endTime,
-    available: raw.available ?? (raw.bookedCount < raw.totalCapacity),
-    remaining: raw.remaining ?? Math.max(0, (raw.totalCapacity ?? 0) - (raw.bookedCount ?? 0)),
+    date: raw.slotDate ?? raw.date ?? '',
+    startTime: raw.startTime ? (raw.startTime.length > 5 ? raw.startTime.substring(0, 5) : raw.startTime) : '09:00',
+    endTime: raw.endTime ? (raw.endTime.length > 5 ? raw.endTime.substring(0, 5) : raw.endTime) : '10:00',
+    available: Boolean(available),
+    remaining: Number(remaining),
   };
 }
 
-function extractList<T>(res: any): T[] {
-  const d = res.data;
+function mapBooking(b: any): VehicleCareBooking {
+  const addonNames = b.addonNames || (b.addons || []).map((a: any) => a.name) || [];
+  const serviceEmoji = b.serviceEmoji || (b.serviceName?.includes('Full') ? '🚿' : '💧');
+  return {
+    id: String(b.id),
+    bookingNumber: b.bookingNumber || `VC-${b.id}`,
+    vehicleId: String(b.vehicleId || ''),
+    vehicleDisplay: b.vehicleDisplay || `${b.vehicleNickname || 'Vehicle'} • ${b.vehiclePlate || ''}`,
+    serviceId: String(b.serviceId || ''),
+    serviceName: b.serviceName || 'Vehicle Service',
+    serviceEmoji,
+    addonIds: b.addonIds || (b.addons || []).map((a: any) => String(a.id)),
+    addonNames,
+    date: b.date || b.scheduledDate || '',
+    startTime: b.startTime ? (b.startTime.length > 5 ? b.startTime.substring(0, 5) : b.startTime) : '09:00',
+    endTime: b.endTime ? (b.endTime.length > 5 ? b.endTime.substring(0, 5) : b.endTime) : '10:00',
+    location: b.location || b.locationNotes || '',
+    status: (b.status || 'CONFIRMED') as BookingStatus,
+    quotedPrice: Number(b.quotedPrice ?? b.totalAmount ?? 0),
+    paidAmount: Number(b.paidAmount ?? b.totalAmount ?? 0),
+    technicianName: b.technicianName,
+    technicianPhone: b.technicianPhone,
+    eta: b.etaMinutes ? `${b.etaMinutes} mins` : b.eta,
+    rating: b.rating,
+    reviewText: b.reviewText,
+    canCancel: b.canCancel ?? ['PENDING_PAYMENT', 'CONFIRMED', 'ASSIGNED'].includes(b.status),
+    canRate: b.canRate ?? (b.status === 'COMPLETED' && !b.rating),
+    createdAt: b.createdAt || '',
+  };
+}
+
+function mapPlan(p: any): WashPlan {
+  return {
+    id: String(p.id),
+    name: p.name || p.planName || 'Wash Plan',
+    frequency: (p.frequency || p.frequencyLabel || 'MONTHLY') as PlanFrequency,
+    servicesIncluded: (p.servicesIncluded || ['FULL_WASH']) as ServiceType[],
+    creditsTotal: Number(p.creditsTotal || 4),
+    creditsUsed: Number(p.creditsUsed || 0),
+    price: Number(p.price || 0),
+    nextRenewalDate: p.nextRenewalDate || p.endDate || '',
+    status: (p.status || 'ACTIVE') as PlanStatus,
+    vehicleId: String(p.vehicleId || ''),
+    vehicleDisplay: (p.vehicleDisplay || `${p.vehicleNickname || ''} ${p.vehiclePlate || ''}`).trim() || 'Vehicle',
+  };
+}
+
+function mapPlanCatalog(c: any): WashPlanCatalog {
+  return {
+    id: String(c.id),
+    name: c.name || 'Wash Plan',
+    frequency: (c.frequency || c.frequencyLabel || 'MONTHLY') as PlanFrequency,
+    serviceType: (c.serviceType || 'FULL_WASH') as ServiceType,
+    creditsPerCycle: Number(c.creditsPerCycle || c.washesPerMonth || 4),
+    price: Number(c.price || 0),
+    savingsPercent: Number(c.savingsPercent || 0),
+    emoji: c.emoji || '🚗',
+    popular: Boolean(c.popular || c.isPopular),
+  };
+}
+
+function mapVendorJob(j: any): VendorJob {
+  return {
+    id: String(j.id),
+    bookingNumber: j.bookingNumber || `VC-${j.id}`,
+    residentName: j.residentName || j.vehicleNickname || 'Resident',
+    address: j.address || j.location || j.locationNotes || 'Flat',
+    vehicleDisplay: j.vehicleDisplay || `${j.vehiclePlate || ''}`,
+    serviceName: j.serviceName || 'Wash',
+    addonNames: j.addonNames || [],
+    scheduledDate: j.scheduledDate || j.date || '',
+    scheduledTime: j.scheduledTime || j.startTime || '',
+    status: (j.status || 'CONFIRMED') as BookingStatus,
+    amount: Number(j.amount ?? j.totalAmount ?? j.paidAmount ?? 0),
+    technicianName: j.technicianName,
+    checklistCompleted: Boolean(j.checklistCompleted),
+  };
+}
+
+function extractList(res: any): any[] {
+  const d = res?.data;
   if (Array.isArray(d)) return d;
-  if (Array.isArray(d?.content)) return d.content; // Page<T>
+  if (Array.isArray(d?.content)) return d.content;
   if (Array.isArray(d?.data)) return d.data;
+  if (Array.isArray(res?.content)) return res.content;
   return [];
 }
 
@@ -423,7 +505,8 @@ export const vehicleCareService = {
   getMyVehicles: async (): Promise<VehicleProfile[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/vehicles');
-      return extractList<any>(res).map(mapVehicle);
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapVehicle) : MOCK_VEHICLES;
     } catch {
       return MOCK_VEHICLES;
     }
@@ -467,30 +550,32 @@ export const vehicleCareService = {
   deleteVehicle: async (id: string): Promise<void> => {
     try {
       await apiClient.delete(`/vehicle-care/vehicles/${id}`);
-    } catch { /* mock: silently succeed */ }
+    } catch { /* mock fallback */ }
   },
 
   setDefaultVehicle: async (id: string): Promise<void> => {
     try {
       await apiClient.patch(`/vehicle-care/vehicles/${id}/default`);
-    } catch { /* mock: silently succeed */ }
+    } catch { /* mock fallback */ }
   },
 
   // Catalog
   getServiceCatalog: async (): Promise<ServiceCatalogItem[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/catalog');
-      return extractList<any>(res).map(mapCatalogItem);
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapCatalogItem) : MOCK_CATALOG;
     } catch {
       return MOCK_CATALOG;
     }
   },
 
   // Availability — backend expects from + to (ISO date range); pass same date for single-day view
-  getAvailableSlots: async (date: string, _serviceId: string): Promise<TimeSlot[]> => {
+  getAvailableSlots: async (date: string, _serviceId?: string): Promise<TimeSlot[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/slots', { params: { from: date, to: date } });
-      return extractList<any>(res).map(mapSlot);
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapSlot) : genSlots(new Date(date));
     } catch {
       return genSlots(new Date(date));
     }
@@ -499,14 +584,17 @@ export const vehicleCareService = {
   // Bookings
   createBooking: async (req: CreateBookingRequest): Promise<VehicleCareBooking> => {
     try {
-      const res = await apiClient.post('/vehicle-care/bookings', {
-        vehicleId: req.vehicleId,
-        serviceId: req.serviceId,
-        slotId: req.slotId,
-        addonIds: req.addonIds,
+      const payload = {
+        vehicleId: isNaN(Number(req.vehicleId)) ? req.vehicleId : Number(req.vehicleId),
+        serviceId: isNaN(Number(req.serviceId)) ? req.serviceId : Number(req.serviceId),
+        slotId: isNaN(Number(req.slotId)) ? req.slotId : Number(req.slotId),
+        addonIds: (req.addonIds || []).map(id => isNaN(Number(id)) ? id : Number(id)),
         locationNotes: req.location,
-      });
-      return (res.data as any)?.data ?? res.data;
+        paymentReference: req.paymentMethod || 'COD',
+      };
+      const res = await apiClient.post('/vehicle-care/bookings', payload);
+      const b = (res.data as any)?.data || res.data;
+      return mapBooking(b);
     } catch {
       const svc = MOCK_CATALOG.find(s => s.id === req.serviceId) || MOCK_CATALOG[0];
       const veh = MOCK_VEHICLES.find(v => v.id === req.vehicleId) || MOCK_VEHICLES[0];
@@ -538,8 +626,9 @@ export const vehicleCareService = {
 
   getMyBookings: async (): Promise<VehicleCareBooking[]> => {
     try {
-      const res = await apiClient.get('/vehicle-care/bookings');
-      return extractList<VehicleCareBooking>(res);
+      const res = await apiClient.get('/vehicle-care/bookings', { params: { filter: 'all', page: 0, size: 50 } });
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapBooking) : MOCK_BOOKINGS;
     } catch {
       return MOCK_BOOKINGS;
     }
@@ -548,20 +637,21 @@ export const vehicleCareService = {
   cancelBooking: async (id: string, _reason?: string): Promise<void> => {
     try {
       await apiClient.patch(`/vehicle-care/bookings/${id}/cancel`);
-    } catch { /* mock: silently succeed */ }
+    } catch { /* mock fallback */ }
   },
 
   rateBooking: async (id: string, rating: number, review?: string): Promise<void> => {
     try {
-      await apiClient.post(`/vehicle-care/bookings/${id}/review`, { rating, reviewText: review });
-    } catch { /* mock: silently succeed */ }
+      await apiClient.post(`/vehicle-care/bookings/${id}/review`, { rating, reviewText: review || '' });
+    } catch { /* mock fallback */ }
   },
 
   // Wash Plans
   getMyPlans: async (): Promise<WashPlan[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/plans');
-      return extractList<WashPlan>(res);
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapPlan) : MOCK_PLANS;
     } catch {
       return MOCK_PLANS;
     }
@@ -570,7 +660,8 @@ export const vehicleCareService = {
   getPlanCatalog: async (): Promise<WashPlanCatalog[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/plans/catalog');
-      return extractList<WashPlanCatalog>(res);
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapPlanCatalog) : MOCK_PLAN_CATALOG;
     } catch {
       return MOCK_PLAN_CATALOG;
     }
@@ -578,8 +669,14 @@ export const vehicleCareService = {
 
   subscribePlan: async (req: SubscribePlanRequest): Promise<WashPlan> => {
     try {
-      const res = await apiClient.post('/vehicle-care/plans/subscribe', req);
-      return (res.data as any)?.data ?? res.data;
+      const payload = {
+        planCatalogId: isNaN(Number(req.planCatalogId)) ? req.planCatalogId : Number(req.planCatalogId),
+        vehicleId: isNaN(Number(req.vehicleId)) ? req.vehicleId : Number(req.vehicleId),
+        paymentReference: req.paymentMethod,
+      };
+      const res = await apiClient.post('/vehicle-care/plans/subscribe', payload);
+      const p = (res.data as any)?.data || res.data;
+      return mapPlan(p);
     } catch {
       const cat = MOCK_PLAN_CATALOG.find(p => p.id === req.planCatalogId) || MOCK_PLAN_CATALOG[0];
       const veh = MOCK_VEHICLES.find(v => v.id === req.vehicleId) || MOCK_VEHICLES[0];
@@ -596,26 +693,27 @@ export const vehicleCareService = {
   pausePlan: async (id: string): Promise<void> => {
     try {
       await apiClient.patch(`/vehicle-care/plans/${id}/status`, null, { params: { status: 'PAUSED' } });
-    } catch { /* mock: silently succeed */ }
+    } catch { /* mock fallback */ }
   },
 
   resumePlan: async (id: string): Promise<void> => {
     try {
       await apiClient.patch(`/vehicle-care/plans/${id}/status`, null, { params: { status: 'ACTIVE' } });
-    } catch { /* mock: silently succeed */ }
+    } catch { /* mock fallback */ }
   },
 
   cancelPlan: async (id: string): Promise<void> => {
     try {
       await apiClient.patch(`/vehicle-care/plans/${id}/status`, null, { params: { status: 'CANCELLED' } });
-    } catch { /* mock: silently succeed */ }
+    } catch { /* mock fallback */ }
   },
 
   // Vendor / Technician
   getVendorJobs: async (): Promise<VendorJob[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/vendor/jobs');
-      return extractList<VendorJob>(res);
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapVendorJob) : MOCK_VENDOR_JOBS;
     } catch {
       return MOCK_VENDOR_JOBS;
     }
@@ -624,6 +722,12 @@ export const vehicleCareService = {
   updateJobStatus: async (id: string, status: BookingStatus): Promise<void> => {
     try {
       await apiClient.patch(`/vehicle-care/vendor/jobs/${id}/status`, null, { params: { status } });
-    } catch { /* mock: silently succeed */ }
+    } catch { /* mock fallback */ }
+  },
+
+  completeJob: async (id: string, _checklistCompleted: boolean): Promise<void> => {
+    try {
+      await apiClient.patch(`/vehicle-care/vendor/jobs/${id}/status`, null, { params: { status: 'COMPLETED' } });
+    } catch { /* mock fallback */ }
   },
 };

@@ -66,7 +66,7 @@ export default function JobBoardScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* Top Header */}
       <Header
@@ -203,7 +203,7 @@ export default function JobBoardScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={() => { refetch(); }}
               tintColor={COLORS.primary}
             />
           }
@@ -212,7 +212,7 @@ export default function JobBoardScreen() {
           ListFooterComponent={
             isFetchingNextPage ? (
               <ActivityIndicator style={{ padding: 16 }} color={COLORS.primary} />
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={s.empty}>

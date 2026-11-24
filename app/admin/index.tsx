@@ -55,8 +55,16 @@ export default function AdminDashboard() {
       route: '/admin/announcements',       color: COLORS.warning,
     },
     {
+      emoji: '🚨', label: 'Emergency Broadcast', sub: 'Push alert to all flats',
+      route: '/admin/broadcast',           color: '#DC2626',
+    },
+    {
       emoji: '⚙️', label: 'Community',     sub: 'Settings & invite',
       route: '/admin/community-settings',  color: COLORS.success,
+    },
+    {
+      emoji: '🛡️', label: 'Roles & Access', sub: 'Manage roles & assign',
+      route: '/admin/roles',               color: '#7C3AED',
     },
   ];
 
@@ -82,7 +90,7 @@ export default function AdminDashboard() {
       <ScrollView
         contentContainerStyle={s.scroll}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />
         }
         showsVerticalScrollIndicator={false}
       >

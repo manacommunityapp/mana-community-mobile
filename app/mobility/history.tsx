@@ -175,7 +175,7 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* ── Modern Header ───────────────────────────────────── */}
       <View style={s.header}>
@@ -233,7 +233,7 @@ export default function HistoryScreen() {
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => <TripCard trip={item} />}
           contentContainerStyle={s.list}
-          onRefresh={refetch}
+          onRefresh={() => { void refetch(); }}
           refreshing={isRefetching}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={

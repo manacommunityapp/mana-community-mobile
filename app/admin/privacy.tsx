@@ -105,7 +105,7 @@ export default function PrivacyComplianceScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
       >
         {/* ── Compliance Hero Banner ──────────────────────────────────── */}
         <View style={styles.heroCard}>

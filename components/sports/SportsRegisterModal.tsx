@@ -1,16 +1,18 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
-  TextInput, ScrollView, ActivityIndicator, Alert,
+  TextInput, ScrollView, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { sportsService } from '@/services/sportsService';
 import api from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { SPORT_EMOJI } from '@/constants/sports';
 import { usePayment } from '@/hooks/usePayment';
 import { PaymentModal } from '@/components/payment/PaymentModal';
 import {
@@ -42,6 +44,7 @@ interface SportsRegisterModalProps {
   visible: boolean;
   onClose: () => void;
   onRegistered?: (reg: RegistrationRecord) => void;
+  initialEventId?: number | null;
 }
 
 interface EventItem {
@@ -53,18 +56,6 @@ interface EventItem {
   emoji: string;
 }
 
-const SPORT_EMOJI_MAP: Record<string, string> = {
-  CRICKET: '🏏',
-  BADMINTON: '🏸',
-  FOOTBALL: '⚽',
-  TENNIS: '🎾',
-  TABLE_TENNIS: '🏓',
-  PICKLEBALL: '🏓',
-  BASKETBALL: '🏀',
-  VOLLEYBALL: '🏐',
-  SWIMMING: '🏊',
-  CHESS: '♟️',
-};
 
 const LOGO_EMOJIS = ['⚽', '🏏', '🏸', '🏓', '🏀', '🏐', '🏆', '🔥', '⚡', '🦅', '🦁', '💪'];
 
@@ -76,13 +67,27 @@ const PLANS = [
 // No static fallback events: real categories load from the backend open tournaments list
 const FALLBACK_EVENTS: EventItem[] = [];
 
-export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRegisterModalProps) {
+export function SportsRegisterModal({ visible, onClose, onRegistered, initialEventId }: SportsRegisterModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [step, setStep] = useState(0);
   const [selectedSportFilter, setSelectedSportFilter] = useState('ALL');
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      if (initialEventId) {
+        setSelectedEventId(initialEventId);
+        setStep(1);
+      } else {
+        setStep(0);
+      }
+    } else {
+      setDone(null);
+    }
+  }, [visible, initialEventId]);
 
   // Form State
   const [isForFamily, setIsForFamily] = useState(false);
@@ -113,9 +118,9 @@ export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRe
   const payment = usePayment();
 
   // Fetch real tournaments and categories
-  const { data: openTournaments = [], isLoading: loadingTournaments } = useQuery({
+  const { data: openTournaments = [], isLoading: loadingTournaments } = useQuery<DashboardTournamentCardDto[]>({
     queryKey: ['tournaments-open-dash'],
-    queryFn: sportsService.getOpenTournaments,
+    queryFn: () => sportsService.getOpenTournaments(),
     staleTime: 30_000,
   });
 
@@ -143,7 +148,7 @@ export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRe
           event: ev,
           format,
           fee: (ev as any).entryFee != null ? Number((ev as any).entryFee) : (format === 'TEAM' ? 2000 : format === 'DOUBLES' ? 800 : 400),
-          emoji: SPORT_EMOJI_MAP[sportUpper] || '🏅',
+          emoji: SPORT_EMOJI[sportUpper] || '🏅',
         });
       });
     });
@@ -411,6 +416,25 @@ export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRe
               </View>
             </View>
 
+            {/* Offer a ride CTA */}
+            {done.venueName ? (
+              <TouchableOpacity
+                style={s.offerRideCta}
+                activeOpacity={0.85}
+                onPress={() => {
+                  handleClose();
+                  router.push(`/commute/offer-ride?to=${encodeURIComponent(done.venueName ?? '')}` as never);
+                }}
+              >
+                <Text style={s.offerRideCtaEmoji}>🚗</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.offerRideCtaTitle}>Offer a Ride to Teammates</Text>
+                  <Text style={s.offerRideCtaSub}>Going to {done.venueName}? Help others get there!</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#1d4ed8" />
+              </TouchableOpacity>
+            ) : null}
+
             <TouchableOpacity style={s.primaryBtn} onPress={handleClose} activeOpacity={0.85}>
               <LinearGradient colors={['#1E1B4B', '#3730A3', '#4F46E5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGradient}>
                 <Text style={s.btnText}>Back to Sports Arena</Text>
@@ -463,7 +487,7 @@ export function SportsRegisterModal({ visible, onClose, onRegistered }: SportsRe
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.pillScroll}>
                     {sportFilters.map((sp) => {
                       const active = selectedSportFilter === sp;
-                      const emoji = SPORT_EMOJI_MAP[sp] || '🏅';
+                      const emoji = SPORT_EMOJI[sp] || '🏅';
                       return (
                         <TouchableOpacity
                           key={sp}
@@ -1171,6 +1195,16 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13,
   },
   btnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+
+  // Offer-ride CTA on success screen
+  offerRideCta: {
+    width: '100%', flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#EFF6FF', borderRadius: RADIUS.lg, padding: 14,
+    borderWidth: 1, borderColor: '#BFDBFE', marginBottom: 4,
+  },
+  offerRideCtaEmoji: { fontSize: 22 },
+  offerRideCtaTitle: { fontSize: 13, fontWeight: '700', color: '#1e40af' },
+  offerRideCtaSub:   { fontSize: 11, color: '#3b82f6', marginTop: 2 },
 
   // Done View
   doneContainer: {

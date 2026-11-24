@@ -1,5 +1,5 @@
-import { Redirect } from 'expo-router';
+import EventsScreen from '@/app/tabs/events';
 
 export default function EventsIndex() {
-  return <Redirect href="/tabs/events" />;
+  return <EventsScreen />;
 }

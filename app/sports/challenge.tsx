@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
+import { useAuth } from '@/hooks/useAuth';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '@/constants/config';
 import { THEME as BASE_THEME } from '@/constants/theme';
 
@@ -36,6 +37,7 @@ const SPORTS_FILTERS: { label: string; value: SportType | 'ALL'; emoji: string }
 export default function SportsChallengesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [selectedSport, setSelectedSport] = useState<SportType | 'ALL'>('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -66,7 +68,12 @@ export default function SportsChallengesScreen() {
   });
 
   const acceptMutation = useMutation({
-    mutationFn: (id: number) => sportsService.acceptChallenge(id),
+    mutationFn: (id: number) =>
+      sportsService.acceptChallenge(
+        id,
+        user?.name || user?.fullName || 'Resident',
+        user?.flatNo || user?.flatNumber || 'Community Resident'
+      ),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['sports-challenges'] });
       Alert.alert(
@@ -153,7 +160,7 @@ export default function SportsChallengesScreen() {
       ) : (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} tintColor={COLORS.primary} />}
           showsVerticalScrollIndicator={false}
         >
           {challenges.length === 0 ? (

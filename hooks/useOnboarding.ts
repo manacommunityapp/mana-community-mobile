@@ -21,11 +21,13 @@ interface OnboardingState {
   flatNo:     string;
   block:      string;
   familySize: number;
+  gender:     string;
+  consentToPrivacyNotice: boolean;
 
   // Actions
   setAccount:    (v: { name: string; email: string; phone: string; password: string }) => void;
   setCommunity:  (inviteCode: string, community: CommunityPreviewDto) => void;
-  setDetails:    (v: { flatNo: string; block: string; familySize: number }) => void;
+  setDetails:    (v: { flatNo: string; block: string; familySize: number; gender?: string; consentToPrivacyNotice?: boolean }) => void;
   clearPassword: () => void;
   reset:         () => void;
 }
@@ -35,6 +37,7 @@ const DEFAULT: Omit<OnboardingState, keyof Pick<OnboardingState,
   name: '', email: '', phone: '', password: '',
   inviteCode: '', community: null,
   flatNo: '', block: '', familySize: 1,
+  gender: 'OTHER', consentToPrivacyNotice: true,
 };
 
 export const useOnboarding = create<OnboardingState>((set) => ({

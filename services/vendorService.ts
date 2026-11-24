@@ -84,8 +84,10 @@ export const vendorService = {
     try {
       const res = await api.get<VendorProfile>(`/vendors/${vendorId}`);
       return res.data;
-    } catch {
-      return SAMPLE_VENDORS.find(v => v.id === vendorId) ?? SAMPLE_VENDORS[0];
+    } catch (err) {
+      console.warn(`[vendorService] getVendorProfile(${vendorId}) API call failed, using fallback preview data:`, err);
+      const match = SAMPLE_VENDORS.find(v => v.id === vendorId) ?? SAMPLE_VENDORS[0];
+      return { ...match, isFallback: true };
     }
   },
 
@@ -216,7 +218,8 @@ export const vendorService = {
     try {
       const res = await api.get(`/vendors/${vendorId}/deals`);
       return res.data;
-    } catch {
+    } catch (err) {
+      console.warn(`[vendorService] getVendorActiveDeals(${vendorId}) API call failed, using fallback preview data:`, err);
       return [
         {
           id: 'd1', title: 'Aashirvaad Atta 10 KG', category: 'Grocery',
@@ -224,6 +227,7 @@ export const vendorService = {
           committedQty: 73, targetQty: 100, currentParticipants: 41,
           dealStatus: 'OPEN', daysLeft: 3, dealEndsAt: '2026-10-07T18:00:00Z',
           pickupPoint: 'Clubhouse Desk', fulfillmentType: 'BOTH',
+          isFallback: true,
         },
         {
           id: 'd5', title: 'Tata Sampann Toor Dal 5 KG', category: 'Grocery',
@@ -231,6 +235,7 @@ export const vendorService = {
           committedQty: 62, targetQty: 100, currentParticipants: 44,
           dealStatus: 'OPEN', daysLeft: 4, dealEndsAt: '2026-10-08T18:00:00Z',
           pickupPoint: 'Clubhouse Desk', fulfillmentType: 'PICKUP',
+          isFallback: true,
         }
       ];
     }
@@ -307,8 +312,9 @@ export const vendorService = {
     try {
       const res = await api.get<VendorSettlement[]>(`/vendors/${vendorId || 'me'}/settlements`);
       return res.data;
-    } catch {
-      return SAMPLE_SETTLEMENTS;
+    } catch (err) {
+      console.warn(`[vendorService] getSettlements(${vendorId}) API call failed, using fallback preview data:`, err);
+      return SAMPLE_SETTLEMENTS.map(s => ({ ...s, isFallback: true }));
     }
   },
 
@@ -316,7 +322,8 @@ export const vendorService = {
     try {
       const res = await api.post(`/vendors/settlements/${settlementId}/request-payout`);
       return res.data;
-    } catch {
+    } catch (err) {
+      console.warn(`[vendorService] requestSettlementPayout(${settlementId}) API call failed:`, err);
       return { success: true, message: 'Payout initiated! Funds will credit within 24 hours.' };
     }
   },
@@ -325,8 +332,9 @@ export const vendorService = {
     try {
       const res = await api.get<VendorCommerceAnalytics>(`/vendors/${vendorId || 'me'}/analytics`);
       return res.data;
-    } catch {
-      return SAMPLE_ANALYTICS;
+    } catch (err) {
+      console.warn(`[vendorService] getCommerceAnalytics(${vendorId}) API call failed, using fallback preview data:`, err);
+      return { ...SAMPLE_ANALYTICS, isFallback: true };
     }
   },
 

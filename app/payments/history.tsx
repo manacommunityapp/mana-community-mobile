@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { paymentService, type CashfreeOrderResponse } from '@/services/paymentService';
+import { PaymentStatusBadge } from '@/components/payment/PaymentStatusBadge';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import { format } from 'date-fns';
 
@@ -59,7 +60,7 @@ export default function PaymentHistoryScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={() => { refetch(); }}
               tintColor={COLORS.primary}
             />
           }
@@ -72,7 +73,6 @@ export default function PaymentHistoryScreen() {
 
 function PaymentCard({ order }: { order: CashfreeOrderResponse }) {
   const router = useRouter();
-  const statusCfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.PENDING;
   const date = order.paidAt ?? order.createdAt;
 
   return (
@@ -98,9 +98,7 @@ function PaymentCard({ order }: { order: CashfreeOrderResponse }) {
           <Text style={s.amount}>
             ₹{Number(order.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </Text>
-          <View style={[s.badge, { backgroundColor: statusCfg.bg }]}>
-            <Text style={[s.badgeText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
-          </View>
+          <PaymentStatusBadge status={order.status} />
           <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
         </View>
       </View>

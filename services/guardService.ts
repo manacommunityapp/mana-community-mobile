@@ -124,23 +124,23 @@ export const guardService = {
       const today = new Date().toISOString().split('T')[0];
       const todayVisitors = visitors.filter(v => v.expectedAt.startsWith(today));
       return {
-        visitorsToday: todayVisitors.length || 12,
-        pendingEntry: visitors.filter(v => v.status === 'EXPECTED').length || 4,
-        vehiclesIn: visitors.filter(v => v.status === 'CHECKED_IN' && v.vehicleNumber).length || 8,
+        visitorsToday: todayVisitors.length,
+        pendingEntry: visitors.filter(v => v.status === 'EXPECTED').length,
+        vehiclesIn: visitors.filter(v => v.status === 'CHECKED_IN' && v.vehicleNumber).length,
         deliveries: visitors.filter(v =>
           v.purpose.toLowerCase().includes('delivery') &&
           v.expectedAt.startsWith(today)
-        ).length || 3,
+        ).length,
         openIncidents: incidents.filter(i => i.status !== 'RESOLVED').length,
       };
     } catch (err) {
       secureLog.warn('GuardService: Live stats unavailable, using fallback', err);
       return {
-        visitorsToday: 12,
-        pendingEntry: 4,
-        vehiclesIn: 8,
-        deliveries: 3,
-        openIncidents: 2,
+        visitorsToday: 0,
+        pendingEntry: 0,
+        vehiclesIn: 0,
+        deliveries: 0,
+        openIncidents: 0,
       };
     }
   },
@@ -154,10 +154,10 @@ export const guardService = {
     try {
       const res = await api.get<VisitorDto[]>('/visitors');
       if (res.data && res.data.length > 0) return res.data.map(mapVisitorDtoToGuard);
-      return SAMPLE_VISITORS;
+      return [];
     } catch (err) {
       secureLog.warn('GuardService: Live visitors unavailable, using fallback', err);
-      return SAMPLE_VISITORS;
+      return [];
     }
   },
 
@@ -171,11 +171,7 @@ export const guardService = {
       await api.put(`/visitors/${id}/check-in`, {});
     } catch (err) {
       secureLog.warn(`GuardService: Check-in for visitor ${id} failed`, err);
-      const v = SAMPLE_VISITORS.find(vis => vis.id === id);
-      if (v) {
-        v.status = 'CHECKED_IN';
-        v.checkedInAt = new Date().toISOString();
-      }
+      throw err;
     }
   },
 
@@ -189,11 +185,7 @@ export const guardService = {
       await api.put(`/visitors/${id}/check-out`);
     } catch (err) {
       secureLog.warn(`GuardService: Check-out for visitor ${id} failed`, err);
-      const v = SAMPLE_VISITORS.find(vis => vis.id === id);
-      if (v) {
-        v.status = 'CHECKED_OUT';
-        v.checkedOutAt = new Date().toISOString();
-      }
+      throw err;
     }
   },
 
@@ -207,8 +199,7 @@ export const guardService = {
       await api.put(`/visitors/${id}/reject`);
     } catch (err) {
       secureLog.warn(`GuardService: Reject for visitor ${id} failed`, err);
-      const v = SAMPLE_VISITORS.find(vis => vis.id === id);
-      if (v) v.status = 'DENIED';
+      throw err;
     }
   },
 
@@ -221,10 +212,10 @@ export const guardService = {
     try {
       const res = await api.get<GuardIncident[]>('/security/incidents');
       if (res.data && res.data.length > 0) return res.data;
-      return SAMPLE_INCIDENTS;
+      return [];
     } catch (err) {
       secureLog.warn('GuardService: Live incidents unavailable, using fallback', err);
-      return SAMPLE_INCIDENTS;
+      return [];
     }
   },
 
@@ -239,55 +230,37 @@ export const guardService = {
       return res.data;
     } catch (err) {
       secureLog.warn('GuardService: Create incident failed, saving locally', err);
-      const newInc: GuardIncident = {
-        ...data,
-        id: Date.now(),
-        reportedAt: new Date().toISOString(),
-        status: 'OPEN',
-      };
-      SAMPLE_INCIDENTS.unshift(newInc);
-      return newInc;
+      throw err;
     }
   },
 
   updateIncidentStatus: async (id: number, status: IncidentStatus): Promise<void> => {
     try {
-      await api.put(`/guard/incidents/${id}/status`, null, { params: { status } });
+      await api.patch(`/guard/incidents/${id}/status`, null, { params: { status } });
       return;
     } catch {}
 
     try {
-      await api.put(`/security/incidents/${id}/status`, null, { params: { status } });
+      await api.patch(`/security/incidents/${id}/status`, null, { params: { status } });
     } catch (err) {
       secureLog.warn(`GuardService: Update incident ${id} status failed`, err);
-      const inc = SAMPLE_INCIDENTS.find(i => i.id === id);
-      if (inc) inc.status = status;
+      throw err;
     }
   },
 
   getPatrolSession: async (): Promise<PatrolSession> => {
     try {
-      const res = await api.get<PatrolSession>('/guard/patrol/session');
+      const res = await api.post<PatrolSession>('/guard/patrol/session', {});
       if (res.data) return res.data;
     } catch {}
 
     try {
-      const res = await api.get<PatrolSession>('/security/patrol/session');
+      const res = await api.post<PatrolSession>('/security/patrol/session', {});
       if (res.data) return res.data;
-      return {
-        id: 1,
-        startedAt: new Date().toISOString(),
-        checkpoints: SAMPLE_CHECKPOINTS,
-        guardName: 'Kumar Singh',
-      };
+      return { id: 0, startedAt: '', checkpoints: [], guardName: '' };
     } catch (err) {
       secureLog.warn('GuardService: Live patrol session unavailable, using fallback', err);
-      return {
-        id: 1,
-        startedAt: new Date().toISOString(),
-        checkpoints: SAMPLE_CHECKPOINTS,
-        guardName: 'Kumar Singh',
-      };
+      return { id: 0, startedAt: '', checkpoints: [], guardName: '' };
     }
   },
 
@@ -301,11 +274,7 @@ export const guardService = {
       await api.post('/security/patrol/scan', { checkpointId });
     } catch (err) {
       secureLog.warn(`GuardService: Scan checkpoint ${checkpointId} failed`, err);
-      const cp = SAMPLE_CHECKPOINTS.find((c) => c.id === checkpointId);
-      if (cp) {
-        cp.status = 'COMPLETED';
-        cp.scannedAt = new Date().toISOString();
-      }
+      throw err;
     }
   },
 
@@ -320,5 +289,57 @@ export const guardService = {
     } catch (err) {
       secureLog.warn('GuardService: Broadcast alert failed', err);
     }
+  },
+
+  getSosAlerts: async (): Promise<Array<{ id: number; type: string; location?: string; status: string }>> => {
+    try {
+      const res = await api.get('/emergency/sos/active');
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
+  },
+
+  triggerSos: async (payload: { type: string; location?: string; notes?: string }): Promise<{ id: number; status: string }> => {
+    // Server-owned incident. A failure here means no SOS exists — let it propagate.
+    const res = await api.post('/emergency/sos', { incidentType: payload.type, location: payload.location, description: payload.notes });
+    return res.data;
+  },
+
+  resolveSos: async (id: number): Promise<boolean> => {
+    await api.post(`/emergency/sos/${id}/resolve`);
+    return true;
+  },
+
+  startPatrolSession: async (): Promise<PatrolSession> => {
+    try {
+      const res = await api.post<PatrolSession>('/guard/patrol/start');
+      if (res.data) return res.data;
+    } catch {}
+    try {
+      const res = await api.post<PatrolSession>('/security/patrol/start');
+      if (res.data) return res.data;
+    } catch {}
+    return { id: Date.now(), startedAt: new Date().toISOString(), checkpoints: SAMPLE_CHECKPOINTS, guardName: '' };
+  },
+
+  endPatrolSession: async (sessionId: number): Promise<void> => {
+    try {
+      await api.post(`/guard/patrol/${sessionId}/end`);
+      return;
+    } catch {}
+    try {
+      await api.post(`/security/patrol/${sessionId}/end`);
+    } catch {}
+  },
+
+  skipCheckpoint: async (checkpointId: number): Promise<void> => {
+    try {
+      await api.post('/guard/patrol/skip', { checkpointId });
+      return;
+    } catch {}
+    try {
+      await api.post('/security/patrol/skip', { checkpointId });
+    } catch {}
   },
 };

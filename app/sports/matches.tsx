@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ScrollView, ActivityIndicator, RefreshControl,
@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { sportsService } from '@/services/sportsService';
+import { sportsService, doesSportMatchFilter } from '@/services/sportsService';
 import { ScoreCard } from '@/components/sports/ScoreCard';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { format, addDays, isSameDay, isToday as checkIsToday } from 'date-fns';
@@ -43,7 +43,7 @@ export default function MatchScheduleScreen() {
   const dates    = buildDateOptions();
   const today    = new Date();
 
-  const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [sportFilter,  setSportFilter]  = useState<SportType | 'ALL'>((params.sport as SportType) || 'ALL');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
@@ -53,19 +53,28 @@ export default function MatchScheduleScreen() {
     }
   }, [params.sport]);
 
-  const dateStr = format(selectedDate, 'yyyy-MM-dd');
-
   const { data: matchesPage, isLoading, refetch, isRefetching } = useQuery({
-    queryKey:       ['matches', dateStr, statusFilter, sportFilter],
-    queryFn:        () => sportsService.getMatches(sportFilter === 'ALL' ? undefined : (sportFilter as any), dateStr, statusFilter),
+    queryKey:       ['matches', statusFilter],
+    queryFn:        () => sportsService.getMatches(undefined, undefined, statusFilter),
     refetchInterval: statusFilter === 'LIVE' ? 15_000 : false,
   });
 
-  const matches = matchesPage?.content ?? [];
-  const total   = matchesPage?.totalElements ?? 0;
+  const allMatches = matchesPage?.content ?? [];
+  const matches = useMemo(() => {
+    return allMatches.filter((m: any) => {
+      if (sportFilter !== 'ALL' && !doesSportMatchFilter(m.rawSportName || m.sport, sportFilter)) {
+        return false;
+      }
+      if (selectedDate) {
+        const schedDay = String(m.scheduledAt || '').slice(0, 10);
+        if (schedDay !== format(selectedDate, 'yyyy-MM-dd')) return false;
+      }
+      return true;
+    });
+  }, [allMatches, sportFilter, selectedDate]);
   const liveCount = matches.filter(m => m.status === 'LIVE').length;
 
-  const isSelectedToday = checkIsToday(selectedDate);
+  const isSelectedToday = selectedDate ? checkIsToday(selectedDate) : false;
   const currentSport = SPORTS_LIST.find(s => s.key === sportFilter);
 
   return (
@@ -80,7 +89,11 @@ export default function MatchScheduleScreen() {
             {sportFilter !== 'ALL' ? `${currentSport?.emoji} ${currentSport?.label}` : 'Match Schedule'}
           </Text>
           <Text style={s.subTitle}>
-            {isSelectedToday ? `Today · ${format(selectedDate, 'MMMM d')}` : format(selectedDate, 'EEEE, MMMM d')}
+            {!selectedDate
+              ? `All Upcoming & Recent · ${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`
+              : isSelectedToday
+                ? `Today · ${format(selectedDate, 'MMMM d')}`
+                : format(selectedDate, 'EEEE, MMMM d')}
           </Text>
         </View>
         {liveCount > 0 && (
@@ -124,15 +137,24 @@ export default function MatchScheduleScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={s.datesScroll}
         >
+          <TouchableOpacity
+            style={[s.dateCard, selectedDate === null && s.dateCardActive]}
+            onPress={() => setSelectedDate(null)}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.dateDayName, selectedDate === null && s.dateDayNameActive]}>ALL</Text>
+            <Text style={[s.dateDayNumber, selectedDate === null && s.dateDayNumberActive]}>∞</Text>
+            <Text style={[s.dateMonth, selectedDate === null && s.dateMonthActive]}>Dates</Text>
+          </TouchableOpacity>
           {dates.map((d) => {
-            const active   = isSameDay(d, selectedDate);
+            const active   = selectedDate ? isSameDay(d, selectedDate) : false;
             const isTodayDate = isSameDay(d, today);
 
             return (
               <TouchableOpacity
                 key={d.toISOString()}
                 style={[s.dateCard, active && s.dateCardActive, isTodayDate && !active && s.dateCardToday]}
-                onPress={() => setSelectedDate(d)}
+                onPress={() => setSelectedDate(active ? null : d)}
                 activeOpacity={0.8}
               >
                 {isTodayDate && (
@@ -197,7 +219,7 @@ export default function MatchScheduleScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={() => { refetch(); }}
               tintColor={COLORS.primary}
             />
           }
@@ -208,16 +230,18 @@ export default function MatchScheduleScreen() {
               </View>
               <Text style={s.emptyTitle}>No matches found</Text>
               <Text style={s.emptySubtitle}>
-                There are no matches scheduled on {format(selectedDate, 'MMM d, yyyy')}{sportFilter !== 'ALL' ? ` for ${currentSport?.label}` : ''}.
+                {selectedDate
+                  ? `There are no matches scheduled on ${format(selectedDate, 'MMM d, yyyy')}${sportFilter !== 'ALL' ? ` for ${currentSport?.label}` : ''}.`
+                  : `No matches found${sportFilter !== 'ALL' ? ` for ${currentSport?.label}` : ''}.`}
               </Text>
               <View style={s.emptyActions}>
-                {!isSelectedToday && (
+                {selectedDate && (
                   <TouchableOpacity
                     style={s.emptyActionBtn}
-                    onPress={() => setSelectedDate(today)}
+                    onPress={() => setSelectedDate(null)}
                   >
-                    <Ionicons name="today-outline" size={15} color="#fff" />
-                    <Text style={s.emptyActionBtnText}>Go to Today</Text>
+                    <Ionicons name="calendar-outline" size={15} color="#fff" />
+                    <Text style={s.emptyActionBtnText}>Show All Dates</Text>
                   </TouchableOpacity>
                 )}
                 {sportFilter !== 'ALL' && (

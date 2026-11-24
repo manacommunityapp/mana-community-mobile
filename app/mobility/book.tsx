@@ -2,12 +2,12 @@
  * Rapido / Uber-style booking screen:
  *   Phase 1 – Location inputs (pickup + destination) with quick-saved places & GPS
  *   Phase 2 – Vehicle types shown with live fare quotes & ETA
- *   Phase 3 – Confirmation sheet with itemized breakdown, promo code & payment
+ *   Phase 3 – Confirmation sheet with itemized breakdown & payment method
  */
 import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, BackHandler, StatusBar,
+  TextInput, ActivityIndicator, BackHandler, StatusBar, Alert,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -68,7 +68,7 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     label:    'Bike',
     sublabel: 'Fastest & cheapest solo ride',
     maxPax:   1,
-    enabled:  false,
+    enabled:  true,
     color:    '#D97706',
     iconBg:   '#FFFBEB',
   },
@@ -78,7 +78,7 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     label:    'Auto',
     sublabel: 'Affordable & quick city ride',
     maxPax:   3,
-    enabled:  false,
+    enabled:  true,
     color:    '#0891B2',
     iconBg:   '#ECFEFF',
   },
@@ -88,7 +88,7 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     label:    'Cab',
     sublabel: 'Comfortable air-conditioned cab',
     maxPax:   4,
-    enabled:  false,
+    enabled:  true,
     color:    '#7C3AED',
     iconBg:   '#F5F3FF',
   },
@@ -108,8 +108,6 @@ const DEFAULT_LNG = 78.4867;
 // ── Payment options ────────────────────────────────────────────────
 const PAYMENT_OPTIONS: { method: PaymentMethod; icon: keyof typeof Ionicons.glyphMap; label: string; sub: string }[] = [
   { method: 'CASH',   icon: 'cash-outline',           label: 'Cash',        sub: 'Pay driver directly' },
-  { method: 'UPI',    icon: 'phone-portrait-outline', label: 'UPI / QR',    sub: 'Instant GooglePay/PhonePe' },
-  { method: 'WALLET', icon: 'wallet-outline',         label: 'Mana Wallet', sub: 'Instant 1-tap checkout' },
 ];
 
 export default function BookRideScreen() {
@@ -128,32 +126,43 @@ export default function BookRideScreen() {
 
   // ── Confirm ────────────────────────────────────────────────────
   const [payment, setPayment]           = useState<PaymentMethod>('CASH');
-  const [promoCode, setPromoCode]       = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
 
   // ── GPS state ──────────────────────────────────────────────────
   const [pickupLat, setPickupLat] = useState(DEFAULT_LAT);
   const [pickupLng, setPickupLng] = useState(DEFAULT_LNG);
+  const [pickupResolved, setPickupResolved] = useState(false);
+  const [destLat, setDestLat] = useState<number | null>(null);
+  const [destLng, setDestLng] = useState<number | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+
+  // ── Inline feedback state ──────────────────────────────────────
+  const [gpsErr, setGpsErr] = useState('');
+  const [locationErr, setLocationErr] = useState('');
+  const [faresErr, setFaresErr] = useState('');
+  const [bookErr, setBookErr] = useState('');
+  const [savedNote, setSavedNote] = useState('');
+  const [promoMsg, setPromoMsg] = useState('');
 
   async function handleGps() {
     setGpsLoading(true);
+    setGpsErr('');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Allow location access to auto-detect your position.');
+        setGpsErr('Location permission denied. Please enter your pickup address manually.');
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setPickupLat(pos.coords.latitude);
       setPickupLng(pos.coords.longitude);
+      setPickupResolved(true);
       const [geo] = await Location.reverseGeocodeAsync(pos.coords);
       if (geo) {
         const label = [geo.name, geo.street, geo.district, geo.city].filter(Boolean).join(', ');
         setPickupAddr(label);
       }
     } catch {
-      Alert.alert('GPS error', 'Could not get current location. Please enter it manually.');
+      setGpsErr('Could not get current location. Please enter your pickup address manually.');
     } finally {
       setGpsLoading(false);
     }
@@ -176,29 +185,54 @@ export default function BookRideScreen() {
   // Fetch all enabled vehicle quotes in parallel
   async function fetchAllQuotes() {
     if (!pickupAddr.trim() || !destAddr.trim()) {
-      Alert.alert('Required', 'Please enter both pickup and destination locations.');
+      setLocationErr('Please enter both pickup and destination locations.');
       return;
     }
+    setLocationErr('');
+    setFaresErr('');
     setLoadingQuotes(true);
     try {
+      let pickup = { latitude: pickupLat, longitude: pickupLng };
+      if (!pickupResolved) {
+        const [geocodedPickup] = await Location.geocodeAsync(pickupAddr.trim());
+        if (!geocodedPickup) {
+          Alert.alert('Pickup not found', 'Please enter a more specific pickup location or use Locate.');
+          return;
+        }
+        pickup = geocodedPickup;
+        setPickupLat(pickup.latitude);
+        setPickupLng(pickup.longitude);
+        setPickupResolved(true);
+      }
+      const [destination] = await Location.geocodeAsync(destAddr.trim());
+      if (!destination) {
+        Alert.alert('Location not found', 'Please enter a more specific destination.');
+        return;
+      }
+      setDestLat(destination.latitude);
+      setDestLng(destination.longitude);
       const enabled = VEHICLE_OPTIONS.filter(v => v.enabled);
       const results = await Promise.allSettled(
         enabled.map(v =>
           mobilityPassengerService.getFareQuote({
             serviceType: v.type,
-            pickupLat: pickupLat, pickupLng: pickupLng,
-            destLat:   pickupLat + 0.05, destLng: pickupLng + 0.05,
+            pickupLat: pickup.latitude, pickupLng: pickup.longitude,
+            destLat:   destination.latitude, destLng: destination.longitude,
           }).then(q => ({ type: v.type, quote: q } as QuotedService)),
         ),
       );
       const fetched = results
         .filter((r): r is PromiseFulfilledResult<QuotedService> => r.status === 'fulfilled')
         .map(r => r.value);
+      if (!fetched.length) {
+        setFaresErr('Could not load ride options. Please try again.');
+        return;
+      }
       setQuotes(fetched);
       setSelectedType(fetched[0]?.type ?? 'CARPOOL');
       setPhase('SELECT_RIDE');
     } catch {
-      Alert.alert('Error', 'Could not fetch fares. Please try again.');
+      setFaresErr('Could not fetch fares. Please try again.');
     } finally {
       setLoadingQuotes(false);
     }
@@ -207,19 +241,23 @@ export default function BookRideScreen() {
   const bookMutation = useMutation({
     mutationFn: (req: CreateRideRequest) => mobilityPassengerService.requestRide(req),
     onSuccess:  (trip) => router.replace(`/mobility/track/${trip.id}` as any),
-    onError:    () => Alert.alert('Error', 'Booking failed. Please try again.'),
+    onError:    (e: any) => setBookErr(e?.response?.data?.message || 'Booking failed. Please try again.'),
   });
 
   function handleConfirmBook() {
     const chosen = quotes.find(q => q.type === selectedType);
     if (!chosen) return;
+    if (destLat == null || destLng == null) {
+      Alert.alert('Destination required', 'Please confirm a valid destination before booking.');
+      return;
+    }
     bookMutation.mutate({
       serviceType:     selectedType,
       pickupLat:       pickupLat,
       pickupLng:       pickupLng,
       pickupAddress:   pickupAddr,
-      destLat:         pickupLat + 0.05,
-      destLng:         pickupLng + 0.05,
+      destLat,
+      destLng,
       destAddress:     destAddr,
       quoteId:         chosen.quote.quoteId,
       idempotencyKey:  `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -236,7 +274,7 @@ export default function BookRideScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* ── Modern Navigation Header ──────────────────────────── */}
       <View style={s.header}>
@@ -343,11 +381,11 @@ export default function BookRideScreen() {
                     placeholder="Enter pickup location"
                     placeholderTextColor={COLORS.textMuted}
                     value={pickupAddr}
-                    onChangeText={setPickupAddr}
+                     onChangeText={(value) => { setPickupAddr(value); setPickupResolved(false); }}
                     onFocus={() => setActiveInput('pickup')}
                   />
                   {pickupAddr.length > 0 && (
-                    <TouchableOpacity onPress={() => setPickupAddr('')} hitSlop={8}>
+                      <TouchableOpacity onPress={() => { setPickupAddr(''); setPickupResolved(false); }} hitSlop={8}>
                       <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
                     </TouchableOpacity>
                   )}
@@ -385,9 +423,22 @@ export default function BookRideScreen() {
               </View>
             </View>
 
+            {!!gpsErr && (
+              <View style={s.inlineError}>
+                <Ionicons name="location-outline" size={14} color="#991B1B" />
+                <Text style={s.inlineErrorText}>{gpsErr}</Text>
+              </View>
+            )}
+
             {/* Quick Saved Shortcuts */}
             <View style={s.savedPlacesSection}>
               <Text style={s.savedSectionTitle}>Saved Places</Text>
+              {!!savedNote && (
+                <View style={s.savedNoteRow}>
+                  <Ionicons name="information-circle-outline" size={14} color="#4F46E5" />
+                  <Text style={s.savedNoteText}>{savedNote}</Text>
+                </View>
+              )}
               <View style={s.savedGrid}>
                 {SAVED_PLACES.map((sp) => (
                   <TouchableOpacity
@@ -395,10 +446,12 @@ export default function BookRideScreen() {
                     style={s.savedCard}
                     onPress={() => {
                       if (sp.addr) {
-                        if (activeInput === 'pickup') setPickupAddr(sp.addr);
+                         if (activeInput === 'pickup') { setPickupAddr(sp.addr); setPickupResolved(false); }
                         else setDestAddr(sp.addr);
+                        setSavedNote('');
                       } else {
-                        Alert.alert(`Set ${sp.label}`, `Please enter your ${sp.label.toLowerCase()} address above to set it for quick booking.`);
+                        setSavedNote(`Enter your ${sp.label.toLowerCase()} address in the field above to save it for quick booking.`);
+                        setTimeout(() => setSavedNote(''), 3500);
                       }
                     }}
                     activeOpacity={0.8}
@@ -414,6 +467,17 @@ export default function BookRideScreen() {
                 ))}
               </View>
             </View>
+
+            {!!locationErr && (
+              <View style={s.inlineError}>
+                <Text style={s.inlineErrorText}>{locationErr}</Text>
+              </View>
+            )}
+            {!!faresErr && (
+              <View style={s.inlineError}>
+                <Text style={s.inlineErrorText}>{faresErr}</Text>
+              </View>
+            )}
 
             {/* Primary Action Button */}
             <TouchableOpacity
@@ -573,41 +637,6 @@ export default function BookRideScreen() {
               ))}
             </View>
 
-            {/* Promo Code Input */}
-            <View style={s.promoCard}>
-              <Ionicons
-                name="pricetag-outline"
-                size={18}
-                color={promoApplied ? '#059669' : COLORS.textMuted}
-              />
-              <TextInput
-                style={s.promoInput}
-                placeholder="Apply Promo or Voucher"
-                placeholderTextColor={COLORS.textMuted}
-                value={promoCode}
-                onChangeText={setPromoCode}
-                autoCapitalize="characters"
-                editable={!promoApplied}
-              />
-              <TouchableOpacity
-                style={[s.promoActionBtn, promoApplied && s.promoActionBtnApplied]}
-                onPress={() => {
-                  if (promoApplied) {
-                    setPromoApplied(false);
-                    setPromoCode('');
-                    return;
-                  }
-                  if (!promoCode.trim()) return;
-                  Alert.alert('Promo Applied', `Code "${promoCode}" active for this trip.`);
-                  setPromoApplied(true);
-                }}
-              >
-                <Text style={[s.promoActionBtnText, promoApplied && s.promoActionBtnTextApplied]}>
-                  {promoApplied ? 'Remove' : 'Apply'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             {/* Payment Method Selector */}
             <View style={s.paymentSection}>
               <Text style={s.paymentTitle}>Payment Method</Text>
@@ -644,6 +673,12 @@ export default function BookRideScreen() {
                 Guaranteed upfront fare: ₹{selectedQuote.quote.total.toFixed(2)}. No hidden surge pricing within community bounds.
               </Text>
             </View>
+
+            {!!bookErr && (
+              <View style={s.inlineError}>
+                <Text style={s.inlineErrorText}>{bookErr}</Text>
+              </View>
+            )}
 
             {/* Confirm & Book CTA */}
             <TouchableOpacity
@@ -1349,5 +1384,50 @@ const s = StyleSheet.create({
     fontFamily: FONTS.regular,
     color: '#065F46',
     lineHeight: 16,
+  },
+
+  inlineError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEE2E2',
+    borderRadius: RADIUS.md,
+    padding: 10,
+  },
+  inlineErrorText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontFamily: FONTS.medium,
+    color: '#991B1B',
+  },
+  savedNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: '#EEF2FF',
+    borderRadius: RADIUS.md,
+    padding: 9,
+    marginBottom: 6,
+  },
+  savedNoteText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    color: '#3730A3',
+    lineHeight: 16,
+  },
+  promoSuccessRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderRadius: RADIUS.md,
+    padding: 9,
+  },
+  promoSuccessText: {
+    fontSize: 12.5,
+    fontFamily: FONTS.medium,
+    color: '#065F46',
+    flex: 1,
   },
 });

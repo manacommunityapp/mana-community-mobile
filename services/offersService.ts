@@ -5,8 +5,6 @@ import type {
   BusinessPartner,
   UserOfferClaim,
   CommunityDemandPool,
-  FarmersMarketDay,
-  MarketVendor,
   CommunityCoupon,
   CouponValidationResult,
   QrVerificationResult,
@@ -390,124 +388,6 @@ const MOCK_CLAIMS: UserOfferClaim[] = [
   },
 ];
 
-const MOCK_MARKET_DAYS: FarmersMarketDay[] = [
-  {
-    id: 'market-1',
-    title: 'Weekend Organic Harvest & Artisan Market',
-    date: 'This Saturday, Oct 04',
-    time: '7:30 AM – 1:00 PM',
-    location: 'Clubhouse Central Lawn & Gate 2 Promenade',
-    theme: 'Fresh Organic Produce, Sourdough Bakes, Native Honey & Handcrafted Cheeses',
-    status: 'UPCOMING',
-    vendorCount: 14,
-    rsvpCount: 128,
-    userRsvp: true,
-    bannerGradient: ['#065F46', '#047857'],
-    highlights: [
-      '🚜 8 Direct Organic Farmers with zero-middlemen pricing',
-      '🧀 Artisan Artisanal Cheese tasting table',
-      '🥖 Fresh warm sourdough straight out of mobile brick oven',
-      '🌱 Society Plant Swap & Seedling distribution corner',
-    ],
-    vendors: [
-      {
-        id: 'v-1',
-        stallNumber: 'Stall #01',
-        name: 'Vedic Farms Naturals',
-        category: 'ORGANIC_VEGGIES',
-        tagline: 'Certified PGS-India pesticide-free heirloom vegetables',
-        description: 'Harvested at 4:30 AM from Kanakapura farm. Spinach, broccoli, cherry tomatoes, and native country greens.',
-        rating: 4.9,
-        reviewCount: 42,
-        preOrderAvailable: true,
-        popularItems: ['Baby Spinach', 'Hydroponic Strawberries', 'Exotic Salad Box', 'English Cucumbers'],
-        specialSocietyDiscount: '10% Extra produce bonus on orders above ₹500',
-        contactNumber: '+91 98451 11223',
-        ownerName: 'Ramesh Gowda',
-      },
-      {
-        id: 'v-2',
-        stallNumber: 'Stall #04',
-        name: 'The French Crust Micro-Bakery',
-        category: 'BAKERY',
-        tagline: 'Fermented country sourdough & butter brioche',
-        description: 'Slow-proved 36-hour sourdoughs, pain au chocolat, cardamom buns, and vegan gluten-free seed loaves.',
-        rating: 4.8,
-        reviewCount: 65,
-        preOrderAvailable: true,
-        popularItems: ['Walnut Sourdough', 'Almond Croissant', 'Garlic Focaccia', 'Gluten-Free Seed Loaf'],
-        specialSocietyDiscount: 'Free croissant on pre-orders placed by Friday 8 PM',
-        contactNumber: '+91 98860 99881',
-        ownerName: 'Chef Camille Dubois',
-      },
-      {
-        id: 'v-3',
-        stallNumber: 'Stall #07',
-        name: 'Malnad Native Dairy & Honey',
-        category: 'FARM_DAIRY',
-        tagline: 'A2 Desi Hallikar Cow Milk, Vedic Bilona Ghee & Raw Forest Honey',
-        description: 'Glass-bottled single-source raw A2 cow milk, traditional hand-churned cultured ghee, and wild unpasteurized honey.',
-        rating: 4.9,
-        reviewCount: 88,
-        preOrderAvailable: true,
-        popularItems: ['A2 Cultured Ghee (500ml)', 'Raw Coorg Blossom Honey', 'Fresh Paneer Blocks', 'A2 Curd'],
-        specialSocietyDiscount: '₹50 Cashback on returning empty glass bottles',
-        contactNumber: '+91 97400 33445',
-        ownerName: 'Naveen Hegde',
-      },
-      {
-        id: 'v-4',
-        stallNumber: 'Stall #11',
-        name: 'GreenSprout Urban Nursery & Succulents',
-        category: 'PLANTS_NURSERY',
-        tagline: 'Air-purifying balcony plants, exotic succulents & organic compost',
-        description: 'Balcony garden specialist. Offering potting mix, self-watering pots, flowering herbs, and bonsai starters.',
-        rating: 4.7,
-        reviewCount: 31,
-        preOrderAvailable: false,
-        popularItems: ['Snake Plants in Ceramic Pots', 'Holy Basil (Tulsi)', 'Balcony Mint & Rosemary', 'Cocopeat Brick (5kg)'],
-        specialSocietyDiscount: 'Free packet of heirloom marigold seeds with every plant purchase',
-        contactNumber: '+91 99160 55442',
-        ownerName: 'Priya Sundaram',
-      },
-      {
-        id: 'v-5',
-        stallNumber: 'Stall #12',
-        name: 'Kashmir Valley Dryfruits & Saffron',
-        category: 'SPECIALTY_FOOD',
-        tagline: 'Pampore Mongra Saffron, Mamra Almonds & Sun-Dried Figs',
-        description: 'Direct procurement from growers in Pulwama and Anantnag. Unpolished and zero sulfur treatment.',
-        rating: 4.9,
-        reviewCount: 54,
-        preOrderAvailable: true,
-        popularItems: ['Mamra Almonds (500g)', 'Kashmiri Walnuts', 'Grade-A Saffron (1g)', 'Dried Apricots'],
-        specialSocietyDiscount: '15% Off society inaugural discount',
-        contactNumber: '+91 94190 22334',
-        ownerName: 'Tariq Mir',
-      },
-    ],
-  },
-  {
-    id: 'market-2',
-    title: 'Diwali Artisan & Festive Crafts Bazaar',
-    date: 'Next Saturday, Oct 11',
-    time: '4:00 PM – 9:30 PM',
-    location: 'Clubhouse Amphitheatre & Poolside Pavilion',
-    theme: 'Terracotta Diyas, Handloom Festive Kurtas, Organic Mithai & Eco Decor',
-    status: 'UPCOMING',
-    vendorCount: 22,
-    rsvpCount: 215,
-    userRsvp: false,
-    bannerGradient: ['#9A3412', '#C2410C'],
-    highlights: [
-      '🪔 Live clay potter wheel workshop for kids',
-      '👗 Handloom block print apparel from Jaipur collectives',
-      '🍬 Pure jaggery & dryfruit festive sweets',
-    ],
-    vendors: [],
-  },
-];
-
 // ── Service Implementation ──────────────────────────────────────────────
 export const offersService = {
   // Categories
@@ -679,37 +559,6 @@ export const offersService = {
     }
   },
 
-  // Farmers Market Days
-  async getMarketDays(): Promise<FarmersMarketDay[]> {
-    try {
-      const res = await api.get<FarmersMarketDay[]>('/offers/market-days');
-      return res.data && res.data.length ? res.data : MOCK_MARKET_DAYS;
-    } catch {
-      return MOCK_MARKET_DAYS;
-    }
-  },
-
-  async rsvpMarketDay(marketId: string): Promise<void> {
-    try {
-      await api.post(`/offers/market-days/${marketId}/rsvp`);
-    } catch {
-      const market = MOCK_MARKET_DAYS.find((m) => m.id === marketId);
-      if (market) {
-        market.userRsvp = !market.userRsvp;
-        market.rsvpCount += market.userRsvp ? 1 : -1;
-      }
-    }
-  },
-
-  async bookVendorStall(data: { marketId: string; vendorName: string; category: string; phone: string; products: string }): Promise<void> {
-    try {
-      await api.post(`/offers/market-days/${data.marketId}/vendor-application`, data);
-    } catch {
-      // Mock acceptance
-      return;
-    }
-  },
-
   // ── Coupons & Vouchers ──────────────────────────────────────────────
   async getCoupons(_businessId?: string): Promise<CommunityCoupon[]> {
     try {
@@ -871,5 +720,3 @@ export const offersService = {
     ];
   },
 };
-
-

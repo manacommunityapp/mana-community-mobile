@@ -46,6 +46,13 @@ export default function GovernanceLayout() {
           headerShown: true,
         }}
       />
+      <Stack.Screen
+        name="elections"
+        options={{
+          title: '🏛️ Society Elections',
+          headerShown: true,
+        }}
+      />
     </Stack>
   );
 }

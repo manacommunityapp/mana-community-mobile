@@ -10,6 +10,7 @@ export default function DiscoverLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: '🕸️ Community Discover' }} />
+      <Stack.Screen name="search" options={{ title: '🔍 Mana Discover' }} />
     </Stack>
   );
 }

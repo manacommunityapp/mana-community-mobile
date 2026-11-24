@@ -215,6 +215,17 @@ export function resolveRoute(data: Record<string, unknown>): string | null {
     case 'SHUTTLE':
       return '/commute';
 
+    // Shared journeys
+    case 'MOBILITY_GROUP_MATCH':
+      return '/mobility/journeys/proposals';
+    case 'MOBILITY_GROUP_JOIN':
+    case 'MOBILITY_GROUP_LEAVE':
+    case 'MOBILITY_WAITLISTED':
+    case 'MOBILITY_WAITLIST_PROMOTED':
+    case 'MOBILITY_GROUP_CANCELLED':
+    case 'MOBILITY_REQUEST_EXPIRED':
+      return '/mobility/journeys/bookings';
+
     // Pets & Academy
     case 'PET_ALERT':
       return '/pets';

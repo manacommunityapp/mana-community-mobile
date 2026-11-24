@@ -86,6 +86,7 @@ export interface VendorProfile {
   description?: string;
   city?: string;
   tags?: string[];
+  isFallback?: boolean;
 }
 
 export interface VendorProduct {
@@ -183,6 +184,7 @@ export interface VendorSettlement {
   settledAt?: string;
   createdAt: string;
   orderCount: number;
+  isFallback?: boolean;
 }
 
 export interface VendorCommerceAnalytics {
@@ -196,4 +198,5 @@ export interface VendorCommerceAnalytics {
   topProducts: Array<{ name: string; unitsSold: number; revenue: number; marginPct: number }>;
   monthlyRevenueChart: Array<{ month: string; revenue: number; orders: number }>;
   categoryDistribution: Array<{ category: string; count: number; percentage: number }>;
+  isFallback?: boolean;
 }

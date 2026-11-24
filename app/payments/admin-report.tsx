@@ -224,7 +224,7 @@ export default function AdminPaymentReportScreen() {
       <FlatList
         data={orders}
         keyExtractor={o => String(o.id)}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} />}
         contentContainerStyle={{ paddingBottom: 32 }}
         ListHeaderComponent={() => (
           <>
@@ -298,7 +298,7 @@ export default function AdminPaymentReportScreen() {
         )}
         ListEmptyComponent={!isLoading ? (
           <Text style={s.empty}>No transactions found</Text>
-        ) : null}
+        ) : undefined}
         ListFooterComponent={totalPages > 1 ? (
           <View style={s.pagination}>
             <TouchableOpacity
@@ -317,7 +317,7 @@ export default function AdminPaymentReportScreen() {
               <Ionicons name="chevron-forward" size={18} color={page >= totalPages - 1 ? '#CBD5E1' : COLORS.primary} />
             </TouchableOpacity>
           </View>
-        ) : null}
+        ) : undefined}
       />
 
       {refundTarget && (
@@ -340,54 +340,54 @@ const s = StyleSheet.create({
   root:       { flex: 1, backgroundColor: '#F8FAFC' },
   header:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   backBtn:    { marginRight: 12 },
-  headerTitle:{ ...FONTS.h2, flex: 1 },
+  headerTitle:{ fontFamily: FONTS.displaySemi, flex: 1 },
 
   statsRow:   { flexDirection: 'row', marginHorizontal: 16, marginTop: 16 },
   statCard:   { backgroundColor: '#fff', borderRadius: RADIUS.md, padding: 14, alignItems: 'center', ...SHADOWS.sm },
   statIcon:   { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  statValue:  { ...FONTS.h3, fontSize: 16 },
-  statLabel:  { ...FONTS.caption, marginTop: 2, textAlign: 'center' },
+  statValue:  { fontFamily: FONTS.semiBold, fontSize: 16 },
+  statLabel:  { fontFamily: FONTS.regular, marginTop: 2, textAlign: 'center' },
 
-  filterHeading: { ...FONTS.caption, marginTop: 16, marginBottom: 6, marginHorizontal: 16, color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 },
+  filterHeading: { fontFamily: FONTS.regular, marginTop: 16, marginBottom: 6, marginHorizontal: 16, color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 },
   chips:      { paddingHorizontal: 16 },
   chip:       { backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginRight: 8 },
   chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  chipText:   { ...FONTS.caption, color: '#64748B' },
+  chipText:   { fontFamily: FONTS.regular, color: '#64748B' },
   chipTextActive: { color: '#fff' },
 
-  resultCount:{ ...FONTS.caption, marginHorizontal: 16, marginBottom: 4, color: '#94A3B8' },
-  empty:      { textAlign: 'center', color: '#94A3B8', marginTop: 40, ...FONTS.body },
+  resultCount:{ fontFamily: FONTS.regular, marginHorizontal: 16, marginBottom: 4, color: '#94A3B8' },
+  empty:      { textAlign: 'center', color: '#94A3B8', marginTop: 40, fontFamily: FONTS.medium },
 
   row:        { backgroundColor: '#fff', marginHorizontal: 16, marginTop: 10, borderRadius: RADIUS.md, padding: 14, ...SHADOWS.sm },
   rowTop:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  rowId:      { ...FONTS.caption, fontFamily: 'monospace', color: '#64748B', flex: 1, marginRight: 8 },
+  rowId:      { fontFamily: 'monospace', color: '#64748B', flex: 1, marginRight: 8 },
   badge:      { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
   badgeText:  { fontSize: 11, fontWeight: '600' },
   rowMid:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  rowAmount:  { ...FONTS.h3, fontSize: 16 },
-  rowMeta:    { ...FONTS.caption, color: '#94A3B8' },
+  rowAmount:  { fontFamily: FONTS.semiBold, fontSize: 16 },
+  rowMeta:    { fontFamily: FONTS.regular, color: '#94A3B8' },
   rowBottom:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowDate:    { ...FONTS.caption, color: '#94A3B8' },
+  rowDate:    { fontFamily: FONTS.regular, color: '#94A3B8' },
   refundBtn:  { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF7ED', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   refundBtnText: { fontSize: 11, fontWeight: '600', color: '#EA580C' },
 
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, paddingVertical: 16 },
   pageBtn:    { padding: 8, borderRadius: 8, backgroundColor: '#fff', ...SHADOWS.sm },
   pageBtnDisabled: { opacity: 0.4 },
-  pageLabel:  { ...FONTS.body, color: '#64748B' },
+  pageLabel:  { fontFamily: FONTS.medium, color: '#64748B' },
 
   // Refund modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalSheet:   { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 32 },
   modalHeader:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-  modalTitle:   { ...FONTS.h2 },
+  modalTitle:   { fontFamily: FONTS.displaySemi },
   modalBody:    { padding: 20 },
   modalFooter:  { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 8 },
-  fieldLabel:   { ...FONTS.caption, color: '#64748B', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
+  fieldLabel:   { fontFamily: FONTS.regular, color: '#64748B', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
   monoText:     { fontFamily: 'monospace', fontSize: 13, color: '#1E293B' },
   input:        { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: RADIUS.sm, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#1E293B', backgroundColor: '#F8FAFC' },
   cancelBtn:    { flex: 1, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: RADIUS.md, paddingVertical: 13, alignItems: 'center' },
-  cancelBtnText:{ ...FONTS.body, color: '#64748B' },
+  cancelBtnText:{ fontFamily: FONTS.medium, color: '#64748B' },
   confirmBtn:   { flex: 1, backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
-  confirmBtnText:{ ...FONTS.body, color: '#fff', fontWeight: '600' },
+  confirmBtnText:{ fontFamily: FONTS.medium, color: '#fff', fontWeight: '600' },
 });

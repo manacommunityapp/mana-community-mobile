@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, StyleSheet,
   KeyboardAvoidingView, Platform, TouchableOpacity,
   ActivityIndicator, ListRenderItemInfo, TextInput,
+  Share, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -261,6 +262,8 @@ export default function ChatWindowScreen() {
     loadMore, publishTyping, connected,
   } = useChatWindow(conversationId, user?.id ?? 0);
 
+  const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
+
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
     queryFn: chatService.getConversations,
@@ -273,7 +276,7 @@ export default function ChatWindowScreen() {
   const headerName = isGroup
     ? (conversation?.title || conversation?.name || 'Group Chat')
     : (other?.name || conversation?.name || 'Resident');
-  const isOtherOnline = other ? Boolean((other as any).isOnline ?? (other as any).online) : false;
+  const isOtherOnline = other ? Boolean(other.isOnline ?? other.online) : false;
   const headerSubtitle = connected
     ? (isOtherOnline ? 'Online' : 'Active')
     : 'Connecting…';
@@ -329,23 +332,27 @@ export default function ChatWindowScreen() {
     setCurrentMatchIndex(0);
   };
 
-  useEffect(() => {
-    if (!isSearching && messages.length > 0) {
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: true });
-      }, 80);
+  const handleMessageLongPress = useCallback((msg: LocalMessage) => {
+    const actions: { text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }[] = [
+      { text: 'Copy text', onPress: () => Share.share({ message: msg.content }).catch(() => {}) },
+    ];
+    if (msg.senderId === user?.id && msg._optimisticId) {
+      actions.push({ text: 'Retry send', onPress: () => sendMessage(msg.content) });
     }
-  }, [messages.length, isSearching]);
+    actions.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Message', undefined, actions);
+  }, [user?.id, sendMessage]);
 
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<LocalMessage>) => {
       const isMine     = item.senderId === user?.id;
-      const prevMsg    = index > 0 ? messages[index - 1] : undefined;
-      const nextMsg    = messages[index + 1];
+      const realIndex  = invertedMessages.length - 1 - index;
+      const prevMsg    = realIndex > 0 ? messages[realIndex - 1] : undefined;
+      const nextMsg    = messages[realIndex + 1];
       const showAvatar = !isMine && (
         !nextMsg || nextMsg.senderId !== item.senderId || nextMsg.senderId === user?.id
       );
-      const isCurrentMatch = isSearching && matchIndices.length > 0 && matchIndices[currentMatchIndex] === index;
+      const isCurrentMatch = isSearching && matchIndices.length > 0 && matchIndices[currentMatchIndex] === realIndex;
 
       return (
         <MessageBubble
@@ -355,10 +362,11 @@ export default function ChatWindowScreen() {
           prevMessage={prevMsg}
           searchQuery={isSearching ? searchQuery : undefined}
           isCurrentMatch={isCurrentMatch}
+          onLongPress={handleMessageLongPress}
         />
       );
     },
-    [messages, user?.id, isSearching, searchQuery, matchIndices, currentMatchIndex],
+    [messages, invertedMessages, user?.id, isSearching, searchQuery, matchIndices, currentMatchIndex, handleMessageLongPress],
   );
 
   const handleScroll = useCallback(
@@ -428,7 +436,8 @@ export default function ChatWindowScreen() {
 
         <FlatList
           ref={listRef}
-          data={messages}
+          data={invertedMessages}
+          inverted
           keyExtractor={(m) => m._optimisticId ?? String(m.id)}
           renderItem={renderItem}
           contentContainerStyle={scr.listContent}

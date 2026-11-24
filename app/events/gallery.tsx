@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { eventGalleryService } from '@/services/eventGalleryService';
 import { mediaService } from '@/services/mediaService';
 import { useAppBack } from '@/hooks/useAppBack';
+import { resolveImageUrl } from '@/utils/imageUrlUtils';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import type { EventGalleryItemResponse } from '@/types/events';
 
@@ -144,7 +145,7 @@ export default function EventGalleryScreen() {
               onPress={() => setSelectedPhoto(item)}
               activeOpacity={0.8}
             >
-              <Image source={{ uri: item.url || item.thumbnailUrl || '' }} style={s.photoImage} />
+              <Image source={{ uri: resolveImageUrl(item.url || item.thumbnailUrl || '') }} style={s.photoImage} />
               {item.caption && <Text style={s.photoCaption} numberOfLines={1}>{item.caption}</Text>}
             </TouchableOpacity>
           ))}
@@ -159,7 +160,7 @@ export default function EventGalleryScreen() {
           </TouchableOpacity>
           {selectedPhoto && (
             <Image
-              source={{ uri: selectedPhoto.url }}
+              source={{ uri: resolveImageUrl(selectedPhoto.url) }}
               style={s.previewImage}
               resizeMode="contain"
             />

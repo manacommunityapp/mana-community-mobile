@@ -21,6 +21,7 @@ export default function PersonalFinanceLayout() {
       <Stack.Screen name="installments" options={{ title: '💳 Loans & EMIs' }} />
       <Stack.Screen name="categories" options={{ title: '🏷️ Category Management' }} />
       <Stack.Screen name="settings" options={{ title: '⚙️ Finance Security & Settings' }} />
+      <Stack.Screen name="khata" options={{ title: '📒 Udhaar Khata' }} />
     </Stack>
   );
 }

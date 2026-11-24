@@ -1,6 +1,7 @@
 import api from './apiClient';
 import { secureLog } from '@/security';
 import type { AiChatRequest, AiChatResponse } from '@/types/api';
+import { n8nWorkflowService } from './n8nWorkflowService';
 
 export interface ActionPill {
   label: string;
@@ -108,12 +109,31 @@ export const aiChatService = {
     message: string,
     conversationId?: number,
     auctionConfigId?: number,
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>,
   ): Promise<AiChatResponse> {
     const payload: AiChatRequest = {
       message: message.trim(),
       conversationId,
       auctionConfigId,
     };
+
+    if (n8nWorkflowService.isConfigured()) {
+      try {
+        return await n8nWorkflowService.invokeAssistant({
+          module: 'ai-chat',
+          route: '/ai-chat',
+          action: 'assistant.chat',
+          message: payload.message,
+          conversationId,
+          history,
+        });
+      } catch (err: any) {
+        secureLog.warn('AiChatService: n8n webhook request failed, trying the application API', {
+          error: err?.message,
+          status: err?.response?.status,
+        });
+      }
+    }
 
     try {
       const res = await api.post<AiChatResponse>('/ai/chat', payload);

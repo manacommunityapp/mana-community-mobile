@@ -7,17 +7,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { VENDOR_COLORS } from '@/constants/vendorTheme';
 import { vendorService } from '@/services/vendorService';
 
 export default function VendorDealsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const vendorId = (user as any)?.vendorId || (user?.id ? String(user.id) : 'v1');
 
   const { data: deals = [], isLoading, refetch } = useQuery({
-    queryKey: ['vendor-deals'],
-    queryFn: () => vendorService.getVendorActiveDeals('v1'),
+    queryKey: ['vendor-deals', vendorId],
+    queryFn: () => vendorService.getVendorActiveDeals(vendorId),
   });
 
   const onRefresh = async () => {

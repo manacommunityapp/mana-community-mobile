@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, Alert, ActivityIndicator, Vibration,
+  ScrollView, Alert, ActivityIndicator, Vibration, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,8 @@ import { healthGuardService } from '@/services/healthGuardService';
 import type { EmergencyIncidentDto } from '@/types/healthguard';
 
 const COUNTDOWN = 5;
+/** Direct fallback when the SOS cannot reach the server. */
+const EMERGENCY_FALLBACK_NUMBER = '112';
 
 export default function SosScreen() {
   const router = useRouter();
@@ -21,9 +23,11 @@ export default function SosScreen() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    healthGuardService.getActiveIncident().then(inc => {
-      if (inc) { setActiveIncident(inc); setPhase('active'); }
-    });
+    healthGuardService.getActiveIncident()
+      .then(inc => {
+        if (inc) { setActiveIncident(inc); setPhase('active'); }
+      })
+      .catch(() => { /* unknown — stay idle rather than claim an active incident */ });
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
@@ -61,8 +65,24 @@ export default function SosScreen() {
       setPhase('active');
       Vibration.vibrate([0, 500, 200, 500, 200, 500]);
     } catch {
-      Alert.alert('SOS Sent', 'Emergency alert triggered (offline mode).');
-      setPhase('active');
+      // The server never received this SOS, so no contact was alerted. Never show an
+      // active incident here — show a hard failure with a direct phone fallback.
+      setActiveIncident(null);
+      setPhase('idle');
+      setCountdown(COUNTDOWN);
+      Alert.alert(
+        'SOS NOT SENT',
+        'Your SOS could not reach the server, so NO emergency contacts were alerted. Call emergency services or security directly right now.',
+        [
+          {
+            text: `Call ${EMERGENCY_FALLBACK_NUMBER}`,
+            style: 'destructive',
+            onPress: () => Linking.openURL(`tel:${EMERGENCY_FALLBACK_NUMBER}`),
+          },
+          { text: 'Retry', onPress: () => triggerSos() },
+          { text: 'Close', style: 'cancel' },
+        ]
+      );
     } finally {
       setLoading(false);
     }
@@ -73,11 +93,19 @@ export default function SosScreen() {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Yes, I\'m safe', onPress: async () => {
-          if (activeIncident?.id) {
-            await healthGuardService.resolveIncident(activeIncident.id, 'Resolved by user');
+          try {
+            if (activeIncident?.id) {
+              await healthGuardService.resolveIncident(activeIncident.id, 'Resolved by user');
+            }
+            setActiveIncident(null);
+            setPhase('resolved');
+          } catch {
+            // Not resolved server-side — keep the incident visible as still active.
+            Alert.alert(
+              'Could Not Resolve',
+              'The server did not confirm this. The incident is still ACTIVE for responders. Please try again.'
+            );
           }
-          setActiveIncident(null);
-          setPhase('resolved');
         },
       },
     ]);
@@ -88,11 +116,19 @@ export default function SosScreen() {
       { text: 'No', style: 'cancel' },
       {
         text: 'Yes, cancel', onPress: async () => {
-          if (activeIncident?.id) {
-            await healthGuardService.cancelIncident(activeIncident.id);
+          try {
+            if (activeIncident?.id) {
+              await healthGuardService.cancelIncident(activeIncident.id);
+            }
+            setActiveIncident(null);
+            setPhase('idle');
+          } catch {
+            // Not cancelled server-side — the alert is still live.
+            Alert.alert(
+              'Could Not Cancel',
+              'The server did not confirm the cancellation. The emergency alert is still ACTIVE. Please try again.'
+            );
           }
-          setActiveIncident(null);
-          setPhase('idle');
         },
       },
     ]);
@@ -225,7 +261,7 @@ const styles = StyleSheet.create({
     width: 180, height: 180, borderRadius: 90,
     backgroundColor: '#ef4444',
     alignItems: 'center', justifyContent: 'center',
-    ...SHADOWS.large,
+    ...SHADOWS.lg,
     borderWidth: 4, borderColor: '#fca5a5',
   },
   sosBtnLabel: { fontSize: 48, fontWeight: '900', color: '#fff', letterSpacing: 2 },
@@ -233,7 +269,7 @@ const styles = StyleSheet.create({
   hint: { marginTop: SPACING.md, fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', maxWidth: 260 },
   countdownLabel: { fontSize: 20, color: COLORS.textSecondary, marginBottom: SPACING.sm },
   countdownNum: { fontSize: 96, fontWeight: '900', color: '#ef4444', lineHeight: 110 },
-  stopBtn: { marginTop: SPACING.lg, backgroundColor: COLORS.card, paddingHorizontal: 48, paddingVertical: 16, borderRadius: RADIUS.lg, ...SHADOWS.sm },
+  stopBtn: { marginTop: SPACING.lg, backgroundColor: COLORS.surface, paddingHorizontal: 48, paddingVertical: 16, borderRadius: RADIUS.lg, ...SHADOWS.sm },
   stopBtnText: { fontSize: 20, fontWeight: '700', color: '#ef4444' },
   countdownHint: { marginTop: SPACING.sm, fontSize: 13, color: COLORS.textSecondary },
   activeRing: {
@@ -241,7 +277,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 6, borderColor: '#fca5a5',
-    ...SHADOWS.large,
+    ...SHADOWS.lg,
   },
   activePulse: {
     position: 'absolute', width: 200, height: 200, borderRadius: 100,
@@ -259,10 +295,10 @@ const styles = StyleSheet.create({
   safeSubText: { fontSize: 14, color: COLORS.textSecondary, marginTop: SPACING.xs, textAlign: 'center' },
   doneBtn: { marginTop: SPACING.xl, backgroundColor: COLORS.primary, paddingHorizontal: 48, paddingVertical: 14, borderRadius: RADIUS.lg },
   doneBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  descCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md, ...SHADOWS.sm },
+  descCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md, ...SHADOWS.sm },
   descLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: SPACING.xs },
   descInput: { color: COLORS.text, fontSize: 14, minHeight: 64, textAlignVertical: 'top' },
-  numbersCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.md, ...SHADOWS.sm, width: '100%' },
+  numbersCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, ...SHADOWS.sm, width: '100%' },
   numbersTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm },
   numberRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border },
   numberLabel: { fontSize: 14, color: COLORS.textSecondary },

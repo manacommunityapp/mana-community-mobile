@@ -70,6 +70,9 @@ export interface MobilityDriverDto {
   status:        DriverStatus;
   availability:  DriverAvailability;
   phone:         string;
+  currentLat?:   number;
+  currentLng?:   number;
+  locationUpdatedAt?: string;
 }
 
 // ── Ride Request / Trip ──────────────────────────────────────────
@@ -97,11 +100,11 @@ export interface MobilityTripDto {
 }
 
 export interface MobilityLocationUpdateDto {
-  tripId:    number;
-  driverLat: number;
-  driverLng: number;
+  tripId?:   number;
+  driverLat?: number;
+  driverLng?: number;
   etaMinutes?: number;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 // ── Driver Documents ─────────────────────────────────────────────
@@ -139,11 +142,10 @@ export interface DriverEarningsSummaryDto {
 // ── Driver Onboarding ────────────────────────────────────────────
 export interface RegisterDriverRequest {
   vehicleType:    VehicleType;
-  vehicleNumber:  string;
+  vehicleNumberPlate: string;
   vehicleModel:   string;
   vehicleColor:   string;
   vehicleYear:    number;
-  serviceZoneIds: number[];
 }
 
 // ── Ride Requests ────────────────────────────────────────────────
@@ -188,10 +190,12 @@ export interface MobilityStatsDto {
 
 // ── Service Zone ─────────────────────────────────────────────────
 export interface MobilityServiceZoneDto {
-  id:          number;
-  name:        string;
-  description?: string;
-  isActive:    boolean;
+  id:        number;
+  name:      string;
+  centerLat: number;
+  centerLng: number;
+  radiusKm:  number;
+  active:    boolean;
 }
 
 // ── Ops / Admin ──────────────────────────────────────────────────
@@ -205,8 +209,8 @@ export interface PendingDocumentReviewDto {
 }
 
 export interface ReviewDocumentRequest {
-  status:          'APPROVED' | 'REJECTED';
-  rejectedReason?: string;
+  approved:        boolean;
+  rejectReason?:   string;
 }
 
 // ── Carpool (community) ──────────────────────────────────────────

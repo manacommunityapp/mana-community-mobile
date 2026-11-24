@@ -15,7 +15,7 @@ import type { EventDto } from '@/types/api';
 
 export default function EventCalendarScreen() {
   const router = useRouter();
-  const { goBack } = useAppBack({ fallbackRoute: '/tabs/events' });
+  const { goBack } = useAppBack({ fallbackRoute: '/events' });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -137,7 +137,7 @@ export default function EventCalendarScreen() {
             data={selectedDayEvents}
             keyExtractor={item => String(item.id)}
             contentContainerStyle={{ paddingBottom: 40 }}
-            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch(); }} />}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={s.eventRowCard}

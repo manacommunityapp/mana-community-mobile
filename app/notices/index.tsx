@@ -34,6 +34,8 @@ export default function NoticesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState<NoticeDto | null>(null);
+  const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(new Set());
+  const [acknowledging, setAcknowledging] = useState(false);
 
   const {
     data: notices = [],
@@ -362,8 +364,37 @@ export default function NoticesScreen() {
                 activeOpacity={0.8}
               >
                 <Ionicons name="share-social-outline" size={16} color={COLORS.primary} />
-                <Text style={styles.shareBtnText}>Share Notice</Text>
+                <Text style={styles.shareBtnText}>Share</Text>
               </TouchableOpacity>
+
+              {selectedNotice && (acknowledgedIds.has(selectedNotice.id) || selectedNotice.isAcknowledged) ? (
+                <View style={styles.acknowledgedBadge}>
+                  <Ionicons name="checkmark-circle" size={15} color="#059669" />
+                  <Text style={styles.acknowledgedBadgeText}>Acknowledged</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.acknowledgeBtn, acknowledging && { opacity: 0.6 }]}
+                  disabled={acknowledging}
+                  onPress={async () => {
+                    if (!selectedNotice) return;
+                    setAcknowledging(true);
+                    await noticeService.acknowledge(selectedNotice.id);
+                    setAcknowledgedIds(prev => new Set([...prev, selectedNotice.id]));
+                    setAcknowledging(false);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  {acknowledging ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-done-outline" size={15} color="#fff" />
+                      <Text style={styles.acknowledgeBtnText}>I Acknowledge</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.dismissBtn}
@@ -768,5 +799,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#fff',
+  },
+  acknowledgeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 12,
+    borderRadius: RADIUS.lg,
+    backgroundColor: '#059669',
+  },
+  acknowledgeBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  acknowledgedBadge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 12,
+    borderRadius: RADIUS.lg,
+    backgroundColor: '#D1FAE5',
+  },
+  acknowledgedBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#059669',
   },
 });

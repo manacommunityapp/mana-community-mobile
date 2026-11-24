@@ -1,17 +1,23 @@
 import api from './apiClient';
 
 export interface EmergencyTriggerRequest {
+  /** Legacy UI field; it is translated to the service's emergencyType enum. */
   category: string;
   description?: string;
   tower?: string;
   flatNumber?: string;
   contactNumber?: string;
+  emergencyType?: 'MEDICAL' | 'FIRE' | 'SECURITY_INTRUDER' | 'GAS_LEAK' | 'LIFT_STUCK' | 'GENERAL_PANIC' | 'THEFT';
+  severity?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  buildingBlock?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface EmergencyAlertDto {
   id: string;
   category: string;
-  status: 'DISPATCHED' | 'ACKNOWLEDGED' | 'RESOLVED';
+  status: 'TRIGGERED' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'ON_SITE' | 'RESOLVED' | 'FALSE_ALARM' | string;
   timestamp: string;
   description?: string;
   requesterName?: string;
@@ -27,23 +33,63 @@ export interface EmergencyContact {
   available: string;
 }
 
+// Fallback contacts shown when the backend is unreachable — keep these updated
+// with the society's real emergency numbers.
+const FALLBACK_CONTACTS: EmergencyContact[] = [
+  { id: 'ec-1', role: 'Security Control Room', phone: '100', available: '24/7' },
+  { id: 'ec-2', role: 'Ambulance / Medical', phone: '108', available: '24/7' },
+  { id: 'ec-3', role: 'Fire Brigade', phone: '101', available: '24/7' },
+  { id: 'ec-4', role: 'Police', phone: '112', available: '24/7' },
+];
+
 export const emergencyService = {
   async triggerSOS(data: EmergencyTriggerRequest): Promise<EmergencyAlertDto> {
-    const res = await api.post<EmergencyAlertDto>('/emergency/sos', data);
-    return res.data;
+    try {
+      const categoryMap: Record<string, string> = { SECURITY: 'SECURITY_INTRUDER', INTRUDER: 'SECURITY_INTRUDER', PANIC: 'GENERAL_PANIC' };
+      const res = await api.post<EmergencyAlertDto>('/emergency/sos/trigger', {
+        emergencyType: data.emergencyType || categoryMap[data.category] || data.category,
+        severity: data.severity || 'CRITICAL',
+        flatNumber: data.flatNumber,
+        buildingBlock: data.buildingBlock || data.tower,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        locationDetails: data.description,
+        notes: data.description,
+      });
+      return res.data;
+    } catch (err) {
+      // No local queue and no fabricated dispatch: if the server did not receive the SOS,
+      // nobody has been notified. The caller must show a hard failure and a phone fallback.
+      throw err;
+    }
   },
 
   async getActiveAlerts(): Promise<EmergencyAlertDto[]> {
-    const res = await api.get<EmergencyAlertDto[]>('/emergency/active');
-    return res.data;
+    try {
+      const res = await api.get<EmergencyAlertDto[]>('/emergency/active');
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 
   async resolveAlert(alertId: string, resolutionNotes?: string): Promise<void> {
-    await api.post(`/emergency/${alertId}/resolve`, { resolutionNotes });
+    try {
+      await api.post(`/emergency/${alertId}/resolve`, { resolutionNotes });
+    } catch (err) {
+      throw new Error('Could not resolve alert — please try again or contact the security desk directly.');
+    }
   },
 
   async getContacts(): Promise<EmergencyContact[]> {
-    const res = await api.get<EmergencyContact[]>('/emergency/contacts');
-    return res.data;
+    try {
+      const res = await api.get<EmergencyContact[]>('/emergency/contacts');
+      const contacts = res.data;
+      if (Array.isArray(contacts) && contacts.length > 0) return contacts;
+      return FALLBACK_CONTACTS;
+    } catch {
+      return FALLBACK_CONTACTS;
+    }
   },
+
 };

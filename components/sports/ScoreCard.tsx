@@ -1,16 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { safeFormat } from '@/utils/dateUtils';
 import type { MatchDto } from '@/types/api';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { SPORT_EMOJI } from '@/constants/sports';
 import { Ionicons } from '@expo/vector-icons';
-
-const SPORT_EMOJI: Record<string, string> = {
-  CRICKET: '🏏', FOOTBALL: '⚽', BADMINTON: '🏸',
-  TABLE_TENNIS: '🏓', BASKETBALL: '🏀', VOLLEYBALL: '🏐',
-  CHESS: '♟️', CARROM: '🎯', OTHER: '🏅',
-};
 
 // ── Sport color accent per sport type ────────────────────────────────────────
 const SPORT_COLOR: Record<string, string> = {
@@ -28,17 +23,33 @@ const SPORT_COLOR: Record<string, string> = {
 // ── Score display ─────────────────────────────────────────────────────────────
 function SportScore({ match }: { match: MatchDto }) {
   const sport = match.sport;
+  const dispHome = match.homeScoreDisplay;
+  const dispAway = match.awayScoreDisplay;
 
-  if (sport === 'CRICKET' && match.status !== 'SCHEDULED') {
+  if (match.status === 'SCHEDULED') {
+    return <Text style={ss.time}>{safeFormat(match.scheduledAt, 'h:mm a')}</Text>;
+  }
+
+  if (dispHome != null && String(dispHome).trim() !== '' && dispAway != null && String(dispAway).trim() !== '') {
     return (
       <View style={ss.wrap}>
-        <Text style={ss.mainScore}>{match.homeScore}/{match.homeWickets ?? 0}</Text>
-        {match.homeOvers && <Text style={ss.sub}>({match.homeOvers} ov)</Text>}
+        <Text style={ss.mainScore} numberOfLines={1}>{String(dispHome)}</Text>
         <Text style={ss.vs}>vs</Text>
-        {match.status === 'COMPLETED' ? (
+        <Text style={ss.mainScore} numberOfLines={1}>{String(dispAway)}</Text>
+      </View>
+    );
+  }
+
+  if (sport === 'CRICKET') {
+    return (
+      <View style={ss.wrap}>
+        <Text style={ss.mainScore}>{dispHome ? String(dispHome) : `${match.homeScore}/${match.homeWickets ?? 0}`}</Text>
+        {match.homeOvers && !String(dispHome || '').includes('ov') && <Text style={ss.sub}>({match.homeOvers} ov)</Text>}
+        <Text style={ss.vs}>vs</Text>
+        {match.status === 'COMPLETED' || dispAway || match.awayOvers ? (
           <>
-            <Text style={ss.mainScore}>{match.awayScore}/{match.awayWickets ?? 0}</Text>
-            {match.awayOvers && <Text style={ss.sub}>({match.awayOvers} ov)</Text>}
+            <Text style={ss.mainScore}>{dispAway ? String(dispAway) : `${match.awayScore}/${match.awayWickets ?? 0}`}</Text>
+            {match.awayOvers && !String(dispAway || '').includes('ov') && <Text style={ss.sub}>({match.awayOvers} ov)</Text>}
           </>
         ) : (
           <Text style={ss.pending}>Yet to bat</Text>
@@ -47,19 +58,15 @@ function SportScore({ match }: { match: MatchDto }) {
     );
   }
 
-  if ((sport === 'BADMINTON' || sport === 'TABLE_TENNIS') && match.status !== 'SCHEDULED') {
+  if (sport === 'BADMINTON' || sport === 'TABLE_TENNIS') {
     return (
       <View style={ss.setsRow}>
-        <Text style={ss.setsScore}>{match.homeSetsWon ?? 0}</Text>
+        <Text style={ss.setsScore}>{match.homeSetsWon ?? match.homeScore ?? 0}</Text>
         <Text style={ss.setsDash}>–</Text>
-        <Text style={ss.setsScore}>{match.awaySetsWon ?? 0}</Text>
-        <Text style={ss.setsSub}> sets</Text>
+        <Text style={ss.setsScore}>{match.awaySetsWon ?? match.awayScore ?? 0}</Text>
+        {match.homeSetsWon != null && <Text style={ss.setsSub}> sets</Text>}
       </View>
     );
-  }
-
-  if (match.status === 'SCHEDULED') {
-    return <Text style={ss.time}>{safeFormat(match.scheduledAt, 'h:mm a')}</Text>;
   }
 
   return (
@@ -89,7 +96,7 @@ const ss = StyleSheet.create({
 
 // ── Pulsing live dot ──────────────────────────────────────────────────────────
 function PulsingDot() {
-  const pulse = new Animated.Value(1);
+  const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -117,15 +124,20 @@ export function ScoreCard({ match, compact = false }: ScoreCardProps) {
   const isLive    = match.status === 'LIVE';
   const isDone    = match.status === 'COMPLETED';
   const isSetBased = match.sport === 'BADMINTON' || match.sport === 'TABLE_TENNIS';
+  const winnerName = match.winnerTeamName;
   const homeWon   = isDone && (
-    isSetBased
-      ? (match.homeSetsWon ?? 0) > (match.awaySetsWon ?? 0)
-      : match.homeScore > match.awayScore
+    winnerName
+      ? winnerName === match.homeTeamName
+      : isSetBased
+        ? (match.homeSetsWon ?? 0) > (match.awaySetsWon ?? 0)
+        : match.homeScore > match.awayScore
   );
   const awayWon   = isDone && (
-    isSetBased
-      ? (match.awaySetsWon ?? 0) > (match.homeSetsWon ?? 0)
-      : match.awayScore > match.homeScore
+    winnerName
+      ? winnerName === match.awayTeamName
+      : isSetBased
+        ? (match.awaySetsWon ?? 0) > (match.homeSetsWon ?? 0)
+        : match.awayScore > match.homeScore
   );
 
   const sportColor = SPORT_COLOR[match.sport] ?? COLORS.primary;
@@ -209,7 +221,7 @@ export function ScoreCard({ match, compact = false }: ScoreCardProps) {
       {match.venue && !compact && (
         <View style={c.venueRow}>
           <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
-          <Text style={c.venue} numberOfLines={1}>{match.venue}</Text>
+          <Text style={c.venue} numberOfLines={1}>{typeof match.venue === 'string' ? match.venue : match.venue?.name ?? ''}</Text>
         </View>
       )}
     </TouchableOpacity>

@@ -287,4 +287,15 @@ export const insuranceService = {
     const { data } = await apiClient.post<GroupEnquiryView>('/insurance/group-enquiries', input);
     return data;
   },
+
+  async sportsGroupPolicyRequest(input: {
+    teamName: string;
+    sport: string;
+    memberCount: number;
+    tournamentId?: number;
+    consentId: number;
+  }): Promise<GroupEnquiryView> {
+    const { data } = await apiClient.post<GroupEnquiryView>('/insurance/sports-group-policy', input);
+    return data;
+  },
 };

@@ -1,4 +1,5 @@
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
+import { CONFIG } from '@/constants/config';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? CONFIG.API_BASE_URL + '/api';
 
 export type TxnType = 'BILL' | 'RECHARGE' | 'TRANSFER_SENT' | 'TRANSFER_RECEIVED' | 'INVESTMENT' | 'ENTERTAINMENT' | 'LOAN_EMI';
 export type TxnStatus = 'SUCCESS' | 'PENDING' | 'FAILED';
@@ -68,10 +69,12 @@ export const upiHistoryService = {
       const resp = await fetch(`${API_BASE}/v1/upi/history`);
       if (resp.ok) {
         const d = await resp.json();
-        if (Array.isArray(d) && d.length > 0) return d;
+        if (Array.isArray(d)) return d;
       }
-    } catch { /* fallthrough */ }
-    return MOCK_TRANSACTIONS;
+      return [];
+    } catch {
+      return [];
+    }
   },
 
   filterByType(txns: UpiTransaction[], filter: TxnFilter): UpiTransaction[] {
