@@ -172,6 +172,10 @@ export default function GoldScreen() {
                 <Text style={[s.quickBtnIcon, { color: '#DC2626' }]}>−</Text>
                 <Text style={[s.quickBtnLabel, { color: '#DC2626' }]}>Sell</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[s.quickBtn, { backgroundColor: '#FEF3C7' }]} onPress={() => router.push('/jewellery')}>
+                <Ionicons name="diamond-outline" size={20} color="#B45309" />
+                <Text style={[s.quickBtnLabel, { color: '#B45309' }]}>Jewellery</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Transaction History */}
