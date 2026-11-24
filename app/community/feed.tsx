@@ -94,7 +94,7 @@ export default function CommunityFeedScreen() {
     return rawList.filter((p) => {
       const type = (p.type || p.postType || '').toUpperCase();
       if (activeTab === 'ANNOUNCEMENT') return type === 'ANNOUNCEMENT' || type === 'COMMITTEE_NOTICE' || p.official;
-      if (activeTab === 'POLL') return type === 'POLL' || Boolean(p.poll || (p as any).pollQuestion);
+      if (activeTab === 'POLL') return type === 'POLL' || Boolean(p.poll);
       if (activeTab === 'POST') return (type === 'POST' || type === 'GENERAL') && !p.official;
       return type === activeTab;
     });
@@ -163,7 +163,11 @@ export default function CommunityFeedScreen() {
         title: post.title || 'Community Update',
         message: `${post.title ? post.title + '\n\n' : ''}${post.content}\n\n— Shared via Mana Community`,
       });
-    } catch {}
+    } catch (err: any) {
+      if (err?.message !== 'User did not share') {
+        console.warn('[CommunityFeed] Share failed:', err?.message);
+      }
+    }
   }, []);
 
   const renderPostItem = ({ item }: { item: PostDto }) => {

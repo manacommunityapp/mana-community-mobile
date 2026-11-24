@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, Pressable, TouchableOpacity,
-  StyleSheet, RefreshControl, ActivityIndicator, Alert,
+  StyleSheet, RefreshControl, ActivityIndicator, Alert, Share,
   Image, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -1307,7 +1307,14 @@ function FeedPostCard({ post, liked, onLike }: { post: PostDto; liked: boolean; 
   const gradColors: readonly [string, string] = post.official ? palette.primaryGradient : ['#EC4899', '#F43F5E'];
   const [imageError, setImageError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const qc = useQueryClient();
   const [votedOption, setVotedOption] = useState<number | null>(null);
+  const handleVote = useCallback((optionId: number) => {
+    setVotedOption(optionId);
+    pollService.vote(post.id, [optionId])
+      .then(() => qc.invalidateQueries({ queryKey: ['home-feed'] }))
+      .catch(() => setVotedOption(null));
+  }, [post.id, qc]);
 
   // Format relative timestamp
   const timeDisplay = useMemo(() => {
@@ -1401,7 +1408,7 @@ function FeedPostCard({ post, liked, onLike }: { post: PostDto; liked: boolean; 
                   { backgroundColor: palette.surface, borderColor: palette.border },
                   isSelected && { borderColor: palette.link, backgroundColor: palette.primaryLight },
                 ]}
-                onPress={() => setVotedOption(opt.id)}
+                onPress={() => handleVote(opt.id)}
                 activeOpacity={0.8}
               >
                 <View style={[styles.pollProgressFill, { width: `${pct}%`, backgroundColor: palette.primaryLight }]} />
@@ -1438,7 +1445,10 @@ function FeedPostCard({ post, liked, onLike }: { post: PostDto; liked: boolean; 
         <Pressable
           style={[styles.feedActionBtn, { backgroundColor: palette.surfaceSubtle }]}
           onPress={() => {
-            Alert.alert('Share', `Share "${post.title || post.content.slice(0, 30)}..." with your network.`);
+            Share.share({
+              title: post.title || 'Community Update',
+              message: `${post.title ? post.title + '\n\n' : ''}${post.content}\n\n— Shared via Mana Community`,
+            }).catch(() => {});
           }}
         >
           <Ionicons name="share-social-outline" size={15} color={palette.textMuted} />
@@ -1812,7 +1822,7 @@ export default function HomeScreen() {
       return allPosts.filter((p) => p.official || p.postType === 'ANNOUNCEMENT' || p.type === 'ANNOUNCEMENT' || p.postType === 'COMMITTEE_NOTICE');
     }
     if (activeFilter === 'Polls') {
-      return allPosts.filter((p) => Boolean(p.poll || (p as any).pollQuestion || p.postType === 'POLL' || p.type === 'POLL'));
+      return allPosts.filter((p) => Boolean(p.poll || p.postType === 'POLL' || p.type === 'POLL'));
     }
     if (activeFilter === 'Community') {
       return allPosts.filter((p) => !p.official && p.postType !== 'ANNOUNCEMENT' && p.type !== 'ANNOUNCEMENT' && p.postType !== 'POLL' && p.type !== 'POLL');
@@ -1830,7 +1840,7 @@ export default function HomeScreen() {
       return allPosts.filter((p) => p.postType === 'LOST_FOUND' || p.type === 'LOST_FOUND');
     }
     if (activeFilter === 'Emergency') {
-      return allPosts.filter((p) => p.postType === 'EMERGENCY' || p.type === 'EMERGENCY' || (p as any).priority === 'EMERGENCY');
+      return allPosts.filter((p) => p.postType === 'EMERGENCY' || p.type === 'EMERGENCY');
     }
     if (activeFilter === 'Saved') {
       return allPosts.filter((p) => Boolean(p.bookmarked));
@@ -1857,20 +1867,44 @@ export default function HomeScreen() {
     return 'Active';
   }, [sportsSummary]);
 
-  // Local liked state
-  const [liked, setLiked] = useState<Record<string | number, boolean>>({});
+  // Like mutation with optimistic update (matches community feed pattern)
+  const likeMutation = useMutation({
+    mutationFn: (postId: number) => feedService.likePost(postId),
+    onMutate: async (postId: number) => {
+      await qc.cancelQueries({ queryKey: ['home-feed'] });
+      const previous = qc.getQueryData(['home-feed']);
+      qc.setQueryData(['home-feed'], (old: any) => {
+        if (!old?.content) return old;
+        return {
+          ...old,
+          content: old.content.map((p: PostDto) => {
+            if (p.id === postId) {
+              const nowLiked = !p.liked;
+              return {
+                ...p,
+                liked: nowLiked,
+                likedByCurrentUser: nowLiked,
+                likeCount: nowLiked ? (p.likeCount || 0) + 1 : Math.max(0, (p.likeCount || 1) - 1),
+                likesCount: nowLiked ? (p.likesCount || 0) + 1 : Math.max(0, (p.likesCount || 1) - 1),
+              };
+            }
+            return p;
+          }),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _postId, context) => {
+      if (context?.previous) qc.setQueryData(['home-feed'], context.previous);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['home-feed'] });
+      qc.invalidateQueries({ queryKey: ['community-feed-all'] });
+    },
+  });
   const toggleLike = useCallback((id: string | number) => {
-    setLiked((prev) => {
-      const current = prev[id] !== undefined
-        ? prev[id]
-        : Boolean(allPosts.find((p) => p.id === id)?.liked);
-      const next = !current;
-      if (typeof id === 'number') {
-        feedService.likePost(id).catch(() => {});
-      }
-      return { ...prev, [id]: next };
-    });
-  }, [allPosts]);
+    if (typeof id === 'number') likeMutation.mutate(id);
+  }, [likeMutation]);
 
   const onRefresh = useCallback(() => {
     qc.invalidateQueries({ queryKey: ['profile', 'me'] });
@@ -2183,7 +2217,7 @@ export default function HomeScreen() {
             <FeedPostCard
               key={post.id}
               post={post}
-              liked={liked[post.id] !== undefined ? liked[post.id] : Boolean(post.liked)}
+              liked={Boolean(post.liked)}
               onLike={() => toggleLike(post.id)}
             />
           ))
