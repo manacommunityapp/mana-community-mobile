@@ -230,6 +230,7 @@ function RootLayout() {
             <Stack.Screen name="send-money" />
             <Stack.Screen name="upi-history" />
             <Stack.Screen name="vehicle-care" />
+            <Stack.Screen name="jewellery" />
             <Stack.Screen name="calendar" />
             <Stack.Screen name="healthguard" />
             <Stack.Screen name="procurement" />
