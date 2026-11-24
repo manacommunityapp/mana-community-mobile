@@ -36,6 +36,7 @@ import { CreatePostModal } from '@/components/feed/CreatePostModal';
 import { EmergencySosModal } from '@/components/feed/EmergencySosModal';
 import { LiveMatchesStrip } from '@/components/feed/LiveMatchesStrip';
 import { JoinCommunityModal } from '@/components/community/JoinCommunityModal';
+import { TodayAtAGlanceModal } from '@/components/common/TodayAtAGlanceModal';
 import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import type { PostDto, EventDto } from '@/types/api';
 
@@ -116,6 +117,7 @@ const HOME_ACTIONS: HomeAction[] = [
   // ── Commerce & Food ───────────────────────────────────────────────────────
   { id: 'bazaar',            icon: 'basket-outline',           label: 'Bazaar',            color: '#EC4899', cat: 'Commerce & Food', badge: 'NEW', route: '/bazaar', module: 'BAZAAR' },
   { id: 'marketplace',       icon: 'storefront-outline',       label: 'Marketplace',       color: '#059669', cat: 'Commerce & Food', route: '/marketplace', module: 'MARKETPLACE' },
+  { id: 'jewellery',         icon: 'diamond-outline',          label: 'Jewellery Hub',     color: '#B45309', cat: 'Commerce & Food', badge: 'TRY-ON', route: '/jewellery', module: 'MARKETPLACE' },
   { id: 'food_os',           icon: 'restaurant-outline',       label: 'Food OS',           color: '#EA580C', cat: 'Commerce & Food', route: '/food', module: 'FOOD_OS' },
   { id: 'offers',            icon: 'pricetag-outline',         label: 'Flash Offers',      color: '#D97706', cat: 'Commerce & Food', badge: 'NEW', route: '/offers', module: 'MARKETPLACE' },
   { id: 'group_buying',      icon: 'bag-handle-outline',       label: 'Bulk Deals',        color: '#059669', cat: 'Commerce & Food', route: '/group-buying', module: 'GROUP_BUYING' },
@@ -703,6 +705,7 @@ function KpiStrip({
   const router = useRouter();
   const { hasModule, isSuperAdmin } = useAuth();
   const { palette } = useAppTheme();
+  const [showAllModal, setShowAllModal] = useState(false);
 
   const allowedMacroItems = useMemo(() => {
     return KPI_ITEMS.filter((item) => isSuperAdmin || !item.module || hasModule(item.module));
@@ -1047,14 +1050,26 @@ function KpiStrip({
   return (
     <View style={styles.kpiContainer}>
       <View style={styles.kpiHeaderRow}>
-        <Text style={[styles.kpiSectionTitle, { color: palette.textMuted }]}>Today at a Glance</Text>
-        {isAdaptiveMode && (
-          <View style={[styles.kpiAdaptivePill, { backgroundColor: palette.surfaceSubtle, borderColor: palette.borderLight }]}>
-            <Text style={[styles.kpiAdaptiveText, { color: palette.textMuted }]}>
-              {allowedMacroItems.map((m) => m.label).join(' • ')}
-            </Text>
-          </View>
-        )}
+        <View style={styles.kpiHeaderLeft}>
+          <Text style={[styles.kpiSectionTitle, { color: palette.textMuted }]}>Today at a Glance</Text>
+          {isAdaptiveMode && (
+            <View style={[styles.kpiAdaptivePill, { backgroundColor: palette.surfaceSubtle, borderColor: palette.borderLight }]}>
+              <Text style={[styles.kpiAdaptiveText, { color: palette.textMuted }]}>
+                {allowedMacroItems.map((m) => m.label).join(' • ')}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.kpiMoreBtn, { backgroundColor: palette.surfaceSubtle, borderColor: palette.borderLight }]}
+          onPress={() => setShowAllModal(true)}
+          activeOpacity={0.7}
+          accessibilityLabel="View all glance options"
+        >
+          <Text style={[styles.kpiMoreBtnText, { color: palette.link }]}>View All</Text>
+          <Ionicons name="chevron-forward" size={11} color={palette.link} />
+        </TouchableOpacity>
       </View>
       <ScrollView
         horizontal
@@ -1107,7 +1122,45 @@ function KpiStrip({
             </View>
           </Pressable>
         ))}
+
+        {/* "+ More" Chip to open the modal */}
+        <Pressable
+          style={[
+            styles.kpiChip,
+            styles.kpiMoreChip,
+            { backgroundColor: palette.surfaceSubtle, borderColor: palette.borderLight },
+          ]}
+          onPress={() => setShowAllModal(true)}
+          accessibilityLabel="View all glance options"
+        >
+          <View style={[styles.kpiIconBox, { backgroundColor: palette.primaryLight }]}>
+            <Ionicons name="apps-outline" size={16} color={palette.link} />
+          </View>
+          <View style={styles.kpiTextBox}>
+            <Text style={[styles.kpiValue, { color: palette.link }]}>More</Text>
+            <Text style={[styles.kpiLabel, { color: palette.textMuted }]}>View All</Text>
+          </View>
+        </Pressable>
       </ScrollView>
+
+      {/* Today at a Glance - All Options Modal */}
+      <TodayAtAGlanceModal
+        visible={showAllModal}
+        onClose={() => setShowAllModal(false)}
+        onOpenPass={onOpenPass}
+        data={{
+          eventsCount,
+          eventsTodayCount,
+          sportsCount,
+          sportsSummary,
+          pollsCount,
+          ticketsCount,
+          duesCount,
+          duesOverdueTotal,
+          facilitiesCount,
+          noticesCount,
+        }}
+      />
     </View>
   );
 }
@@ -2487,11 +2540,15 @@ const styles = StyleSheet.create({
   // ── KPI Strip ────────────────────────────────────────────────────────────
   kpiContainer:      { marginBottom: 10 },
   kpiHeaderRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5, paddingHorizontal: 2 },
+  kpiHeaderLeft:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
   kpiSectionTitle:   { fontSize: 12, fontFamily: FONTS.semiBold, letterSpacing: 0.2 },
   kpiAdaptivePill:   { paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 10, borderWidth: 1 },
   kpiAdaptiveText:   { fontSize: 9.5, fontFamily: FONTS.semiBold, letterSpacing: 0.2 },
+  kpiMoreBtn:        { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, borderWidth: 1 },
+  kpiMoreBtnText:    { fontSize: 10.5, fontFamily: FONTS.bold },
   kpiScroll:         { gap: 9, paddingTop: 6, paddingBottom: 4, paddingHorizontal: 2 },
   kpiChip:           { position: 'relative', flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9, borderWidth: 1, borderColor: '#E5EFEC', ...SHADOWS.sm } as any,
+  kpiMoreChip:       { borderStyle: 'dashed' },
   kpiIconBox:        { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   kpiTextBox:        { justifyContent: 'center', minWidth: 40 },
   kpiValue:          { fontSize: 15, color: '#0D0D2B', fontFamily: FONTS.displayBold, lineHeight: 18 },

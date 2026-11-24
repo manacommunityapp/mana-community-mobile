@@ -11,7 +11,7 @@ import {
   Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { kittyPartyService } from '@/services/kittyPartyService';
+import { kittyPartyService, type KittyPartyJoinRequest } from '@/services/kittyPartyService';
 import type { KittyPartyCircleSummary, KittyPartyMember } from '@/types/kittyPartyTypes';
 import { hasPermission, isAdminOrOwner, getRoleBadgeColor } from '@/utils/kittyPartyPermissions';
 
@@ -33,6 +33,7 @@ export default function KittyPartyDetailsScreen() {
 
   const [circle, setCircle] = useState<KittyPartyCircleSummary | null>(null);
   const [members, setMembers] = useState<KittyPartyMember[]>([]);
+  const [joinRequests, setJoinRequests] = useState<KittyPartyJoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<DetailsTab>('overview');
 
@@ -51,6 +52,11 @@ export default function KittyPartyDetailsScreen() {
       ]);
       setCircle(circleData);
       setMembers(membersData || []);
+      if (isAdminOrOwner(circleData?.currentUserRole)) {
+        kittyPartyService.getPendingJoinRequests(circleId)
+          .then((list) => setJoinRequests(list || []))
+          .catch(() => setJoinRequests([]));
+      }
     } catch (e) {
       console.error('Failed to load mobile circle details', e);
     } finally {
@@ -77,6 +83,16 @@ export default function KittyPartyDetailsScreen() {
       loadDetails();
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Failed to submit join request');
+    }
+  };
+
+  const handleApproveJoinRequest = async (requestId: number) => {
+    try {
+      await kittyPartyService.approveJoinRequest(circleId, requestId);
+      Alert.alert('Approved', 'Join request approved and resident added to circle!');
+      loadDetails();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to approve join request');
     }
   };
 
@@ -156,6 +172,30 @@ export default function KittyPartyDetailsScreen() {
           >
             <Text style={styles.joinButtonText}>Request to Join Circle</Text>
           </TouchableOpacity>
+        )}
+
+        {isAdmin && joinRequests.length > 0 && (
+          <View style={{ marginTop: 14, padding: 12, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 1, borderColor: '#FDE68A' }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E', marginBottom: 8 }}>
+              PENDING JOIN REQUESTS ({joinRequests.length})
+            </Text>
+            {joinRequests.map((jr) => (
+              <View key={jr.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>{jr.fullName}</Text>
+                  {jr.requestMessage ? (
+                    <Text style={{ fontSize: 11, color: '#4B5563' }}>{jr.requestMessage}</Text>
+                  ) : null}
+                </View>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#059669', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                  onPress={() => handleApproveJoinRequest(jr.id)}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>✓ Approve</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
         )}
       </View>
 

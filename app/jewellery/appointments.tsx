@@ -186,21 +186,24 @@ export default function JewelleryAppointmentsScreen() {
             {/* Jeweller picker */}
             <Text style={styles.fieldLabel}>Select Jeweller</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-              {vendors.map((v) => (
-                <TouchableOpacity
-                  key={v.id}
-                  onPress={() => setSelectedVendorId(v.id)}
-                  style={[styles.vendorOption, selectedVendorId === v.id && styles.vendorOptionActive]}
-                >
-                  <Text style={[styles.vendorOptionText, selectedVendorId === v.id && { color: '#FFFFFF' }]}>{v.shopName}</Text>
-                  {v.rating && (
-                    <View style={styles.vendorRating}>
-                      <Ionicons name="star" size={9} color={selectedVendorId === v.id ? '#FCD34D' : '#F59E0B'} />
-                      <Text style={[styles.vendorRatingText, selectedVendorId === v.id && { color: '#FCD34D' }]}>{v.rating.toFixed(1)}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+              {vendors.map((v) => {
+                const isSelectedVendor = String(selectedVendorId) === String(v.id);
+                return (
+                  <TouchableOpacity
+                    key={v.id}
+                    onPress={() => setSelectedVendorId(String(v.id))}
+                    style={[styles.vendorOption, isSelectedVendor && styles.vendorOptionActive]}
+                  >
+                    <Text style={[styles.vendorOptionText, isSelectedVendor && { color: '#FFFFFF' }]}>{v.shopName}</Text>
+                    {v.rating ? (
+                      <View style={styles.vendorRating}>
+                        <Ionicons name="star" size={9} color={isSelectedVendor ? '#FCD34D' : '#F59E0B'} />
+                        <Text style={[styles.vendorRatingText, isSelectedVendor && { color: '#FCD34D' }]}>{v.rating.toFixed(1)}</Text>
+                      </View>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
             {/* Date selection chips */}

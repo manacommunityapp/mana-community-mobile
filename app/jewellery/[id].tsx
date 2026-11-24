@@ -29,6 +29,8 @@ export default function JewelleryProductScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jewellery-product', id] });
       queryClient.invalidateQueries({ queryKey: ['jewellery-wishlist'] });
+      queryClient.invalidateQueries({ queryKey: ['jewellery-products'] });
+      queryClient.invalidateQueries({ queryKey: ['jewellery-featured'] });
     },
     onError: () => Alert.alert('Error', 'Failed to update wishlist. Please try again.'),
   });
@@ -50,13 +52,24 @@ export default function JewelleryProductScreen() {
     );
   }
 
-  const priceBreakdown = [
+  const goldCost =
     product.netWeightG && product.goldRatePerGram
-      ? { label: `Gold (${product.netWeightG}g × ₹${product.goldRatePerGram}/g)`, value: product.netWeightG * product.goldRatePerGram }
+      ? Math.round(product.netWeightG * product.goldRatePerGram)
+      : 0;
+  const preTaxSubtotal = goldCost + (product.makingCharges ?? 0) + (product.stoneCost ?? 0);
+  const gstValue = product.gstPercent
+    ? preTaxSubtotal > 0
+      ? Math.round(preTaxSubtotal * (product.gstPercent / 100))
+      : Math.round(product.totalPrice - product.totalPrice / (1 + product.gstPercent / 100))
+    : 0;
+
+  const priceBreakdown = [
+    goldCost > 0
+      ? { label: `Gold (${product.netWeightG}g × ₹${product.goldRatePerGram}/g)`, value: goldCost }
       : null,
     product.makingCharges ? { label: 'Making Charges', value: product.makingCharges } : null,
     product.stoneCost     ? { label: 'Stone / Diamond',  value: product.stoneCost }     : null,
-    product.gstPercent    ? { label: `GST @ ${product.gstPercent}%`, value: product.totalPrice * (product.gstPercent / 100) } : null,
+    product.gstPercent    ? { label: `GST @ ${product.gstPercent}%`, value: gstValue }    : null,
   ].filter(Boolean) as { label: string; value: number }[];
 
   return (

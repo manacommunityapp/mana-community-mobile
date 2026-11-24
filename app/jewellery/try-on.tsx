@@ -45,8 +45,16 @@ export default function JewelleryTryOnScreen() {
   const [pendingAction, setPendingAction] = useState<'camera' | 'gallery' | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollCount = useRef(0);
+
+  // Cleanup polling interval on unmount
+  React.useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const { data: products = [], isLoading: loadingProducts } = useQuery({
@@ -54,9 +62,15 @@ export default function JewelleryTryOnScreen() {
     queryFn: () => jewelleryService.getProducts(),
   });
 
+  const tryOnEligibleProducts = React.useMemo(() => {
+    const withArAsset = products.filter((p) => p.tryOnAssetUrl);
+    if (withArAsset.length > 0) return withArAsset;
+    return products.filter((p) => (p.imageUrls?.length ?? 0) > 0);
+  }, [products]);
+
   React.useEffect(() => {
     if (productId && products.length > 0) {
-      const found = products.find((p) => p.id === productId);
+      const found = products.find((p) => String(p.id) === String(productId));
       if (found) setSelectedProduct(found);
     }
   }, [productId, products]);
@@ -133,6 +147,7 @@ export default function JewelleryTryOnScreen() {
 
       // Step 4: Submit photo job with s3Key
       const job = await jewelleryService.submitPhotoJob(session.id, slot.s3Key);
+      setActiveJobId(job.id);
       setUploadProgress(100);
 
       // Step 5: Poll for result
@@ -202,7 +217,37 @@ export default function JewelleryTryOnScreen() {
 
   const handleAddToCart = () => {
     if (!selectedProduct) return;
-    router.push({ pathname: '/cart', params: { productId: selectedProduct.id } });
+    Alert.alert(
+      'Added to Bag',
+      `${selectedProduct.name} (₹${selectedProduct.totalPrice.toLocaleString('en-IN')}) has been added to your shopping bag.`,
+      [
+        { text: 'Continue Try-On', style: 'cancel' },
+        {
+          text: 'View Details',
+          onPress: () => router.push(`/jewellery/${selectedProduct.id}`),
+        },
+        {
+          text: 'Book Consultation',
+          onPress: () =>
+            router.push({
+              pathname: '/jewellery/appointments',
+              params: { vendorId: selectedProduct.vendorId },
+            }),
+        },
+      ]
+    );
+  };
+
+  const handleDeletePhoto = async () => {
+    if (activeJobId) {
+      try {
+        await jewelleryService.deletePhoto(activeJobId);
+      } catch {
+        // Proceed with local reset even if already purged
+      }
+    }
+    handleReset();
+    Alert.alert('Photo Deleted', 'Your try-on photo has been scheduled for immediate erasure.');
   };
 
   const handleReset = () => {
@@ -210,6 +255,7 @@ export default function JewelleryTryOnScreen() {
     setViewMode('SELECT');
     setPhotoUri(null);
     setResultUrl(null);
+    setActiveJobId(null);
     setErrorMsg(null);
     setUploadProgress(0);
     pollCount.current = 0;
@@ -312,8 +358,12 @@ export default function JewelleryTryOnScreen() {
             )}
             <View style={styles.resultBar}>
               <TouchableOpacity style={styles.resultBtn} onPress={handleReset}>
-                <Ionicons name="refresh" size={17} color="#64748B" />
+                <Ionicons name="refresh" size={17} color="#FFFFFF" />
                 <Text style={styles.resultBtnText}>Retake</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.resultBtn} onPress={handleDeletePhoto}>
+                <Ionicons name="trash-outline" size={17} color="#FCA5A5" />
+                <Text style={styles.resultBtnText}>Delete</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.resultBtn} onPress={handleSaveLook} disabled={wishlistMutation.isPending}>
                 <Ionicons name={wishlistMutation.isPending ? 'hourglass' : 'heart'} size={17} color="#EF4444" />
@@ -321,7 +371,7 @@ export default function JewelleryTryOnScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.resultBtn, styles.resultBtnPrimary]} onPress={handleAddToCart}>
                 <Ionicons name="bag-add" size={17} color="#FFFFFF" />
-                <Text style={[styles.resultBtnText, { color: '#FFFFFF' }]}>Add to Cart</Text>
+                <Text style={[styles.resultBtnText, { color: '#FFFFFF' }]}>Add to Bag</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -348,8 +398,8 @@ export default function JewelleryTryOnScreen() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: SPACING.md, gap: 10 }}>
-              {products.filter((p) => p.tryOnAssetUrl).map((product) => {
-                const active = selectedProduct?.id === product.id;
+              {tryOnEligibleProducts.map((product) => {
+                const active = String(selectedProduct?.id) === String(product.id);
                 return (
                   <TouchableOpacity key={product.id}
                     style={[styles.carouselCard, active && styles.carouselCardActive]}
@@ -367,7 +417,7 @@ export default function JewelleryTryOnScreen() {
                   </TouchableOpacity>
                 );
               })}
-              {products.filter((p) => p.tryOnAssetUrl).length === 0 && !loadingProducts && (
+              {tryOnEligibleProducts.length === 0 && !loadingProducts && (
                 <View style={{ padding: 16 }}>
                   <Text style={{ color: '#94A3B8', fontSize: 12 }}>No try-on items yet. Check back soon!</Text>
                 </View>

@@ -1,5 +1,5 @@
 import api from './apiClient';
-import type { ApiEnvelope, PageResponse } from './apiClient';
+import type { ApiEnvelope } from './apiClient';
 
 export type GroupType = 'BOOK_CLUB' | 'FITNESS' | 'PARENTS' | 'HOBBY' | 'PROFESSIONAL' | 'INTEREST' | 'GENERAL';
 
@@ -30,7 +30,8 @@ export interface GroupEvent {
   id: number;
   groupId: number;
   title: string;
-  scheduledAt: string;
+  scheduledAt?: string;
+  eventDate?: string;
   location?: string;
   rsvpStatus?: 'GOING' | 'NOT_GOING' | 'MAYBE';
 }
@@ -40,6 +41,7 @@ export interface GroupExpense {
   groupId: number;
   description: string;
   amount: number;
+  paidBy?: number;
   paidByName: string;
   createdAt: string;
   myShare: number;
@@ -53,21 +55,27 @@ export interface CreateGroupRequest {
   isPrivate: boolean;
 }
 
+function unwrapArray<T>(d: any): T[] {
+  if (Array.isArray(d)) return d;
+  if (Array.isArray(d?.content)) return d.content;
+  if (Array.isArray(d?.data)) return d.data;
+  if (Array.isArray(d?.data?.content)) return d.data.content;
+  return [];
+}
+
 export const socialGroupService = {
   async getCommunityGroups(communityId: number): Promise<SocialGroup[]> {
     const res = await api.get<ApiEnvelope<SocialGroup[]> | SocialGroup[]>(
       `/api/v1/social/groups?communityId=${communityId}`,
     );
-    const d = res.data as any;
-    return Array.isArray(d) ? d : (d?.data ?? []);
+    return unwrapArray<SocialGroup>(res.data);
   },
 
   async getMyGroups(): Promise<SocialGroup[]> {
     const res = await api.get<ApiEnvelope<SocialGroup[]> | SocialGroup[]>(
       '/api/v1/social/groups/my',
     );
-    const d = res.data as any;
-    return Array.isArray(d) ? d : (d?.data ?? []);
+    return unwrapArray<SocialGroup>(res.data);
   },
 
   async getGroup(groupId: number): Promise<SocialGroup> {
@@ -79,26 +87,25 @@ export const socialGroupService = {
   async createGroup(communityId: number, data: CreateGroupRequest): Promise<SocialGroup> {
     const res = await api.post<ApiEnvelope<SocialGroup>>(
       `/api/v1/social/groups?communityId=${communityId}`,
-      data,
+      { ...data, communityId },
     );
     const d = res.data as any;
     return d?.data ?? d;
   },
 
   async join(groupId: number): Promise<void> {
-    await api.post(`/api/v1/social/groups/${groupId}/join`);
+    await api.post(`/api/v1/social/groups/${groupId}/join`, {});
   },
 
   async leave(groupId: number): Promise<void> {
-    await api.post(`/api/v1/social/groups/${groupId}/leave`);
+    await api.post(`/api/v1/social/groups/${groupId}/leave`, {});
   },
 
   async getMessages(groupId: number, page = 0): Promise<GroupMessage[]> {
     const res = await api.get<ApiEnvelope<GroupMessage[]> | GroupMessage[]>(
       `/api/v1/social/groups/${groupId}/messages?page=${page}&size=30`,
     );
-    const d = res.data as any;
-    return Array.isArray(d) ? d : (d?.data ?? []);
+    return unwrapArray<GroupMessage>(res.data);
   },
 
   async sendMessage(groupId: number, content: string): Promise<GroupMessage> {
@@ -114,8 +121,7 @@ export const socialGroupService = {
     const res = await api.get<ApiEnvelope<GroupEvent[]> | GroupEvent[]>(
       `/api/v1/social/groups/${groupId}/events`,
     );
-    const d = res.data as any;
-    return Array.isArray(d) ? d : (d?.data ?? []);
+    return unwrapArray<GroupEvent>(res.data);
   },
 
   async rsvp(groupId: number, eventId: number, status: 'GOING' | 'NOT_GOING' | 'MAYBE'): Promise<void> {
@@ -126,8 +132,7 @@ export const socialGroupService = {
     const res = await api.get<ApiEnvelope<GroupExpense[]> | GroupExpense[]>(
       `/api/v1/social/groups/${groupId}/expenses`,
     );
-    const d = res.data as any;
-    return Array.isArray(d) ? d : (d?.data ?? []);
+    return unwrapArray<GroupExpense>(res.data);
   },
 
   async addExpense(groupId: number, description: string, amount: number): Promise<GroupExpense> {
