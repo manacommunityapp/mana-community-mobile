@@ -101,7 +101,7 @@ export function useChatWindow(
 
                 if (msg.senderId === currentUserId) {
                   const optIdx = prev.findIndex(
-                    (m) => m._optimisticId && m.content === msg.content,
+                    (m) => m._optimisticId && (m.content.trim() === msg.content.trim() || m.id === -1),
                   );
                   if (optIdx !== -1) {
                     const updated = [...prev];
@@ -194,9 +194,13 @@ export function useChatWindow(
 
     try {
       const saved = await chatService.sendMessage(conversationId, trimmed);
-      setMessages((prev) =>
-        prev.map((m) => (m._optimisticId === optId ? saved : m))
-      );
+      setMessages((prev) => {
+        const alreadyHasSaved = prev.some((m) => m.id === saved.id && !m._optimisticId);
+        if (alreadyHasSaved) {
+          return prev.filter((m) => m._optimisticId !== optId);
+        }
+        return prev.map((m) => (m._optimisticId === optId ? saved : m));
+      });
     } catch (err) {
       secureLog.error('[ChatWindow] Send failed', err);
       setMessages((prev) =>
@@ -229,9 +233,13 @@ export function useChatWindow(
 
     try {
       const saved = await chatService.sendWithAttachments(conversationId, files, text);
-      setMessages((prev) =>
-        prev.map((m) => (m._optimisticId === optId ? saved : m))
-      );
+      setMessages((prev) => {
+        const alreadyHasSaved = prev.some((m) => m.id === saved.id && !m._optimisticId);
+        if (alreadyHasSaved) {
+          return prev.filter((m) => m._optimisticId !== optId);
+        }
+        return prev.map((m) => (m._optimisticId === optId ? saved : m));
+      });
     } catch (err) {
       secureLog.error('[ChatWindow] Attachment send failed', err);
       setMessages((prev) =>

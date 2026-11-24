@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert, ActivityIndicator, RefreshControl,
@@ -80,7 +80,7 @@ interface MenuItemProps {
   isLast?: boolean;
 }
 
-function MenuItem({
+const MenuItem = React.memo(function MenuItem({
   icon,
   label,
   sublabel,
@@ -141,9 +141,9 @@ function MenuItem({
       <Ionicons name="chevron-forward" size={15} color={palette.textMuted} />
     </TouchableOpacity>
   );
-}
+});
 
-function HubSectionHeader({
+const HubSectionHeader = React.memo(function HubSectionHeader({
   title,
   icon,
   iconColor,
@@ -166,11 +166,11 @@ function HubSectionHeader({
       <Text style={[styles.sectionHeader, { color: palette.eyebrow }]}>{title}</Text>
     </View>
   );
-}
+});
 
 type HubMenuItemConfig = Omit<MenuItemProps, 'isLast'> & { key: string; visible?: boolean };
 
-function HubMenuSection({
+const HubMenuSection = React.memo(function HubMenuSection({
   title,
   icon,
   iconColor,
@@ -197,7 +197,7 @@ function HubMenuSection({
       </View>
     </>
   );
-}
+});
 
 export default function ProfileScreen() {
   const { user: authUser, logout, isLoading: isAuthLoading, loadUser, hasModule } = useAuth();
@@ -249,7 +249,7 @@ export default function ProfileScreen() {
   const { data: myEvents = [], refetch: refetchEvents } = useQuery({
     queryKey: ['events', 'mine'],
     queryFn: () => eventService.getMyEvents(),
-    staleTime: 30_000,
+    staleTime: 60_000,
     enabled: modEvents,
   });
 
@@ -257,7 +257,7 @@ export default function ProfileScreen() {
   const { data: myListingsPage, refetch: refetchListings } = useQuery({
     queryKey: ['marketplace', 'mine'],
     queryFn: () => marketplaceService.getMyListings(),
-    staleTime: 30_000,
+    staleTime: 60_000,
     enabled: modMarket,
   });
 
@@ -265,7 +265,7 @@ export default function ProfileScreen() {
   const { data: myTeams = [], refetch: refetchTeams } = useQuery({
     queryKey: ['sports', 'my-teams'],
     queryFn: () => sportsService.getMyTeams(),
-    staleTime: 30_000,
+    staleTime: 60_000,
     enabled: modSports,
   });
 
@@ -289,7 +289,7 @@ export default function ProfileScreen() {
   const { data: unreadNotifsCount = 0, refetch: refetchNotifs } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationService.getUnreadCount(),
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 
   // Merge live DB profile with Zustand auth user (preserve all resident fields)
