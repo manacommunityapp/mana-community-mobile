@@ -131,7 +131,7 @@ export default function MyBookingsScreen() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); }} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />}
         {!isLoading && list.length === 0 && (
