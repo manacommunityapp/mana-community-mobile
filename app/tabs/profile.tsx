@@ -361,59 +361,71 @@ export default function ProfileScreen() {
     );
   }
 
-  // Community service permissions (gated by user permission AND community module)
-  const showEmergency      = hasPerm(VIEW_EMERGENCY) && hasModule('EMERGENCY');
-  const showFinance        = hasPerm(VIEW_MAINTENANCE_DUES) && hasModule('FINANCE_MGMT');
-  const showHelpdesk       = hasPerm(VIEW_TICKETS) && hasModule('HELPDESK');
-  const showGroupBuying    = hasPerm(VIEW_GROUP_BUYING) && hasModule('GROUP_BUYING');
-  const showTrips          = hasPerm(VIEW_TRIPS) && hasModule('TRIPS');
-  const showDiscover       = hasPerm(VIEW_DISCOVER) && hasModule('DISCOVER');
-  const showVisitors       = (isAdmin || hasPerm(VIEW_VISITORS)) && hasModule('VISITORS');
-  const showFeedItems      = (isAdmin || hasPerm(VIEW_FEED)) && hasModule('COMMUNITY_FEED');
-  const showAmenities      = hasPerm(VIEW_AMENITIES) && hasModule('FACILITIES');
-  const showHealth         = (isAdmin || hasPerm(VIEW_HEALTH_GUARD)) && hasModule('HEALTH');
-  const showWellness       = (isAdmin || hasPerm(VIEW_HEALTH_GUARD)) && hasModule('WELLNESS');
-  const showHomeServices   = (isAdmin || hasPerm(VIEW_HOME_SERVICE)) && hasModule('SERVICE_PLATFORM');
-  const showParking        = (isAdmin || hasPerm(VIEW_VISITORS) || hasPerm(VIEW_AMENITIES)) && hasModule('PARKING');
-  const showFood           = (isAdmin || hasPerm(VIEW_FOOD_MENU)) && hasModule('FOOD_OS');
-  const showSmartHome      = (isAdmin || hasPerm(VIEW_AMENITIES)) && hasModule('SMART_HOME');
-  const showNotices        = hasPerm(VIEW_NOTICES) && hasModule('NOTICES');
-  const showGovernance     = (isAdmin || hasPerm(VIEW_NOTICES) || hasPerm(VIEW_POLLS)) && hasModule('GOVERNANCE');
-  const showProcurement    = (isAdmin || hasPerm(VIEW_HOME_SERVICE) || hasPerm(VIEW_MARKETPLACE)) && hasModule('MAINTENANCE');
-  const showKittyCircles   = (isAdmin || hasPerm(VIEW_EVENTS) || hasPerm(VIEW_FEED)) && (hasModule('EVENTS') || hasModule('COMMUNITY_FEED'));
-  const showCommute        = (isAdmin || hasPerm(VIEW_TRIPS) || hasPerm(VIEW_FEED)) && hasModule('COMMUTE');
-  const showPets           = (isAdmin || hasPerm(VIEW_FEED)) && hasModule('PETS');
-  const showOffers         = (isAdmin || hasPerm(VIEW_MARKETPLACE)) && hasModule('COMMERCE');
-  const showAcademy        = (isAdmin || hasPerm(VIEW_FEED)) && hasModule('ACADEMY');
-  const showCpos           = (isAdmin || hasPerm(VIEW_MARKETPLACE) || hasPerm(VIEW_AMENITIES)) && hasModule('CPOS');
-  const showJobs           = hasPerm(VIEW_JOBS) && hasModule('JOBS');
-  const showAiAssistant    = (isAdmin || hasPerm(VIEW_FEED) || hasPerm(VIEW_VISITORS)) && hasModule('AI_CONCIERGE');
-  const showHousehold      = isAdmin || hasPerm(VIEW_VISITORS) || hasPerm(VIEW_FEED);
-
-  // Explore items permissions
-  const showSports = hasPerm(VIEW_SPORTS_MENU) && hasModule('SPORTS');
-  const showPolls = hasPerm(VIEW_POLLS) && hasModule('POLLS');
-  const showMarketplace = hasPerm(VIEW_MARKETPLACE) && hasModule('MARKETPLACE');
-
-  // Wealth & investment permissions
-  const showPersonalFinance = (hasPerm(VIEW_PERSONAL_FINANCE) || hasPerm('Manage Personal Finance')) && hasModule('PERSONAL_FINANCE');
-  const showFixedDeposits   = (hasPerm(VIEW_FIXED_DEPOSITS)   || showPersonalFinance) && hasModule('PERSONAL_FINANCE');
-  const showDigitalGold     = (hasPerm(VIEW_DIGITAL_GOLD)     || showPersonalFinance) && hasModule('PERSONAL_FINANCE');
-  const showMutualFunds     = (hasPerm(VIEW_MUTUAL_FUNDS)     || showPersonalFinance) && hasModule('PERSONAL_FINANCE');
-  const showLoans           = (hasPerm(VIEW_LOANS)            || showPersonalFinance) && hasModule('PERSONAL_FINANCE');
-
-  // Payment & transfer permissions
-  const showSplitBill  = hasPerm(VIEW_SPLIT_BILL) && hasModule('PAYMENTS');
-  const showScanPay    = hasPerm(VIEW_SCAN_PAY) && hasModule('PAYMENTS');
-  const showSendMoney  = hasPerm(VIEW_SEND_MONEY) && hasModule('PAYMENTS');
-  const showUpiHistory = hasPerm(VIEW_UPI_HISTORY) && hasModule('PAYMENTS');
-  const showPayments   = (isAdmin || showScanPay || showSendMoney || showUpiHistory) && hasModule('PAYMENTS');
-
-  // Lifestyle permissions
-  const showMovies      = hasPerm(VIEW_MOVIES) && hasModule('ENTERTAINMENT');
-  const showVehicleCare = hasPerm(VIEW_VEHICLE_CARE) && hasModule('VISITORS');
-  const showCalendar    = hasPerm(VIEW_CALENDAR) && hasModule('CALENDAR');
-  const showHealthGuard = hasPerm(VIEW_HEALTH_GUARD) && hasModule('SAFETY');
+  const {
+    showEmergency, showFinance, showHelpdesk, showGroupBuying, showTrips,
+    showDiscover, showVisitors, showFeedItems, showAmenities, showHealth,
+    showWellness, showHomeServices, showParking, showFood, showSmartHome,
+    showNotices, showGovernance, showProcurement, showKittyCircles, showCommute,
+    showPets, showOffers, showAcademy, showCpos, showJobs, showAiAssistant,
+    showHousehold, showSports, showPolls, showMarketplace,
+    showPersonalFinance, showFixedDeposits, showDigitalGold, showMutualFunds, showLoans,
+    showSplitBill, showScanPay, showSendMoney, showUpiHistory, showPayments,
+    showMovies, showVehicleCare, showCalendar, showHealthGuard,
+  } = useMemo(() => {
+    const p = (perm: string) => hasPerm(perm);
+    const m = (mod: string) => hasModule(mod);
+    const adm = isAdmin;
+    const _showPersonalFinance = (p(VIEW_PERSONAL_FINANCE) || p('Manage Personal Finance')) && m('PERSONAL_FINANCE');
+    const _showScanPay   = p(VIEW_SCAN_PAY) && m('PAYMENTS');
+    const _showSendMoney = p(VIEW_SEND_MONEY) && m('PAYMENTS');
+    const _showUpiHistory = p(VIEW_UPI_HISTORY) && m('PAYMENTS');
+    return {
+      showEmergency:      p(VIEW_EMERGENCY) && m('EMERGENCY'),
+      showFinance:        p(VIEW_MAINTENANCE_DUES) && m('FINANCE_MGMT'),
+      showHelpdesk:       p(VIEW_TICKETS) && m('HELPDESK'),
+      showGroupBuying:    p(VIEW_GROUP_BUYING) && m('GROUP_BUYING'),
+      showTrips:          p(VIEW_TRIPS) && m('TRIPS'),
+      showDiscover:       p(VIEW_DISCOVER) && m('DISCOVER'),
+      showVisitors:       (adm || p(VIEW_VISITORS)) && m('VISITORS'),
+      showFeedItems:      (adm || p(VIEW_FEED)) && m('COMMUNITY_FEED'),
+      showAmenities:      p(VIEW_AMENITIES) && m('FACILITIES'),
+      showHealth:         (adm || p(VIEW_HEALTH_GUARD)) && m('HEALTH'),
+      showWellness:       (adm || p(VIEW_HEALTH_GUARD)) && m('WELLNESS'),
+      showHomeServices:   (adm || p(VIEW_HOME_SERVICE)) && m('SERVICE_PLATFORM'),
+      showParking:        (adm || p(VIEW_VISITORS) || p(VIEW_AMENITIES)) && m('PARKING'),
+      showFood:           (adm || p(VIEW_FOOD_MENU)) && m('FOOD_OS'),
+      showSmartHome:      (adm || p(VIEW_AMENITIES)) && m('SMART_HOME'),
+      showNotices:        p(VIEW_NOTICES) && m('NOTICES'),
+      showGovernance:     (adm || p(VIEW_NOTICES) || p(VIEW_POLLS)) && m('GOVERNANCE'),
+      showProcurement:    (adm || p(VIEW_HOME_SERVICE) || p(VIEW_MARKETPLACE)) && m('MAINTENANCE'),
+      showKittyCircles:   (adm || p(VIEW_EVENTS) || p(VIEW_FEED)) && (m('EVENTS') || m('COMMUNITY_FEED')),
+      showCommute:        (adm || p(VIEW_TRIPS) || p(VIEW_FEED)) && m('COMMUTE'),
+      showPets:           (adm || p(VIEW_FEED)) && m('PETS'),
+      showOffers:         (adm || p(VIEW_MARKETPLACE)) && m('COMMERCE'),
+      showAcademy:        (adm || p(VIEW_FEED)) && m('ACADEMY'),
+      showCpos:           (adm || p(VIEW_MARKETPLACE) || p(VIEW_AMENITIES)) && m('CPOS'),
+      showJobs:           p(VIEW_JOBS) && m('JOBS'),
+      showAiAssistant:    (adm || p(VIEW_FEED) || p(VIEW_VISITORS)) && m('AI_CONCIERGE'),
+      showHousehold:      adm || p(VIEW_VISITORS) || p(VIEW_FEED),
+      showSports:         p(VIEW_SPORTS_MENU) && m('SPORTS'),
+      showPolls:          p(VIEW_POLLS) && m('POLLS'),
+      showMarketplace:    p(VIEW_MARKETPLACE) && m('MARKETPLACE'),
+      showPersonalFinance: _showPersonalFinance,
+      showFixedDeposits:  (p(VIEW_FIXED_DEPOSITS) || _showPersonalFinance) && m('PERSONAL_FINANCE'),
+      showDigitalGold:    (p(VIEW_DIGITAL_GOLD) || _showPersonalFinance) && m('PERSONAL_FINANCE'),
+      showMutualFunds:    (p(VIEW_MUTUAL_FUNDS) || _showPersonalFinance) && m('PERSONAL_FINANCE'),
+      showLoans:          (p(VIEW_LOANS) || _showPersonalFinance) && m('PERSONAL_FINANCE'),
+      showSplitBill:      p(VIEW_SPLIT_BILL) && m('PAYMENTS'),
+      showScanPay:        _showScanPay,
+      showSendMoney:      _showSendMoney,
+      showUpiHistory:     _showUpiHistory,
+      showPayments:       (adm || _showScanPay || _showSendMoney || _showUpiHistory) && m('PAYMENTS'),
+      showMovies:         p(VIEW_MOVIES) && m('ENTERTAINMENT'),
+      showVehicleCare:    p(VIEW_VEHICLE_CARE) && m('VISITORS'),
+      showCalendar:       p(VIEW_CALENDAR) && m('CALENDAR'),
+      showHealthGuard:    p(VIEW_HEALTH_GUARD) && m('SAFETY'),
+    };
+  }, [isAdmin, hasPerm, hasModule]);
 
   const flatNumber = user.flatNumber || user.flatNo;
   const tower = user.tower || user.block;
