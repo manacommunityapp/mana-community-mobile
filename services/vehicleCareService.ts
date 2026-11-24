@@ -338,6 +338,166 @@ const MOCK_VENDOR_JOBS: VendorJob[] = [
   },
 ];
 
+// ── Response mappers ─────────────────────────────────────────────────────────
+
+const EMOJI_BY_NAME: [string, string][] = [
+  ['exterior wash', '💧'],
+  ['full', '🚿'],
+  ['interior deep', '✨'],
+  ['premium', '💎'],
+  ['steam', '♨️'],
+  ['interior only', '🪑'],
+];
+
+const EMOJI_BY_TYPE: Record<string, string> = {
+  CAR: '🚗', BIKE: '🛵', SUV: '🚙', TRUCK: '🚐',
+};
+
+function mapAddon(raw: any): ServiceAddon {
+  return {
+    id: String(raw.id),
+    name: raw.name || '',
+    description: raw.description ?? raw.name ?? '',
+    price: Number(raw.price || 0),
+    durationMins: raw.durationMinutes ?? raw.durationMins ?? 0,
+  };
+}
+
+function mapCatalogItem(raw: any): ServiceCatalogItem {
+  const lc = (raw.name ?? '').toLowerCase();
+  const emoji = raw.emoji || EMOJI_BY_NAME.find(([k]) => lc.includes(k))?.[1] || (raw.name?.includes('Full') ? '🚿' : '💧');
+  return {
+    id: String(raw.id),
+    serviceType: (raw.serviceType ?? raw.name?.toUpperCase().replace(/\s+/g, '_') ?? 'FULL_WASH') as ServiceType,
+    name: raw.name || 'Vehicle Service',
+    description: raw.description ?? '',
+    emoji,
+    basePrice: Number(raw.basePrice || 0),
+    communityPrice: Number(raw.communityPrice ?? raw.basePrice ?? 0),
+    durationMins: raw.durationMinutes ?? raw.durationMins ?? 30,
+    vehicleTypes: raw.vehicleTypes ?? ['CAR', 'SUV', 'BIKE'],
+    addons: (raw.addons ?? []).map(mapAddon),
+    popular: Boolean(raw.isPopular ?? raw.popular ?? false),
+    gradientColors: [raw.gradientStart ?? '#4F46E5', raw.gradientEnd ?? '#6366F1'],
+  };
+}
+
+function mapVehicle(raw: any): VehicleProfile {
+  const type: VehicleType = (raw.vehicleType ?? raw.type ?? 'CAR') as VehicleType;
+  return {
+    id: String(raw.id),
+    nickname: raw.nickname || 'My Vehicle',
+    type,
+    make: raw.make || '',
+    model: raw.model || '',
+    color: raw.color ?? '',
+    plateNumber: raw.plateNumber || '',
+    isDefault: Boolean(raw.isDefault ?? raw.default ?? raw.setAsDefault),
+    imageEmoji: EMOJI_BY_TYPE[type] ?? (type === 'BIKE' ? '🛵' : '🚗'),
+  };
+}
+
+function mapSlot(raw: any): TimeSlot {
+  const available = raw.available ?? (raw.bookedCount !== undefined && raw.totalCapacity !== undefined ? raw.bookedCount < raw.totalCapacity : true);
+  const remaining = raw.remaining ?? Math.max(0, (raw.totalCapacity ?? 1) - (raw.bookedCount ?? 0));
+  return {
+    id: String(raw.id),
+    date: raw.slotDate ?? raw.date ?? '',
+    startTime: raw.startTime ? (raw.startTime.length > 5 ? raw.startTime.substring(0, 5) : raw.startTime) : '09:00',
+    endTime: raw.endTime ? (raw.endTime.length > 5 ? raw.endTime.substring(0, 5) : raw.endTime) : '10:00',
+    available: Boolean(available),
+    remaining: Number(remaining),
+  };
+}
+
+function mapBooking(b: any): VehicleCareBooking {
+  const addonNames = b.addonNames || (b.addons || []).map((a: any) => a.name) || [];
+  const serviceEmoji = b.serviceEmoji || (b.serviceName?.includes('Full') ? '🚿' : '💧');
+  return {
+    id: String(b.id),
+    bookingNumber: b.bookingNumber || `VC-${b.id}`,
+    vehicleId: String(b.vehicleId || ''),
+    vehicleDisplay: b.vehicleDisplay || `${b.vehicleNickname || 'Vehicle'} • ${b.vehiclePlate || ''}`,
+    serviceId: String(b.serviceId || ''),
+    serviceName: b.serviceName || 'Vehicle Service',
+    serviceEmoji,
+    addonIds: b.addonIds || (b.addons || []).map((a: any) => String(a.id)),
+    addonNames,
+    date: b.date || b.scheduledDate || '',
+    startTime: b.startTime ? (b.startTime.length > 5 ? b.startTime.substring(0, 5) : b.startTime) : '09:00',
+    endTime: b.endTime ? (b.endTime.length > 5 ? b.endTime.substring(0, 5) : b.endTime) : '10:00',
+    location: b.location || b.locationNotes || '',
+    status: (b.status || 'CONFIRMED') as BookingStatus,
+    quotedPrice: Number(b.quotedPrice ?? b.totalAmount ?? 0),
+    paidAmount: Number(b.paidAmount ?? b.totalAmount ?? 0),
+    technicianName: b.technicianName,
+    technicianPhone: b.technicianPhone,
+    eta: b.etaMinutes ? `${b.etaMinutes} mins` : b.eta,
+    rating: b.rating,
+    reviewText: b.reviewText,
+    canCancel: b.canCancel ?? ['PENDING_PAYMENT', 'CONFIRMED', 'ASSIGNED'].includes(b.status),
+    canRate: b.canRate ?? (b.status === 'COMPLETED' && !b.rating),
+    createdAt: b.createdAt || '',
+  };
+}
+
+function mapPlan(p: any): WashPlan {
+  return {
+    id: String(p.id),
+    name: p.name || p.planName || 'Wash Plan',
+    frequency: (p.frequency || p.frequencyLabel || 'MONTHLY') as PlanFrequency,
+    servicesIncluded: (p.servicesIncluded || ['FULL_WASH']) as ServiceType[],
+    creditsTotal: Number(p.creditsTotal || 4),
+    creditsUsed: Number(p.creditsUsed || 0),
+    price: Number(p.price || 0),
+    nextRenewalDate: p.nextRenewalDate || p.endDate || '',
+    status: (p.status || 'ACTIVE') as PlanStatus,
+    vehicleId: String(p.vehicleId || ''),
+    vehicleDisplay: (p.vehicleDisplay || `${p.vehicleNickname || ''} ${p.vehiclePlate || ''}`).trim() || 'Vehicle',
+  };
+}
+
+function mapPlanCatalog(c: any): WashPlanCatalog {
+  return {
+    id: String(c.id),
+    name: c.name || 'Wash Plan',
+    frequency: (c.frequency || c.frequencyLabel || 'MONTHLY') as PlanFrequency,
+    serviceType: (c.serviceType || 'FULL_WASH') as ServiceType,
+    creditsPerCycle: Number(c.creditsPerCycle || c.washesPerMonth || 4),
+    price: Number(c.price || 0),
+    savingsPercent: Number(c.savingsPercent || 0),
+    emoji: c.emoji || '🚗',
+    popular: Boolean(c.popular || c.isPopular),
+  };
+}
+
+function mapVendorJob(j: any): VendorJob {
+  return {
+    id: String(j.id),
+    bookingNumber: j.bookingNumber || `VC-${j.id}`,
+    residentName: j.residentName || j.vehicleNickname || 'Resident',
+    address: j.address || j.location || j.locationNotes || 'Flat',
+    vehicleDisplay: j.vehicleDisplay || `${j.vehiclePlate || ''}`,
+    serviceName: j.serviceName || 'Wash',
+    addonNames: j.addonNames || [],
+    scheduledDate: j.scheduledDate || j.date || '',
+    scheduledTime: j.scheduledTime || j.startTime || '',
+    status: (j.status || 'CONFIRMED') as BookingStatus,
+    amount: Number(j.amount ?? j.totalAmount ?? j.paidAmount ?? 0),
+    technicianName: j.technicianName,
+    checklistCompleted: Boolean(j.checklistCompleted),
+  };
+}
+
+function extractList(res: any): any[] {
+  const d = res?.data;
+  if (Array.isArray(d)) return d;
+  if (Array.isArray(d?.content)) return d.content;
+  if (Array.isArray(d?.data)) return d.data;
+  if (Array.isArray(res?.content)) return res.content;
+  return [];
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 export const vehicleCareService = {
@@ -345,21 +505,8 @@ export const vehicleCareService = {
   getMyVehicles: async (): Promise<VehicleProfile[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/vehicles');
-      const raw = (res.data as any)?.data || res.data;
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map((v: any) => ({
-          id: String(v.id),
-          nickname: v.nickname,
-          type: (v.type || v.vehicleType || 'CAR') as VehicleType,
-          make: v.make,
-          model: v.model,
-          color: v.color,
-          plateNumber: v.plateNumber,
-          isDefault: !!v.isDefault,
-          imageEmoji: (v.type || v.vehicleType) === 'BIKE' ? '🛵' : '🚗',
-        }));
-      }
-      return MOCK_VEHICLES;
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapVehicle) : MOCK_VEHICLES;
     } catch {
       return MOCK_VEHICLES;
     }
@@ -367,7 +514,7 @@ export const vehicleCareService = {
 
   addVehicle: async (data: Omit<VehicleProfile, 'id'>): Promise<VehicleProfile> => {
     try {
-      const payload = {
+      const res = await apiClient.post('/vehicle-care/vehicles', {
         nickname: data.nickname,
         vehicleType: data.type,
         make: data.make,
@@ -375,20 +522,8 @@ export const vehicleCareService = {
         color: data.color,
         plateNumber: data.plateNumber,
         setAsDefault: data.isDefault,
-      };
-      const res = await apiClient.post('/vehicle-care/vehicles', payload);
-      const v = (res.data as any)?.data || res.data;
-      return {
-        id: String(v.id),
-        nickname: v.nickname,
-        type: (v.type || v.vehicleType || data.type) as VehicleType,
-        make: v.make,
-        model: v.model,
-        color: v.color,
-        plateNumber: v.plateNumber,
-        isDefault: !!v.isDefault,
-        imageEmoji: (v.type || v.vehicleType) === 'BIKE' ? '🛵' : '🚗',
-      };
+      });
+      return mapVehicle((res.data as any)?.data ?? res.data);
     } catch {
       return { ...data, id: `v-${Date.now()}` };
     }
@@ -396,28 +531,16 @@ export const vehicleCareService = {
 
   updateVehicle: async (id: string, data: Partial<VehicleProfile>): Promise<VehicleProfile> => {
     try {
-      const payload = {
-        nickname: data.nickname,
-        vehicleType: data.type,
-        make: data.make,
-        model: data.model,
-        color: data.color,
-        plateNumber: data.plateNumber,
-        setAsDefault: data.isDefault,
-      };
-      const res = await apiClient.put(`/vehicle-care/vehicles/${id}`, payload);
-      const v = (res.data as any)?.data || res.data;
-      return {
-        id: String(v.id),
-        nickname: v.nickname,
-        type: (v.type || v.vehicleType || data.type || 'CAR') as VehicleType,
-        make: v.make,
-        model: v.model,
-        color: v.color,
-        plateNumber: v.plateNumber,
-        isDefault: !!v.isDefault,
-        imageEmoji: (v.type || v.vehicleType) === 'BIKE' ? '🛵' : '🚗',
-      };
+      const res = await apiClient.put(`/vehicle-care/vehicles/${id}`, {
+        ...(data.nickname && { nickname: data.nickname }),
+        ...(data.type && { vehicleType: data.type }),
+        ...(data.make && { make: data.make }),
+        ...(data.model && { model: data.model }),
+        ...(data.color !== undefined && { color: data.color }),
+        ...(data.plateNumber && { plateNumber: data.plateNumber }),
+        ...(data.isDefault !== undefined && { setAsDefault: data.isDefault }),
+      });
+      return mapVehicle((res.data as any)?.data ?? res.data);
     } catch {
       const existing = MOCK_VEHICLES.find(v => v.id === id) || MOCK_VEHICLES[0];
       return { ...existing, ...data };
@@ -427,68 +550,32 @@ export const vehicleCareService = {
   deleteVehicle: async (id: string): Promise<void> => {
     try {
       await apiClient.delete(`/vehicle-care/vehicles/${id}`);
-    } catch {
-      // mock fallback
-    }
+    } catch { /* mock fallback */ }
   },
 
   setDefaultVehicle: async (id: string): Promise<void> => {
     try {
       await apiClient.patch(`/vehicle-care/vehicles/${id}/default`);
-    } catch {
-      // mock fallback
-    }
+    } catch { /* mock fallback */ }
   },
 
   // Catalog
   getServiceCatalog: async (): Promise<ServiceCatalogItem[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/catalog');
-      const raw = (res.data as any)?.data || res.data;
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map((s: any) => ({
-          id: String(s.id),
-          serviceType: s.name as ServiceType,
-          name: s.name,
-          description: s.description || '',
-          emoji: s.name?.includes('Full') ? '🚿' : '💧',
-          basePrice: Number(s.basePrice || 0),
-          communityPrice: Number(s.communityPrice || s.basePrice || 0),
-          durationMins: Number(s.durationMinutes || 30),
-          vehicleTypes: (s.vehicleTypes || ['CAR', 'SUV', 'BIKE']) as VehicleType[],
-          addons: (s.addons || []).map((a: any) => ({
-            id: String(a.id),
-            name: a.name,
-            description: a.name,
-            price: Number(a.price || 0),
-            durationMins: 10,
-          })),
-          popular: !!s.isPopular,
-          gradientColors: [s.gradientStart || '#0284C7', s.gradientEnd || '#38BDF8'],
-        }));
-      }
-      return MOCK_CATALOG;
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapCatalogItem) : MOCK_CATALOG;
     } catch {
       return MOCK_CATALOG;
     }
   },
 
-  // Availability
+  // Availability — backend expects from + to (ISO date range); pass same date for single-day view
   getAvailableSlots: async (date: string, _serviceId?: string): Promise<TimeSlot[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/slots', { params: { from: date, to: date } });
-      const raw = (res.data as any)?.data || res.data;
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map((s: any) => ({
-          id: String(s.id),
-          date: s.slotDate || date,
-          startTime: s.startTime ? s.startTime.substring(0, 5) : '09:00',
-          endTime: s.endTime ? s.endTime.substring(0, 5) : '10:00',
-          available: !!s.available,
-          remaining: Number(s.remaining ?? s.totalCapacity ?? 1),
-        }));
-      }
-      return genSlots(new Date(date));
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapSlot) : genSlots(new Date(date));
     } catch {
       return genSlots(new Date(date));
     }
@@ -498,38 +585,16 @@ export const vehicleCareService = {
   createBooking: async (req: CreateBookingRequest): Promise<VehicleCareBooking> => {
     try {
       const payload = {
-        vehicleId: isNaN(Number(req.vehicleId)) ? 1 : Number(req.vehicleId),
-        serviceId: isNaN(Number(req.serviceId)) ? 1 : Number(req.serviceId),
-        slotId: isNaN(Number(req.slotId)) ? 1 : Number(req.slotId),
-        addonIds: (req.addonIds || []).map(id => isNaN(Number(id)) ? 1 : Number(id)),
+        vehicleId: isNaN(Number(req.vehicleId)) ? req.vehicleId : Number(req.vehicleId),
+        serviceId: isNaN(Number(req.serviceId)) ? req.serviceId : Number(req.serviceId),
+        slotId: isNaN(Number(req.slotId)) ? req.slotId : Number(req.slotId),
+        addonIds: (req.addonIds || []).map(id => isNaN(Number(id)) ? id : Number(id)),
         locationNotes: req.location,
         paymentReference: req.paymentMethod || 'COD',
       };
       const res = await apiClient.post('/vehicle-care/bookings', payload);
       const b = (res.data as any)?.data || res.data;
-      const addonNames = b.addonNames || (b.addons || []).map((a: any) => a.name) || [];
-      return {
-        id: String(b.id),
-        bookingNumber: b.bookingNumber || `VC-${Date.now().toString().slice(-6)}`,
-        vehicleId: String(b.vehicleId || req.vehicleId),
-        vehicleDisplay: b.vehicleDisplay || `${b.vehicleNickname || 'Vehicle'} • ${b.vehiclePlate || ''}`,
-        serviceId: String(b.serviceId || req.serviceId),
-        serviceName: b.serviceName || 'Vehicle Service',
-        serviceEmoji: b.serviceName?.includes('Full') ? '🚿' : '💧',
-        addonIds: req.addonIds || [],
-        addonNames,
-        date: b.date || b.scheduledDate || '',
-        startTime: b.startTime || b.scheduledStart || '09:00',
-        endTime: b.endTime || b.scheduledEnd || '10:00',
-        location: b.location || b.locationNotes || req.location,
-        status: b.status || 'CONFIRMED',
-        quotedPrice: Number(b.quotedPrice ?? b.totalAmount ?? 0),
-        paidAmount: Number(b.paidAmount ?? b.totalAmount ?? 0),
-        technicianName: b.technicianName,
-        canCancel: b.canCancel ?? true,
-        canRate: b.canRate ?? false,
-        createdAt: b.createdAt || new Date().toISOString(),
-      };
+      return mapBooking(b);
     } catch {
       const svc = MOCK_CATALOG.find(s => s.id === req.serviceId) || MOCK_CATALOG[0];
       const veh = MOCK_VEHICLES.find(v => v.id === req.vehicleId) || MOCK_VEHICLES[0];
@@ -562,35 +627,8 @@ export const vehicleCareService = {
   getMyBookings: async (): Promise<VehicleCareBooking[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/bookings', { params: { filter: 'all', page: 0, size: 50 } });
-      const raw = (res.data as any)?.content || (res.data as any)?.data || res.data;
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map((b: any) => ({
-          id: String(b.id),
-          bookingNumber: b.bookingNumber || `VC-${b.id}`,
-          vehicleId: String(b.vehicleId || ''),
-          vehicleDisplay: b.vehicleDisplay || `${b.vehicleNickname || 'Vehicle'} • ${b.vehiclePlate || ''}`,
-          serviceId: String(b.serviceId || ''),
-          serviceName: b.serviceName || 'Vehicle Service',
-          serviceEmoji: b.serviceName?.includes('Full') ? '🚿' : '💧',
-          addonIds: (b.addons || []).map((a: any) => String(a.id)),
-          addonNames: b.addonNames || (b.addons || []).map((a: any) => a.name) || [],
-          date: b.date || b.scheduledDate || '',
-          startTime: b.startTime || b.scheduledStart || '',
-          endTime: b.endTime || b.scheduledEnd || '',
-          location: b.location || b.locationNotes || '',
-          status: b.status || 'CONFIRMED',
-          quotedPrice: Number(b.quotedPrice ?? b.totalAmount ?? 0),
-          paidAmount: Number(b.paidAmount ?? b.totalAmount ?? 0),
-          technicianName: b.technicianName,
-          eta: b.etaMinutes ? `${b.etaMinutes} mins` : undefined,
-          rating: b.rating,
-          reviewText: b.reviewText,
-          canCancel: b.canCancel ?? ['PENDING_PAYMENT', 'CONFIRMED', 'ASSIGNED'].includes(b.status),
-          canRate: b.canRate ?? (b.status === 'COMPLETED' && !b.rating),
-          createdAt: b.createdAt || '',
-        }));
-      }
-      return MOCK_BOOKINGS;
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapBooking) : MOCK_BOOKINGS;
     } catch {
       return MOCK_BOOKINGS;
     }
@@ -599,40 +637,21 @@ export const vehicleCareService = {
   cancelBooking: async (id: string, _reason?: string): Promise<void> => {
     try {
       await apiClient.patch(`/vehicle-care/bookings/${id}/cancel`);
-    } catch {
-      // mock fallback
-    }
+    } catch { /* mock fallback */ }
   },
 
   rateBooking: async (id: string, rating: number, review?: string): Promise<void> => {
     try {
       await apiClient.post(`/vehicle-care/bookings/${id}/review`, { rating, reviewText: review || '' });
-    } catch {
-      // mock fallback
-    }
+    } catch { /* mock fallback */ }
   },
 
   // Wash Plans
   getMyPlans: async (): Promise<WashPlan[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/plans');
-      const raw = (res.data as any)?.data || res.data;
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map((p: any) => ({
-          id: String(p.id),
-          name: p.name || p.planName || 'Wash Plan',
-          frequency: (p.frequency || p.frequencyLabel || 'MONTHLY') as PlanFrequency,
-          servicesIncluded: ['FULL_WASH'] as ServiceType[],
-          creditsTotal: Number(p.creditsTotal || 4),
-          creditsUsed: Number(p.creditsUsed || 0),
-          price: Number(p.price || 0),
-          nextRenewalDate: p.nextRenewalDate || p.endDate || '',
-          status: (p.status || 'ACTIVE') as PlanStatus,
-          vehicleId: String(p.vehicleId || ''),
-          vehicleDisplay: p.vehicleDisplay || `${p.vehicleNickname || ''} ${p.vehiclePlate || ''}`,
-        }));
-      }
-      return MOCK_PLANS;
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapPlan) : MOCK_PLANS;
     } catch {
       return MOCK_PLANS;
     }
@@ -641,21 +660,8 @@ export const vehicleCareService = {
   getPlanCatalog: async (): Promise<WashPlanCatalog[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/plans/catalog');
-      const raw = (res.data as any)?.data || res.data;
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map((c: any) => ({
-          id: String(c.id),
-          name: c.name,
-          frequency: (c.frequency || c.frequencyLabel || 'MONTHLY') as PlanFrequency,
-          serviceType: 'FULL_WASH' as ServiceType,
-          creditsPerCycle: Number(c.creditsPerCycle || c.washesPerMonth || 4),
-          price: Number(c.price || 0),
-          savingsPercent: Number(c.savingsPercent || 0),
-          emoji: c.emoji || '🚗',
-          popular: !!c.popular,
-        }));
-      }
-      return MOCK_PLAN_CATALOG;
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapPlanCatalog) : MOCK_PLAN_CATALOG;
     } catch {
       return MOCK_PLAN_CATALOG;
     }
@@ -664,25 +670,13 @@ export const vehicleCareService = {
   subscribePlan: async (req: SubscribePlanRequest): Promise<WashPlan> => {
     try {
       const payload = {
-        planCatalogId: isNaN(Number(req.planCatalogId)) ? 1 : Number(req.planCatalogId),
-        vehicleId: isNaN(Number(req.vehicleId)) ? 1 : Number(req.vehicleId),
+        planCatalogId: isNaN(Number(req.planCatalogId)) ? req.planCatalogId : Number(req.planCatalogId),
+        vehicleId: isNaN(Number(req.vehicleId)) ? req.vehicleId : Number(req.vehicleId),
         paymentReference: req.paymentMethod,
       };
       const res = await apiClient.post('/vehicle-care/plans/subscribe', payload);
       const p = (res.data as any)?.data || res.data;
-      return {
-        id: String(p.id),
-        name: p.name || p.planName || 'Wash Plan',
-        frequency: (p.frequency || p.frequencyLabel || 'MONTHLY') as PlanFrequency,
-        servicesIncluded: ['FULL_WASH'] as ServiceType[],
-        creditsTotal: Number(p.creditsTotal || 4),
-        creditsUsed: Number(p.creditsUsed || 0),
-        price: Number(p.price || 0),
-        nextRenewalDate: p.nextRenewalDate || p.endDate || '',
-        status: (p.status || 'ACTIVE') as PlanStatus,
-        vehicleId: String(p.vehicleId || req.vehicleId),
-        vehicleDisplay: p.vehicleDisplay || `${p.vehicleNickname || ''} ${p.vehiclePlate || ''}`,
-      };
+      return mapPlan(p);
     } catch {
       const cat = MOCK_PLAN_CATALOG.find(p => p.id === req.planCatalogId) || MOCK_PLAN_CATALOG[0];
       const veh = MOCK_VEHICLES.find(v => v.id === req.vehicleId) || MOCK_VEHICLES[0];
@@ -698,50 +692,28 @@ export const vehicleCareService = {
 
   pausePlan: async (id: string): Promise<void> => {
     try {
-      await apiClient.patch(`/vehicle-care/plans/${id}/status?status=PAUSED`);
-    } catch {
-      // mock fallback
-    }
+      await apiClient.patch(`/vehicle-care/plans/${id}/status`, null, { params: { status: 'PAUSED' } });
+    } catch { /* mock fallback */ }
   },
 
   resumePlan: async (id: string): Promise<void> => {
     try {
-      await apiClient.patch(`/vehicle-care/plans/${id}/status?status=ACTIVE`);
-    } catch {
-      // mock fallback
-    }
+      await apiClient.patch(`/vehicle-care/plans/${id}/status`, null, { params: { status: 'ACTIVE' } });
+    } catch { /* mock fallback */ }
   },
 
   cancelPlan: async (id: string): Promise<void> => {
     try {
-      await apiClient.patch(`/vehicle-care/plans/${id}/status?status=CANCELLED`);
-    } catch {
-      // mock fallback
-    }
+      await apiClient.patch(`/vehicle-care/plans/${id}/status`, null, { params: { status: 'CANCELLED' } });
+    } catch { /* mock fallback */ }
   },
 
   // Vendor / Technician
   getVendorJobs: async (): Promise<VendorJob[]> => {
     try {
       const res = await apiClient.get('/vehicle-care/vendor/jobs');
-      const raw = (res.data as any)?.data || res.data;
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map((j: any) => ({
-          id: String(j.id),
-          bookingNumber: j.bookingNumber || `VC-${j.id}`,
-          residentName: j.vehicleNickname || 'Resident',
-          address: j.location || j.locationNotes || 'Flat',
-          vehicleDisplay: j.vehicleDisplay || `${j.vehiclePlate || ''}`,
-          serviceName: j.serviceName || 'Wash',
-          addonNames: j.addonNames || [],
-          scheduledDate: j.date || j.scheduledDate || '',
-          scheduledTime: j.startTime || j.scheduledStart || '',
-          status: j.status || 'CONFIRMED',
-          amount: Number(j.totalAmount || j.paidAmount || 0),
-          technicianName: j.technicianName,
-        }));
-      }
-      return MOCK_VENDOR_JOBS;
+      const list = extractList(res);
+      return list.length > 0 ? list.map(mapVendorJob) : MOCK_VENDOR_JOBS;
     } catch {
       return MOCK_VENDOR_JOBS;
     }
@@ -749,17 +721,13 @@ export const vehicleCareService = {
 
   updateJobStatus: async (id: string, status: BookingStatus): Promise<void> => {
     try {
-      await apiClient.patch(`/vehicle-care/vendor/jobs/${id}/status?status=${status}`);
-    } catch {
-      // mock fallback
-    }
+      await apiClient.patch(`/vehicle-care/vendor/jobs/${id}/status`, null, { params: { status } });
+    } catch { /* mock fallback */ }
   },
 
   completeJob: async (id: string, _checklistCompleted: boolean): Promise<void> => {
     try {
-      await apiClient.patch(`/vehicle-care/vendor/jobs/${id}/status?status=COMPLETED`);
-    } catch {
-      // mock fallback
-    }
+      await apiClient.patch(`/vehicle-care/vendor/jobs/${id}/status`, null, { params: { status: 'COMPLETED' } });
+    } catch { /* mock fallback */ }
   },
 };
