@@ -131,6 +131,7 @@ export default function SportsHubScreen() {
   const [customRegistrations, setCustomRegistrations] = useState<RegistrationRecord[]>([]);
   const [wsScores, setWsScores] = useState<Record<number, Partial<MatchDto>>>({});
   const [scoreFlash, setScoreFlash] = useState<number | null>(null);
+  const scoreFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stompHubRef = useRef<Client | null>(null);
 
   const isSportsAdmin = useMemo(() => {
@@ -214,13 +215,19 @@ export default function SportsHubScreen() {
     ]);
   };
 
+  const liveIdsKey = useMemo(() => {
+    if (!liveMatches || liveMatches.length === 0) return '';
+    return liveMatches
+      .filter(m => m.status === 'LIVE' || (m.status as string) === 'IN_PROGRESS')
+      .map(m => m.id)
+      .sort((a, b) => a - b)
+      .join(',');
+  }, [liveMatches]);
+
   // ── WebSocket: real-time score push for live matches ─────────────
   useEffect(() => {
-    if (!liveMatches || liveMatches.length === 0) return;
-    const liveIds = liveMatches
-      .filter(m => m.status === 'LIVE' || (m.status as string) === 'IN_PROGRESS')
-      .map(m => m.id);
-    if (liveIds.length === 0) return;
+    if (!liveIdsKey) return;
+    const liveIds = liveIdsKey.split(',').map(Number);
 
     let client: Client;
     (async () => {
@@ -250,7 +257,8 @@ export default function SportsHubScreen() {
                 if (Object.keys(patch).length > 0) {
                   setWsScores(prev => ({ ...prev, [id]: { ...(prev[id] ?? {}), ...patch } }));
                   setScoreFlash(id);
-                  setTimeout(() => setScoreFlash(cur => cur === id ? null : cur), 900);
+                  if (scoreFlashTimer.current) clearTimeout(scoreFlashTimer.current);
+                  scoreFlashTimer.current = setTimeout(() => setScoreFlash(cur => cur === id ? null : cur), 900);
                 }
               } catch (err) {
                 secureLog.warn(`[SportsHub] WS message parse error: ${err instanceof Error ? err.message : String(err)}`);
@@ -270,10 +278,9 @@ export default function SportsHubScreen() {
     return () => {
       stompHubRef.current?.deactivate();
       stompHubRef.current = null;
+      if (scoreFlashTimer.current) clearTimeout(scoreFlashTimer.current);
     };
-  // reconnect only when the set of live match IDs changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveMatches?.map(m => m.id).join(',')]);
+  }, [liveIdsKey]);
 
   // ── Derived Data ──────────────────────────────────────────────
   const filteredLive = useMemo(() => {
