@@ -11,6 +11,7 @@ import type {
   VacationPauseRequest,
   DeliveryPassDto,
   HandoverVerifyRequest,
+  DayOfWeek,
 } from '@/types/freshKitchen';
 
 export const SEED_FRESH_PRODUCTS: FreshFoodProduct[] = [
@@ -227,45 +228,38 @@ export const freshKitchenService = {
   getDailyBasket: async (): Promise<DailyBasket> => {
     try {
       const response = await apiClient.get('/daily-basket');
-      return (response.data as any)?.data || response.data;
+      const data = (response.data as any)?.data || response.data;
+      if (data && (data.id || data.items)) {
+        return normalizeDailyBasket(data);
+      }
+      return normalizeDailyBasket(SEED_DEFAULT_BASKET);
     } catch {
-      return {
-        id: 'basket-user-default',
-        userId: 'current-user',
-        communityId: 1,
-        flatNumber: 'Tower A - 402',
-        deliveryAddress: 'Tower A, Flat 402, Mana Residency',
-        deliveryInstructions: 'Leave in cool bag outside door before 6:30 AM',
-        executionMode: 'AUTO_ORDER',
-        isVacationPaused: false,
-        items: [
-          {
-            id: 'item-1',
-            productId: SEED_FRESH_PRODUCTS[0].id,
-            product: SEED_FRESH_PRODUCTS[0],
-            itemName: SEED_FRESH_PRODUCTS[0].name,
-            itemCategory: 'STANDARD_BATTER',
-            unitPrice: SEED_FRESH_PRODUCTS[0].price,
-            quantity: 1,
-            scheduledDays: ['MON', 'WED', 'FRI'],
-            isPaused: false,
-          },
-        ],
-        preferredDeliveryTime: '06:00 AM - 06:45 AM',
-        totalDailyEstimate: 85,
-        totalWeeklyEstimate: 255,
-        monthlyProjection: 1020,
-        status: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      return normalizeDailyBasket(SEED_DEFAULT_BASKET);
     }
   },
 
   addItemToDailyBasket: async (request: CreateDailyBasketItemRequest): Promise<DailyBasketItem> => {
+    const payload = {
+      productId: request.productId || request.comboId || 'prod-custom',
+      productName: request.itemName,
+      itemName: request.itemName,
+      category: request.itemCategory,
+      unitPrice: request.unitPrice,
+      quantity: request.quantity || 1,
+      scheduledDays: request.scheduledDays,
+      mon: request.scheduledDays ? request.scheduledDays.includes('MON') : true,
+      tue: request.scheduledDays ? request.scheduledDays.includes('TUE') : true,
+      wed: request.scheduledDays ? request.scheduledDays.includes('WED') : true,
+      thu: request.scheduledDays ? request.scheduledDays.includes('THU') : true,
+      fri: request.scheduledDays ? request.scheduledDays.includes('FRI') : true,
+      sat: request.scheduledDays ? request.scheduledDays.includes('SAT') : false,
+      sun: request.scheduledDays ? request.scheduledDays.includes('SUN') : false,
+      specialInstructions: request.specialInstructions,
+    };
     try {
-      const response = await apiClient.post('/daily-basket/items', request);
-      return (response.data as any)?.data || response.data;
+      const response = await apiClient.post('/daily-basket/items', payload);
+      const data = (response.data as any)?.data || response.data;
+      return normalizeBasketItem(data);
     } catch {
       return {
         id: 'item-' + Date.now(),
@@ -274,7 +268,7 @@ export const freshKitchenService = {
         itemCategory: request.itemCategory,
         unitPrice: request.unitPrice,
         quantity: request.quantity,
-        scheduledDays: request.scheduledDays,
+        scheduledDays: request.scheduledDays || ['MON', 'WED', 'FRI'],
         isPaused: false,
         specialInstructions: request.specialInstructions,
       };
@@ -282,9 +276,23 @@ export const freshKitchenService = {
   },
 
   updateDailyBasketItem: async (itemId: string, request: UpdateDailyBasketItemRequest): Promise<DailyBasketItem> => {
+    const payload = {
+      quantity: request.quantity,
+      scheduledDays: request.scheduledDays,
+      mon: request.scheduledDays ? request.scheduledDays.includes('MON') : undefined,
+      tue: request.scheduledDays ? request.scheduledDays.includes('TUE') : undefined,
+      wed: request.scheduledDays ? request.scheduledDays.includes('WED') : undefined,
+      thu: request.scheduledDays ? request.scheduledDays.includes('THU') : undefined,
+      fri: request.scheduledDays ? request.scheduledDays.includes('FRI') : undefined,
+      sat: request.scheduledDays ? request.scheduledDays.includes('SAT') : undefined,
+      sun: request.scheduledDays ? request.scheduledDays.includes('SUN') : undefined,
+      isPaused: request.isPaused,
+      specialInstructions: request.specialInstructions,
+    };
     try {
-      const response = await apiClient.put(`/daily-basket/items/${itemId}`, request);
-      return (response.data as any)?.data || response.data;
+      const response = await apiClient.put(`/daily-basket/items/${itemId}`, payload);
+      const data = (response.data as any)?.data || response.data;
+      return normalizeBasketItem(data);
     } catch {
       return {
         id: itemId,
@@ -313,7 +321,8 @@ export const freshKitchenService = {
         pauseStartDate: request.vacationStartDate,
         pauseEndDate: request.vacationEndDate,
       });
-      return (response.data as any)?.data || response.data;
+      const data = (response.data as any)?.data || response.data;
+      return normalizeDailyBasket(data);
     } catch {
       const basket = await freshKitchenService.getDailyBasket();
       return {
@@ -328,7 +337,8 @@ export const freshKitchenService = {
   resumeDailyBasket: async (): Promise<DailyBasket> => {
     try {
       const response = await apiClient.post('/daily-basket/resume', {});
-      return (response.data as any)?.data || response.data;
+      const data = (response.data as any)?.data || response.data;
+      return normalizeDailyBasket(data);
     } catch {
       const basket = await freshKitchenService.getDailyBasket();
       return {
@@ -383,7 +393,10 @@ export const freshKitchenService = {
 
   lookupDeliveryOrder: async (tokenOrNumber: string): Promise<DeliveryPassDto> => {
     const response = await apiClient.get('/daily-basket/orders/lookup', {
-      params: { tokenOrNumber },
+      params: {
+        query: tokenOrNumber,
+        tokenOrNumber,
+      },
     });
     return (response.data as any)?.data || response.data;
   },
@@ -393,6 +406,90 @@ export const freshKitchenService = {
     return (response.data as any)?.data || response.data;
   },
 };
+
+const SEED_DEFAULT_BASKET: DailyBasket = {
+  id: 'basket-user-default',
+  userId: 'current-user',
+  communityId: 1,
+  flatNumber: 'Tower A - 402',
+  deliveryAddress: 'Tower A, Flat 402, Mana Residency',
+  deliveryInstructions: 'Leave in cool bag outside door before 6:30 AM',
+  executionMode: 'AUTO_ORDER',
+  isVacationPaused: false,
+  items: [
+    {
+      id: 'item-1',
+      productId: SEED_FRESH_PRODUCTS[0].id,
+      product: SEED_FRESH_PRODUCTS[0],
+      itemName: SEED_FRESH_PRODUCTS[0].name,
+      itemCategory: 'STANDARD_BATTER',
+      unitPrice: SEED_FRESH_PRODUCTS[0].price,
+      quantity: 1,
+      scheduledDays: ['MON', 'WED', 'FRI'],
+      isPaused: false,
+    },
+  ],
+  preferredDeliveryTime: '06:00 AM - 06:45 AM',
+  totalDailyEstimate: 85,
+  totalWeeklyEstimate: 255,
+  monthlyProjection: 1020,
+  status: 'ACTIVE',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+function normalizeBasketItem(raw: any): DailyBasketItem {
+  if (!raw) {
+    return {
+      id: 'item-' + Date.now(),
+      productId: '',
+      itemName: 'Item',
+      itemCategory: 'BATTER',
+      unitPrice: 0,
+      quantity: 1,
+      scheduledDays: ['MON', 'WED', 'FRI'],
+      isPaused: false,
+    };
+  }
+
+  const days: DayOfWeek[] = [];
+  if (Array.isArray(raw.scheduledDays) && raw.scheduledDays.length > 0) {
+    days.push(...raw.scheduledDays);
+  } else {
+    if (raw.mon) days.push('MON');
+    if (raw.tue) days.push('TUE');
+    if (raw.wed) days.push('WED');
+    if (raw.thu) days.push('THU');
+    if (raw.fri) days.push('FRI');
+    if (raw.sat) days.push('SAT');
+    if (raw.sun) days.push('SUN');
+  }
+
+  return {
+    id: String(raw.id || Date.now()),
+    basketId: raw.basketId ? String(raw.basketId) : undefined,
+    productId: String(raw.productId || ''),
+    itemName: raw.itemName || raw.productName || 'Fresh Item',
+    itemCategory: raw.itemCategory || raw.category || 'STANDARD_BATTER',
+    unitPrice: Number(raw.unitPrice || 0),
+    quantity: Number(raw.quantity || 1),
+    scheduledDays: days.length > 0 ? days : ['MON', 'WED', 'FRI'],
+    isPaused: raw.isPaused !== undefined ? Boolean(raw.isPaused) : (raw.isActive !== undefined ? !raw.isActive : false),
+    specialInstructions: raw.specialInstructions,
+  };
+}
+
+function normalizeDailyBasket(raw: any): DailyBasket {
+  if (!raw) return SEED_DEFAULT_BASKET;
+  const rawItems = raw.items || [];
+  const items = Array.isArray(rawItems) ? rawItems.map(normalizeBasketItem) : [];
+  return {
+    ...raw,
+    id: String(raw.id || 'basket-1'),
+    items,
+    isVacationPaused: Boolean(raw.isVacationPaused || raw.vacationPaused),
+  };
+}
 
 function filterSeedProducts(category?: FreshFoodProductCategory): FreshFoodProduct[] {
   if (!category || category === 'ALL') {

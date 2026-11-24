@@ -92,12 +92,12 @@ export default function EditProfileScreen() {
   const { user, updateUser } = useAuth();
 
   const [form, setForm] = useState({
-    name:       user?.fullName   ?? user?.name ?? '',
-    mobile:     user?.mobile     ?? '',
+    name:       user?.fullName   ?? user?.name   ?? '',
+    mobile:     user?.mobile     ?? user?.phone  ?? '',
     bio:        user?.bio        ?? '',
     profession: user?.profession ?? '',
-    flatNumber: user?.flatNumber ?? '',
-    tower:      user?.tower      ?? '',
+    flatNumber: user?.flatNumber ?? user?.flatNo ?? '',
+    tower:      user?.tower      ?? user?.block  ?? '',
   });
 
   const [photoUri,    setPhotoUri]    = useState<string | null>(null);  // local preview
@@ -197,7 +197,13 @@ export default function EditProfileScreen() {
         );
 
         // Update local user state with new photo URL
-        if (user) updateUser({ ...user, profilePhoto: photoUrl });
+        if (user) {
+          updateUser({
+            ...user,
+            profilePhoto: photoUrl,
+            profilePicUrl: photoUrl,
+          });
+        }
         setIsUploading(false);
         setUploadPct(0);
       }
@@ -205,11 +211,15 @@ export default function EditProfileScreen() {
       // 2. Save profile fields
       const payload: UpdateProfileRequest = {
         name:        form.name.trim(),
+        fullName:    form.name.trim(),
         mobile:      form.mobile.trim()     || undefined,
+        phone:       form.mobile.trim()     || undefined,
         bio:         form.bio.trim()        || undefined,
         profession:  form.profession.trim() || undefined,
         flatNumber:  form.flatNumber.trim() || undefined,
+        flatNo:      form.flatNumber.trim() || undefined,
         tower:       form.tower.trim()      || undefined,
+        block:       form.tower.trim()      || undefined,
       };
 
       const updated = await profileService.updateProfile(payload);

@@ -17,7 +17,6 @@ import { authService } from '@/services/authService';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRoleSwitcher } from '@/hooks/useRoleSwitcher';
 import { CONFIG, COLORS, SHADOWS, RADIUS, FONTS, GRADIENTS, getInitials } from '@/constants/config';
-import { THEME } from '@/constants/theme';
 import { profileService } from '@/services/profileService';
 import { eventService } from '@/services/eventService';
 import { marketplaceService } from '@/services/marketplaceService';
@@ -293,8 +292,8 @@ export default function ProfileScreen() {
     staleTime: 30_000,
   });
 
-  // Merge live DB profile with Zustand auth user
-  const user = dbProfile || authUser;
+  // Merge live DB profile with Zustand auth user (preserve all resident fields)
+  const user = { ...(authUser || {}), ...(dbProfile || {}) } as any;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -342,9 +341,10 @@ export default function ProfileScreen() {
     try {
       const unitText = [tower, flatNumber].filter(Boolean).join(' - ') || 'Unit not assigned';
       const statusText = user?.status === 'ACTIVE' ? 'Verified Active' : (user?.status || 'Active');
+      const memberId = user?.id ? `MANA-${String(user.id).padStart(4, '0')}` : 'PENDING';
       await Share.share({
         title: `${communityName} Pass`,
-        message: `🛡️ *${communityName} Resident Pass*\nName: ${displayName}\nUnit: ${unitText}\nSociety: ${communityName}\nStatus: ${statusText}`,
+        message: `🛡️ *${communityName} Resident Pass*\nName: ${displayName}\nMember ID: ${memberId}\nUnit: ${unitText}\nSociety: ${communityName}\nStatus: ${statusText}`,
       });
     } catch {
       // Ignored
@@ -873,8 +873,8 @@ export default function ProfileScreen() {
             { key: 'vehicles', visible: showParking, icon: 'car-sport-outline', label: 'My Vehicles', sublabel: 'Register plates for resident gate access', onPress: () => router.push('/profile/vehicles'), iconColor: '#2563EB', iconBg: '#DBEAFE' },
             { key: 'vehicle-care', visible: showVehicleCare, icon: 'car-sport-outline', label: 'Vehicle Care & Wash', sublabel: 'Doorstep wash, detailing & monthly plans', onPress: () => router.push('/vehicle-care'), iconColor: '#2563EB', iconBg: '#EFF6FF', badge: 'WASH', badgeBg: '#DBEAFE', badgeColor: '#2563EB' },
             { key: 'trusted', visible: showVisitors, icon: 'people-circle-outline', label: 'Trusted Visitors', sublabel: 'Recurring maid, driver and family entry', onPress: () => router.push('/visitors/trusted'), iconColor: '#059669', iconBg: '#D1FAE5' },
-            { key: 'packages', visible: showVisitors, icon: 'cube-outline', label: 'Package Room', sublabel: 'Delivery collection and OTPs', onPress: () => router.push('/packages'), iconColor: '#D97706', iconBg: '#FEF3C7' },
-            { key: 'intercom', visible: showVisitors, icon: 'videocam-outline', label: 'Resident Intercom', sublabel: 'Call the gate guard before entry', onPress: () => router.push('/intercom'), iconColor: '#4F46E5', iconBg: '#E0E7FF' },
+            { key: 'packages', visible: showVisitors, icon: 'cube-outline', label: 'Package Room', sublabel: 'Delivery collection and OTPs', onPress: () => router.push('/visitors/packages'), iconColor: '#D97706', iconBg: '#FEF3C7' },
+            { key: 'intercom', visible: showVisitors, icon: 'videocam-outline', label: 'Resident Intercom', sublabel: 'Call the gate guard before entry', onPress: () => router.push('/visitors/intercom'), iconColor: '#4F46E5', iconBg: '#E0E7FF' },
             { key: 'helpdesk', visible: showHelpdesk, icon: 'headset-outline', label: 'Smart Helpdesk', sublabel: 'Society maintenance complaints & support', onPress: () => router.push('/helpdesk'), iconColor: '#D97706', iconBg: '#FEF3C7', badge: totalTicketsCount > 0 ? `${totalTicketsCount} Open` : undefined, badgeBg: '#FEF3C7', badgeColor: '#D97706' },
             { key: 'food', visible: showFood, icon: 'restaurant-outline', label: 'Community Kitchen', sublabel: 'Home chefs, catering & daily meal orders', onPress: () => router.push('/food'), iconColor: '#E11D48', iconBg: '#FFE4E6' },
             { key: 'automation', visible: showSmartHome, icon: 'hardware-chip-outline', label: 'Smart Home & IoT', sublabel: 'Automations, scenes & smart device schedules', onPress: () => router.push('/automation'), iconColor: '#7C3AED', iconBg: '#EDE9FE', badge: 'IoT', badgeBg: '#EDE9FE', badgeColor: '#7C3AED' },
@@ -1172,7 +1172,7 @@ const styles = StyleSheet.create({
   },
   bodyWrap: {
     flex: 1,
-    backgroundColor: THEME.background,
+    backgroundColor: COLORS.background,
   },
   loadingContainer: {
     flex: 1,
@@ -1194,9 +1194,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: THEME.surface,
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
-    borderColor: THEME.border,
+    borderColor: COLORS.border,
     ...SHADOWS.sm,
   },
   topBarLeft: {
@@ -1206,12 +1206,12 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontFamily: FONTS.displayBold,
     fontWeight: '800',
-    color: THEME.textPrimary,
+    color: COLORS.text,
     letterSpacing: -0.3,
   },
   topBarSubtitle: {
     fontSize: 11.5,
-    color: THEME.textSecondary,
+    color: COLORS.textMuted,
     marginTop: 1,
     fontFamily: FONTS.medium,
   },

@@ -128,11 +128,13 @@ export interface DailyBasketItem {
   comboId?: string;
   combo?: BreakfastCombo;
   itemName: string;
+  productName?: string;
   itemCategory: string;
   unitPrice: number;
   quantity: number;
   scheduledDays: DayOfWeek[];
   isPaused: boolean;
+  isActive?: boolean;
   specialInstructions?: string;
   createdAt?: string;
   updatedAt?: string;
