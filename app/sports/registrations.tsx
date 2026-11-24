@@ -17,23 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { sportsService, doesSportMatchFilter } from '@/services/sportsService';
 import { SportsRegisterModal } from '@/components/sports/SportsRegisterModal';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { SPORT_EMOJI } from '@/constants/sports';
 import { safeFormat } from '@/utils/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
-
-const SPORT_EMOJI_MAP: Record<string, string> = {
-  BADMINTON: '🏸',
-  CRICKET: '🏏',
-  FOOTBALL: '⚽',
-  TENNIS: '🎾',
-  TABLE_TENNIS: '🏓',
-  PICKLEBALL: '🏓',
-  SWIMMING: '🏊',
-  BASKETBALL: '🏀',
-  VOLLEYBALL: '🏐',
-  CHESS: '♟️',
-  CARROM: '🎯',
-  SQUASH: '🎾',
-};
 
 const STATUS_TABS = ['ALL', 'CONFIRMED', 'PENDING'] as const;
 
@@ -66,7 +52,7 @@ export default function MyRegistrationsScreen() {
         eventName: r.tournamentName || r.eventName || 'Tournament Event',
         sport,
         sportKey,
-        emoji: SPORT_EMOJI_MAP[sportKey] || '🏅',
+        emoji: SPORT_EMOJI[sportKey] || '🏅',
         categoryName: r.categoryName || null,
         matchType: r.matchType || null,
         playerName: r.playerName || r.teamName || user?.fullName || user?.name || 'Resident',

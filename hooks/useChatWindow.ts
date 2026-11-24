@@ -6,7 +6,7 @@ import { CONFIG } from '@/constants/config';
 import { secureLog } from '@/security';
 import type { ChatMessageDto } from '@/types/api';
 
-export type LocalMessage = ChatMessageDto & { _optimisticId?: string };
+export type LocalMessage = ChatMessageDto & { _optimisticId?: string; _failed?: boolean };
 
 let _seqCounter = 0;
 function optimisticId(): string {
@@ -46,8 +46,10 @@ export function useChatWindow(
   const [connected, setConnected]     = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<number, string>>(new Map());
 
-  const stompRef     = useRef<Client | null>(null);
-  const typingTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stompRef        = useRef<Client | null>(null);
+  const typingTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markReadTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingExpiry    = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   // ── Load initial messages from REST ───────────────────────────
   useEffect(() => {
@@ -95,7 +97,7 @@ export function useChatWindow(
             try {
               const msg: ChatMessageDto = JSON.parse(frame.body);
               setMessages((prev) => {
-                if (prev.find((m) => m.id === msg.id && !m._optimisticId)) return prev;
+                if (prev.some((m) => m.id === msg.id && !m._optimisticId)) return prev;
 
                 if (msg.senderId === currentUserId) {
                   const optIdx = prev.findIndex(
@@ -110,7 +112,10 @@ export function useChatWindow(
 
                 return [...prev, msg];
               });
-              chatService.markRead(conversationId).catch(() => {});
+              if (markReadTimer.current) clearTimeout(markReadTimer.current);
+              markReadTimer.current = setTimeout(() => {
+                chatService.markRead(conversationId).catch(() => {});
+              }, 2000);
             } catch {/* malformed frame */}
           };
 
@@ -121,23 +126,29 @@ export function useChatWindow(
               if (ev.userId === currentUserId) return;
               setTypingUsers((prev) => {
                 const next = new Map(prev);
+                const existing = typingExpiry.current.get(ev.userId);
+                if (existing) clearTimeout(existing);
+
                 if (ev.typing) {
                   next.set(ev.userId, ev.name);
+                  typingExpiry.current.set(ev.userId, setTimeout(() => {
+                    typingExpiry.current.delete(ev.userId);
+                    setTypingUsers((p) => { const n = new Map(p); n.delete(ev.userId); return n; });
+                  }, 6000));
                 } else {
                   next.delete(ev.userId);
+                  typingExpiry.current.delete(ev.userId);
                 }
                 return next;
               });
             } catch {/* ignore */}
           };
 
-          // Subscribe: incoming chat messages (dot notation per STOMP inventory + slash alias)
+          // Subscribe: incoming chat messages (dot notation per Spring STOMP convention)
           client.subscribe(`/topic/conversation.${conversationId}`, handleIncomingMessage);
-          client.subscribe(`/topic/conversation/${conversationId}`, handleIncomingMessage);
 
-          // Subscribe: typing indicators (dot notation per STOMP inventory + slash alias)
+          // Subscribe: typing indicators
           client.subscribe(`/topic/typing.${conversationId}`, handleTypingEvent);
-          client.subscribe(`/topic/typing/${conversationId}`, handleTypingEvent);
         },
 
         onDisconnect: () => setConnected(false),
@@ -155,6 +166,9 @@ export function useChatWindow(
       stompRef.current?.deactivate();
       stompRef.current = null;
       setConnected(false);
+      if (markReadTimer.current) clearTimeout(markReadTimer.current);
+      typingExpiry.current.forEach((t) => clearTimeout(t));
+      typingExpiry.current.clear();
     };
   }, [conversationId, currentUserId]);
 
@@ -179,22 +193,15 @@ export function useChatWindow(
     setIsSending(true);
 
     try {
-      // 1. Publish over STOMP for instantaneous broker propagation
-      if (stompRef.current?.connected) {
-        stompRef.current.publish({
-          destination: `/app/chat/conversations/${conversationId}/send`,
-          body: JSON.stringify({ content: trimmed }),
-        });
-      }
-
-      // 2. Persist via REST to ensure database durability and dispatch offline notifications
       const saved = await chatService.sendMessage(conversationId, trimmed);
       setMessages((prev) =>
         prev.map((m) => (m._optimisticId === optId ? saved : m))
       );
     } catch (err) {
       secureLog.error('[ChatWindow] Send failed', err);
-      setMessages((prev) => prev.filter((m) => m._optimisticId !== optId));
+      setMessages((prev) =>
+        prev.map((m) => (m._optimisticId === optId ? { ...m, _failed: true } : m))
+      );
     } finally {
       setIsSending(false);
     }
@@ -227,7 +234,9 @@ export function useChatWindow(
       );
     } catch (err) {
       secureLog.error('[ChatWindow] Attachment send failed', err);
-      setMessages((prev) => prev.filter((m) => m._optimisticId !== optId));
+      setMessages((prev) =>
+        prev.map((m) => (m._optimisticId === optId ? { ...m, _failed: true } : m))
+      );
     } finally {
       setIsSending(false);
     }
@@ -262,14 +271,13 @@ export function useChatWindow(
       body: JSON.stringify({ conversationId, typing: isTyping }),
     });
 
-    // Auto-stop typing after 3 s of inactivity
     if (isTyping) {
       typingTimer.current = setTimeout(() => {
         stompRef.current?.publish({
           destination: `/app/chat/typing`,
           body: JSON.stringify({ conversationId, typing: false }),
         });
-      }, 3000);
+      }, 2500);
     }
   }, [conversationId]);
 

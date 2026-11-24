@@ -12,6 +12,7 @@ import { sportsService } from '@/services/sportsService';
 import api from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { SPORT_EMOJI } from '@/constants/sports';
 import { usePayment } from '@/hooks/usePayment';
 import { PaymentModal } from '@/components/payment/PaymentModal';
 import {
@@ -55,18 +56,6 @@ interface EventItem {
   emoji: string;
 }
 
-const SPORT_EMOJI_MAP: Record<string, string> = {
-  CRICKET: '🏏',
-  BADMINTON: '🏸',
-  FOOTBALL: '⚽',
-  TENNIS: '🎾',
-  TABLE_TENNIS: '🏓',
-  PICKLEBALL: '🏓',
-  BASKETBALL: '🏀',
-  VOLLEYBALL: '🏐',
-  SWIMMING: '🏊',
-  CHESS: '♟️',
-};
 
 const LOGO_EMOJIS = ['⚽', '🏏', '🏸', '🏓', '🏀', '🏐', '🏆', '🔥', '⚡', '🦅', '🦁', '💪'];
 
@@ -159,7 +148,7 @@ export function SportsRegisterModal({ visible, onClose, onRegistered, initialEve
           event: ev,
           format,
           fee: (ev as any).entryFee != null ? Number((ev as any).entryFee) : (format === 'TEAM' ? 2000 : format === 'DOUBLES' ? 800 : 400),
-          emoji: SPORT_EMOJI_MAP[sportUpper] || '🏅',
+          emoji: SPORT_EMOJI[sportUpper] || '🏅',
         });
       });
     });
@@ -498,7 +487,7 @@ export function SportsRegisterModal({ visible, onClose, onRegistered, initialEve
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.pillScroll}>
                     {sportFilters.map((sp) => {
                       const active = selectedSportFilter === sp;
-                      const emoji = SPORT_EMOJI_MAP[sp] || '🏅';
+                      const emoji = SPORT_EMOJI[sp] || '🏅';
                       return (
                         <TouchableOpacity
                           key={sp}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity,
   ActivityIndicator, Alert, RefreshControl,
@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { sportsAuctionService } from '@/services/sportsAuctionService';
@@ -18,53 +19,50 @@ import type {
 } from '@/types/api';
 
 type Tab = 'live' | 'players' | 'teams';
-const POLL_MS = 4000;
 
 export default function SportsAuctionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router  = useRouter();
   const { user } = useAuth();
   const configId = Number(id);
+  const qc = useQueryClient();
 
-  const [config, setConfig]   = useState<SportsAuctionConfigResponse | null>(null);
-  const [stats, setStats]     = useState<SportsAuctionStatsResponse | null>(null);
-  const [current, setCurrent] = useState<PlayerWithBidResponse | null>(null);
-  const [players, setPlayers] = useState<SportsAuctionPlayerResponse[]>([]);
-  const [teams, setTeams]     = useState<SportsAuctionTeamResponse[]>([]);
-  const [myTeam, setMyTeam]   = useState<SportsAuctionTeamResponse | null>(null);
   const [tab, setTab]         = useState<Tab>('live');
-  const [loading, setLoading] = useState(true);
   const [bidding, setBidding] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadBase = useCallback(async () => {
-    const [cfg, st, pl, tm, myTeams] = await Promise.all([
-      sportsAuctionService.getConfig(configId).catch(() => null),
-      sportsAuctionService.getStats(configId),
-      sportsAuctionService.getPlayers(configId),
-      sportsAuctionService.getTeams(configId),
-      sportsAuctionService.getMyCaptainRegistrations(),
-    ]);
-    if (cfg) setConfig(cfg);
-    setStats(st);
-    setPlayers(pl);
-    setTeams(tm);
-    const mine = myTeams.find((t) => t.configId === configId) ?? null;
-    setMyTeam(mine);
-    setLoading(false);
-  }, [configId]);
+  const { data: baseData, isLoading: loading, refetch } = useQuery({
+    queryKey: ['auction-detail', configId],
+    queryFn: async () => {
+      const [cfg, st, pl, tm, myTeams] = await Promise.all([
+        sportsAuctionService.getConfig(configId).catch(() => null),
+        sportsAuctionService.getStats(configId),
+        sportsAuctionService.getPlayers(configId),
+        sportsAuctionService.getTeams(configId),
+        sportsAuctionService.getMyCaptainRegistrations(),
+      ]);
+      return {
+        config: cfg,
+        stats: st,
+        players: pl,
+        teams: tm,
+        myTeam: myTeams.find((t) => t.configId === configId) ?? null,
+      };
+    },
+    enabled: !!configId,
+  });
 
-  const pollCurrent = useCallback(async () => {
-    const c = await sportsAuctionService.getCurrentPlayer(configId);
-    setCurrent(c);
-  }, [configId]);
+  const config  = baseData?.config ?? null;
+  const stats   = baseData?.stats ?? null;
+  const players = baseData?.players ?? [];
+  const teams   = baseData?.teams ?? [];
+  const myTeam  = baseData?.myTeam ?? null;
 
-  useEffect(() => {
-    loadBase();
-    pollCurrent();
-    pollRef.current = setInterval(pollCurrent, POLL_MS);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [loadBase, pollCurrent]);
+  const { data: current = null } = useQuery({
+    queryKey: ['auction-current-player', configId],
+    queryFn: () => sportsAuctionService.getCurrentPlayer(configId),
+    enabled: !!configId,
+    refetchInterval: 4000,
+  });
 
   async function handleBid() {
     if (!current?.player || !myTeam) return;
@@ -81,7 +79,7 @@ export default function SportsAuctionDetailScreen() {
             setBidding(true);
             try {
               await sportsAuctionService.placeBid(configId, current.player.id, nextBid, myTeam.id);
-              await pollCurrent();
+              qc.invalidateQueries({ queryKey: ['auction-current-player', configId] });
             } catch (e: any) {
               Alert.alert('Bid Failed', e?.message ?? 'Please try again.');
             } finally {

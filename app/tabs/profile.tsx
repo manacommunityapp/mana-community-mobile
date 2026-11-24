@@ -26,6 +26,7 @@ import { maintenanceDuesService } from '@/services/maintenanceDuesService';
 import { smartHelpdeskService } from '@/services/smartHelpdeskService';
 import { notificationService } from '@/services/notificationService';
 import { ProfileImageModal } from '@/components/common/ProfileImageModal';
+import { JoinCommunityModal } from '@/components/community/JoinCommunityModal';
 import { resolveImageUrl, resolveUserAvatar } from '@/utils/imageUrlUtils';
 import {
   VIEW_FEED,
@@ -207,6 +208,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [passModalVisible, setPassModalVisible] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
 
   const { hasPerm, isAdmin, isSuperAdmin, hasMultiplePortals, availablePortals, switchToRole } = {
     ...usePermissions(),
@@ -415,18 +417,23 @@ export default function ProfileScreen() {
 
   const flatNumber = user.flatNumber || user.flatNo;
   const tower = user.tower || user.block;
+  const hasCommunity = Boolean(resolvedCommunityId);
   const communityName =
-    knownCommunityName ||
-    communityDetails?.name ||
-    communityDetails?.communityName ||
-    'My Community';
+    hasCommunity
+      ? knownCommunityName ||
+        communityDetails?.name ||
+        communityDetails?.communityName ||
+        'My Community'
+      : 'Mana Standalone';
   const profilePhoto = resolveUserAvatar(user);
   const displayName =
     user.fullName || user.name || authUser?.fullName || authUser?.name || (user.email ? user.email.split('@')[0] : 'Member');
   const hasPhoto = !photoError && !!profilePhoto;
   const primaryRoleLabel = (user.role || 'RESIDENT').replace(/_/g, ' ').toUpperCase();
   const verifiedBadgeLabel =
-    user.status === 'ACTIVE' ? `VERIFIED ${primaryRoleLabel}` : 'PENDING VERIFICATION';
+    !hasCommunity
+      ? 'STANDALONE ACCOUNT'
+      : (user.status === 'ACTIVE' ? `VERIFIED ${primaryRoleLabel}` : 'PENDING VERIFICATION');
 
   const totalEventsCount = myEvents.length;
   const totalListingsCount =
@@ -578,7 +585,14 @@ export default function ProfileScreen() {
 
             {/* Unit Details & Tags Pill Row */}
             <View style={styles.unitPillsRow}>
-              {tower && flatNumber && (
+              {!hasCommunity && (
+                <View style={styles.unitPill}>
+                  <Ionicons name="compass-outline" size={12} color="#A5B4FC" />
+                  <Text style={styles.unitPillText}>Standalone Account</Text>
+                </View>
+              )}
+
+              {hasCommunity && tower && flatNumber && (
                 <View style={styles.unitPill}>
                   <Ionicons name="home" size={12} color="#A5B4FC" />
                   <Text style={styles.unitPillText}>
@@ -604,16 +618,25 @@ export default function ProfileScreen() {
 
             {/* Quick Hero Actions */}
             <View style={styles.heroActionsRow}>
-              {showVisitors && (
-              <TouchableOpacity
-                style={styles.heroPassBtn}
-                onPress={() => setPassModalVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="qr-code-outline" size={16} color="#fff" />
-                <Text style={styles.heroPassBtnText}>Resident Pass</Text>
-              </TouchableOpacity>
-              )}
+              {!hasCommunity ? (
+                <TouchableOpacity
+                  style={styles.heroPassBtn}
+                  onPress={() => setJoinModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="add-circle-outline" size={16} color="#fff" />
+                  <Text style={styles.heroPassBtnText}>Join Community</Text>
+                </TouchableOpacity>
+              ) : showVisitors ? (
+                <TouchableOpacity
+                  style={styles.heroPassBtn}
+                  onPress={() => setPassModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="qr-code-outline" size={16} color="#fff" />
+                  <Text style={styles.heroPassBtnText}>Resident Pass</Text>
+                </TouchableOpacity>
+              ) : null}
 
               <TouchableOpacity
                 style={styles.heroEditBtn}
@@ -626,6 +649,46 @@ export default function ProfileScreen() {
             </View>
           </LinearGradient>
         </View>
+
+        {/* ── Standalone Join Community Action Card ────────────────── */}
+        {!hasCommunity && (
+          <View style={styles.joinCommCardWrap}>
+            <View
+              style={[
+                styles.joinCommCard,
+                { backgroundColor: palette.surface, borderColor: palette.primaryBorder },
+              ]}
+            >
+              <View style={styles.joinCommRow}>
+                <View style={[styles.joinCommIconWrap, { backgroundColor: palette.primaryLight }]}>
+                  <Ionicons name="business" size={24} color={palette.link} />
+                </View>
+                <View style={styles.joinCommInfo}>
+                  <Text style={[styles.joinCommTitle, { color: palette.text }]}>Join Your Community</Text>
+                  <Text style={[styles.joinCommSub, { color: palette.textMuted }]}>
+                    Have an invite code from your housing society or apartment? Link your flat now to access security gate passes, visitor approvals, society billing & amenities.
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.joinCommBtnWrap}
+                onPress={() => setJoinModalVisible(true)}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={palette.primaryGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.joinCommBtn}
+                >
+                  <Ionicons name="key-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+                  <Text style={styles.joinCommBtnText}>Enter Invite Code</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* ── Pending Dues Quick Alert Banner (Conditional) ───────── */}
         {showFinance && pendingDuesTotal > 0 && (
@@ -1035,11 +1098,74 @@ export default function ProfileScreen() {
         name={displayName}
         subtitle={[tower, flatNumber].filter(Boolean).join(' • ') || communityName}
       />
+
+      {/* Join Community Modal */}
+      <JoinCommunityModal
+        visible={joinModalVisible}
+        onClose={() => setJoinModalVisible(false)}
+        onSuccess={() => {
+          refetchProfile();
+          onRefresh();
+        }}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // ── Standalone Join Community Action Card ────────────────────────
+  joinCommCardWrap: {
+    paddingHorizontal: 16,
+    marginTop: 14,
+  },
+  joinCommCard: {
+    borderWidth: 1,
+    borderRadius: RADIUS.xl,
+    padding: 16,
+    ...SHADOWS.sm,
+  },
+  joinCommRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  joinCommIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinCommInfo: {
+    flex: 1,
+  },
+  joinCommTitle: {
+    fontSize: 15,
+    fontFamily: FONTS.displayBold,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  joinCommSub: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  joinCommBtnWrap: {
+    marginTop: 4,
+  },
+  joinCommBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 16,
+  },
+  joinCommBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

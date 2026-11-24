@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { sportsService } from '@/services/sportsService';
 import { COLORS, SHADOWS, RADIUS, getInitials } from '@/constants/config';
-import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
+import { SPORT_EMOJI } from '@/constants/sports';
 import type { TeamDto } from '@/types/api';
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {

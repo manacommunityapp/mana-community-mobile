@@ -12,10 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { sportsService, doesSportMatchFilter } from '@/services/sportsService';
 import { facilityService, FacilityDto } from '@/services/facilityService';
-import { auctionService } from '@/services/auctionService';
 import { commuteService } from '@/services/commuteService';
 import { SportsRegisterModal, RegistrationRecord } from '@/components/sports/SportsRegisterModal';
 import { COLORS, SHADOWS, RADIUS, SPACING, FONTS, CONFIG } from '@/constants/config';
+import { SPORT_EMOJI, getVenueName } from '@/constants/sports';
+import { secureLog } from '@/security';
 import { useAuth } from '@/hooks/useAuth';
 import { useModuleGuard } from '@/hooks/useRoleGuard';
 import { resolveImageUrl } from '@/utils/imageUrlUtils';
@@ -43,20 +44,13 @@ const SPORT_FILTERS = [
   { id: 'SWIMMING',     label: 'Swimming',     emoji: '🏊' },
 ] as const;
 
-const SPORT_EMOJI_MAP: Record<string, string> = {
-  BADMINTON: '🏸', CRICKET: '🏏', FOOTBALL: '⚽', TENNIS: '🎾',
-  TABLE_TENNIS: '🏓', PICKLEBALL: '🏓', SWIMMING: '🏊',
-  SWIMMING_POOL: '🏊', BASKETBALL: '🏀', VOLLEYBALL: '🏐',
-  CHESS: '♟️', CARROM: '🎯', GYM: '💪', SQUASH: '🎾',
-};
-
 const MEDAL_ICONS = ['🥇', '🥈', '🥉'];
 const MEDAL_COLORS = ['#F59E0B', '#94A3B8', '#D97706'];
 
 // ── Sport-specific score formatting ───────────────────────────────
 function formatMatchScore(m: MatchDto): { home: string; away: string; detail?: string } {
-  const dispHome = (m as any).homeScoreDisplay;
-  const dispAway = (m as any).awayScoreDisplay;
+  const dispHome = m.homeScoreDisplay;
+  const dispAway = m.awayScoreDisplay;
   if (dispHome != null && String(dispHome).trim() !== '' && dispAway != null && String(dispAway).trim() !== '') {
     return {
       home: String(dispHome).trim(),
@@ -258,13 +252,17 @@ export default function SportsHubScreen() {
                   setScoreFlash(id);
                   setTimeout(() => setScoreFlash(cur => cur === id ? null : cur), 900);
                 }
-              } catch {}
+              } catch (err) {
+                secureLog.warn(`[SportsHub] WS message parse error: ${err instanceof Error ? err.message : String(err)}`);
+              }
             };
             client.subscribe(`/topic/sports.match.${id}`, handleUpdate);
             client.subscribe(`/topic/match/${id}/state`,  handleUpdate);
           });
         },
-        onStompError: () => {},
+        onStompError: (frame) => {
+          secureLog.warn(`[SportsHub] STOMP error: ${frame.headers?.message || 'unknown'}`);
+        },
       });
       client.activate();
       stompHubRef.current = client;
@@ -282,14 +280,14 @@ export default function SportsHubScreen() {
     if (!liveMatches) return [];
     return selectedSport === 'ALL'
       ? liveMatches
-      : liveMatches.filter((m) => doesSportMatchFilter((m as any).rawSportName || m.sport, selectedSport));
+      : liveMatches.filter((m) => doesSportMatchFilter(m.rawSportName || m.sport, selectedSport));
   }, [liveMatches, selectedSport]);
 
   const filteredToday = useMemo(() => {
     if (!todayMatches) return [];
     return selectedSport === 'ALL'
       ? todayMatches
-      : todayMatches.filter((m) => doesSportMatchFilter((m as any).rawSportName || m.sport, selectedSport));
+      : todayMatches.filter((m) => doesSportMatchFilter(m.rawSportName || m.sport, selectedSport));
   }, [todayMatches, selectedSport]);
 
   const scheduledMatches = useMemo(() => {
@@ -438,7 +436,7 @@ export default function SportsHubScreen() {
     openTournamentsWithFilteredEvents.reduce((acc, t) => acc + (t.filteredEvents?.length || t.events?.length || 0), 0),
   [openTournamentsWithFilteredEvents]);
 
-  const communityLabel = (user as any)?.community?.name || (user as any)?.communityName || 'Mana Community';
+  const communityLabel = (typeof user?.community === 'object' ? user.community?.name : undefined) || user?.communityName || 'Mana Community';
 
   // ── Render Helpers ────────────────────────────────────────────
 
@@ -469,7 +467,7 @@ export default function SportsHubScreen() {
               </View>
               <View style={s.heroScoreCol}>
                 <Text style={[s.heroScoreBig, { fontSize: 22, letterSpacing: 1 }]}>VS</Text>
-                <Text style={s.heroLeadStatus}>{typeof next.venue === 'string' ? next.venue : (next.venue as any)?.name || 'Community Arena'}</Text>
+                <Text style={s.heroLeadStatus}>{getVenueName(next.venue) || 'Community Arena'}</Text>
                 {next.round && <Text style={[s.heroLeadStatus, { marginTop: 2, fontWeight: '800' }]}>{next.round}</Text>}
               </View>
               <View style={s.heroTeamCol}>
@@ -520,7 +518,7 @@ export default function SportsHubScreen() {
           <View style={s.heroScoreCol}>
             <View style={{ alignItems: 'center' }}>
               <Text style={[s.heroScoreBig, scoreFlash === activeLiveMatch.id && s.heroScoreFlash]}>
-                {(activeLiveMatch as any).homeScoreDisplay || (activeLiveMatch as any).awayScoreDisplay
+                {activeLiveMatch.homeScoreDisplay || activeLiveMatch.awayScoreDisplay
                   ? `${scoreInfo.home} : ${scoreInfo.away}`
                   : (
                     <>
@@ -713,7 +711,7 @@ export default function SportsHubScreen() {
             {profileStats.stats.length > 0 && (
               <View style={s.profileSportStatsRow}>
                 {profileStats.stats.slice(0, 4).map((ss, i) => {
-                  const e = SPORT_EMOJI_MAP[ss.sport?.toUpperCase()] || '🏅';
+                  const e = SPORT_EMOJI[ss.sport?.toUpperCase()] || '🏅';
                   const matches = ss.matchesPlayed || ss.matches || 0;
                   const winRate = ss.wins != null && matches > 0
                     ? Math.round((ss.wins / matches) * 100)
@@ -873,7 +871,7 @@ export default function SportsHubScreen() {
                     {displayEvents.length > 0 && <View style={s.eventsListWrap}>
                       {displayEvents.map((ev: DashboardEventCardDto) => {
                         const sportUp = (ev.sportName || '').toUpperCase().replace(/\s+/g, '_');
-                        const sportEmoji = SPORT_EMOJI_MAP[sportUp] || '🏅';
+                        const sportEmoji = SPORT_EMOJI[sportUp] || '🏅';
                         const isRegistered = ev.myRegistrationId != null || allRegistrations.some(r => String(r.id) === String(ev.id) || r.tournamentName === ev.name);
                         const max = ev.maxParticipants ?? 0;
                         const registered = ev.registeredCount ?? 0;
@@ -997,7 +995,7 @@ export default function SportsHubScreen() {
               >
                 {allRegistrations.map(r => {
                   const isConfirmed = r.status === 'Confirmed';
-                  const emoji = SPORT_EMOJI_MAP[r.sport.toUpperCase().replace(/\s+/g, '_')] || '🏅';
+                  const emoji = SPORT_EMOJI[r.sport.toUpperCase().replace(/\s+/g, '_')] || '🏅';
                   const reg = r as any;
                   const cardWidth = allRegistrations.length > 1 ? Math.min(284, SCREEN_W - 76) : Math.max(260, SCREEN_W - 58);
                   return (
@@ -1106,10 +1104,10 @@ export default function SportsHubScreen() {
             </View>
           ) : (
             scheduledMatches.map((m, idx) => {
-              const sportEmoji = SPORT_EMOJI_MAP[m.sport?.toUpperCase()] || '🏅';
+              const sportEmoji = SPORT_EMOJI[m.sport?.toUpperCase()] || '🏅';
               const timeStr = m.scheduledAt ? safeFormat(m.scheduledAt, 'hh:mm a', 'Scheduled') : 'Scheduled';
               const dateStr = m.scheduledAt ? safeFormat(m.scheduledAt, 'dd MMM', '') : '';
-              const venue = typeof m.venue === 'string' ? m.venue : (m.venue as any)?.name || '';
+              const venue = getVenueName(m.venue);
               return (
                 <TouchableOpacity key={m.id || idx} style={[s.fixtureRow, idx > 0 && s.fixtureBorder]}
                   onPress={() => router.push(`/sports/match/${m.id}`)} activeOpacity={0.8}>
@@ -1172,7 +1170,7 @@ export default function SportsHubScreen() {
           ) : (
             <View style={s.resultsList}>
               {recentCompleted.map((res: any) => {
-                const sportEmoji = SPORT_EMOJI_MAP[res.sport?.toUpperCase()] || '🏅';
+                const sportEmoji = SPORT_EMOJI[res.sport?.toUpperCase()] || '🏅';
                 const score = formatMatchScore(res);
                 const winner = res.winnerTeamName;
                 const completedTime = res.endedAt || res.completedAt;
@@ -1252,7 +1250,7 @@ export default function SportsHubScreen() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hScroll}>
               {sportsFacilities.map(court => {
-                const sportEmoji = SPORT_EMOJI_MAP[court.type?.toUpperCase()] || '🏟️';
+                const sportEmoji = SPORT_EMOJI[court.type?.toUpperCase()] || '🏟️';
                 return (
                   <TouchableOpacity key={court.id} style={s.courtCard}
                     onPress={() => router.push(`/sports/facility/${court.id}` as any)} activeOpacity={0.8}>

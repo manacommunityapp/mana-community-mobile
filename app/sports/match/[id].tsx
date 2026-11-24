@@ -10,6 +10,7 @@ import { useLiveScore } from '@/hooks/useLiveScore';
 import { useAuth } from '@/hooks/useAuth';
 import { useModuleGuard } from '@/hooks/useRoleGuard';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { SPORT_EMOJI, getVenueName, getVenueDisplay } from '@/constants/sports';
 import { format, formatDistanceToNow } from 'date-fns';
 import { safeFormat } from '@/utils/dateUtils';
 import { shareMatch } from '@/utils/sportsShare';
@@ -17,12 +18,6 @@ import { LiveScoringModal } from '@/components/sports/LiveScoringModal';
 import { commuteService } from '@/services/commuteService';
 import { useQuery } from '@tanstack/react-query';
 import type { MatchDto, MatchEventDto, CommuteRideDto } from '@/types/api';
-
-const SPORT_EMOJI: Record<string, string> = {
-  CRICKET:'🏏', FOOTBALL:'⚽', BADMINTON:'🏸', TABLE_TENNIS:'🏓',
-  PICKLEBALL:'🏓', TENNIS:'🎾', SWIMMING:'🏊',
-  BASKETBALL:'🏀', VOLLEYBALL:'🏐', CHESS:'♟️', CARROM:'🎯', OTHER:'🏅',
-};
 
 const EVENT_ICON: Record<string, string> = {
   GOAL:        '⚽', WICKET:    '🏏', POINT:  '🎯',
@@ -35,8 +30,8 @@ function Scoreboard({ match }: { match: MatchDto }) {
   const sport = match.sport;
   const isLive = match.status === 'LIVE';
   const isDone = match.status === 'COMPLETED';
-  const dispHome = (match as any).homeScoreDisplay;
-  const dispAway = (match as any).awayScoreDisplay;
+  const dispHome = match.homeScoreDisplay;
+  const dispAway = match.awayScoreDisplay;
 
   if (sport === 'CRICKET') {
     return (
@@ -178,11 +173,7 @@ export default function LiveMatchScreen() {
   useModuleGuard('SPORTS');
 
   // Derive venue string for ride search
-  const venueStr = match
-    ? (typeof match.venue === 'object' && match.venue !== null
-        ? [(match.venue as any).name, (match.venue as any).area].filter(Boolean).join(', ') || (match.venue as any).address || ''
-        : typeof match.venue === 'string' ? match.venue : '')
-    : '';
+  const venueStr = match ? getVenueName(match.venue) : '';
 
   // Fetch rides to this venue only when match is scheduled
   const { data: ridesPage } = useQuery({
@@ -299,9 +290,7 @@ export default function LiveMatchScreen() {
             </Text>
           )}
           {(() => {
-            const venueStr = typeof match.venue === 'object' && match.venue !== null
-              ? [(match.venue as any).name, (match.venue as any).area, (match.venue as any).city].filter(Boolean).join(', ') || (match.venue as any).address || ''
-              : typeof match.venue === 'string' ? match.venue : '';
+            const venueStr = getVenueDisplay(match.venue);
             return venueStr ? (
               <Text style={scr.venue}>📍 {venueStr}</Text>
             ) : null;
@@ -329,7 +318,9 @@ export default function LiveMatchScreen() {
           {isDone && (
             <View style={scr.resultBanner}>
               <Text style={scr.resultText}>
-                {match.homeScore > match.awayScore
+                {match.winnerTeamName
+                  ? `${match.winnerTeamName} won!`
+                  : match.homeScore > match.awayScore
                   ? `${match.homeTeamName} won!`
                   : match.awayScore > match.homeScore
                   ? `${match.awayTeamName} won!`

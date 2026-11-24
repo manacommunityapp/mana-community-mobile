@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, RefreshControl,
@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { sportsAuctionService } from '@/services/sportsAuctionService';
 import type { SportsAuctionConfigResponse } from '@/types/api';
@@ -22,25 +23,22 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function SportsAuctionListScreen() {
   const router = useRouter();
-  const [tab, setTab]           = useState<Tab>('active');
-  const [configs, setConfigs]   = useState<SportsAuctionConfigResponse[]>([]);
-  const [watchSet, setWatchSet] = useState<Set<number>>(new Set());
-  const [loading, setLoading]   = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const qc = useQueryClient();
+  const [tab, setTab] = useState<Tab>('active');
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    const [all, watched] = await Promise.all([
-      sportsAuctionService.getMyConfigs(),
-      sportsAuctionService.getWatchList(),
-    ]);
-    setConfigs(all);
-    setWatchSet(new Set(watched));
-    setLoading(false);
-    setRefreshing(false);
-  }, []);
+  const { data, isLoading: loading, refetch } = useQuery({
+    queryKey: ['auction-list'],
+    queryFn: async () => {
+      const [all, watched] = await Promise.all([
+        sportsAuctionService.getMyConfigs(),
+        sportsAuctionService.getWatchList(),
+      ]);
+      return { configs: all, watchSet: new Set(watched) };
+    },
+  });
 
-  useEffect(() => { load(); }, [load]);
+  const configs = data?.configs ?? [];
+  const watchSet = data?.watchSet ?? new Set<number>();
 
   const displayed = configs.filter((c) => {
     const st = String(c.status || '').toUpperCase();
@@ -59,11 +57,10 @@ export default function SportsAuctionListScreen() {
   async function toggleWatch(id: number) {
     if (watchSet.has(id)) {
       await sportsAuctionService.unwatchAuction(id);
-      setWatchSet((s) => { const n = new Set(s); n.delete(id); return n; });
     } else {
       await sportsAuctionService.watchAuction(id);
-      setWatchSet((s) => new Set(s).add(id));
     }
+    qc.invalidateQueries({ queryKey: ['auction-list'] });
   }
 
   function renderItem({ item }: { item: SportsAuctionConfigResponse }) {
@@ -142,7 +139,7 @@ export default function SportsAuctionListScreen() {
           renderItem={renderItem}
           contentContainerStyle={{ padding: 14, gap: 12, paddingBottom: 32 }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} />
+            <RefreshControl refreshing={false} onRefresh={() => { refetch(); }} />
           }
           ListEmptyComponent={
             <View style={s.empty}>

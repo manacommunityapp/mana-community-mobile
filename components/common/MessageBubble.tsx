@@ -2,7 +2,8 @@ import React, { memo } from 'react';
 import { View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import { CachedImage as Image } from '@/components/common/CachedImage';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
-import { ChatMessageDto, ChatAttachmentDto } from '@/types/api';
+import type { ChatAttachmentDto } from '@/types/api';
+import type { LocalMessage } from '@/hooks/useChatWindow';
 import { COLORS, getInitials } from '@/constants/config';
 
 // ── Date separator between message groups ─────────────────────
@@ -121,12 +122,13 @@ const att = StyleSheet.create({
 
 // ── Main MessageBubble ─────────────────────────────────────────
 interface Props {
-  message: ChatMessageDto;
+  message: LocalMessage;
   isMine: boolean;
-  showAvatar: boolean;          // show avatar for first msg in a received group
-  prevMessage?: ChatMessageDto; // used to decide if date separator is needed
+  showAvatar: boolean;
+  prevMessage?: LocalMessage;
   searchQuery?: string;
   isCurrentMatch?: boolean;
+  onLongPress?: (message: LocalMessage) => void;
 }
 
 function HighlightedText({
@@ -176,7 +178,7 @@ function HighlightedText({
 }
 
 export const MessageBubble = memo(function MessageBubble({
-  message, isMine, showAvatar, prevMessage, searchQuery, isCurrentMatch,
+  message, isMine, showAvatar, prevMessage, searchQuery, isCurrentMatch, onLongPress,
 }: Props) {
   if (message.type === 'system') {
     return <SystemBubble content={message.content} />;
@@ -192,13 +194,17 @@ export const MessageBubble = memo(function MessageBubble({
 
       <View style={[bub.row, isMine ? bub.rowMine : bub.rowTheirs, isCurrentMatch && bub.focusedMatch]}>
 
-        {/* Avatar on the left for received messages */}
         {!isMine && (showAvatar
           ? <MiniAvatar name={message.senderName} />
-          : <View style={{ width: 34 }} />   /* spacer to keep alignment */
+          : <View style={{ width: 34 }} />
         )}
 
-        <View style={[bub.bubble, isMine ? bub.mine : bub.theirs]}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onLongPress={() => onLongPress?.(message)}
+          delayLongPress={400}
+          style={[bub.bubble, isMine ? bub.mine : bub.theirs]}
+        >
           {/* Sender name — only show in groups/when needed */}
           {!isMine && showAvatar && (
             <Text style={bub.senderName}>{message.senderName}</Text>
@@ -220,12 +226,15 @@ export const MessageBubble = memo(function MessageBubble({
           )}
 
           <View style={bub.meta}>
+            {message._failed && (
+              <Text style={bub.failedLabel}>Failed</Text>
+            )}
             <Text style={[bub.time, isMine ? bub.timeMine : bub.timeTheirs]}>
               {format(msgDate, 'h:mm a')}
             </Text>
-            {isMine && <Ticks readAt={message.readAt} />}
+            {isMine && !message._failed && <Ticks readAt={message.readAt} />}
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
     </>
   );
@@ -249,4 +258,5 @@ const bub = StyleSheet.create({
   highlightMine:{ backgroundColor: '#FDE047', color: '#1E1B4B', fontWeight: '700' },
   highlightTheirs:{ backgroundColor: '#FEF08A', color: '#854D0E', fontWeight: '700' },
   focusedMatch: { backgroundColor: 'rgba(254, 240, 138, 0.18)', borderRadius: 8 },
+  failedLabel: { fontSize: 11, color: '#EF4444', fontFamily: 'DMSans-Medium', fontWeight: '500', marginRight: 4 },
 });

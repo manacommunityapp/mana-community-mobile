@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { authService } from '@/services/authService';
 import { tokenStore, setTenantCommunityId } from '@/services/apiClient';
 import type { UserProfileResponse, LoginRequest, RegisterRequest } from '@/types/api';
-import { ROLE_PERMISSIONS, type UserRole } from '@/constants/permissions';
+import { ROLE_PERMISSIONS, ROLE_ALIASES, type UserRole } from '@/constants/permissions';
+import { normalizeRoles } from '@/constants/roleAliases';
 
 export type UserPersona = 'RESIDENT' | 'ADMIN' | 'STAFF' | 'VENDOR';
 
@@ -101,7 +102,16 @@ export function computeEffectivePermissions(roles: string[], directPermissions?:
   const perms = new Set<string>(directPermissions || []);
   for (const r of roles) {
     const roleKey = r.trim().toUpperCase() as UserRole;
-    const rp = ROLE_PERMISSIONS[roleKey];
+    let rp = ROLE_PERMISSIONS[roleKey];
+    if (!rp) {
+      const aliases = ROLE_ALIASES[roleKey] || [];
+      for (const alias of aliases) {
+        if (ROLE_PERMISSIONS[alias as UserRole]) {
+          rp = ROLE_PERMISSIONS[alias as UserRole];
+          break;
+        }
+      }
+    }
     if (!rp) continue;
     if (rp.includes('*')) {
       return ['*'];
@@ -116,10 +126,10 @@ export function computeEffectivePermissions(roles: string[], directPermissions?:
 function computeRoles(user: UserProfileResponse | null): string[] {
   if (!user) return [];
   if (user.roles && user.roles.length > 0) {
-    return user.roles.map(r => r.trim().toUpperCase());
+    return normalizeRoles(user.roles);
   }
   if (user.role) {
-    return user.role.split(',').map(r => r.trim().toUpperCase()).filter(Boolean);
+    return normalizeRoles(user.role.split(','));
   }
   return [];
 }
@@ -226,7 +236,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     const { roles, isSuperAdmin } = get();
     if (isSuperAdmin) return true;
     const upperRoles = checkRoles.map(r => r.trim().toUpperCase());
-    return upperRoles.some(r => roles.includes(r));
+    return upperRoles.some(r => {
+      if (roles.includes(r)) return true;
+      const aliases = ROLE_ALIASES[r] || [];
+      return aliases.some(alias => roles.includes(alias));
+    });
   },
 
   switchPersona: (persona: UserPersona) => {

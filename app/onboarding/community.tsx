@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services/authService';
 import { StepHeader } from './account';
 import { COLORS } from '@/constants/config';
@@ -14,10 +15,12 @@ import type { CommunityPreviewDto } from '@/types/api';
 export default function CommunityStep() {
   const router = useRouter();
   const { setCommunity, inviteCode: savedCode, community: savedCommunity } = useOnboarding();
+  const { register } = useAuth();
 
   const [code,      setCode]      = useState(savedCode);
   const [community, setCommunityLocal] = useState<CommunityPreviewDto | null>(savedCommunity);
   const [loading,   setLoading]   = useState(false);
+  const [skipLoading, setSkipLoading] = useState(false);
   const [error,     setError]     = useState('');
 
   async function handleLookup() {
@@ -44,6 +47,35 @@ export default function CommunityStep() {
     if (!community) { setError('Find your community first'); return; }
     setCommunity(code.trim().toUpperCase(), community);
     router.push('/onboarding/details');
+  }
+
+  async function handleSkipCommunity() {
+    const { name, email, phone, password } = useOnboarding.getState();
+    if (!name || !email || !password) {
+      router.push('/onboarding/account');
+      return;
+    }
+    setSkipLoading(true);
+    try {
+      const digitsOnly = (phone || '').replace(/\D/g, '');
+      const cleanPhone10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+      await register({
+        fullName: name.trim(),
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: cleanPhone10,
+        mobile: cleanPhone10,
+        password,
+        consentToPrivacyNotice: true,
+      });
+      useOnboarding.getState().clearPassword();
+      router.replace('/tabs/feed');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Registration failed. Please try again.';
+      Alert.alert('Registration Error', msg);
+    } finally {
+      setSkipLoading(false);
+    }
   }
 
   return (
@@ -122,31 +154,41 @@ export default function CommunityStep() {
             </View>
           )}
 
-          {/* Skip code option */}
-          <View style={s.dividerRow}>
-            <View style={s.divider} />
-            <Text style={s.dividerText}>or</Text>
-            <View style={s.divider} />
-          </View>
-
-          <TouchableOpacity
-            style={s.searchBtn}
-            onPress={() => {
-              // For now just prompt — full city search can be added later
-              setError("Ask your admin for the invite code. They can find it in Admin → Settings → Invite Code.");
-            }}
-          >
-            <Text style={s.searchBtnText}>🔍 Search by community name</Text>
-          </TouchableOpacity>
-
-          <View style={{ height: 8 }} />
-
+          {/* Continue with community button */}
           <TouchableOpacity
             style={[s.nextBtn, !community && s.nextBtnDisabled]}
             onPress={handleNext}
             activeOpacity={0.85}
+            disabled={!community}
           >
-            <Text style={s.nextBtnText}>Continue →</Text>
+            <Text style={s.nextBtnText}>Continue with Society →</Text>
+          </TouchableOpacity>
+
+          {/* Skip code / Standalone Option */}
+          <View style={s.dividerRow}>
+            <View style={s.divider} />
+            <Text style={s.dividerText}>or continue without code</Text>
+            <View style={s.divider} />
+          </View>
+
+          <TouchableOpacity
+            style={s.skipCard}
+            onPress={handleSkipCommunity}
+            disabled={skipLoading}
+            activeOpacity={0.85}
+          >
+            <View style={s.skipIconBox}>
+              <Text style={s.skipEmoji}>✨</Text>
+            </View>
+            <View style={s.skipInfo}>
+              <Text style={s.skipTitle}>Join a community later</Text>
+              <Text style={s.skipSub}>Use Mana standalone for personal finance, marketplace, events & sports</Text>
+            </View>
+            {skipLoading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Text style={s.skipArrow}>→</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -184,4 +226,11 @@ const s = StyleSheet.create({
   nextBtn:         { backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   nextBtnDisabled: { opacity: 0.4 },
   nextBtnText:     { color: '#fff', fontWeight: '800', fontSize: 16 },
+  skipCard:        { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E2E8F0' },
+  skipIconBox:     { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  skipEmoji:       { fontSize: 20 },
+  skipInfo:        { flex: 1, gap: 2 },
+  skipTitle:       { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  skipSub:         { fontSize: 11.5, color: COLORS.textMuted, lineHeight: 16 },
+  skipArrow:       { fontSize: 18, fontWeight: '700', color: COLORS.primary },
 });

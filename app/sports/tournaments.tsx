@@ -8,7 +8,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { sportsService } from '@/services/sportsService';
-import { TournamentCard, SPORT_EMOJI } from '@/components/sports/TournamentCard';
+import { TournamentCard } from '@/components/sports/TournamentCard';
+import { SPORT_EMOJI } from '@/constants/sports';
 import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import type { SportType } from '@/types/api';
@@ -18,12 +19,12 @@ const SPORTS_LIST: { key: SportType | 'ALL'; label: string; emoji: string }[] = 
   { key: 'CRICKET',      label: 'Cricket',       emoji: '🏏' },
   { key: 'BADMINTON',    label: 'Badminton',     emoji: '🏸' },
   { key: 'FOOTBALL',     label: 'Football',      emoji: '⚽' },
-  { key: 'PICKLEBALL' as SportType, label: 'Pickleball', emoji: '🏓' },
-  { key: 'TENNIS' as SportType,     label: 'Tennis',     emoji: '🎾' },
+  { key: 'PICKLEBALL', label: 'Pickleball', emoji: '🏓' },
+  { key: 'TENNIS',     label: 'Tennis',     emoji: '🎾' },
   { key: 'TABLE_TENNIS', label: 'Table Tennis',  emoji: '🏓' },
   { key: 'BASKETBALL',   label: 'Basketball',    emoji: '🏀' },
   { key: 'VOLLEYBALL',   label: 'Volleyball',    emoji: '🏐' },
-  { key: 'SWIMMING' as SportType,   label: 'Swimming',   emoji: '🏊' },
+  { key: 'SWIMMING',   label: 'Swimming',   emoji: '🏊' },
   { key: 'CHESS',        label: 'Chess',         emoji: '♟️' },
   { key: 'CARROM',       label: 'Carrom',        emoji: '🎯' },
 ];

@@ -11,11 +11,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { sportsService } from '@/services/sportsService';
 import { ScoreCard } from '@/components/sports/ScoreCard';
-import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
 import { COLORS } from '@/constants/config';
 import { safeFormat, formatTournamentDateRange } from '@/utils/dateUtils';
 import { shareTournament } from '@/utils/sportsShare';
 import { TournamentBracketView } from '@/components/sports/TournamentBracketView';
+import { SPORT_EMOJI, getVenueDisplay } from '@/constants/sports';
 import type { DashboardEventCardDto, DashboardTournamentCardDto } from '@/types/api';
 
 const TABS = ['Overview', 'Sports Groups', 'Schedule', 'Standings', 'Brackets'] as const;
@@ -26,15 +26,9 @@ const FORMAT_LABEL: Record<string, string> = {
   LEAGUE:   'League',   SWISS:       'Swiss',
 };
 
-const SPORT_EMOJI_MAP: Record<string, string> = {
-  BADMINTON: '🏸', CRICKET: '🏏', FOOTBALL: '⚽', TENNIS: '🎾',
-  TABLE_TENNIS: '🏓', PICKLEBALL: '🏓', SWIMMING: '🏊', BASKETBALL: '🏀',
-  GYM: '💪', SQUASH: '🎾',
-};
-
 // ── Category Card ──────────────────────────────────────────────
 function CategoryCard({ ev, onRegister }: { ev: DashboardEventCardDto; onRegister?: (ev: DashboardEventCardDto) => void }) {
-  const sportEmoji = SPORT_EMOJI_MAP[(ev.sportName ?? '').toUpperCase().replace(/\s+/g, '_')] ?? '🏅';
+  const sportEmoji = SPORT_EMOJI[(ev.sportName ?? '').toUpperCase().replace(/\s+/g, '_')] ?? '🏅';
   const isOpen = (ev.registrationStatus ?? '').toUpperCase() === 'REGISTRATION_OPEN';
   const isClosed = !isOpen;
   const isRegistered = ev.myRegistrationId != null;
@@ -209,20 +203,21 @@ export default function TournamentDetailScreen() {
   });
 
   const dashTournament = openTournamentsDash.find(t => Number(t.id) === Number(id));
-  const rawTournamentEvents = (tournament as any)?.sportsEvents || (tournament as any)?.events || [];
+  const rawTournamentEvents = tournament?.sportsEvents || tournament?.events || [];
   const events: DashboardEventCardDto[] = (dashTournament?.events && dashTournament.events.length > 0)
     ? dashTournament.events
     : rawTournamentEvents.map((ev: any) => ({
         id: ev.id,
+        uuid: ev.uuid ?? null,
         name: ev.name || tournament?.name || 'Event',
-        eventDateStart: ev.eventDateStart || (tournament as any)?.startDate || null,
-        eventDateEnd: ev.eventDateEnd || (tournament as any)?.endDate || null,
+        eventDateStart: ev.eventDateStart || tournament?.startDate || null,
+        eventDateEnd: ev.eventDateEnd || tournament?.endDate || null,
         sportName: ev.sport?.name || ev.sportName || tournament?.sport || 'Sports',
         categoryName: ev.categories?.[0]?.name || ev.categoryName || ev.name || '',
         venueName: ev.venue?.name || ev.venueName || (typeof tournament?.venue === 'string' ? tournament.venue : ''),
-        maxParticipants: ev.maxParticipants ?? (tournament as any)?.maxTeams ?? null,
+        maxParticipants: ev.maxParticipants ?? tournament?.maxTeams ?? null,
         registeredCount: ev.registeredCount ?? 0,
-        registrationStatus: ev.status || ev.registrationStatus || (tournament as any)?.registrationStatus || tournament?.status || 'REGISTRATION_OPEN',
+        registrationStatus: ev.status || ev.registrationStatus || tournament?.registrationStatus || tournament?.status || 'REGISTRATION_OPEN',
         auctionStatus: ev.auctionStatus ?? null,
         teamSport: (ev.minPlayers && ev.minPlayers > 1) || false,
         myRegistrationId: ev.myRegistrationId ?? null,
@@ -235,7 +230,7 @@ export default function TournamentDetailScreen() {
     const sport = ev.sportName ?? 'Other';
     if (!sportGroupsMap.has(sport)) {
       sportGroupsMap.set(sport, {
-        emoji: SPORT_EMOJI_MAP[sport.toUpperCase().replace(/\s+/g, '_')] ?? '🏅',
+        emoji: SPORT_EMOJI[sport.toUpperCase().replace(/\s+/g, '_')] ?? '🏅',
         events: [],
       });
     }
@@ -285,15 +280,13 @@ export default function TournamentDetailScreen() {
   const canRegister = tournament.status === 'REGISTRATION_OPEN' && !tournament.myTeamRegistered;
   const isRegOpen = (dashTournament?.registrationStatus ?? tournament.status ?? '').toUpperCase() === 'REGISTRATION_OPEN';
 
-  const startDateVal = (tournament as any).startDate ?? (tournament as any).eventDateStart;
-  const endDateVal = (tournament as any).endDate ?? (tournament as any).eventDateEnd;
-  const regDeadlineVal = (tournament as any).registrationDeadline ?? (tournament as any).registrationDateEnd;
+  const startDateVal = tournament.startDate ?? tournament.eventDateStart;
+  const endDateVal = tournament.endDate ?? tournament.eventDateEnd;
+  const regDeadlineVal = tournament.registrationDeadline;
   const datesFormatted = formatTournamentDateRange(startDateVal, endDateVal);
   const regDeadlineFormatted = regDeadlineVal ? safeFormat(regDeadlineVal, 'dd MMM, h:mm a') : '';
 
-  const venueStr = typeof tournament.venue === 'object' && tournament.venue !== null
-    ? [(tournament.venue as any).name, (tournament.venue as any).area, (tournament.venue as any).city].filter(Boolean).join(', ') || (tournament.venue as any).address || ''
-    : typeof tournament.venue === 'string' ? tournament.venue : '';
+  const venueStr = getVenueDisplay(tournament.venue);
 
   const prizesStr = typeof tournament.prizes === 'object' && tournament.prizes !== null
     ? ((tournament.prizes as any).name || (tournament.prizes as any).description || JSON.stringify(tournament.prizes))

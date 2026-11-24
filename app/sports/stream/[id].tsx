@@ -8,12 +8,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { sportsService } from '@/services/sportsService';
 import type { SportsStreamResponse } from '@/types/api';
-
-const POLL_MS = 5000;
 
 export default function StreamViewerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,31 +20,25 @@ export default function StreamViewerScreen() {
   const { user } = useAuth();
   const matchId  = Number(id);
 
-  const [stream, setStream]       = useState<SportsStreamResponse | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const qc = useQueryClient();
   const [activeCamId, setActiveCamId] = useState<number | null>(null);
   const [chatMsg, setChatMsg]     = useState('');
   const [sending, setSending]     = useState(false);
   const flatRef = useRef<FlatList>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function fetchStream() {
-    try {
+  const { data: stream = null, isLoading: loading } = useQuery({
+    queryKey: ['stream', matchId],
+    queryFn: async () => {
       const data = await sportsService.getStream(matchId);
-      setStream(data);
       if (!activeCamId) {
         const active = data.cameras.find((c) => c.active);
         if (active) setActiveCamId(active.id);
       }
-    } catch { /* silent */ }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => {
-    fetchStream();
-    pollRef.current = setInterval(fetchStream, POLL_MS);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [matchId]);
+      return data;
+    },
+    enabled: !!matchId,
+    refetchInterval: 5000,
+  });
 
   useEffect(() => {
     if ((stream?.messages.length ?? 0) > 0) {
@@ -57,8 +50,8 @@ export default function StreamViewerScreen() {
     if (!chatMsg.trim() || !user) return;
     setSending(true);
     try {
-      const updated = await sportsService.postStreamMessage(matchId, { text: chatMsg.trim(), commentary: false });
-      setStream(updated);
+      await sportsService.postStreamMessage(matchId, { text: chatMsg.trim(), commentary: false });
+      qc.invalidateQueries({ queryKey: ['stream', matchId] });
       setChatMsg('');
     } catch { /* silent */ }
     finally { setSending(false); }

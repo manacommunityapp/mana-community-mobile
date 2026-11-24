@@ -143,6 +143,18 @@ export const feedService = {
     }
 
     if (!anyEndpointResponded) {
+      const status = lastError?.response?.status;
+      const msg = String(lastError?.response?.data?.message || lastError?.message || '').toLowerCase();
+      if (status === 404 || (status === 400 && msg.includes('community'))) {
+        return {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          page,
+          number: page,
+          size,
+        };
+      }
       throw new Error(lastError?.response?.data?.message || lastError?.message || 'Unable to load the community feed. Please try again.');
     }
 

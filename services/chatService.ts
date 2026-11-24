@@ -15,12 +15,8 @@ export const chatService = {
   },
 
   async getContacts(): Promise<ChatContactDto[]> {
-    try {
-      const res = await api.get<ChatContactDto[]>('/chat/contacts');
-      return res.data;
-    } catch {
-      return [];
-    }
+    const res = await api.get<ChatContactDto[]>('/chat/contacts');
+    return res.data;
   },
 
   async startDirect(userId: number): Promise<ConversationDto> {
@@ -33,23 +29,16 @@ export const chatService = {
       const res = await api.post<ConversationDto>('/chat/conversations/group', { title, userIds });
       return res.data;
     } catch {
-      try {
-        const res = await api.post<any>('/groups', { name: title, description: `Group chat: ${title}` });
-        return {
-          id: res.data.id || Date.now(),
-          type: 'GROUP',
-          title,
-          name: title,
-          isGroup: true,
-          unreadCount: 0,
-          participants: userIds.map((id) => ({ userId: id, name: `Member ${id}`, online: false })),
-        };
-      } catch {
-        if (userIds.length > 0) {
-          return await chatService.startDirect(userIds[0]);
-        }
-        throw new Error('Unable to create group chat');
-      }
+      const res = await api.post<any>('/groups', { name: title, description: `Group chat: ${title}` });
+      return {
+        id: res.data.id || Date.now(),
+        type: 'GROUP',
+        title,
+        name: title,
+        isGroup: true,
+        unreadCount: 0,
+        participants: userIds.map((id) => ({ userId: id, name: `Member ${id}`, online: false })),
+      };
     }
   },
 

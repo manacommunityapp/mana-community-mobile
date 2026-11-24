@@ -2,14 +2,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SHADOWS } from '@/constants/config';
+import { SPORT_EMOJI } from '@/constants/sports';
 import type { TournamentDto } from '@/types/api';
-
-export const SPORT_EMOJI: Record<string, string> = {
-  CRICKET: '🏏', FOOTBALL: '⚽', BADMINTON: '🏸',
-  TABLE_TENNIS: '🏓', BASKETBALL: '🏀', VOLLEYBALL: '🏐',
-  CHESS: '♟️', CARROM: '🎯', TENNIS: '🎾', SWIMMING: '🏊',
-  PICKLEBALL: '🏓', OTHER: '🏅',
-};
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   UPCOMING:            { label: 'Upcoming',    bg: '#EEF2FF', text: '#4F46E5', dot: '#818CF8' },

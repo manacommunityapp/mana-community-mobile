@@ -28,13 +28,13 @@ export default function TrainerProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const communityId = (user as any)?.communityId ?? (user as any)?.community?.id;
+  const communityId = user?.communityId ?? (typeof user?.community === 'object' ? user.community?.id : undefined);
 
   // Fetch all trainers and find this one (avoids a separate endpoint)
   const { data: trainers = [], isLoading: loadingTrainers } = useQuery({
     queryKey:  ['sports-trainers', communityId],
-    queryFn:   () => sportsTrainerService.listApproved(communityId),
-    enabled:   !!communityId,
+    queryFn:   () => sportsTrainerService.listApproved(communityId!),
+    enabled:   communityId != null,
     staleTime: 2 * 60 * 1000,
   });
   const trainer: SportsTrainerDto | undefined = trainers.find(t => String(t.id) === id);

@@ -7,17 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { facilityService, SlotDto } from '@/services/facilityService';
+import { facilityService, SlotDto, FacilityBookingDto } from '@/services/facilityService';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
+import { FACILITY_EMOJI } from '@/constants/sports';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-const FACILITY_EMOJI: Record<string, string> = {
-  BADMINTON: '🏸', TENNIS: '🎾', SWIMMING_POOL: '🏊', GYM: '💪',
-  CRICKET: '🏏', FOOTBALL: '⚽', BASKETBALL: '🏀', PARTY_HALL: '🎉',
-  SQUASH: '🎾', TABLE_TENNIS: '🏓', CLUBHOUSE: '🏠', PICKLEBALL: '🏓',
-};
 
 function buildDateStrip(): Array<{ label: string; sub: string; iso: string }> {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -51,7 +46,7 @@ export default function FacilityBookingScreen() {
   const [selectedDate, setSelectedDate] = useState(dateStrip[0].iso);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [booking, setBooking] = useState<any>(null);
+  const [booking, setBooking] = useState<FacilityBookingDto | null>(null);
 
   // Facility details
   const { data: facility, isLoading: loadingFacility } = useQuery({
@@ -275,7 +270,7 @@ export default function FacilityBookingScreen() {
             <Text style={s.successTitle}>✅ Booking Confirmed!</Text>
             <Text style={s.successRef}>Ref: {booking.bookingRef}</Text>
             <Text style={s.successDetail}>{booking.date} · {booking.startTime} – {booking.endTime}</Text>
-            {booking.totalAmount > 0 && (
+            {(booking.totalAmount ?? 0) > 0 && (
               <Text style={s.successAmount}>Total: ₹{booking.totalAmount}</Text>
             )}
             <TouchableOpacity onPress={() => setBooking(null)}>

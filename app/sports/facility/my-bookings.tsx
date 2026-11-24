@@ -9,12 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { facilityService, FacilityBookingDto, FacilityDto } from '@/services/facilityService';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
-
-const FACILITY_EMOJI: Record<string, string> = {
-  BADMINTON: '🏸', TENNIS: '🎾', SWIMMING_POOL: '🏊', GYM: '💪',
-  CRICKET: '🏏', FOOTBALL: '⚽', BASKETBALL: '🏀', PARTY_HALL: '🎉',
-  SQUASH: '🎾', TABLE_TENNIS: '🏓', CLUBHOUSE: '🏠', PICKLEBALL: '🏓',
-};
+import { FACILITY_EMOJI } from '@/constants/sports';
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   CONFIRMED:  { bg: '#ECFDF5', color: '#065F46' },

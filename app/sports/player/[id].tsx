@@ -10,7 +10,7 @@ import { sportsService } from '@/services/sportsService';
 import { BadgeCard, BadgeRow } from '@/components/sports/BadgeCard';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, getInitials } from '@/constants/config';
-import { SPORT_EMOJI } from '@/components/sports/TournamentCard';
+import { SPORT_EMOJI } from '@/constants/sports';
 import { safeFormat } from '@/utils/dateUtils';
 import type { SportStatDto } from '@/types/api';
 
