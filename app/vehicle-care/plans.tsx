@@ -100,12 +100,12 @@ function CatalogCard({ item, onSubscribe }: { item: WashPlanCatalog; onSubscribe
             <Text style={styles.catName}>{item.name}</Text>
             {item.popular && <View style={styles.catPopular}><Text style={styles.catPopularText}>Popular</Text></View>}
           </View>
-          <Text style={styles.catFreq}>{item.frequency === 'WEEKLY' ? '4 washes/month' : '4 washes/month'} • {item.frequency.toLowerCase()}</Text>
+          <Text style={styles.catFreq}>{item.creditsPerCycle} washes/{item.frequency === 'WEEKLY' ? 'week' : 'month'} • {item.frequency.toLowerCase()}</Text>
         </View>
       </View>
       <View style={styles.catPriceRow}>
         <View>
-          <Text style={styles.catPrice}>₹{item.price}<Text style={styles.catPerCycle}>/{item.frequency === 'WEEKLY' ? 'month' : 'month'}</Text></Text>
+          <Text style={styles.catPrice}>₹{item.price}<Text style={styles.catPerCycle}>/{item.frequency === 'WEEKLY' ? 'week' : 'month'}</Text></Text>
           <Text style={styles.catSavings}>Save {item.savingsPercent}% vs. on-demand</Text>
         </View>
         <TouchableOpacity onPress={onSubscribe} style={styles.subscribeBtn}>
@@ -260,7 +260,7 @@ export default function PlansScreen() {
               <LinearGradient colors={['#312E81', '#4F46E5']} style={styles.modalPlanSummary}>
                 <Text style={{ fontSize: 36, marginBottom: 8 }}>{subscribeModal.emoji}</Text>
                 <Text style={styles.modalPlanName}>{subscribeModal.name}</Text>
-                <Text style={styles.modalPlanFreq}>{subscribeModal.creditsPerCycle} washes per month</Text>
+                <Text style={styles.modalPlanFreq}>{subscribeModal.creditsPerCycle} washes per {subscribeModal.frequency === 'WEEKLY' ? 'week' : 'month'}</Text>
                 <Text style={styles.modalPlanPrice}>₹{subscribeModal.price}/month</Text>
                 <Text style={styles.modalPlanSavings}>Save {subscribeModal.savingsPercent}% vs. on-demand</Text>
               </LinearGradient>

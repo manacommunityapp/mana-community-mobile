@@ -194,6 +194,7 @@ function RootLayout() {
             <Stack.Screen name="projects" />
             <Stack.Screen name="mobility" />
             <Stack.Screen name="experiences" />
+            <Stack.Screen name="vehicle-care" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
