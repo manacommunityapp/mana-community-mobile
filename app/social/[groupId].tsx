@@ -53,20 +53,25 @@ function ChatTab({ groupId }: { groupId: number }) {
         keyExtractor={m => String(m.id)}
         inverted
         contentContainerStyle={styles.chatList}
-        renderItem={({ item }) => (
-          <View style={styles.msgRow}>
-            <View style={styles.msgAvatar}>
-              <Text style={styles.msgAvatarText}>{item.senderName.charAt(0).toUpperCase()}</Text>
+        renderItem={({ item }) => {
+          const displaySender = item.senderName || `Member #${item.senderId ?? ''}`;
+          return (
+            <View style={styles.msgRow}>
+              <View style={styles.msgAvatar}>
+                <Text style={styles.msgAvatarText}>{displaySender.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.msgBubble}>
+                <Text style={styles.msgSender}>{displaySender}</Text>
+                <Text style={styles.msgContent}>{item.content}</Text>
+                <Text style={styles.msgTime}>
+                  {item.sentAt
+                    ? new Date(item.sentAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                    : ''}
+                </Text>
+              </View>
             </View>
-            <View style={styles.msgBubble}>
-              <Text style={styles.msgSender}>{item.senderName}</Text>
-              <Text style={styles.msgContent}>{item.content}</Text>
-              <Text style={styles.msgTime}>
-                {new Date(item.sentAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-          </View>
-        )}
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.emptyChat}>
             <Text style={styles.emptyChatText}>No messages yet. Start the conversation!</Text>
@@ -126,7 +131,9 @@ function EventsTab({ groupId }: { groupId: number }) {
             <View style={styles.eventInfo}>
               <Text style={styles.eventTitle}>{event.title}</Text>
               <Text style={styles.eventMeta}>
-                {new Date(event.scheduledAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {(event.scheduledAt || event.eventDate)
+                  ? new Date((event.scheduledAt || event.eventDate)!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : 'TBD'}
                 {event.location ? ` · ${event.location}` : ''}
               </Text>
             </View>
@@ -171,7 +178,7 @@ function ExpensesTab({ groupId }: { groupId: number }) {
     },
   });
 
-  const totalBalance = expenses.reduce((s, e) => s + e.myBalance, 0);
+  const totalBalance = expenses.reduce((s, e) => s + Number(e.myBalance ?? 0), 0);
 
   if (isLoading) return <ActivityIndicator style={{ flex: 1 }} color={COLORS.primary} />;
 
@@ -180,7 +187,7 @@ function ExpensesTab({ groupId }: { groupId: number }) {
       <View style={[styles.balanceCard, { backgroundColor: totalBalance >= 0 ? COLORS.successLight : COLORS.errorLight }]}>
         <Text style={styles.balanceLabel}>Your Balance</Text>
         <Text style={[styles.balanceAmt, { color: totalBalance >= 0 ? COLORS.successDark : COLORS.errorDark }]}>
-          {totalBalance >= 0 ? '+' : ''}₹{Math.abs(totalBalance).toLocaleString('en-IN')}
+          {totalBalance >= 0 ? '+' : '-'}₹{Math.abs(totalBalance).toLocaleString('en-IN')}
         </Text>
         <Text style={styles.balanceHint}>{totalBalance >= 0 ? 'Others owe you' : 'You owe others'}</Text>
       </View>
@@ -217,17 +224,21 @@ function ExpensesTab({ groupId }: { groupId: number }) {
         </View>
       )}
 
-      {expenses.map(exp => (
-        <View key={exp.id} style={styles.expCard}>
-          <View style={styles.expInfo}>
-            <Text style={styles.expDesc}>{exp.description}</Text>
-            <Text style={styles.expMeta}>Paid by {exp.paidByName} · ₹{exp.amount.toLocaleString('en-IN')}</Text>
+      {expenses.map(exp => {
+        const expBal = Number(exp.myBalance ?? 0);
+        const payerDisplay = exp.paidByName || `Member #${exp.paidBy ?? ''}`;
+        return (
+          <View key={exp.id} style={styles.expCard}>
+            <View style={styles.expInfo}>
+              <Text style={styles.expDesc}>{exp.description}</Text>
+              <Text style={styles.expMeta}>Paid by {payerDisplay} · ₹{Number(exp.amount ?? 0).toLocaleString('en-IN')}</Text>
+            </View>
+            <Text style={[styles.expShare, { color: expBal >= 0 ? COLORS.successDark : COLORS.errorDark }]}>
+              {expBal >= 0 ? '+' : '-'}₹{Math.abs(expBal).toLocaleString('en-IN')}
+            </Text>
           </View>
-          <Text style={[styles.expShare, { color: exp.myBalance >= 0 ? COLORS.successDark : COLORS.errorDark }]}>
-            {exp.myBalance >= 0 ? '+' : ''}₹{Math.abs(exp.myBalance).toLocaleString('en-IN')}
-          </Text>
-        </View>
-      ))}
+        );
+      })}
     </ScrollView>
   );
 }

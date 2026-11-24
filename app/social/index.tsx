@@ -61,8 +61,7 @@ export default function SocialGroupsScreen() {
 
   const { data: allGroups = [], isLoading: loadingAll } = useQuery({
     queryKey: ['social-groups-all', communityId],
-    queryFn: () => socialGroupService.getCommunityGroups(communityId ?? 0),
-    enabled: !!communityId,
+    queryFn: () => socialGroupService.getCommunityGroups(communityId ?? 1),
   });
 
   const { data: myGroups = [], isLoading: loadingMy } = useQuery({
@@ -90,7 +89,12 @@ export default function SocialGroupsScreen() {
     },
   });
 
-  const groups = tab === 'my' ? myGroups : allGroups;
+  const myGroupIds = new Set(myGroups.map(g => g.id));
+  const rawGroups = tab === 'my' ? myGroups : allGroups;
+  const groups = rawGroups.map(g => ({
+    ...g,
+    isMember: Boolean(g.isMember || tab === 'my' || myGroupIds.has(g.id)),
+  }));
   const isLoading = tab === 'my' ? loadingMy : loadingAll;
 
   return (

@@ -68,6 +68,11 @@ export default function KittyPartyLedgerScreen() {
   const [statement, setStatement] = useState<MonthlyStatementResponse | null>(null);
   const [statementLoading, setStatementLoading] = useState(false);
 
+  const [showCreateCycleModal, setShowCreateCycleModal] = useState(false);
+  const [newCycleName, setNewCycleName] = useState('Kitty Pool 2026');
+  const [newCycleAmount, setNewCycleAmount] = useState('2000');
+  const [newCycleMembers, setNewCycleMembers] = useState('12');
+
   useEffect(() => {
     if (circleId) {
       loadData();
@@ -305,6 +310,73 @@ export default function KittyPartyLedgerScreen() {
     }
   };
 
+  const handleCreateCycle = async () => {
+    if (!newCycleName.trim() || !newCycleAmount || !newCycleMembers) {
+      Alert.alert('Required', 'Please fill in all cycle details');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await kittyPartyService.createCycle(circleId, {
+        cycleName: newCycleName.trim(),
+        contributionAmount: parseFloat(newCycleAmount),
+        memberCount: Math.max(2, parseInt(newCycleMembers, 10) || 12),
+        startDate: new Date().toISOString().split('T')[0],
+      });
+      setShowCreateCycleModal(false);
+      Alert.alert('Success', 'Kitty Savings cycle initialized with fixed rotation order!');
+      loadData();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to initialize cycle');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyContribution = async (contributionId: number) => {
+    try {
+      setSubmitting(true);
+      await kittyPartyService.verifyContribution(contributionId);
+      Alert.alert('Verified', 'Contribution verified and logged in audit trail!');
+      loadData();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to verify contribution');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDisbursePayout = async (periodNumber: number) => {
+    if (!cycle?.id) return;
+    try {
+      setSubmitting(true);
+      await kittyPartyService.disbursePayout(cycle.id, periodNumber);
+      Alert.alert('Disbursed', `Month #${periodNumber} payout recorded as DISBURSED!`);
+      loadData();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to record payout disbursement');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResolveDispute = async (disputeId: number) => {
+    try {
+      setSubmitting(true);
+      await kittyPartyService.resolveDispute(circleId, disputeId, {
+        status: 'RESOLVED',
+        resolutionNotes: 'Resolved and verified by circle admin',
+      });
+      const data = await kittyPartyService.getDisputes(circleId);
+      setDisputes(data || []);
+      Alert.alert('Resolved', 'Dispute marked as resolved.');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to resolve dispute');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -327,6 +399,14 @@ export default function KittyPartyLedgerScreen() {
           <Text style={styles.emptyText}>
             This circle does not have an active rotating savings cycle yet.
           </Text>
+          {hasPermission(userRole, 'CREATE_CYCLE') && (
+            <TouchableOpacity
+              style={[styles.payButton, { marginTop: 14, paddingHorizontal: 20 }]}
+              onPress={() => setShowCreateCycleModal(true)}
+            >
+              <Text style={styles.payButtonText}>+ Initialize Kitty Savings Cycle</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <>
@@ -491,6 +571,15 @@ export default function KittyPartyLedgerScreen() {
                   ]}>
                     {r.rotationStatus}
                   </Text>
+                  {r.rotationStatus !== 'DISBURSED' && hasPermission(userRole, 'VERIFY_CONTRIBUTION') && (
+                    <TouchableOpacity
+                      style={{ marginTop: 6, backgroundColor: '#059669', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                      onPress={() => handleDisbursePayout(r.periodNumber)}
+                      disabled={submitting}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>💸 Disburse</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
             </ScrollView>
@@ -530,6 +619,15 @@ export default function KittyPartyLedgerScreen() {
                       ]}>
                         <Text style={styles.statusText}>{c.paymentStatus}</Text>
                       </View>
+                      {c.paymentStatus === 'PAID' && hasPermission(userRole, 'VERIFY_CONTRIBUTION') && (
+                        <TouchableOpacity
+                          style={{ marginTop: 6, backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}
+                          onPress={() => handleVerifyContribution(c.id)}
+                          disabled={submitting}
+                        >
+                          <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>✓ Verify</Text>
+                        </TouchableOpacity>
+                      )}
                       {c.isOverdue && (
                         <View style={styles.overdueBadge}>
                           <Text style={styles.overdueBadgeText}>Overdue ({c.daysOverdue}d)</Text>
@@ -543,6 +641,53 @@ export default function KittyPartyLedgerScreen() {
           </View>
         </>
       )}
+
+      {/* Create Kitty Cycle Modal */}
+      <Modal visible={showCreateCycleModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Initialize Kitty Savings Cycle</Text>
+            <Text style={styles.inputLabel}>Cycle Name</Text>
+            <TextInput
+              style={styles.input}
+              value={newCycleName}
+              onChangeText={setNewCycleName}
+              placeholder="e.g. Monthly Kitty Pool 2026"
+            />
+            <Text style={styles.inputLabel}>Monthly Contribution (₹)</Text>
+            <TextInput
+              style={styles.input}
+              value={newCycleAmount}
+              onChangeText={setNewCycleAmount}
+              keyboardType="decimal-pad"
+            />
+            <Text style={styles.inputLabel}>Total Members / Months</Text>
+            <TextInput
+              style={styles.input}
+              value={newCycleMembers}
+              onChangeText={setNewCycleMembers}
+              keyboardType="number-pad"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowCreateCycleModal(false)}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleCreateCycle}
+                disabled={submitting}
+              >
+                <Text style={styles.submitText}>
+                  {submitting ? 'Creating...' : 'Start Cycle'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Record Contribution Modal */}
       <Modal visible={showPayModal} transparent animationType="slide">
@@ -700,6 +845,14 @@ export default function KittyPartyLedgerScreen() {
                       <Text style={[styles.auditDesc, { color: '#15803D', fontStyle: 'italic' }]}>
                         Resolution: {d.resolutionNotes}
                       </Text>
+                    ) : d.status === 'OPEN' && hasPermission(userRole, 'RESOLVE_DISPUTE') ? (
+                      <TouchableOpacity
+                        style={{ marginTop: 6, alignSelf: 'flex-start', backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 }}
+                        onPress={() => handleResolveDispute(d.id)}
+                        disabled={submitting}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>✓ Mark Resolved</Text>
+                      </TouchableOpacity>
                     ) : null}
                   </View>
                 ))
