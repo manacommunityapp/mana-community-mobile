@@ -55,7 +55,7 @@ function ConversationItem({ item }: { item: ConversationDto }) {
             {getInitials(name)}
           </Text>
         </View>
-        {Boolean((other as any)?.isOnline ?? (other as any)?.online) && (
+        {Boolean(other?.isOnline ?? other?.online) && (
           <View style={st.onlineDot} />
         )}
         {isGroup && (
@@ -120,7 +120,7 @@ export default function ChatScreen() {
     refetchInterval: 10_000,
   });
 
-  const { data: contacts = [], isLoading: isContactsLoading } = useQuery({
+  const { data: contacts = [], isLoading: isContactsLoading, isError: isContactsError } = useQuery({
     queryKey: ['chatContacts'],
     queryFn: chatService.getContacts,
     enabled: showNewModal,
@@ -155,9 +155,9 @@ export default function ChatScreen() {
       const conv = await chatService.startDirect(userId);
       setShowNewModal(false);
       router.push(`/chat/${conv.id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[Chat] Failed to start direct conversation:', (err as Error)?.message);
       setShowNewModal(false);
-      router.push(`/chat/${userId}`);
     } finally {
       setIsCreating(false);
     }
@@ -395,7 +395,11 @@ export default function ChatScreen() {
           </View>
 
           {/* Contact list */}
-          {isContactsLoading ? (
+          {isContactsError ? (
+            <Text style={{ textAlign: 'center', marginTop: 40, color: COLORS.textMuted, fontSize: 14 }}>
+              Could not load contacts. Pull down to retry.
+            </Text>
+          ) : isContactsLoading ? (
             <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.primary} />
           ) : (
             <FlatList

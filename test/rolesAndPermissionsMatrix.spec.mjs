@@ -55,6 +55,9 @@ const ROLE_PORTAL_MAP = {
   OWNER:                { role: 'OWNER',                  label: 'Owner Home',          route: '/tabs/feed',                   icon: 'home' },
   TENANT:               { role: 'TENANT',                 label: 'Tenant Home',         route: '/tabs/feed',                   icon: 'home' },
   SPORTS_VENDOR:        { role: 'SPORTS_VENDOR',          label: 'Sports Vendor',       route: '/vendor/tabs/dashboard',       icon: 'construct' },
+  SPORTS_TRAINER:       { role: 'SPORTS_TRAINER',         label: 'Sports Trainer',      route: '/sports-admin/tabs/dashboard', icon: 'barbell' },
+  STAFF:                { role: 'STAFF',                  label: 'Staff Portal',        route: '/admin-role/tabs/dashboard',   icon: 'people' },
+  CASHIER:              { role: 'CASHIER',                label: 'Cashier Portal',      route: '/admin-role/tabs/dashboard',   icon: 'cash' },
 };
 
 function getPortalForRole(role) {
@@ -252,6 +255,28 @@ describe('Roles and Permissions Matrix — Minute Level Audit', () => {
       assert.ok(perms.includes(VIEW_SPORTS_DASHBOARD));
     });
 
+    it('SPORTS_TRAINER receives sports dashboard, menu, and analytics', () => {
+      const perms = computeEffectivePermissions(['SPORTS_TRAINER']);
+      assert.ok(perms.includes(VIEW_SPORTS_DASHBOARD), 'Trainer must have VIEW_SPORTS_DASHBOARD');
+      assert.strictEqual(perms.includes(VIEW_ADMIN_DASHBOARD), false, 'Trainer must not have VIEW_ADMIN_DASHBOARD');
+    });
+
+    it('STAFF receives admin dashboard, feed, notices, tickets, visitors, emergency', () => {
+      const perms = computeEffectivePermissions(['STAFF']);
+      assert.ok(perms.includes(VIEW_ADMIN_DASHBOARD), 'Staff must have VIEW_ADMIN_DASHBOARD');
+      assert.ok(perms.includes(VIEW_FEED), 'Staff must have VIEW_FEED');
+      assert.ok(perms.includes(VIEW_EMERGENCY), 'Staff must have VIEW_EMERGENCY');
+      assert.ok(perms.includes(VIEW_VISITORS), 'Staff must have VIEW_VISITORS');
+      assert.strictEqual(perms.includes(MANAGE_BILLING), false, 'Staff must not have MANAGE_BILLING');
+    });
+
+    it('CASHIER receives finance dashboard and billing management', () => {
+      const perms = computeEffectivePermissions(['CASHIER']);
+      assert.ok(perms.includes(MANAGE_BILLING), 'Cashier must have MANAGE_BILLING');
+      assert.ok(perms.includes(VIEW_MAINTENANCE_DUES), 'Cashier must have VIEW_MAINTENANCE_DUES');
+      assert.ok(perms.includes(PAY_MAINTENANCE_DUES), 'Cashier must have PAY_MAINTENANCE_DUES');
+    });
+
     it('Merges direct user-specific permissions when provided', () => {
       const perms = computeEffectivePermissions(['RESIDENT'], ['CUSTOM_EXTRA_PERMISSION']);
       assert.ok(perms.includes(VIEW_EMERGENCY));
@@ -297,9 +322,15 @@ describe('Roles and Permissions Matrix — Minute Level Audit', () => {
       assert.strictEqual(getPortalForRole('SPORTS_VENDOR')?.route, '/vendor/tabs/dashboard');
     });
 
-    it('Routes sports admin to /sports-admin/tabs/dashboard', () => {
+    it('Routes sports admin and trainer to /sports-admin/tabs/dashboard', () => {
       assert.strictEqual(getPortalForRole('SPORTS_ADMIN')?.route, '/sports-admin/tabs/dashboard');
       assert.strictEqual(getPortalForRole('SPORTS_REFEREE')?.route, '/sports-admin/tabs/dashboard');
+      assert.strictEqual(getPortalForRole('SPORTS_TRAINER')?.route, '/sports-admin/tabs/dashboard');
+    });
+
+    it('Routes STAFF and CASHIER to /admin-role/tabs/dashboard', () => {
+      assert.strictEqual(getPortalForRole('STAFF')?.route, '/admin-role/tabs/dashboard');
+      assert.strictEqual(getPortalForRole('CASHIER')?.route, '/admin-role/tabs/dashboard');
     });
 
     it('Handles case-insensitivity in role lookup', () => {
@@ -316,6 +347,7 @@ describe('Roles and Permissions Matrix — Minute Level Audit', () => {
         'MODERATOR', 'FINANCE_ADMIN', 'FINANCE_MGMT_ADMIN', 'FACILITY_MANAGER',
         'FOOD_ADMIN', 'FOOD_OS_ADMIN', 'HELPDESK_AGENT', 'HELPDESK_ADMIN', 'COMMITTEE_MEMBER',
         'ACCOUNTANT', 'READONLY_ADMIN', 'VISITORS_ADMIN', 'COMMUNITY_FEED_ADMIN',
+        'STAFF', 'CASHIER',
       ];
       for (const role of expected) {
         assert.ok(ADMIN_PORTAL_ROLES.has(role), `${role} must be in ADMIN_PORTAL_ROLES`);
