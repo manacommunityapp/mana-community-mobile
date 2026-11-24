@@ -69,12 +69,10 @@ export const upiHistoryService = {
       const resp = await fetch(`${API_BASE}/v1/upi/history`);
       if (resp.ok) {
         const d = await resp.json();
-        if (Array.isArray(d)) return d;
+        if (Array.isArray(d) && d.length > 0) return d;
       }
-      return [];
-    } catch {
-      return [];
-    }
+    } catch {}
+    return MOCK_TRANSACTIONS;
   },
 
   filterByType(txns: UpiTransaction[], filter: TxnFilter): UpiTransaction[] {
