@@ -227,22 +227,23 @@ function GateBlocks({ unit }: { unit?: string }) {
   const { data: pendingAll = [] } = useQuery({
     queryKey: ['gate', 'pending'],
     queryFn: () => visitorService.getPendingApprovals(),
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
+    staleTime: 15_000,
   });
   const { data: myVisitors = [] } = useQuery({
     queryKey: ['gate', 'mine'],
     queryFn: () => visitorService.getMyVisitors(),
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
   const { data: staff = [] } = useQuery({
     queryKey: ['gate', 'daily-help'],
     queryFn: () => residentGateService.getMyDailyHelp(),
-    staleTime: 60_000,
+    staleTime: 120_000,
   });
   const { data: attendance = [] } = useQuery({
     queryKey: ['gate', 'attendance'],
     queryFn: () => residentGateService.getTodayStaffAttendance(),
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 
   const decide = useMutation({
@@ -1697,7 +1698,7 @@ export default function HomeScreen() {
   const { data: unreadNotifsCount = 0 } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationService.getUnreadCount().catch(() => 0),
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
   });
 
   const { data: openTickets = [] } = useQuery({
@@ -1906,22 +1907,16 @@ export default function HomeScreen() {
     if (typeof id === 'number') likeMutation.mutate(id);
   }, [likeMutation]);
 
+  const REFRESH_KEYS: string[] = [
+    'profile', 'home-feed', 'home-events', 'home-invoices-overdue',
+    'notifications', 'helpdesk', 'polls', 'gate', 'home-reward-balance',
+    'feed-live-strip', 'feed-live-recent', 'feed-live-all',
+    'home-sports-kpi', 'home-facilities-kpi', 'home-notices-kpi',
+  ];
   const onRefresh = useCallback(() => {
-    qc.invalidateQueries({ queryKey: ['profile', 'me'] });
-    qc.invalidateQueries({ queryKey: ['home-feed'] });
-    qc.invalidateQueries({ queryKey: ['home-events'] });
-    qc.invalidateQueries({ queryKey: ['home-invoices-overdue'] });
-    qc.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
-    qc.invalidateQueries({ queryKey: ['helpdesk', 'tickets-open'] });
-    qc.invalidateQueries({ queryKey: ['polls', 'active'] });
-    qc.invalidateQueries({ queryKey: ['gate'] });
-    qc.invalidateQueries({ queryKey: ['home-reward-balance'] });
-    qc.invalidateQueries({ queryKey: ['feed-live-strip'] });
-    qc.invalidateQueries({ queryKey: ['feed-live-recent'] });
-    qc.invalidateQueries({ queryKey: ['feed-live-all'] });
-    qc.invalidateQueries({ queryKey: ['home-sports-kpi'] });
-    qc.invalidateQueries({ queryKey: ['home-facilities-kpi'] });
-    qc.invalidateQueries({ queryKey: ['home-notices-kpi'] });
+    qc.invalidateQueries({
+      predicate: (q) => REFRESH_KEYS.includes(q.queryKey[0] as string),
+    });
   }, [qc]);
 
   if (isLoading) {

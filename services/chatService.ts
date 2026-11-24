@@ -25,21 +25,8 @@ export const chatService = {
   },
 
   async createGroup(title: string, userIds: number[]): Promise<ConversationDto> {
-    try {
-      const res = await api.post<ConversationDto>('/chat/conversations/group', { title, userIds });
-      return res.data;
-    } catch {
-      const res = await api.post<any>('/groups', { name: title, description: `Group chat: ${title}` });
-      return {
-        id: res.data.id || Date.now(),
-        type: 'GROUP',
-        title,
-        name: title,
-        isGroup: true,
-        unreadCount: 0,
-        participants: userIds.map((id) => ({ userId: id, name: `Member ${id}`, online: false })),
-      };
-    }
+    const res = await api.post<ConversationDto>('/chat/conversations/group', { title, userIds });
+    return res.data;
   },
 
   async getMessages(conversationId: number, page = 0): Promise<PageResponse<ChatMessageDto>> {
