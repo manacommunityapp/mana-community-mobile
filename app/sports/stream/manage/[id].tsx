@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '@/constants/config';
+import { useAuth } from '@/hooks/useAuth';
 import { sportsService } from '@/services/sportsService';
 import { secureLog } from '@/security';
 import type { SportsStreamResponse } from '@/types/api';
@@ -16,7 +17,22 @@ type Panel = 'overview' | 'cameras' | 'commentary';
 export default function StreamManageScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router  = useRouter();
+  const { user, isAnyAdmin, hasRole, isLoading: authLoading } = useAuth();
   const matchId = Number(id);
+
+  const canManage = isAnyAdmin || hasRole('ADMIN', 'SUPER_ADMIN', 'SPORTS_ADMIN', 'SPORTS_REFEREE', 'MODERATOR');
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/auth/login');
+      return;
+    }
+    if (!canManage) {
+      Alert.alert('Access Denied', 'Only sports admins and referees can manage streams.');
+      router.replace(`/sports/match/${matchId}` as never);
+    }
+  }, [authLoading, user, canManage, matchId, router]);
 
   const [stream, setStream]     = useState<SportsStreamResponse | null>(null);
   const [loading, setLoading]   = useState(true);

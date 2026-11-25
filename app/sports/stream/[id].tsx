@@ -17,8 +17,9 @@ import type { SportsStreamResponse } from '@/types/api';
 export default function StreamViewerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router  = useRouter();
-  const { user } = useAuth();
+  const { user, isAnyAdmin, hasRole } = useAuth();
   const matchId  = Number(id);
+  const canManage = isAnyAdmin || hasRole('ADMIN', 'SUPER_ADMIN', 'SPORTS_ADMIN', 'SPORTS_REFEREE', 'MODERATOR');
 
   const qc = useQueryClient();
   const [activeCamId, setActiveCamId] = useState<number | null>(null);
@@ -86,6 +87,14 @@ export default function StreamViewerScreen() {
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
             <Text style={s.backBtnText}>Go Back</Text>
           </TouchableOpacity>
+          {canManage && (
+            <TouchableOpacity
+              style={[s.backBtn, { backgroundColor: '#4f46e5', marginTop: 10 }]}
+              onPress={() => router.push(`/sports/stream/manage/${matchId}` as never)}
+            >
+              <Text style={s.backBtnText}>📹 Broadcast / Manage Stream</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -133,6 +142,15 @@ export default function StreamViewerScreen() {
               <View style={s.liveDot} />
               <Text style={s.liveText}>LIVE</Text>
             </View>
+            {canManage && (
+              <TouchableOpacity
+                onPress={() => router.push(`/sports/stream/manage/${matchId}` as never)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#3730A3', borderRadius: 6 }}
+              >
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Manage</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={shareStream} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="share-social-outline" size={20} color="#fff" />
             </TouchableOpacity>

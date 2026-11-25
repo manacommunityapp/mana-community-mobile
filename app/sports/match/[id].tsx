@@ -388,6 +388,14 @@ export default function LiveMatchScreen() {
           >
             <Text style={scr.actionBtnText}>📤 Share Match</Text>
           </TouchableOpacity>
+          {canScore && (
+            <TouchableOpacity
+              style={scr.actionBtn}
+              onPress={() => router.push(`/sports/stream/manage/${match.id}` as never)}
+            >
+              <Text style={scr.actionBtnText}>📹 Stream</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Scheduled info */}

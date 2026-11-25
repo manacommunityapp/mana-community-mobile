@@ -4,6 +4,7 @@ import {
   FlatList, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { SPORTS_ADMIN_COLORS } from '@/constants/sportsAdminTheme';
@@ -12,6 +13,7 @@ import { sportsAdminService, type MatchSummary } from '@/services/sportsAdminSer
 const FILTERS = ['All', 'LIVE', 'SCHEDULED', 'COMPLETED'] as const;
 
 export default function MatchesScreen() {
+  const router = useRouter();
   const [matches, setMatches] = useState<MatchSummary[]>([]);
   const [filter, setFilter] = useState<string>('All');
   const [refreshing, setRefreshing] = useState(false);
@@ -42,7 +44,11 @@ export default function MatchesScreen() {
     const meta = statusMeta[item.status] || statusMeta.SCHEDULED;
     const isLive = item.status === 'LIVE';
     return (
-      <View style={[s.card, isLive && { borderLeftColor: '#DC2626', borderLeftWidth: 3 }]}>
+      <TouchableOpacity
+        style={[s.card, isLive && { borderLeftColor: '#DC2626', borderLeftWidth: 3 }]}
+        onPress={() => router.push(`/sports/match/${item.id}` as any)}
+        activeOpacity={0.85}
+      >
         <View style={s.cardTop}>
           <Text style={s.tournamentLabel}>{item.tournamentName}</Text>
           <View style={[s.statusBadge, { backgroundColor: meta.bg }]}>
@@ -77,7 +83,7 @@ export default function MatchesScreen() {
             <Text style={s.footerText}>{formatDate(item.scheduledAt)}</Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

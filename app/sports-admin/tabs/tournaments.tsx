@@ -4,6 +4,7 @@ import {
   FlatList, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
 import { SPORTS_ADMIN_COLORS } from '@/constants/sportsAdminTheme';
@@ -12,6 +13,7 @@ import { sportsAdminService, type TournamentSummary } from '@/services/sportsAdm
 const FILTERS = ['All', 'ONGOING', 'REGISTRATION_OPEN', 'UPCOMING', 'COMPLETED'] as const;
 
 export default function TournamentsScreen() {
+  const router = useRouter();
   const [tournaments, setTournaments] = useState<TournamentSummary[]>([]);
   const [filter, setFilter] = useState<string>('All');
   const [refreshing, setRefreshing] = useState(false);
@@ -43,7 +45,11 @@ export default function TournamentsScreen() {
     const meta = statusMeta[item.status] || statusMeta.UPCOMING;
     const progress = item.maxTeams > 0 ? item.teamsRegistered / item.maxTeams : 0;
     return (
-      <View style={s.card}>
+      <TouchableOpacity
+        style={s.card}
+        onPress={() => router.push(`/sports/tournament/${item.id}` as any)}
+        activeOpacity={0.85}
+      >
         <View style={s.cardHeader}>
           <View style={[s.sportBadge, { backgroundColor: SPORTS_ADMIN_COLORS.accentLight }]}>
             <Ionicons name="trophy" size={14} color={SPORTS_ADMIN_COLORS.accent} />
@@ -64,7 +70,7 @@ export default function TournamentsScreen() {
             <View style={[s.progressFill, { width: `${Math.min(progress * 100, 100)}%` }]} />
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

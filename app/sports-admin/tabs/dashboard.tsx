@@ -4,6 +4,7 @@ import {
   ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import WorkspaceSwitcherBar from '@/components/common/WorkspaceSwitcherBar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +42,7 @@ function StatCard({ icon, label, value, color, bg, sub }: StatCardProps) {
 }
 
 export default function SportsAdminDashboardScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const [stats, setStats] = useState<SportsAdminDashboardStats | null>(null);
   const [liveMatches, setLiveMatches] = useState<MatchSummary[]>([]);
@@ -107,7 +109,12 @@ export default function SportsAdminDashboardScreen() {
               <View style={s.liveDot} />
             </View>
             {liveMatches.map(m => (
-              <View key={m.id} style={[s.matchCard, { borderLeftColor: '#DC2626', borderLeftWidth: 3 }]}>
+              <TouchableOpacity
+                key={m.id}
+                style={[s.matchCard, { borderLeftColor: '#DC2626', borderLeftWidth: 3 }]}
+                onPress={() => router.push(`/sports/match/${m.id}` as any)}
+                activeOpacity={0.85}
+              >
                 <View style={s.matchHeader}>
                   <Text style={s.matchTournament}>{m.tournamentName}</Text>
                   <View style={[s.statusBadge, { backgroundColor: '#FEE2E2' }]}>
@@ -124,19 +131,24 @@ export default function SportsAdminDashboardScreen() {
                   <Text style={s.teamName}>{m.teamB}</Text>
                 </View>
                 {m.venue && <Text style={s.matchVenue}>{m.venue}</Text>}
-              </View>
+              </TouchableOpacity>
             ))}
           </>
         )}
 
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>Recent Tournaments</Text>
-          <TouchableOpacity><Text style={s.seeAll}>See All</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/sports-admin/tabs/tournaments')}><Text style={s.seeAll}>See All</Text></TouchableOpacity>
         </View>
         {tournaments.map(t => {
           const meta = statusColor[t.status] || statusColor.UPCOMING;
           return (
-            <View key={t.id} style={s.activityCard}>
+            <TouchableOpacity
+              key={t.id}
+              style={s.activityCard}
+              onPress={() => router.push(`/sports/tournament/${t.id}` as any)}
+              activeOpacity={0.85}
+            >
               <View style={[s.activityIcon, { backgroundColor: SPORTS_ADMIN_COLORS.accentLight }]}>
                 <Ionicons name="trophy" size={18} color={SPORTS_ADMIN_COLORS.accent} />
               </View>
@@ -148,7 +160,7 @@ export default function SportsAdminDashboardScreen() {
               <View style={[s.typeBadge, { backgroundColor: meta.bg }]}>
                 <Text style={[s.typeBadgeText, { color: meta.color }]}>{formatStatus(t.status)}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
 

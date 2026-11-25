@@ -7,6 +7,8 @@ import {
   ADMIN_ROLES,
   ADMIN_PORTAL_ROLES,
   GUARD_ROLES,
+  SPORTS_ADMIN_PORTAL_ROLES,
+  EVENT_ADMIN_PORTAL_ROLES,
   ROLE_ALIASES,
   resolveRoleAliases,
   VIEW_FEED,
@@ -360,6 +362,23 @@ describe('Roles and Permissions Matrix — Minute Level Audit', () => {
       assert.strictEqual(ADMIN_PORTAL_ROLES.has('TENANT'), false);
       assert.strictEqual(ADMIN_PORTAL_ROLES.has('GUARD'), false);
       assert.strictEqual(ADMIN_PORTAL_ROLES.has('VENDOR'), false);
+    });
+
+    it('Includes SPORTS_ADMIN, SPORTS_REFEREE, SPORTS_TRAINER, ADMIN, SUPER_ADMIN, COMMUNITY_ADMIN in SPORTS_ADMIN_PORTAL_ROLES', () => {
+      const expected = ['SPORTS_ADMIN', 'SPORTS_REFEREE', 'SPORTS_TRAINER', 'ADMIN', 'SUPER_ADMIN', 'COMMUNITY_ADMIN'];
+      for (const role of expected) {
+        assert.ok(SPORTS_ADMIN_PORTAL_ROLES.has(role), `${role} must be in SPORTS_ADMIN_PORTAL_ROLES`);
+      }
+      assert.strictEqual(SPORTS_ADMIN_PORTAL_ROLES.has('RESIDENT'), false);
+      assert.strictEqual(SPORTS_ADMIN_PORTAL_ROLES.has('GUARD'), false);
+    });
+
+    it('Includes EVENT_ADMIN, EVENTS_ADMIN, ADMIN, SUPER_ADMIN, COMMUNITY_ADMIN in EVENT_ADMIN_PORTAL_ROLES', () => {
+      const expected = ['EVENT_ADMIN', 'EVENTS_ADMIN', 'ADMIN', 'SUPER_ADMIN', 'COMMUNITY_ADMIN'];
+      for (const role of expected) {
+        assert.ok(EVENT_ADMIN_PORTAL_ROLES.has(role), `${role} must be in EVENT_ADMIN_PORTAL_ROLES`);
+      }
+      assert.strictEqual(EVENT_ADMIN_PORTAL_ROLES.has('RESIDENT'), false);
     });
   });
 

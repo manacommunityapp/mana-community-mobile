@@ -101,10 +101,10 @@ export default function SportsAdminProfileScreen() {
 
         <Text style={s.sectionHeader}>Management</Text>
         <View style={s.menuSection}>
-          <MenuItem icon="trophy-outline" label="Tournament Management" onPress={() => {}} iconColor={SPORTS_ADMIN_COLORS.accent} iconBg={SPORTS_ADMIN_COLORS.accentLight} />
-          <MenuItem icon="people-outline" label="Team Management" onPress={() => {}} iconColor="#4F46E5" iconBg="#EEF2FF" />
-          <MenuItem icon="location-outline" label="Venue Management" onPress={() => {}} iconColor="#D97706" iconBg="#FEF3C7" />
-          <MenuItem icon="stats-chart-outline" label="Reports & Analytics" onPress={() => {}} iconColor="#7C3AED" iconBg="#EDE9FE" />
+          <MenuItem icon="trophy-outline" label="Tournament Management" onPress={() => router.push('/sports-admin/tabs/tournaments')} iconColor={SPORTS_ADMIN_COLORS.accent} iconBg={SPORTS_ADMIN_COLORS.accentLight} />
+          <MenuItem icon="people-outline" label="Team Management" onPress={() => router.push('/sports/my-teams')} iconColor="#4F46E5" iconBg="#EEF2FF" />
+          <MenuItem icon="location-outline" label="Venue Management" onPress={() => router.push('/sports-ops')} iconColor="#D97706" iconBg="#FEF3C7" />
+          <MenuItem icon="stats-chart-outline" label="Reports & Analytics" onPress={() => router.push('/sports-admin/tabs/analytics')} iconColor="#7C3AED" iconBg="#EDE9FE" />
         </View>
 
         <Text style={s.sectionHeader}>Account</Text>
