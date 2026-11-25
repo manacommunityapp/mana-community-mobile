@@ -217,7 +217,7 @@ const VISITOR_ICON: Record<string, IoniconsName> = {
 
 type GateEvent = { key: string; ts: string; icon: IoniconsName; color: string; title: string; sub: string };
 
-function GateBlocks({ unit }: { unit?: string }) {
+const GateBlocks = React.memo(function GateBlocks({ unit }: { unit?: string }) {
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -259,66 +259,72 @@ function GateBlocks({ unit }: { unit?: string }) {
   });
 
   const myId = user?.id;
-  const pending = pendingAll.filter(
-    (v) => v.residentId == null || myId == null || String(v.residentId) === String(myId),
-  );
+  const pending = useMemo(() => {
+    return pendingAll.filter(
+      (v) => v.residentId == null || myId == null || String(v.residentId) === String(myId),
+    );
+  }, [pendingAll, myId]);
   const current = pending[0];
 
-  const activeStaff = staff.filter((s) => s.status !== 'TERMINATED');
-  const attByStaff = new Map(attendance.map((a) => [String(a.staffId), a]));
-  const insideCount = activeStaff.filter((s) => attByStaff.get(String(s.id))?.status === 'CHECKED_IN').length;
+  const { activeStaff, insideCount, attByStaff } = useMemo(() => {
+    const active = staff.filter((s) => s.status !== 'TERMINATED');
+    const attMap = new Map(attendance.map((a) => [String(a.staffId), a]));
+    const inside = active.filter((s) => attMap.get(String(s.id))?.status === 'CHECKED_IN').length;
+    return { activeStaff: active, insideCount: inside, attByStaff: attMap };
+  }, [staff, attendance]);
 
-  const events: GateEvent[] = [];
-  myVisitors.forEach((v) => {
-    const icon = VISITOR_ICON[String(v.passType).toUpperCase()] ?? 'person-outline';
-    if (isToday(v.checkedInAt)) {
-      events.push({
-        key: `v${v.id}-in`,
-        ts: v.checkedInAt!,
-        icon,
-        color: '#059669',
-        title: `${v.visitorName} entered`,
-        sub: [formatClock(v.checkedInAt), v.gateIn, v.guardIn ? `Guard ${v.guardIn}` : ''].filter(Boolean).join(' · '),
-      });
-    }
-    if (isToday(v.checkedOutAt)) {
-      events.push({
-        key: `v${v.id}-out`,
-        ts: v.checkedOutAt!,
-        icon: 'log-out-outline',
-        color: '#0284C7',
-        title: `${v.visitorName} exited`,
-        sub: [formatClock(v.checkedOutAt), v.gateOut, v.guardOut ? `Guard ${v.guardOut}` : ''].filter(Boolean).join(' · '),
-      });
-    }
-  });
-  attendance.forEach((a) => {
-    const inTs = toStamp(a.date, a.checkInTime);
-    const outTs = toStamp(a.date, a.checkOutTime);
-    if (inTs) {
-      events.push({
-        key: `a${a.id}-in`,
-        ts: inTs,
-        icon: 'log-in-outline',
-        color: '#059669',
-        title: `${a.staffName} (${a.role}) entered`,
-        sub: [formatClock(inTs), a.checkInGate].filter(Boolean).join(' · '),
-      });
-    }
-    if (outTs) {
-      events.push({
-        key: `a${a.id}-out`,
-        ts: outTs,
-        icon: 'log-out-outline',
-        color: '#0284C7',
-        title: `${a.staffName} (${a.role}) exited`,
-        sub: [formatClock(outTs), a.checkOutGate].filter(Boolean).join(' · '),
-      });
-    }
-  });
-  events.sort((x, y) => new Date(y.ts).getTime() - new Date(x.ts).getTime());
-  const latest = events[0];
-  const earlier = events.slice(1, 6);
+  const { latest, earlier } = useMemo(() => {
+    const evts: GateEvent[] = [];
+    myVisitors.forEach((v) => {
+      const icon = VISITOR_ICON[String(v.passType).toUpperCase()] ?? 'person-outline';
+      if (isToday(v.checkedInAt)) {
+        evts.push({
+          key: `v${v.id}-in`,
+          ts: v.checkedInAt!,
+          icon,
+          color: '#059669',
+          title: `${v.visitorName} entered`,
+          sub: [formatClock(v.checkedInAt), v.gateIn, v.guardIn ? `Guard ${v.guardIn}` : ''].filter(Boolean).join(' · '),
+        });
+      }
+      if (isToday(v.checkedOutAt)) {
+        evts.push({
+          key: `v${v.id}-out`,
+          ts: v.checkedOutAt!,
+          icon: 'log-out-outline',
+          color: '#0284C7',
+          title: `${v.visitorName} exited`,
+          sub: [formatClock(v.checkedOutAt), v.gateOut, v.guardOut ? `Guard ${v.guardOut}` : ''].filter(Boolean).join(' · '),
+        });
+      }
+    });
+    attendance.forEach((a) => {
+      const inTs = toStamp(a.date, a.checkInTime);
+      const outTs = toStamp(a.date, a.checkOutTime);
+      if (inTs) {
+        evts.push({
+          key: `a${a.id}-in`,
+          ts: inTs,
+          icon: 'log-in-outline',
+          color: '#059669',
+          title: `${a.staffName} (${a.role}) entered`,
+          sub: [formatClock(inTs), a.checkInGate].filter(Boolean).join(' · '),
+        });
+      }
+      if (outTs) {
+        evts.push({
+          key: `a${a.id}-out`,
+          ts: outTs,
+          icon: 'log-out-outline',
+          color: '#0284C7',
+          title: `${a.staffName} (${a.role}) exited`,
+          sub: [formatClock(outTs), a.checkOutGate].filter(Boolean).join(' · '),
+        });
+      }
+    });
+    evts.sort((x, y) => new Date(y.ts).getTime() - new Date(x.ts).getTime());
+    return { latest: evts[0], earlier: evts.slice(1, 6) };
+  }, [myVisitors, attendance]);
 
   return (
     <View style={styles.gateSection}>
@@ -513,11 +519,11 @@ function GateBlocks({ unit }: { unit?: string }) {
       )}
     </View>
   );
-}
+});
 
 // ─── Resident QR Pass Card ────────────────────────────────────────────────────
 
-function ResidentPassCard({
+const ResidentPassCard = React.memo(function ResidentPassCard({
   unit,
   residentName,
   duesLabel,
@@ -573,11 +579,11 @@ function ResidentPassCard({
       )}
     </View>
   );
-}
+});
 
 // ─── Resident Pass Modal ──────────────────────────────────────────────────────
 
-function ResidentPassModal({
+const ResidentPassModal = React.memo(function ResidentPassModal({
   visible,
   onClose,
   unit,
@@ -657,9 +663,7 @@ function ResidentPassModal({
       </Pressable>
     </Modal>
   );
-}
-
-// ─── KPI Strip ────────────────────────────────────────────────────────────────
+});
 
 // ─── KPI Strip ────────────────────────────────────────────────────────────────
 
@@ -678,7 +682,7 @@ export type DisplayKpiItem = {
   priority: number;
 };
 
-function KpiStrip({
+const KpiStrip = React.memo(function KpiStrip({
   eventsCount,
   eventsTodayCount,
   sportsCount,
@@ -1164,11 +1168,11 @@ function KpiStrip({
       />
     </View>
   );
-}
+});
 
 // ─── Quick Actions Grid ───────────────────────────────────────────────────────
 
-function QuickActionsGrid({ onOpenSos }: { onOpenSos: () => void }) {
+const QuickActionsGrid = React.memo(function QuickActionsGrid({ onOpenSos }: { onOpenSos: () => void }) {
   const router = useRouter();
   const { hasModule, hasRole, hasPermission, isSuperAdmin } = useAuth();
   const { palette } = useAppTheme();
@@ -1272,11 +1276,11 @@ function QuickActionsGrid({ onOpenSos }: { onOpenSos: () => void }) {
       </View>
     </View>
   );
-}
+});
 
 // ─── Payments Due Banner ──────────────────────────────────────────────────────
 
-function PaymentsDueBanner({ count, total }: { count: number; total: number }) {
+const PaymentsDueBanner = React.memo(function PaymentsDueBanner({ count, total }: { count: number; total: number }) {
   const router = useRouter();
   if (count === 0) return null;
   return (
@@ -1293,11 +1297,11 @@ function PaymentsDueBanner({ count, total }: { count: number; total: number }) {
       </LinearGradient>
     </Pressable>
   );
-}
+});
 
 // ─── Community Highlight Banner ───────────────────────────────────────────────
 
-function CommunityHighlightBanner({
+const CommunityHighlightBanner = React.memo(function CommunityHighlightBanner({
   post,
   event,
   communityDisplay,
@@ -1350,14 +1354,16 @@ function CommunityHighlightBanner({
       {subtitle ? <Text style={styles.announcementBannerMeta} numberOfLines={2}>{subtitle}</Text> : null}
     </Pressable>
   );
-}
+});
 
 // ─── Feed Post Card ───────────────────────────────────────────────────────────
 
-function FeedPostCard({ post, liked, onLike }: { post: PostDto; liked: boolean; onLike: () => void }) {
+const FeedPostCard = React.memo(function FeedPostCard({ post, liked, onLike }: { post: PostDto; liked: boolean; onLike: () => void }) {
   const router = useRouter();
   const { palette } = useAppTheme();
-  const initials = (post.authorName ?? '?').split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  const initials = useMemo(() => {
+    return (post.authorName ?? '?').split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  }, [post.authorName]);
   const gradColors: readonly [string, string] = post.official ? palette.primaryGradient : ['#EC4899', '#F43F5E'];
   const [imageError, setImageError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
@@ -1514,11 +1520,11 @@ function FeedPostCard({ post, liked, onLike }: { post: PostDto; liked: boolean; 
       </View>
     </View>
   );
-}
+});
 
 // ─── Unit & Community Dropdown Selector Modal ─────────────────────────────────
 
-function UnitSelectorModal({
+const UnitSelectorModal = React.memo(function UnitSelectorModal({
   visible,
   onClose,
   activeUser,
@@ -1684,7 +1690,14 @@ function UnitSelectorModal({
       </Pressable>
     </Modal>
   );
-}
+});
+
+const FEED_REFRESH_KEYS: readonly string[] = [
+  'profile', 'home-feed', 'home-events', 'home-invoices-overdue',
+  'notifications', 'helpdesk', 'polls', 'gate', 'home-reward-balance',
+  'feed-live-strip', 'feed-live-recent', 'feed-live-all',
+  'home-sports-kpi', 'home-facilities-kpi', 'home-notices-kpi',
+];
 
 // ─── Main Home Screen ─────────────────────────────────────────────────────────
 
@@ -1739,6 +1752,7 @@ export default function HomeScreen() {
     queryKey: ['home-events', activeUser?.communityId],
     queryFn: () => eventService.getUpcomingEvents(),
     staleTime: 60_000,
+    enabled: hasModule('EVENTS'),
   });
 
   const { data: invoices = [] } = useQuery({
@@ -1758,12 +1772,14 @@ export default function HomeScreen() {
     queryKey: ['helpdesk', 'tickets-open'],
     queryFn: () => smartHelpdeskService.getTickets('OPEN').catch(() => []),
     staleTime: 60_000,
+    enabled: hasModule('HELPDESK'),
   });
 
   const { data: activePolls } = useQuery({
     queryKey: ['polls', 'active'],
     queryFn: () => pollService.getPolls('ACTIVE').catch(() => ({ content: [], totalElements: 0 } as any)),
     staleTime: 60_000,
+    enabled: hasModule('POLLS'),
   });
 
   const { data: sportsSummary } = useQuery({
@@ -1784,7 +1800,7 @@ export default function HomeScreen() {
       }
     },
     enabled: hasModule('SPORTS'),
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 
   const { data: facilitiesList = [] } = useQuery({
@@ -1960,15 +1976,9 @@ export default function HomeScreen() {
     if (typeof id === 'number') likeMutation.mutate(id);
   }, [likeMutation]);
 
-  const REFRESH_KEYS: string[] = [
-    'profile', 'home-feed', 'home-events', 'home-invoices-overdue',
-    'notifications', 'helpdesk', 'polls', 'gate', 'home-reward-balance',
-    'feed-live-strip', 'feed-live-recent', 'feed-live-all',
-    'home-sports-kpi', 'home-facilities-kpi', 'home-notices-kpi',
-  ];
   const onRefresh = useCallback(() => {
     qc.invalidateQueries({
-      predicate: (q) => REFRESH_KEYS.includes(q.queryKey[0] as string),
+      predicate: (q) => FEED_REFRESH_KEYS.includes(q.queryKey[0] as string),
     });
   }, [qc]);
 

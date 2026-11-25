@@ -49,15 +49,58 @@ export const entryLogService = {
   async getMyEntryLog(filter?: EntryLogFilter): Promise<EntryLogPage> {
     try {
       const res = await api.get<EntryLogPage>('/access/my-log', { params: filter });
-      return res.data;
-    } catch {
-      const filtered = MOCK_LOGS.filter(l => {
-        if (filter?.type && l.type !== filter.type) return false;
-        if (filter?.action && l.action !== filter.action) return false;
-        return true;
-      });
-      return { content: filtered, totalElements: filtered.length, totalPages: 1, page: 0 };
-    }
+      if (res.data?.content && res.data.content.length > 0) {
+        return res.data;
+      }
+    } catch {}
+
+    try {
+      const res = await api.get<any[]>('/visitors/mine');
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        const mapped: EntryLogEntry[] = res.data.map((p) => {
+          const isExit = Boolean(p.checkedOutAt);
+          const rawType = (p.passType || 'VISITOR').toUpperCase();
+          const type: EntryLogType =
+            rawType === 'DELIVERY'
+              ? 'DELIVERY'
+              : rawType === 'CAB' || p.vehicleNumber
+              ? 'VEHICLE'
+              : 'VISITOR';
+          return {
+            id: p.id,
+            type,
+            action: isExit ? 'EXIT' : 'ENTRY',
+            personName: p.visitorName || 'Guest',
+            vehicleNumber: p.vehicleNumber || undefined,
+            flatNumber: p.flatNumber || undefined,
+            gate: (isExit ? p.gateOut : p.gateIn) || 'Main Gate',
+            timestamp:
+              (isExit ? p.checkedOutAt : (p.checkedInAt || p.createdAt || p.expectedAt)) ||
+              new Date().toISOString(),
+            guardName: (isExit ? p.guardOut : p.guardIn) || undefined,
+            passCode: p.passCode,
+            purpose: p.purpose,
+            photoUrl: p.visitorPhoto,
+            verificationMethod: p.passCode ? 'OTP' : 'MANUAL',
+          };
+        });
+
+        const filtered = mapped.filter((l) => {
+          if (filter?.type && l.type !== filter.type) return false;
+          if (filter?.action && l.action !== filter.action) return false;
+          return true;
+        });
+
+        return { content: filtered, totalElements: filtered.length, totalPages: 1, page: 0 };
+      }
+    } catch {}
+
+    const filtered = MOCK_LOGS.filter((l) => {
+      if (filter?.type && l.type !== filter.type) return false;
+      if (filter?.action && l.action !== filter.action) return false;
+      return true;
+    });
+    return { content: filtered, totalElements: filtered.length, totalPages: 1, page: 0 };
   },
 
   async getSocietyLog(filter?: EntryLogFilter): Promise<EntryLogPage> {

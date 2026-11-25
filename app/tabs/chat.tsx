@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, Dimensions,
   TouchableOpacity, ActivityIndicator, TextInput,
@@ -21,7 +21,7 @@ import { formatDistanceToNow } from 'date-fns';
 const SCREEN_W = Dimensions.get('window').width;
 
 // ── ConversationItem ───────────────────────────────────────────────────────────
-function ConversationItem({ item }: { item: ConversationDto }) {
+const ConversationItem = React.memo(function ConversationItem({ item }: { item: ConversationDto }) {
   const router = useRouter();
   const isGroup = item.isGroup ?? (item.type !== 'DIRECT');
   const other = item.contact ?? item.participants?.[0];
@@ -101,7 +101,7 @@ function ConversationItem({ item }: { item: ConversationDto }) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 // ── ChatScreen ─────────────────────────────────────────────────────────────────
 export default function ChatScreen() {
@@ -117,7 +117,8 @@ export default function ChatScreen() {
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations'],
     queryFn: chatService.getConversations,
-    refetchInterval: 10_000,
+    refetchInterval: 30_000,
+    staleTime: 10_000,
   });
 
   const { data: contacts = [], isLoading: isContactsLoading, isError: isContactsError } = useQuery({

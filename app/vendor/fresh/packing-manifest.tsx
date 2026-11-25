@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert
 } from 'react-native';
@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SHADOWS } from '@/constants/config';
+import { freshVendorService } from '@/services/freshVendorService';
 
 interface ManifestStop {
   id: string;
@@ -26,6 +27,21 @@ const STOPS: ManifestStop[] = [
 export default function FreshPackingManifestScreen() {
   const router = useRouter();
   const [stops, setStops] = useState<ManifestStop[]>(STOPS);
+
+  useEffect(() => {
+    loadManifest();
+  }, []);
+
+  const loadManifest = async () => {
+    try {
+      const manifest = await freshVendorService.getDailyManifest('v-kitchen-01');
+      if (manifest && Array.isArray(manifest.stops) && manifest.stops.length > 0) {
+        setStops(manifest.stops);
+      }
+    } catch {
+      // Keep initial fallback stops
+    }
+  };
 
   const togglePacked = (id: string) => {
     setStops(stops.map(s => s.id === id ? { ...s, packed: !s.packed } : s));

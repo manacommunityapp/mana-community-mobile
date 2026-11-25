@@ -62,6 +62,15 @@ export default function SettingsHubScreen() {
           />
           <View style={styles.divider} />
           <SettingItem
+            icon="lock-closed-outline"
+            title="Change Password"
+            sub="Update your login credentials"
+            route="/settings/password"
+            iconColor="#6366F1"
+            iconBg="#EEF2FF"
+          />
+          <View style={styles.divider} />
+          <SettingItem
             icon="shield-checkmark-outline"
             title="Privacy & GDPR"
             sub="Directory visibility, data export & erasure"

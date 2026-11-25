@@ -148,7 +148,8 @@ export default function SportsHubScreen() {
   const { data: liveMatches = [], refetch: refetchLive, isRefetching: isRefetchingLive } = useQuery<MatchDto[]>({
     queryKey: ['sports-live', user?.communityId],
     queryFn: () => sportsService.getLiveMatches(user?.communityId),
-    refetchInterval: 15_000,
+    refetchInterval: 30_000,
+    staleTime: 10_000,
   });
 
   const { data: todayMatches = [], refetch: refetchToday } = useQuery<MatchDto[]>({
@@ -573,10 +574,10 @@ export default function SportsHubScreen() {
             <Text style={s.heroTeamName} numberOfLines={1}>{activeLiveMatch.awayTeamName || 'Away'}</Text>
           </View>
         </TouchableOpacity>
-        {activeLiveMatch.venue && (
+        {Boolean(getVenueName(activeLiveMatch.venue)) && (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 2 }}>
             <Ionicons name="location-outline" size={10} color="#A5B4FC" />
-            <Text style={{ fontSize: 10, color: '#A5B4FC' }}>{typeof activeLiveMatch.venue === 'string' ? activeLiveMatch.venue : ''}</Text>
+            <Text style={{ fontSize: 10, color: '#A5B4FC' }}>{getVenueName(activeLiveMatch.venue)}</Text>
           </View>
         )}
         {filteredLive.length > 1 && (
@@ -1217,10 +1218,10 @@ export default function SportsHubScreen() {
                       </View>
                     </View>
 
-                    {res.venue && (
+                    {Boolean(getVenueName(res.venue)) && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 }}>
                         <Ionicons name="location-outline" size={9} color={COLORS.textMuted} />
-                        <Text style={{ fontSize: 9, color: COLORS.textMuted }}>{typeof res.venue === 'string' ? res.venue : ''}</Text>
+                        <Text style={{ fontSize: 9, color: COLORS.textMuted }}>{getVenueName(res.venue)}</Text>
                         {res.round && <><Text style={{ fontSize: 9, color: COLORS.textMuted }}> · </Text><Text style={{ fontSize: 9, color: COLORS.textMuted }}>{res.round}</Text></>}
                       </View>
                     )}

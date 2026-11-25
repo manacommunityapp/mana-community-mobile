@@ -8,6 +8,25 @@ import type {
   WeightAdjustmentDto,
 } from '@/types/freshVendor';
 
+export interface ProductionBatchRequest {
+  recipeName: string;
+  batchCode: string;
+  inputQty: string;
+  outputQty: string;
+  yieldPct?: string;
+  temp?: string;
+}
+
+export interface BatchReleasePayload {
+  inspectorName?: string;
+  coreTemperature: number;
+  sensoryCheckPassed: boolean;
+  sealCheckPassed: boolean;
+  phValue?: number;
+  decision: 'RELEASE' | 'QUARANTINE';
+  notes?: string;
+}
+
 export const freshVendorService = {
   getVendorCapabilities: async (vendorId: number): Promise<VendorCapabilityDto[]> => {
     const res = await apiClient.get<VendorCapabilityDto[]>(`/v1/fresh/vendor/capabilities?vendorId=${vendorId}`);
@@ -39,6 +58,28 @@ export const freshVendorService = {
 
   recordActualWeight: async (data: RecordWeightRequest): Promise<WeightAdjustmentDto> => {
     const res = await apiClient.post<WeightAdjustmentDto>('/v1/fresh/weight/adjust', data);
+    return res.data;
+  },
+
+  getDailyManifest: async (vendorId: string | number, date?: string): Promise<any> => {
+    const dateParam = date ? `&date=${date}` : '';
+    const res = await apiClient.get(`/v1/vendor/production-manifest?vendorId=${vendorId}${dateParam}`);
+    return res.data;
+  },
+
+  getProductionCapacity: async (vendorId?: string | number, date?: string): Promise<any> => {
+    const query = vendorId ? `?vendorId=${vendorId}` : '';
+    const res = await apiClient.get(`/v1/vendor/production-capacity${query}`);
+    return res.data;
+  },
+
+  createProductionBatch: async (data: ProductionBatchRequest): Promise<any> => {
+    const res = await apiClient.post('/v1/vendor/batches', data);
+    return res.data;
+  },
+
+  releaseBatchQc: async (batchNumber: string, payload: BatchReleasePayload): Promise<any> => {
+    const res = await apiClient.post(`/v1/vendor/batches/${batchNumber}/release`, payload);
     return res.data;
   },
 };

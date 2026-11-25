@@ -267,6 +267,7 @@ function RootLayout() {
             <Stack.Screen name="vendor-finance" />
             <Stack.Screen name="my-money" />
             <Stack.Screen name="bookings" />
+            <Stack.Screen name="mkit" />
           </Stack>
         </QueryClientProvider>
         </TenantProvider>

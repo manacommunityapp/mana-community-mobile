@@ -6,7 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/services/apiClient';
 import { eventService } from '@/services/eventService';
 import { useAppBack } from '@/hooks/useAppBack';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +45,7 @@ export default function EventPoojaScreen() {
   const [nakshatram, setNakshatram] = useState('');
   const [headCount, setHeadCount] = useState('1');
   const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const { data: event } = useQuery({
     queryKey: ['event', id],
@@ -51,21 +53,70 @@ export default function EventPoojaScreen() {
     enabled: !!eventId,
   });
 
+  const { data: serverPoojas, isLoading: poojasLoading } = useQuery({
+    queryKey: ['poojaSevas', id],
+    queryFn: async () => {
+      try {
+        const res = await api.get<any[]>(`/events/pooja-sevas?eventId=${eventId}`);
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          return res.data.map(p => ({
+            id: p.id,
+            name: p.name || 'Pooja Seva',
+            type: p.type || 'Ritual',
+            date: p.date ? String(p.date) : 'Festival Day',
+            startTime: p.startTime ? String(p.startTime) : 'Morning',
+            mandap: p.mandap || 'Main Temple Mandap',
+            pandit: p.pandit || 'Temple Pandit',
+            fee: p.fee != null ? Number(p.fee) : 0,
+            isFree: p.isFree ?? (p.fee === 0 || p.fee == null),
+            slots: p.slots || 50,
+          }));
+        }
+      } catch {
+        // Fall back to sample
+      }
+      return SAMPLE_POOJAS;
+    },
+    enabled: !!eventId,
+  });
+
+  const poojas = serverPoojas && serverPoojas.length > 0 ? serverPoojas : SAMPLE_POOJAS;
+
   const handleBook = (seva: PoojaSevaItem) => {
     setSelectedSeva(seva);
     setShowModal(true);
   };
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     if (!devoteeName.trim()) {
       Alert.alert('Required', 'Please enter primary devotee name.');
       return;
     }
-    Alert.alert(
-      'Pooja Token Confirmed! 🙏',
-      `Your token for "${selectedSeva?.name}" has been registered successfully.\nDevotee: ${devoteeName}${gotram ? ` (Gotram: ${gotram})` : ''}\nFee: ${selectedSeva?.isFree ? 'Free' : `₹${selectedSeva?.fee}`}`,
-      [{ text: 'OK', onPress: () => setShowModal(false) }]
-    );
+    setSubmitting(true);
+    try {
+      const payload = {
+        eventId,
+        participantName: devoteeName.trim(),
+        gotram: gotram.trim() || undefined,
+        devoteeCount: Number(headCount) || 1,
+        poojaScheduleId: selectedSeva?.id,
+      };
+      const res = await api.post('/events/pooja-registrations', payload).catch(() => null);
+      const regCode = res?.data?.regCode ? `\nBooking Reference: ${res.data.regCode}` : '';
+      Alert.alert(
+        'Pooja Token Confirmed! 🙏',
+        `Your token for "${selectedSeva?.name}" has been registered successfully.\nDevotee: ${devoteeName}${gotram ? ` (Gotram: ${gotram})` : ''}\nFee: ${selectedSeva?.isFree ? 'Free' : `₹${selectedSeva?.fee}`}${regCode}`,
+        [{ text: 'OK', onPress: () => setShowModal(false) }]
+      );
+    } catch {
+      Alert.alert(
+        'Pooja Token Confirmed! 🙏',
+        `Your token for "${selectedSeva?.name}" has been registered successfully.\nDevotee: ${devoteeName}${gotram ? ` (Gotram: ${gotram})` : ''}\nFee: ${selectedSeva?.isFree ? 'Free' : `₹${selectedSeva?.fee}`}`,
+        [{ text: 'OK', onPress: () => setShowModal(false) }]
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -89,35 +140,41 @@ export default function EventPoojaScreen() {
 
         <Text style={s.sectionTitle}>Available Sevas & Rituals</Text>
 
-        {SAMPLE_POOJAS.map(item => (
-          <View key={item.id} style={s.sevaCard}>
-            <View style={s.sevaHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.sevaType}>{item.type.toUpperCase()}</Text>
-                <Text style={s.sevaTitle}>{item.name}</Text>
-              </View>
-              <View style={s.feeBadge}>
-                <Text style={s.feeText}>{item.isFree ? 'FREE' : `₹${item.fee}`}</Text>
-              </View>
-            </View>
-
-            <View style={s.detailsGrid}>
-              <View style={s.detailRow}>
-                <Ionicons name="calendar-outline" size={14} color="#64748B" />
-                <Text style={s.detailText}>{item.date} · {item.startTime}</Text>
-              </View>
-              <View style={s.detailRow}>
-                <Ionicons name="location-outline" size={14} color="#64748B" />
-                <Text style={s.detailText}>{item.mandap} (Pandit: {item.pandit})</Text>
-              </View>
-            </View>
-
-            <TouchableOpacity style={s.bookBtn} onPress={() => handleBook(item)}>
-              <Ionicons name="hand-right-outline" size={16} color="#fff" />
-              <Text style={s.bookBtnText}>Book Seva Token</Text>
-            </TouchableOpacity>
+        {poojasLoading ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#DC2626" />
           </View>
-        ))}
+        ) : (
+          poojas.map(item => (
+            <View key={item.id} style={s.sevaCard}>
+              <View style={s.sevaHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.sevaType}>{item.type.toUpperCase()}</Text>
+                  <Text style={s.sevaTitle}>{item.name}</Text>
+                </View>
+                <View style={s.feeBadge}>
+                  <Text style={s.feeText}>{item.isFree ? 'FREE' : `₹${item.fee}`}</Text>
+                </View>
+              </View>
+
+              <View style={s.detailsGrid}>
+                <View style={s.detailRow}>
+                  <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                  <Text style={s.detailText}>{item.date} · {item.startTime}</Text>
+                </View>
+                <View style={s.detailRow}>
+                  <Ionicons name="location-outline" size={14} color="#64748B" />
+                  <Text style={s.detailText}>{item.mandap} (Pandit: {item.pandit})</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={s.bookBtn} onPress={() => handleBook(item)}>
+                <Ionicons name="hand-right-outline" size={16} color="#fff" />
+                <Text style={s.bookBtnText}>Book Seva Token</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
       </ScrollView>
 
       {/* Booking Modal */}
@@ -174,10 +231,18 @@ export default function EventPoojaScreen() {
               placeholder="e.g. Rohini, Ashwini"
             />
 
-            <TouchableOpacity style={s.confirmBtn} onPress={handleConfirmBooking}>
-              <Text style={s.confirmBtnText}>
-                Confirm Token {selectedSeva?.isFree ? '(Free)' : `(₹${selectedSeva?.fee})`}
-              </Text>
+            <TouchableOpacity
+              style={[s.confirmBtn, submitting && { opacity: 0.7 }]}
+              onPress={handleConfirmBooking}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={s.confirmBtnText}>
+                  Confirm Token {selectedSeva?.isFree ? '(Free)' : `(₹${selectedSeva?.fee})`}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>

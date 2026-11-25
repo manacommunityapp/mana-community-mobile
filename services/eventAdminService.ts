@@ -117,7 +117,7 @@ export const eventAdminService = {
     try {
       const [eventsRes, venuesRes] = await Promise.all([
         api.get<any[]>('/events/all'),
-        api.get<any[]>('/venues').catch(() => null),
+        api.get<any[]>('/events/venues').catch(() => api.get<any[]>('/venues')).catch(() => null),
       ]);
       const events = eventsRes.data;
       const now = new Date();
@@ -201,7 +201,7 @@ export const eventAdminService = {
 
   async getVenues(): Promise<EventVenue[]> {
     try {
-      const res = await api.get<any[]>('/venues');
+      const res = await api.get<any[]>('/events/venues').catch(() => api.get<any[]>('/venues'));
       return res.data.map(v => ({
         id: v.id,
         name: v.name || '',
