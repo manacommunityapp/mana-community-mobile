@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity,
-  ActivityIndicator, Alert, RefreshControl,
+  ActivityIndicator, Alert, RefreshControl, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -23,12 +23,21 @@ type Tab = 'live' | 'players' | 'teams';
 export default function SportsAuctionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router  = useRouter();
-  const { user } = useAuth();
+  const { user, isAnyAdmin, hasRole } = useAuth();
   const configId = Number(id);
   const qc = useQueryClient();
 
-  const [tab, setTab]         = useState<Tab>('live');
-  const [bidding, setBidding] = useState(false);
+  const isAuctionAdmin = Boolean(
+    isAnyAdmin ||
+    hasRole?.('ADMIN', 'SUPER_ADMIN', 'COMMUNITY_ADMIN', 'SPORTS_ADMIN') ||
+    user?.role?.toUpperCase().includes('ADMIN') ||
+    user?.role === 'SPORTS_ADMIN'
+  );
+
+  const [tab, setTab]                       = useState<Tab>('live');
+  const [bidding, setBidding]               = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [showTeamPicker, setShowTeamPicker] = useState(false);
 
   const { data: baseData, isLoading: loading, refetch } = useQuery({
     queryKey: ['auction-detail', configId],
@@ -57,6 +66,14 @@ export default function SportsAuctionDetailScreen() {
   const teams   = baseData?.teams ?? [];
   const myTeam  = baseData?.myTeam ?? null;
 
+  const isCaptain = Boolean(myTeam);
+  const isAuthorizedBidder = isAuctionAdmin || isCaptain;
+
+  const activeTeam: SportsAuctionTeamResponse | null =
+    myTeam ??
+    teams.find((t) => t.id === selectedTeamId) ??
+    (isAuctionAdmin && teams.length > 0 ? teams[0] : null);
+
   const { data: current = null } = useQuery({
     queryKey: ['auction-current-player', configId],
     queryFn: () => sportsAuctionService.getCurrentPlayer(configId),
@@ -64,12 +81,20 @@ export default function SportsAuctionDetailScreen() {
     refetchInterval: 4000,
   });
 
+  const isLive    = config?.status === 'LIVE';
+  const canBid    = isLive && isAuthorizedBidder && !!activeTeam && !!current?.player;
+  const nextBid   = current ? (current.currentBid ?? current.player.basePrice ?? 0) + (config?.bidIncrementDefault ?? 100) : 0;
+
   async function handleBid() {
-    if (!current?.player || !myTeam) return;
+    if (!current?.player || !activeTeam || !canBid) return;
     const nextBid = (current.currentBid ?? current.player.basePrice ?? 0) + (config?.bidIncrementDefault ?? 100);
+    const confirmMessage = isAuctionAdmin && !isCaptain
+      ? `Place bid of ₹${nextBid.toLocaleString()} for ${current.player.playerName} on behalf of ${activeTeam.teamName}?`
+      : `Place bid of ₹${nextBid.toLocaleString()} for ${current.player.playerName}?`;
+
     Alert.alert(
       'Confirm Bid',
-      `Place bid of ₹${nextBid.toLocaleString()} for ${current.player.playerName}?`,
+      confirmMessage,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -78,8 +103,9 @@ export default function SportsAuctionDetailScreen() {
           onPress: async () => {
             setBidding(true);
             try {
-              await sportsAuctionService.placeBid(configId, current.player.id, nextBid, myTeam.id);
+              await sportsAuctionService.placeBid(configId, current.player.id, nextBid, activeTeam.id);
               qc.invalidateQueries({ queryKey: ['auction-current-player', configId] });
+              qc.invalidateQueries({ queryKey: ['auction-detail', configId] });
             } catch (e: any) {
               Alert.alert('Bid Failed', e?.message ?? 'Please try again.');
             } finally {
@@ -98,10 +124,6 @@ export default function SportsAuctionDetailScreen() {
       </SafeAreaView>
     );
   }
-
-  const isLive    = config?.status === 'LIVE';
-  const canBid    = isLive && !!myTeam && !!current?.player;
-  const nextBid   = current ? (current.currentBid ?? current.player.basePrice ?? 0) + (config?.bidIncrementDefault ?? 100) : 0;
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -150,12 +172,62 @@ export default function SportsAuctionDetailScreen() {
           canBid={canBid}
           bidding={bidding}
           nextBid={nextBid}
-          myTeam={myTeam}
+          activeTeam={activeTeam}
+          isAuctionAdmin={isAuctionAdmin}
+          isCaptain={isCaptain}
+          isAuthorizedBidder={isAuthorizedBidder}
+          onOpenTeamPicker={() => setShowTeamPicker(true)}
           onBid={handleBid}
         />
       )}
       {tab === 'players' && <PlayersTab players={players} />}
       {tab === 'teams'   && <TeamsTab   teams={teams} budgetPerTeam={config?.budgetPerTeam ?? 0} />}
+
+      {/* Team Picker Modal for Admins */}
+      <Modal visible={showTeamPicker} transparent animationType="fade" onRequestClose={() => setShowTeamPicker(false)}>
+        <TouchableOpacity style={s.modalBackdrop} activeOpacity={1} onPress={() => setShowTeamPicker(false)}>
+          <View style={s.teamPickerSheet}>
+            <View style={s.teamPickerHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="shield-checkmark" size={16} color="#F59E0B" />
+                <Text style={s.teamPickerTitle}>Select Bidding Team</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowTeamPicker(false)} hitSlop={8}>
+                <Ionicons name="close" size={20} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+              {teams.length === 0 ? (
+                <Text style={s.emptyText}>No teams registered yet</Text>
+              ) : (
+                teams.map((t) => (
+                  <TouchableOpacity
+                    key={t.id}
+                    style={[s.teamPickItem, activeTeam?.id === t.id && s.teamPickItemActive]}
+                    onPress={() => {
+                      setSelectedTeamId(t.id);
+                      setShowTeamPicker(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.teamPickName, activeTeam?.id === t.id && s.teamPickNameActive]}>
+                        {t.teamName}
+                      </Text>
+                      <Text style={s.teamPickMeta}>
+                        Budget Left: ₹{(t.remainingBudget ?? 0).toLocaleString()} · Spent: ₹{(t.spent ?? 0).toLocaleString()}
+                      </Text>
+                    </View>
+                    {activeTeam?.id === t.id && (
+                      <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -163,14 +235,19 @@ export default function SportsAuctionDetailScreen() {
 // ── Live tab ───────────────────────────────────────────────────
 
 function LiveTab({
-  isLive, current, canBid, bidding, nextBid, myTeam, onBid,
+  isLive, current, canBid, bidding, nextBid, activeTeam,
+  isAuctionAdmin, isCaptain, isAuthorizedBidder, onOpenTeamPicker, onBid,
 }: {
   isLive: boolean;
   current: PlayerWithBidResponse | null;
   canBid: boolean;
   bidding: boolean;
   nextBid: number;
-  myTeam: SportsAuctionTeamResponse | null;
+  activeTeam: SportsAuctionTeamResponse | null;
+  isAuctionAdmin: boolean;
+  isCaptain: boolean;
+  isAuthorizedBidder: boolean;
+  onOpenTeamPicker: () => void;
   onBid: () => void;
 }) {
   if (!isLive) {
@@ -195,6 +272,37 @@ function LiveTab({
     <ScrollView contentContainerStyle={{ padding: 14, gap: 14, paddingBottom: 32 }}>
       {/* Player on block */}
       <View style={s.playerCard}>
+        {/* Role & team banner */}
+        {isAuctionAdmin && (
+          <View style={s.bidderBanner}>
+            <View style={s.adminRoleBadge}>
+              <Ionicons name="shield-checkmark" size={11} color="#92400E" />
+              <Text style={s.adminRoleText}>ADMIN BIDDER</Text>
+            </View>
+            <TouchableOpacity
+              style={s.teamPickerTrigger}
+              onPress={onOpenTeamPicker}
+              activeOpacity={0.8}
+            >
+              <Text style={s.teamPickerTriggerText} numberOfLines={1}>
+                {activeTeam?.teamName ? `Team: ${activeTeam.teamName} ▾` : 'Select Team ▾'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isCaptain && !isAuctionAdmin && activeTeam && (
+          <View style={s.bidderBanner}>
+            <View style={s.captainRoleBadge}>
+              <Ionicons name="ribbon" size={12} color="#065F46" />
+              <Text style={s.captainRoleText}>Captain: {activeTeam.teamName}</Text>
+            </View>
+            <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+              Purse: ₹{(activeTeam.remainingBudget ?? 0).toLocaleString()}
+            </Text>
+          </View>
+        )}
+
         <View style={s.playerCardHeader}>
           <View style={s.playerAvatar}>
             <Text style={s.playerInitial}>{p.playerName?.[0] ?? '?'}</Text>
@@ -230,8 +338,17 @@ function LiveTab({
           )}
         </View>
 
-        {!myTeam && isLive && (
-          <Text style={s.noTeamNote}>Register as captain to place bids</Text>
+        {!isAuthorizedBidder && isLive && (
+          <View style={s.restrictedBox}>
+            <Ionicons name="lock-closed" size={14} color={COLORS.textMuted} />
+            <Text style={s.restrictedText}>
+              Bidding is restricted to Team Captains and Admins (ADMIN, COMMUNITY_ADMIN, SPORTS_ADMIN).
+            </Text>
+          </View>
+        )}
+
+        {isAuthorizedBidder && !activeTeam && isLive && (
+          <Text style={s.noTeamNote}>No teams available in this auction to place bids.</Text>
         )}
       </View>
 
@@ -369,6 +486,24 @@ const s = StyleSheet.create({
   bidBtnDisabled: { opacity: 0.5 },
   bidBtnText:     { color: '#fff', fontWeight: '800', fontSize: 14 },
   noTeamNote:     { textAlign: 'center', fontSize: 12, color: COLORS.textMuted, fontStyle: 'italic' },
+  bidderBanner:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderRadius: RADIUS.sm, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.border, marginBottom: 4 },
+  adminRoleBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  adminRoleText:  { fontSize: 10, fontWeight: '800', color: '#92400E', letterSpacing: 0.5 },
+  captainRoleBadge:{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  captainRoleText:{ fontSize: 11, fontWeight: '700', color: '#065F46' },
+  teamPickerTrigger: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, maxWidth: '55%' },
+  teamPickerTriggerText: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
+  restrictedBox:  { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F3F4F6', borderRadius: RADIUS.sm, padding: 10, marginTop: 4 },
+  restrictedText: { flex: 1, fontSize: 11, color: COLORS.textMuted, lineHeight: 15 },
+  modalBackdrop:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  teamPickerSheet:{ backgroundColor: COLORS.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 16, paddingBottom: 32, gap: 12 },
+  teamPickerHeader:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  teamPickerTitle:{ fontSize: 15, fontWeight: '700', color: COLORS.text },
+  teamPickItem:   { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderRadius: 8, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  teamPickItemActive:{ backgroundColor: '#EEF2FF' },
+  teamPickName:   { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  teamPickNameActive:{ color: COLORS.primary },
+  teamPickMeta:   { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   section:        { gap: 6 },
   sectionTitle:   { fontSize: 13, fontWeight: '700', color: COLORS.text },
   bidHistoryRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderColor: COLORS.border },

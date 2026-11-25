@@ -791,4 +791,62 @@ describe('Roles and Permissions Matrix — Minute Level Audit', () => {
       assert.strictEqual(hasModule('EVENTS'), true, 'Standalone user can access events');
     });
   });
+
+  describe('11. Player Auction Bidding Authorization (Admin, Community Admin, Sports Admin, Captains Only)', () => {
+    function canBidInAuction(user, myTeam, isLive, currentPlayer) {
+      if (!isLive || !currentPlayer) return false;
+      const roles = (user.roles || [user.role || '']).map(r => String(r).toUpperCase());
+      const isAuctionAdmin = roles.some(r =>
+        ['SUPER_ADMIN', 'ADMIN', 'COMMUNITY_ADMIN', 'SPORTS_ADMIN'].includes(r) || r.includes('ADMIN')
+      );
+      const isCaptain = Boolean(myTeam);
+      const isAuthorizedBidder = isAuctionAdmin || isCaptain;
+      return isAuthorizedBidder;
+    }
+
+    it('grants bidding access to SUPER_ADMIN without captaincy', () => {
+      const user = { role: 'SUPER_ADMIN', roles: ['SUPER_ADMIN'] };
+      assert.strictEqual(canBidInAuction(user, null, true, { id: 1 }), true);
+    });
+
+    it('grants bidding access to ADMIN without captaincy', () => {
+      const user = { role: 'ADMIN', roles: ['ADMIN'] };
+      assert.strictEqual(canBidInAuction(user, null, true, { id: 1 }), true);
+    });
+
+    it('grants bidding access to COMMUNITY_ADMIN without captaincy', () => {
+      const user = { role: 'COMMUNITY_ADMIN', roles: ['COMMUNITY_ADMIN'] };
+      assert.strictEqual(canBidInAuction(user, null, true, { id: 1 }), true);
+    });
+
+    it('grants bidding access to SPORTS_ADMIN without captaincy', () => {
+      const user = { role: 'SPORTS_ADMIN', roles: ['SPORTS_ADMIN'] };
+      assert.strictEqual(canBidInAuction(user, null, true, { id: 1 }), true);
+    });
+
+    it('grants bidding access to Team Captains regardless of administrative role', () => {
+      const user = { role: 'RESIDENT', roles: ['RESIDENT'] };
+      const myTeam = { id: 101, teamName: 'Warriors', remainingBudget: 50000 };
+      assert.strictEqual(canBidInAuction(user, myTeam, true, { id: 1 }), true);
+    });
+
+    it('denies bidding access to non-captain standard RESIDENT / USER / GUARD', () => {
+      const resident = { role: 'RESIDENT', roles: ['RESIDENT'] };
+      assert.strictEqual(canBidInAuction(resident, null, true, { id: 1 }), false);
+
+      const user = { role: 'USER', roles: ['USER'] };
+      assert.strictEqual(canBidInAuction(user, null, true, { id: 1 }), false);
+
+      const guard = { role: 'GUARD', roles: ['GUARD'] };
+      assert.strictEqual(canBidInAuction(guard, null, true, { id: 1 }), false);
+    });
+
+    it('denies bidding when auction is not LIVE even for admins and captains', () => {
+      const admin = { role: 'ADMIN', roles: ['ADMIN'] };
+      const captain = { role: 'RESIDENT', roles: ['RESIDENT'] };
+      const myTeam = { id: 101, teamName: 'Warriors' };
+      assert.strictEqual(canBidInAuction(admin, null, false, { id: 1 }), false);
+      assert.strictEqual(canBidInAuction(captain, myTeam, false, { id: 1 }), false);
+    });
+  });
 });
