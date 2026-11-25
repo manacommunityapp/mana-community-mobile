@@ -131,6 +131,7 @@ export function resolveRoute(data: Record<string, unknown>): string | null {
     // Events
     case 'NEW_EVENT':
     case 'EVENT_REMINDER':
+    case 'REPORT_EXPORT_READY':
       return '/tabs/events';
 
     // Sports
@@ -146,10 +147,21 @@ export function resolveRoute(data: Record<string, unknown>): string | null {
     // Marketplace & Auction
     case 'AUCTION_BID':
     case 'AUCTION_START':
-      return '/auction';
+    case 'AUCTION_ENDED':
+    case 'AUCTION_SOLD':
+    case 'AUCTION_ITEM_WON':
+    case 'AUCTION_ITEM_OUTBID':
+      return data.auctionId ? `/auction/${data.auctionId}` : '/auction';
+    case 'AUCTION_OUTBID':
+    case 'AUCTION_PLAYER_SOLD':
+      return data.auctionId ? `/sports/auction/${data.auctionId}` : '/sports';
     case 'MARKETPLACE_LISTING':
     case 'MARKETPLACE_OFFER':
       return data.listingId ? `/marketplace/${data.listingId}` : '/marketplace';
+
+    // IoT & Smart Meters
+    case 'IOT_ANOMALY':
+      return '/iot';
 
     // Visitors & Parking
     case 'VISITOR_ARRIVAL':
@@ -214,6 +226,8 @@ export function resolveRoute(data: Record<string, unknown>): string | null {
     case 'COMMUTE_UPDATE':
     case 'SHUTTLE':
       return '/commute';
+    case 'MOBILITY_TRIP_OFFER':
+      return '/mobility/driver';
 
     // Shared journeys
     case 'MOBILITY_GROUP_MATCH':
@@ -234,6 +248,7 @@ export function resolveRoute(data: Record<string, unknown>): string | null {
 
     // Group buying & Offers
     case 'GROUP_BUY':
+    case 'GROUP_ORDER_STATUS':
       return '/group-buying';
     case 'OFFER':
     case 'DEAL':

@@ -124,6 +124,10 @@ export default function BiometricTurnstileScreen() {
         onLeftPress={() => router.back()}
         actions={[
           {
+            icon: 'scan-outline',
+            onPress: () => router.push('/access/kiosk' as any),
+          },
+          {
             icon: 'refresh-outline',
             onPress: loadTurnstiles,
           },

@@ -112,8 +112,17 @@ export default function CricHeroesScreen() {
   async function handleRefresh() {
     setRefreshLoading(true);
     try {
-      const data = await sportsService.refreshCricHeroesProfile(playerId);
-      setLinked(data);
+      try {
+        await sportsService.refreshCricHeroesProfileAsync(playerId);
+        const latest = await sportsService.getCricHeroesProfile(playerId);
+        if (latest) setLinked(latest);
+        setTimeout(() => {
+          sportsService.getCricHeroesProfile(playerId).then((p) => { if (p) setLinked(p); }).catch(() => {});
+        }, 3500);
+      } catch {
+        const data = await sportsService.refreshCricHeroesProfile(playerId);
+        setLinked(data);
+      }
     } catch (err: any) {
       Alert.alert('Refresh failed', err?.response?.data?.message ?? 'Could not refresh');
     } finally {

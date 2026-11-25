@@ -11,6 +11,7 @@ export default function HrmLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="attendance" />
+      <Stack.Screen name="punch" options={{ title: 'Field Attendance Punch' }} />
       <Stack.Screen name="leaves" />
       <Stack.Screen name="apply-leave" options={{ presentation: 'modal' }} />
       <Stack.Screen name="shifts" />

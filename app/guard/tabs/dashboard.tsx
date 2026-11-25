@@ -364,6 +364,8 @@ export default function GuardDashboard() {
           <Text style={s.sectionTitle}>Quick Actions</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.quickRow}>
+          <QuickBtn icon="scan-circle-outline" label="Face Kiosk" onPress={() => router.push('/access/kiosk' as any)} color="#059669" bg="#D1FAE5" />
+          <QuickBtn icon="people-outline"   label="Crew Clock-In" onPress={() => router.push('/guard/contractor-crew' as any)} color="#0284C7" bg="#E0F2FE" />
           <QuickBtn icon="scan-outline"     label="Scan QR"      onPress={() => router.push('/guard/tabs/scan')}       color="#2563EB" bg="#DBEAFE" />
           <QuickBtn icon="person-add-outline" label="Walk-In"    onPress={() => router.push('/guard/walk-in')}         color="#7C3AED" bg="#EDE9FE" />
           <QuickBtn

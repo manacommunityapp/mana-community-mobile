@@ -62,10 +62,19 @@ export function useRealtimeSync(enabled: boolean = true) {
                   queryClient.invalidateQueries({ queryKey: ['my-orders'] });
                   break;
                 case 'GROUP_BUYING':
+                case 'GROUP_ORDERS':
                 case 'DEALS':
+                  queryClient.invalidateQueries({ queryKey: ['group-deals'] });
+                  queryClient.invalidateQueries({ queryKey: ['almost-unlocked'] });
+                  queryClient.invalidateQueries({ queryKey: ['community-savings'] });
                   queryClient.invalidateQueries({ queryKey: ['group-buying-deals'] });
                   queryClient.invalidateQueries({ queryKey: ['group-buying-orders'] });
                   queryClient.invalidateQueries({ queryKey: ['demand-pools'] });
+                  break;
+                case 'IOT':
+                case 'IOT_ALERTS':
+                  queryClient.invalidateQueries({ queryKey: ['iot-sensors'] });
+                  queryClient.invalidateQueries({ queryKey: ['iot-anomalies'] });
                   break;
                 case 'NOTIFICATIONS':
                   queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -144,6 +153,22 @@ export function useRealtimeSync(enabled: boolean = true) {
           topics.forEach((t) => {
             client.subscribe(t, (frame: IMessage) => handleLiveEvent(t, frame));
           });
+
+          // Direct Redis Pub/Sub domain topics for IoT & Group Orders (payloads do not wrap in { module })
+          if (communityId) {
+            client.subscribe(`/topic/community/${communityId}/iot-feed`, () => {
+              queryClient.invalidateQueries({ queryKey: ['iot-sensors'] });
+              queryClient.invalidateQueries({ queryKey: ['iot-anomalies'] });
+            });
+            client.subscribe(`/topic/community/${communityId}/group-orders`, () => {
+              queryClient.invalidateQueries({ queryKey: ['group-deals'] });
+              queryClient.invalidateQueries({ queryKey: ['almost-unlocked'] });
+              queryClient.invalidateQueries({ queryKey: ['community-savings'] });
+              queryClient.invalidateQueries({ queryKey: ['group-buying-deals'] });
+              queryClient.invalidateQueries({ queryKey: ['group-buying-orders'] });
+              queryClient.invalidateQueries({ queryKey: ['demand-pools'] });
+            });
+          }
         },
 
         onStompError: (frame) => {

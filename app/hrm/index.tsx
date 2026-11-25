@@ -188,6 +188,21 @@ export default function HrmHomeScreen() {
             onCheckIn={async () => { await checkInMutation.mutateAsync(); }}
             onCheckOut={async () => { await checkOutMutation.mutateAsync(); }}
           />
+
+          <TouchableOpacity
+            style={s.fieldPunchBanner}
+            onPress={() => router.push('/hrm/punch' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={s.fieldPunchIcon}>
+              <Ionicons name="camera-outline" size={18} color="#059669" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.fieldPunchTitle}>Field Selfie & GPS Punch</Text>
+              <Text style={s.fieldPunchSub}>Touchless attendance with geofence verification</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+          </TouchableOpacity>
         </View>
 
         {/* Today's Status */}
@@ -327,6 +342,39 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 16,
+  },
+  fieldPunchBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: RADIUS.md,
+    padding: 12,
+    marginTop: 14,
+    width: '100%',
+    gap: 10,
+  },
+  fieldPunchIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fieldPunchTitle: {
+    fontSize: 13,
+    fontFamily: FONTS.displayBold,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  fieldPunchSub: {
+    fontSize: 11,
+    fontFamily: FONTS.regular,
+    color: '#047857',
+    marginTop: 1,
   },
 
   todayCard: {

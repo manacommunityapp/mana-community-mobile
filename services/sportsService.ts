@@ -1468,6 +1468,10 @@ export const sportsService = {
     const res = await api.get<SportsCricHeroesProfileResponse>(`/api/cricheroes/profile/${playerId}/refresh`);
     return res.data;
   },
+  async refreshCricHeroesProfileAsync(playerId: number): Promise<{ status: string; playerId: number }> {
+    const res = await api.post<{ status: string; playerId: number }>(`/api/cricheroes/profile/${playerId}/refresh-async`);
+    return res.data;
+  },
 
   // ── Race Results ──────────────────────────────────────────────
   async getRaceResults(matchId: number): Promise<SportsRaceResultResponse[]> {
