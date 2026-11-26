@@ -656,6 +656,11 @@ export default function VisitorsScreen() {
         data={filtered}
         keyExtractor={item => String(item.id)}
         renderItem={renderVisitor}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        windowSize={5}
+        removeClippedSubviews
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
