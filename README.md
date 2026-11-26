@@ -20,6 +20,21 @@ Connects to the same Spring Boot backend used by the web app.
 
 ---
 
+## Validation
+
+Run the complete local validation pipeline with:
+
+```sh
+npm ci
+npm run validate
+```
+
+`npm test` runs both the Node `.mjs` suite and the TypeScript Jest suite. `npm run validate` also runs TypeScript checking, Expo dependency validation, linting, and an Android production bundle export. GitHub Actions runs those checks as separate steps for pushes to `main`/`master` and pull requests, so a failing check does not hide the results from later checks.
+
+The Android export validates Metro bundling; it does not produce a signed installable app. Device end-to-end coverage for sign-in, payment status, booking, visitor approval, and offline recovery still needs a configured test backend, seeded test accounts, and a native device/emulator runner.
+
+---
+
 ## Navigation Structure
 
 Five root tabs with a Discover hub containing 12 category tiles:

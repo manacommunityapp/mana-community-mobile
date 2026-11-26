@@ -33,13 +33,17 @@ interface PaymentModalProps {
   /** Completed order from the Mana backend (paymentSessionId + appId required). */
   order: CashfreeOrderResponse | null;
   /** Current payment state from usePayment. */
-  status: 'idle' | 'creating' | 'checkout' | 'verifying' | 'success' | 'failed';
+  status: 'idle' | 'creating' | 'checkout' | 'verifying' | 'checking' | 'unknown' | 'success' | 'failed';
   /** Error message to display. */
   error: string | null;
+  canRetry?: boolean;
   /** Called when the user closes the modal after success or failure. */
   onDismiss: () => void;
   /** Called by the modal after the SDK onVerify fires. */
   onVerify: (manaOrderId: string) => Promise<void>;
+  onCheckStatus?: () => Promise<void>;
+  onRetry?: () => Promise<void>;
+  onOpenHistory?: () => void;
 }
 
 /**
@@ -61,8 +65,12 @@ export function PaymentModal({
   order,
   status,
   error,
+  canRetry = false,
   onDismiss,
   onVerify,
+  onCheckStatus = async () => {},
+  onRetry = async () => onDismiss(),
+  onOpenHistory,
 }: PaymentModalProps) {
   const hasLaunchedCheckout = useRef(false);
 
@@ -86,17 +94,18 @@ export function PaymentModal({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={status === 'success' || status === 'failed' ? onDismiss : undefined}
+      onRequestClose={status === 'success' || status === 'failed' || status === 'unknown' ? onDismiss : undefined}
     >
       <SafeAreaView style={s.container} edges={['top', 'bottom']}>
         {/* ── Loading / Creating ── */}
-        {(status === 'creating' || status === 'checkout' || status === 'verifying') && (
+        {(status === 'creating' || status === 'checkout' || status === 'verifying' || status === 'checking') && (
           <View style={s.center}>
             <ActivityIndicator size="large" color={COLORS.primary} />
             <Text style={s.loadingTitle}>
               {status === 'creating'   && 'Preparing payment…'}
               {status === 'checkout'   && 'Opening checkout…'}
               {status === 'verifying'  && 'Confirming payment…'}
+              {status === 'checking'   && 'Checking order status…'}
             </Text>
             <Text style={s.loadingSub}>
               Please do not close this screen.
@@ -135,12 +144,40 @@ export function PaymentModal({
             <View style={[s.iconCircle, { backgroundColor: '#FEF2F2' }]}>
               <Ionicons name="close" size={36} color="#EF4444" />
             </View>
-            <Text style={s.resultTitle}>Payment Failed</Text>
+            <Text style={s.resultTitle}>Payment Not Completed</Text>
             <Text style={s.resultSub}>
-              {error ?? 'Your payment could not be completed. No amount has been charged.'}
+              {error ?? 'The server reports that this payment did not complete.'}
             </Text>
-            <TouchableOpacity style={[s.primaryBtn, s.retryBtn]} onPress={onDismiss} activeOpacity={0.85}>
-              <Text style={[s.primaryBtnText, { color: COLORS.primary }]}>Try Again</Text>
+            <TouchableOpacity style={[s.primaryBtn, s.retryBtn]} onPress={canRetry ? onRetry : onDismiss} activeOpacity={0.85}>
+              <Text style={[s.primaryBtnText, { color: COLORS.primary }]}>{canRetry ? 'Start New Attempt' : 'Close'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {status === 'unknown' && (
+          <View style={s.center}>
+            <View style={[s.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="help" size={36} color="#B45309" />
+            </View>
+            <Text style={s.resultTitle}>{order ? 'Order Found' : 'Order Status Unknown'}</Text>
+            {order && <DetailRow label="Order ID" value={order.manaOrderId} />}
+            {order && <DetailRow label="Server status" value={order.status} />}
+            <Text style={s.resultSub}>{error ?? 'We could not confirm whether the server created the order. Check its status before retrying.'}</Text>
+            <TouchableOpacity style={s.primaryBtn} onPress={onCheckStatus} activeOpacity={0.85}>
+              <Text style={s.primaryBtnText}>Check Status</Text>
+            </TouchableOpacity>
+            {canRetry && (
+              <TouchableOpacity style={[s.primaryBtn, s.retryBtn]} onPress={onRetry} activeOpacity={0.85}>
+                <Text style={[s.primaryBtnText, { color: COLORS.primary }]}>Retry With Same Request</Text>
+              </TouchableOpacity>
+            )}
+            {order && onOpenHistory && (
+              <TouchableOpacity onPress={onOpenHistory} activeOpacity={0.8}>
+                <Text style={s.closeText}>Open Payment History</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={onDismiss} activeOpacity={0.8}>
+              <Text style={s.closeText}>Keep this attempt pending and close</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -289,6 +326,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.primary,
   },
+  closeText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600', marginTop: 4 },
   primaryBtnText: {
     fontSize: 15,
     fontWeight: '800',

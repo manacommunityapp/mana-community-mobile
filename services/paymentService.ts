@@ -1,10 +1,5 @@
 import api from './apiClient';
-import { requestQueue } from './requestQueue';
-
-function isNetworkError(err: unknown): boolean {
-  const e = err as any;
-  return !e?.response && (e?.code === 'ECONNABORTED' || e?.message === 'Network Error' || !e?.status);
-}
+import * as SecureStore from 'expo-secure-store';
 
 export interface CashfreeCreateOrderRequest {
   amount: number;
@@ -12,6 +7,68 @@ export interface CashfreeCreateOrderRequest {
   referenceId: number;
   description?: string;
   customerPhone?: string;
+}
+
+export interface PaymentIdentity {
+  userId: number;
+  communityId: number | null;
+}
+
+interface PaymentAttempt {
+  idempotencyKey: string;
+  request: CashfreeCreateOrderRequest;
+  createdAt: string;
+}
+
+export class PaymentOrderUnknownError extends Error {
+  readonly code = 'PAYMENT_ORDER_UNKNOWN';
+  constructor(message = 'We could not confirm whether your payment order was created. Check its status before retrying.') {
+    super(message);
+    this.name = 'PaymentOrderUnknownError';
+  }
+}
+
+export type PendingOrderLookup =
+  | { status: 'FOUND'; order: CashfreeOrderResponse }
+  | { status: 'NOT_FOUND' }
+  | { status: 'UNKNOWN' };
+
+function attemptStorageKey(req: CashfreeCreateOrderRequest, identity: PaymentIdentity): string {
+  const refType = req.referenceType.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return `mana_payment_attempt_${identity.userId}_${identity.communityId ?? 'none'}_${refType}_${req.referenceId}`;
+}
+
+async function readPaymentAttempt(key: string): Promise<PaymentAttempt | null> {
+  const raw = await SecureStore.getItemAsync(key);
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as PaymentAttempt;
+    if (typeof value?.idempotencyKey !== 'string' || typeof value?.createdAt !== 'string' || !value.request) return null;
+    return value;
+  } catch { return null; }
+}
+
+async function findOrderForAttempt(req: CashfreeCreateOrderRequest, attempt: PaymentAttempt): Promise<PendingOrderLookup> {
+  try {
+    const response = await api.get<{ content?: CashfreeOrderResponse[] }>('/payments/cashfree/orders', { params: { page: 0, size: 50 } });
+    const createdAfter = new Date(attempt.createdAt).getTime() - 60_000;
+    const candidate = (response.data?.content ?? []).find((order) =>
+      order.referenceType === req.referenceType &&
+      Number(order.referenceId) === Number(req.referenceId) &&
+      Math.abs(Number(order.amount) - Number(req.amount)) < 0.01 &&
+      Number.isFinite(new Date(order.createdAt).getTime()) && new Date(order.createdAt).getTime() >= createdAfter
+    );
+    return candidate ? { status: 'FOUND', order: candidate } : { status: 'NOT_FOUND' };
+  } catch {
+    return { status: 'UNKNOWN' };
+  }
+}
+
+async function postCreateOrder(req: CashfreeCreateOrderRequest, attempt: PaymentAttempt): Promise<CashfreeOrderResponse> {
+  const response = await api.post<CashfreeOrderResponse>('/payments/cashfree/orders', req, {
+    headers: { 'Idempotency-Key': attempt.idempotencyKey },
+  });
+  return response.data;
 }
 
 export interface CashfreeOrderResponse {
@@ -43,24 +100,72 @@ export interface AdminSummaryResponse {
 }
 
 export const paymentService = {
-  async createOrder(req: CashfreeCreateOrderRequest): Promise<CashfreeOrderResponse> {
-    try {
-      const res = await api.post<CashfreeOrderResponse>('/payments/cashfree/orders', req);
-      return res.data;
-    } catch (err: any) {
-      if (isNetworkError(err)) {
-        await requestQueue.enqueue({
-          url: '/payments/cashfree/orders',
-          method: 'POST',
-          body: req,
-          headers: {},
-          maxRetries: 3,
-          tags: ['payment'],
-        });
-        throw new Error('No connection. Payment queued and will retry automatically.');
+  async createOrder(req: CashfreeCreateOrderRequest, identity: PaymentIdentity): Promise<CashfreeOrderResponse> {
+    const key = attemptStorageKey(req, identity);
+    let attempt = await readPaymentAttempt(key);
+
+    if (attempt) {
+      if (JSON.stringify(attempt.request) !== JSON.stringify(req)) {
+        const lookup = await findOrderForAttempt(attempt.request, attempt);
+        if (lookup.status === 'FOUND') {
+          if (lookup.order.status === 'PAID' || lookup.order.status === 'FAILED' || lookup.order.status === 'EXPIRED') {
+            await SecureStore.deleteItemAsync(key);
+          }
+          return lookup.order;
+        }
+        throw new PaymentOrderUnknownError('A previous payment attempt for this item is unresolved. Check its status before changing the payment details.');
       }
+      const lookup = await findOrderForAttempt(req, attempt);
+      if (lookup.status === 'UNKNOWN') throw new PaymentOrderUnknownError();
+      if (lookup.status === 'FOUND') {
+        if (lookup.order.status === 'PAID' || lookup.order.status === 'FAILED' || lookup.order.status === 'EXPIRED') {
+          await SecureStore.deleteItemAsync(key);
+        }
+        // An order is already visible for this operation. Never create another one.
+        return lookup.order;
+      }
+    } else {
+      attempt = {
+        idempotencyKey: `mana-pay-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`,
+        request: req,
+        createdAt: new Date().toISOString(),
+      };
+      // Persist before the POST so a process death or lost response can be resolved safely.
+      await SecureStore.setItemAsync(key, JSON.stringify(attempt));
+    }
+
+    try {
+      const created = await postCreateOrder(req, attempt!);
+      await SecureStore.deleteItemAsync(key);
+      return created;
+    } catch (err: any) {
+      const status = Number(err?.response?.status);
+      const serverMessage = String(err?.response?.data?.message ?? err?.response?.data?.error ?? '').toLowerCase();
+      const idempotencyInFlight = status === 409 && serverMessage.includes('still being processed');
+      if (!status || status >= 500 || idempotencyInFlight) {
+        throw new PaymentOrderUnknownError();
+      }
+      await SecureStore.deleteItemAsync(key);
       throw new Error(err?.response?.data?.message || 'Failed to create payment order. Please try again.');
     }
+  },
+
+  async checkPendingOrder(req: CashfreeCreateOrderRequest, identity: PaymentIdentity): Promise<PendingOrderLookup> {
+    const key = attemptStorageKey(req, identity);
+    const attempt = await readPaymentAttempt(key);
+    if (!attempt) return { status: 'UNKNOWN' };
+    const matchesRequest = JSON.stringify(attempt.request) === JSON.stringify(req);
+    const lookup = await findOrderForAttempt(attempt.request, attempt);
+    if (!matchesRequest && lookup.status !== 'FOUND') return { status: 'UNKNOWN' };
+    if (lookup.status !== 'FOUND') return lookup;
+    if (lookup.order.status === 'PAID' || lookup.order.status === 'FAILED' || lookup.order.status === 'EXPIRED') {
+      await SecureStore.deleteItemAsync(key);
+    }
+    return lookup;
+  },
+
+  async clearPendingAttempt(req: CashfreeCreateOrderRequest, identity: PaymentIdentity): Promise<void> {
+    await SecureStore.deleteItemAsync(attemptStorageKey(req, identity));
   },
 
   async verifyPayment(orderId: string): Promise<CashfreeOrderResponse> {

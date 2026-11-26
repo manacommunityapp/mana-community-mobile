@@ -12,59 +12,43 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '@/components/common/Header';
-import { offlineSyncService, type SyncMutation } from '@/services/offlineSyncService';
-import { COLORS, SHADOWS, RADIUS } from '@/constants/config';
+import { offlineSyncService } from '@/services/offlineSyncService';
+import { backgroundSync } from '@/services/backgroundSync';
+import { requestQueue, type QueuedRequest } from '@/services/requestQueue';
+import { useAuth } from '@/hooks/useAuth';
+import { SHADOWS, RADIUS } from '@/constants/config';
 
 export default function OfflineSyncScreen() {
   const router = useRouter();
-  const [queue, setQueue] = useState<SyncMutation[]>([]);
+  const { user } = useAuth();
+  const [queue, setQueue] = useState<QueuedRequest[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [lastSyncFailed, setLastSyncFailed] = useState(false);
 
-  useEffect(() => {
-    loadQueue();
-  }, []);
-
-  const loadQueue = () => {
-    const q = offlineSyncService.getServerQueue();
-    if (q.length === 0) {
-      offlineSyncService.enqueueMutation(1, 101, 'VISITOR_PASS', 'CREATE', { visitorName: 'Amazon Delivery', slot: 'Tower B' });
-      offlineSyncService.enqueueMutation(1, 101, 'METER_READING', 'CREATE', { meterId: 102, pulseDelta: 250 });
-      setQueue(offlineSyncService.getServerQueue());
-    } else {
-      setQueue(q);
-    }
+  const refreshQueue = async () => {
+    const all = await requestQueue.getAll();
+    setQueue(all.filter((item) => item.identity.userId === Number(user?.id) && item.identity.communityId === (user?.communityId ?? null)));
   };
+
+  useEffect(() => {
+    void refreshQueue();
+    const unsubscribeStatus = offlineSyncService.onStatusChange(setIsOnline);
+    const unsubscribeQueue = requestQueue.subscribe(() => { void refreshQueue(); });
+    return () => { unsubscribeStatus(); unsubscribeQueue(); };
+  }, [user?.id, user?.communityId]);
 
   const handleSyncNow = async () => {
     setSyncing(true);
     try {
-      const pushRes = await offlineSyncService.pushPendingMutations(1);
-      const pullRes = await offlineSyncService.pullDeltaChanges(1);
-      const latest = offlineSyncService.getServerQueue();
-      setQueue(latest);
-      const stillPending = latest.filter((m) => m.status === 'PENDING').length;
-
-      if (pushRes.status === 'PUSH_FAILED' || pullRes.status === 'PULL_FAILED') {
-        setLastSyncFailed(true);
-        Alert.alert(
-          'Sync Failed',
-          `The server could not be reached, so nothing was confirmed. ${stillPending} item(s) are still pending and will be retried. Do not treat them as submitted.`
-        );
-        return;
-      }
-
-      setLastSyncFailed(false);
-      Alert.alert(
-        'Sync Complete',
-        `Server confirmed ${pushRes.acceptedMutationIds.length} mutation(s).` +
-          (stillPending > 0 ? ` ${stillPending} item(s) are still pending.` : '')
-      );
+      const result = await backgroundSync.run();
+      await refreshQueue();
+      setLastSyncFailed(result.failed > 0 || result.conflicts.length > 0);
+      Alert.alert('Sync Finished', `${result.succeeded} confirmed, ${result.failed} failed, ${result.conflicts.length} conflict(s).`);
     } catch (err) {
       setLastSyncFailed(true);
-      setQueue(offlineSyncService.getServerQueue());
-      const stillPending = offlineSyncService.getServerQueue().filter((m) => m.status === 'PENDING').length;
+      await refreshQueue();
+      const stillPending = queue.filter((item) => item.status === 'PENDING').length;
       Alert.alert(
         'Sync Failed',
         `Sync could not complete. Nothing was confirmed by the server. ${stillPending} item(s) remain pending.`
@@ -89,15 +73,14 @@ export default function OfflineSyncScreen() {
             <Text style={styles.networkStatusText}>{isOnline ? 'Online (Connected)' : 'Deep Offline Mode'}</Text>
           </View>
           <Text style={styles.statusDescription}>
-            Mutations recorded in elevator shafts or basement parking are cached locally and synchronized via Last-Write-Wins (LWW) delta protocol.
+            Only bill-paid records are queued for retry. Queued changes stay on this device until the server confirms them; a queued change is not a completed payment.
           </Text>
 
           {lastSyncFailed && (
             <View style={styles.failureBanner}>
               <Ionicons name="alert-circle-outline" size={16} color="#B91C1C" />
               <Text style={styles.failureBannerText}>
-                Last sync failed — server unreachable. {queue.filter((m) => m.status === 'PENDING').length} item(s) pending
-                confirmation. Nothing below has been confirmed by the server.
+                Some queued changes could not be confirmed. Review the status of each item below before treating it as complete.
               </Text>
             </View>
           )}
@@ -118,37 +101,34 @@ export default function OfflineSyncScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Pending Queue List */}
+        {/* Persisted Queue List */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionHeader}>Local Mutation Queue ({queue.length})</Text>
-          <TouchableOpacity onPress={() => { offlineSyncService.clearSynced(); setQueue(offlineSyncService.getServerQueue()); }}>
-            <Text style={styles.clearBtnText}>Clear Synced</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionHeader}>On-device queue ({queue.length})</Text>
         </View>
 
         {queue.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="checkmark-done-circle-outline" size={48} color="#10B981" />
             <Text style={styles.emptyTitle}>All Caught Up!</Text>
-            <Text style={styles.emptySubtitle}>No pending offline mutations in local queue.</Text>
+            <Text style={styles.emptySubtitle}>No queued changes for this account.</Text>
           </View>
         ) : (
           queue.map((item) => (
-            <View key={item.mutationId} style={styles.mutationCard}>
+            <View key={item.id} style={styles.mutationCard}>
               <View style={styles.mutationHeader}>
                 <View style={styles.mutationTypeBadge}>
-                  <Text style={styles.mutationTypeText}>{item.entityType}</Text>
+                  <Text style={styles.mutationTypeText}>{item.operation.type.replaceAll('_', ' ')}</Text>
                 </View>
                 <View
                   style={[
                     styles.statusBadge,
-                    { backgroundColor: item.status === 'SYNCED' ? '#D1FAE5' : '#FEF3C7' },
+                    { backgroundColor: item.status === 'PENDING' ? '#FEF3C7' : item.status === 'CONFLICT' ? '#FEE2E2' : '#E2E8F0' },
                   ]}
                 >
                   <Text
                     style={[
                       styles.statusBadgeText,
-                      { color: item.status === 'SYNCED' ? '#065F46' : '#92400E' },
+                      { color: item.status === 'PENDING' ? '#92400E' : item.status === 'CONFLICT' ? '#B91C1C' : '#334155' },
                     ]}
                   >
                     {item.status}
@@ -156,13 +136,23 @@ export default function OfflineSyncScreen() {
                 </View>
               </View>
 
-              <Text style={styles.mutationId}>{item.mutationId}</Text>
+              <Text style={styles.mutationId}>Bill {item.operation.billId}</Text>
               <Text style={styles.mutationPayload} numberOfLines={2}>
-                Payload: {item.payloadJson}
+                {item.lastError ?? `${item.retryCount} retry attempt(s)`}
               </Text>
               <Text style={styles.mutationTimestamp}>
-                Timestamp: {new Date(item.vectorTimestamp).toLocaleTimeString()}
+                Added: {new Date(item.createdAt).toLocaleString()}
               </Text>
+              {item.status === 'FAILED' && (
+                <TouchableOpacity onPress={async () => { await requestQueue.retry(item.id); if (isOnline) await backgroundSync.run(); }}>
+                  <Text style={styles.clearBtnText}>Retry</Text>
+                </TouchableOpacity>
+              )}
+              {item.status !== 'PENDING' && (
+                <TouchableOpacity onPress={() => requestQueue.remove(item.id)}>
+                  <Text style={styles.clearBtnText}>Discard item</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))
         )}

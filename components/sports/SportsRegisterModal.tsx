@@ -341,16 +341,14 @@ export function SportsRegisterModal({ visible, onClose, onRegistered, initialEve
     // If there is a non-zero fee, gate on Cashfree payment first.
     if (fee > 0) {
       setPendingRecord(record);
-      const order = await payment.startPayment({
+      setShowPaymentModal(true);
+      await payment.startPayment({
         amount: fee,
         referenceType: 'SPORTS_REGISTRATION',
         referenceId: currentEvent.event.id,
         description: `${currentEvent.tournamentName} — ${currentEvent.event.categoryName || currentEvent.event.name}`,
       });
       setLoading(false);
-      if (order) {
-        setShowPaymentModal(true);
-      }
       return;
     }
 
@@ -969,7 +967,11 @@ export function SportsRegisterModal({ visible, onClose, onRegistered, initialEve
       order={payment.order}
       status={payment.status}
       error={payment.error}
+      canRetry={payment.canRetry}
       onVerify={handlePaymentVerify}
+      onCheckStatus={payment.checkStatus}
+      onRetry={payment.retry}
+      onOpenHistory={() => { setShowPaymentModal(false); onClose(); router.push('/payments/history'); }}
       onDismiss={() => {
         setShowPaymentModal(false);
         payment.reset();

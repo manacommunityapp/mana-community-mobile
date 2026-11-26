@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function ConflictsScreen() {
   const router = useRouter();
-  const { conflicts, triggerSync } = useBackgroundSync();
+  const { conflicts } = useBackgroundSync();
 
   function handleDismiss(id: string) {
     Alert.alert(
@@ -26,10 +26,6 @@ export default function ConflictsScreen() {
         },
       ]
     );
-  }
-
-  function handleRetryAll() {
-    triggerSync();
   }
 
   const renderItem = ({ item }: ListRenderItemInfo<ConflictRecord>) => {
@@ -70,14 +66,14 @@ export default function ConflictsScreen() {
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Sync Conflicts</Text>
-        <TouchableOpacity onPress={handleRetryAll} hitSlop={8} activeOpacity={0.7}>
-          <Text style={styles.retryAll}>Retry All</Text>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
+          <Text style={styles.retryAll}>Done</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.banner}>
         <Text style={styles.bannerText}>
-          These actions couldn't sync because the server has newer data. Review and discard any you no longer need.
+          The server rejected these queued changes because their data conflicts. Review each item and discard it if you no longer need it.
         </Text>
       </View>
 
@@ -90,7 +86,7 @@ export default function ConflictsScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>✅</Text>
             <Text style={styles.emptyTitle}>No conflicts</Text>
-            <Text style={styles.emptyText}>All your changes have synced successfully.</Text>
+          <Text style={styles.emptyText}>There are no conflicts waiting for review.</Text>
           </View>
         }
       />

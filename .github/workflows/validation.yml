@@ -1,0 +1,28 @@
+name: Validation
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - id: install
+        run: npm ci
+      - if: ${{ always() && steps.install.outcome == 'success' }}
+        run: npm run typecheck
+      - if: ${{ always() && steps.install.outcome == 'success' }}
+        run: npm test
+      - if: ${{ always() && steps.install.outcome == 'success' }}
+        run: npm run lint
+      - if: ${{ always() && steps.install.outcome == 'success' }}
+        run: npm run expo:check
+      - if: ${{ always() && steps.install.outcome == 'success' }}
+        run: npm run build:check

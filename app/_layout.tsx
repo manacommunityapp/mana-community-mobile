@@ -26,6 +26,7 @@ import { setupGlobalFonts } from '@/utils/globalFonts';
 import { initSentry, setUser, clearUser } from '@/utils/sentry';
 import { validateEnvConfig } from '@/utils/security';
 import { offlineSyncService } from '@/services/offlineSyncService';
+import { backgroundSync } from '@/services/backgroundSync';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { getPortalForRole } from '@/hooks/useRoleSwitcher';
 import { useAppBiometrics } from '@/hooks/useAppBiometrics';
@@ -55,6 +56,10 @@ function AuthGuard() {
   useIdleTimeout(isAuthenticated && !isPending, logout);
   useDeviceSecurity();
   useRealtimeSync(isAuthenticated && !isPending);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) void backgroundSync.run();
+  }, [isAuthenticated, user?.id, user?.communityId]);
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {

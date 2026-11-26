@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { backgroundSync, SyncStatus, ConflictRecord } from '@/services/backgroundSync';
 import { requestQueue } from '@/services/requestQueue';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface BackgroundSyncState {
   syncStatus: SyncStatus;
@@ -11,13 +12,24 @@ export interface BackgroundSyncState {
 }
 
 export function useBackgroundSync(): BackgroundSyncState {
+  const { user } = useAuth();
+  const userId = Number(user?.id);
+  const communityId = user?.communityId ?? null;
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(backgroundSync.getStatus());
   const [pendingCount, setPendingCount] = useState(0);
   const [conflictCount, setConflictCount] = useState(backgroundSync.getConflicts().length);
   const [conflicts, setConflicts] = useState<ConflictRecord[]>(backgroundSync.getConflicts());
 
   useEffect(() => {
-    requestQueue.getAll().then((q) => setPendingCount(q.length));
+    const refresh = async () => {
+      await backgroundSync.refresh();
+      const queue = await requestQueue.getAll();
+      const ownQueue = queue.filter((item) => item.identity.userId === userId && item.identity.communityId === communityId);
+      setPendingCount(ownQueue.filter((item) => item.status === 'PENDING').length);
+      setConflicts(backgroundSync.getConflicts());
+      setConflictCount(backgroundSync.getConflicts().length);
+    };
+    void refresh();
 
     const unsubscribe = backgroundSync.addListener((status, pending, conflictCnt) => {
       setSyncStatus(status);
@@ -25,8 +37,9 @@ export function useBackgroundSync(): BackgroundSyncState {
       setConflictCount(conflictCnt);
       setConflicts(backgroundSync.getConflicts());
     });
-    return unsubscribe;
-  }, []);
+    const unsubscribeQueue = requestQueue.subscribe(() => { void refresh(); });
+    return () => { unsubscribe(); unsubscribeQueue(); };
+  }, [userId, communityId]);
 
   const triggerSync = useCallback(async () => {
     await backgroundSync.run();

@@ -111,7 +111,10 @@ export default function PersonalFinanceDashboard() {
   });
 
   const markPaidMutation = useMutation({
-    mutationFn: personalFinanceService.markBillPaid,
+    mutationFn: (billId: string) => personalFinanceService.markBillPaid(billId, {
+      userId: Number(user?.id),
+      communityId: user?.communityId ?? null,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personal-finance-bills'] });
     },

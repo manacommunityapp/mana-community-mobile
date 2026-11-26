@@ -13,6 +13,7 @@ import {
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { personalFinanceService, PersonalBillDto, isOfflineQueuedError } from '@/services/personalFinanceService';
 
@@ -22,6 +23,7 @@ function formatCurrency(amount: number): string {
 
 export default function BillsScreen() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'PAID' | 'ALL'>('UPCOMING');
   const [showAddModal, setShowAddModal] = useState(false);
   const [billName, setBillName] = useState('');
@@ -35,7 +37,10 @@ export default function BillsScreen() {
   });
 
   const markPaidMutation = useMutation({
-    mutationFn: personalFinanceService.markBillPaid,
+    mutationFn: (billId: string) => personalFinanceService.markBillPaid(billId, {
+      userId: Number(user?.id),
+      communityId: user?.communityId ?? null,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personal-finance-bills'] });
       Alert.alert('Bill Paid', 'Bill marked as paid and expense recorded.');

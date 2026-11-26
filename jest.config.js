@@ -1,15 +1,5 @@
 module.exports = {
-  testEnvironment: 'node',
-  transform: {
-    // Must cover .js/.jsx/.mjs too, not just TypeScript: several packages under
-    // node_modules ship ESM .js (expo/virtual/env.js among them), and a file with
-    // no matching transform is handed to Jest as CommonJS and fails to parse —
-    // transformIgnorePatterns cannot help a file that no transform claims.
-    '^.+\\.(js|jsx|ts|tsx|mjs)$': ['babel-jest', { configFile: './babel.config.js' }],
-  },
-  transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|i18n-js|expo-localization)',
-  ],
+  preset: 'jest-expo/node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },

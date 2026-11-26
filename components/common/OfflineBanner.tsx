@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { offlineSyncService } from '@/services/offlineSyncService';
 import { SPACING } from '@/constants/config';
@@ -20,9 +20,6 @@ export const OfflineBanner: React.FC = () => {
     <View style={styles.banner}>
       <Ionicons name="cloud-offline" size={16} color="#FFFFFF" />
       <Text style={styles.bannerText}>Offline mode — cached data active</Text>
-      <TouchableOpacity onPress={() => offlineSyncService.flush()} style={styles.syncBtn}>
-        <Text style={styles.syncText}>Sync</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -41,17 +38,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-  },
-  syncBtn: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 6,
-  },
-  syncText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
   },
 });

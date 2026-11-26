@@ -14,11 +14,16 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "build:android": "eas build --platform android",
-    "test": "node --test test/**/*.spec.mjs",
-    "test:jest": "jest",
+    "test": "npm run test:node && npm run test:jest",
+    "test:node": "node --test test/**/*.spec.mjs",
+    "test:jest": "jest --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "expo:check": "expo install --check",
+    "build:check": "expo export --platform android --output-dir dist-ci",
+    "validate": "npm run typecheck && npm test && npm run lint && npm run expo:check && npm run build:check"
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.15",
@@ -80,14 +85,15 @@
     "@emnapi/core": "^1.11.3",
     "@emnapi/runtime": "^1.11.3",
     "@emnapi/wasi-threads": "^2.2.0",
-    "@react-native/jest-preset": "^0.86.3",
+    "@react-native/jest-preset": "^0.88.1",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.4",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "eslint": "^8.57.0",
+    "eslint-config-expo": "~58.0.4",
     "eslint-plugin-react-hooks": "^4.6.0",
     "jest": "^30.5.2",
-    "jest-expo": "^57.0.5",
+    "jest-expo": "~58.0.11",
     "typescript": "~6.0.3"
   }
 }
