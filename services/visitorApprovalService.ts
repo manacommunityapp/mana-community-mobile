@@ -51,7 +51,16 @@ export const visitorApprovalService = {
       const res = await api.put<VisitorDto>(`/visitors/${id}/approve`);
       return res.data;
     } catch (err: any) {
-      throw new Error(err?.response?.data?.message || 'Failed to approve visitor.');
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.detail || err?.response?.data?.message;
+      const error = new Error(
+        status === 409
+          ? 'Already decided by another household member. Refreshing status.'
+          : msg || 'Failed to approve visitor.'
+      ) as Error & { status?: number; isConflict?: boolean };
+      error.status = status;
+      error.isConflict = status === 409;
+      throw error;
     }
   },
 
@@ -60,7 +69,16 @@ export const visitorApprovalService = {
       const res = await api.put<VisitorDto>(`/visitors/${id}/leave-at-gate`);
       return res.data;
     } catch (err: any) {
-      throw new Error(err?.response?.data?.message || 'Failed to instruct gate.');
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.detail || err?.response?.data?.message;
+      const error = new Error(
+        status === 409
+          ? 'Already decided by another household member. Refreshing status.'
+          : msg || 'Failed to instruct gate.'
+      ) as Error & { status?: number; isConflict?: boolean };
+      error.status = status;
+      error.isConflict = status === 409;
+      throw error;
     }
   },
 
@@ -69,7 +87,16 @@ export const visitorApprovalService = {
       const res = await api.put<VisitorDto>(`/visitors/${id}/reject`, { reason });
       return res.data;
     } catch (err: any) {
-      throw new Error(err?.response?.data?.message || 'Failed to reject visitor.');
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.detail || err?.response?.data?.message;
+      const error = new Error(
+        status === 409
+          ? 'Already decided by another household member. Refreshing status.'
+          : msg || 'Failed to reject visitor.'
+      ) as Error & { status?: number; isConflict?: boolean };
+      error.status = status;
+      error.isConflict = status === 409;
+      throw error;
     }
   },
 

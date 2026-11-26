@@ -62,7 +62,12 @@ export default function ApproveVisitorScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       setDecision('approved');
     },
-    onError: (err: any) => setApproveErr(err?.message || 'Could not approve entry. Please try again.'),
+    onError: (err: any) => {
+      if (err?.isConflict || err?.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['visitors'] });
+      }
+      setApproveErr(err?.message || 'Could not approve entry. Please try again.');
+    },
   });
 
   const rejectMutation = useMutation({
@@ -74,7 +79,12 @@ export default function ApproveVisitorScreen() {
       setDenyReason('');
       setDecision('denied');
     },
-    onError: (err: any) => setDenyErr(err?.message || 'Could not deny entry. Please try again.'),
+    onError: (err: any) => {
+      if (err?.isConflict || err?.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['visitors'] });
+      }
+      setDenyErr(err?.message || 'Could not deny entry. Please try again.');
+    },
   });
 
   const leaveAtGateMutation = useMutation({
@@ -83,7 +93,12 @@ export default function ApproveVisitorScreen() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       setDecision('leave_at_gate');
     },
-    onError: (err: any) => setApproveErr(err?.message || 'Could not instruct gate. Please try again.'),
+    onError: (err: any) => {
+      if (err?.isConflict || err?.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['visitors'] });
+      }
+      setApproveErr(err?.message || 'Could not instruct gate. Please try again.');
+    },
   });
 
   if (!visitor) {
