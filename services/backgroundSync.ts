@@ -37,11 +37,24 @@ function currentIdentity(): QueueIdentity | null {
   return { userId: Number(user.id), communityId: user.communityId ?? null };
 }
 
+function operationEndpoint(op: QueuedRequest['operation']): string {
+  switch (op.type) {
+    case 'MARK_BILL_PAID':
+      return `/personal-finance/bills/${encodeURIComponent(op.billId)}/mark-paid`;
+    case 'EXPRESS_CLEARANCE':
+      return '/partners/delivery/verify';
+    case 'VISITOR_CHECK_IN':
+      return '/visitors/check-in';
+    case 'VISITOR_CHECK_OUT':
+      return '/visitors/check-out';
+  }
+}
+
 async function refreshConflicts(identity: QueueIdentity): Promise<void> {
   const queue = await requestQueue.getAll();
   conflictLog = queue
     .filter((item) => item.status === 'CONFLICT' && item.identity.userId === identity.userId && item.identity.communityId === identity.communityId)
-    .map((item) => ({ requestId: item.id, url: `/personal-finance/bills/${item.operation.billId}/mark-paid`, method: 'POST', detectedAt: item.conflictAt ?? item.createdAt }));
+    .map((item) => ({ requestId: item.id, url: operationEndpoint(item.operation), method: 'POST', detectedAt: item.conflictAt ?? item.createdAt }));
 }
 
 export const backgroundSync = {
@@ -94,6 +107,12 @@ export const backgroundSync = {
       const processed = await requestQueue.processQueue(identity, async (req: QueuedRequest) => {
         if (req.operation.type === 'MARK_BILL_PAID') {
           await api.post(`/personal-finance/bills/${encodeURIComponent(req.operation.billId)}/mark-paid`, {}, { headers: { 'Idempotency-Key': req.id } });
+        } else if (req.operation.type === 'EXPRESS_CLEARANCE') {
+          await api.post('/partners/delivery/verify', { passCode: req.operation.passCode, gateName: req.operation.gate }, { headers: { 'Idempotency-Key': req.id } });
+        } else if (req.operation.type === 'VISITOR_CHECK_IN') {
+          await api.post('/visitors/check-in', { passCode: req.operation.passCode, gate: req.operation.gate, visitorName: req.operation.visitorName }, { headers: { 'Idempotency-Key': req.id } });
+        } else if (req.operation.type === 'VISITOR_CHECK_OUT') {
+          await api.post('/visitors/check-out', { passCode: req.operation.passCode, gate: req.operation.gate }, { headers: { 'Idempotency-Key': req.id } });
         }
       });
       result.processed = processed.processed;

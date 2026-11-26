@@ -136,7 +136,9 @@ export default function OfflineSyncScreen() {
                 </View>
               </View>
 
-              <Text style={styles.mutationId}>Bill {item.operation.billId}</Text>
+              <Text style={styles.mutationId}>
+                #{item.seqId} · {item.operation.type === 'MARK_BILL_PAID' ? `Bill ${item.operation.billId}` : `${item.operation.passCode} (${item.operation.gate})`}
+              </Text>
               <Text style={styles.mutationPayload} numberOfLines={2}>
                 {item.lastError ?? `${item.retryCount} retry attempt(s)`}
               </Text>
