@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, BackHandler, Modal, TextInput, Share,
-  RefreshControl, ActivityIndicator,
+  RefreshControl, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -13,6 +13,7 @@ import { THEME } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 import { visitorApprovalService } from '@/services/visitorApprovalService';
+import { expressDeliveryService } from '@/services/expressDeliveryService';
 import GatePassQR from '@/components/common/GatePassQR';
 import { getBrandIconForText } from '@/components/common/BrandIcon';
 
@@ -118,6 +119,53 @@ export default function VisitorsScreen() {
   const [etaEditId, setEtaEditId] = useState<number | null>(null);
   const [etaInput, setEtaInput] = useState('');
   const [createError, setCreateError] = useState('');
+
+  // Express Delivery Preferences (Swiggy, Zomato, Blinkit, etc.)
+  const [showDeliveryPrefModal, setShowDeliveryPrefModal] = useState(false);
+  const [deliveryPref, setDeliveryPref] = useState({
+    autoApproveSwiggy: true,
+    autoApproveZomato: true,
+    autoApproveBlinkit: true,
+    autoApproveZepto: true,
+    autoApproveAmazon: true,
+    defaultLeaveAtGate: false,
+    deliveryInstructions: 'Leave parcel outside door and ring bell once.',
+  });
+
+  useEffect(() => {
+    const communityId = Number(user?.communityId) || 1;
+    const flatNumber = user?.flatNumber || '1204';
+    expressDeliveryService.getPreferences(communityId, flatNumber)
+      .then(pref => {
+        setDeliveryPref({
+          autoApproveSwiggy: pref.autoApproveSwiggy ?? true,
+          autoApproveZomato: pref.autoApproveZomato ?? true,
+          autoApproveBlinkit: pref.autoApproveBlinkit ?? true,
+          autoApproveZepto: pref.autoApproveZepto ?? true,
+          autoApproveAmazon: pref.autoApproveAmazon ?? true,
+          defaultLeaveAtGate: Boolean(pref.defaultLeaveAtGate),
+          deliveryInstructions: pref.deliveryInstructions || 'Leave parcel outside door and ring bell once.',
+        });
+      })
+      .catch(() => {});
+  }, [user]);
+
+  const handleSaveDeliveryPref = async () => {
+    try {
+      const communityId = Number(user?.communityId) || 1;
+      const flatNumber = user?.flatNumber || '1204';
+      await expressDeliveryService.updatePreferences({
+        communityId,
+        flatNumber,
+        ...deliveryPref,
+        autoApproveOther: true,
+      });
+    } catch {
+      // safe fallback
+    } finally {
+      setShowDeliveryPrefModal(false);
+    }
+  };
 
   // Walk-in approval count — polls every 10s to show urgent banner
   const { data: pendingCount = 0 } = useQuery<number>({
@@ -571,6 +619,16 @@ export default function VisitorsScreen() {
           <Text style={[s.quickLinkText, { color: '#D97706' }]}>Packages</Text>
           <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
         </TouchableOpacity>
+        <View style={s.quickLinkDivider} />
+        <TouchableOpacity
+          style={s.quickLinkBtn}
+          onPress={() => setShowDeliveryPrefModal(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="flash-outline" size={16} color="#EA580C" />
+          <Text style={[s.quickLinkText, { color: '#EA580C' }]}>Express</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {/* ── Tabs (Active / History) ── */}
@@ -792,6 +850,96 @@ export default function VisitorsScreen() {
               }}
             >
               <Text style={s.etaSaveText}>Save Note</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Express Delivery Partner Preferences Modal ── */}
+      <Modal visible={showDeliveryPrefModal} transparent animationType="slide" onRequestClose={() => setShowDeliveryPrefModal(false)}>
+        <TouchableOpacity style={s.modalOverlay} onPress={() => setShowDeliveryPrefModal(false)} activeOpacity={1} />
+        <View style={s.deliverySheet}>
+          <View style={s.etaSheetHandle} />
+          <View style={s.deliverySheetHeader}>
+            <View style={s.deliverySheetIconWrap}>
+              <Ionicons name="flash" size={20} color="#EA580C" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.etaSheetTitle}>Express Delivery Clearance</Text>
+              <Text style={s.etaSheetSub}>Pre-approve verified riders from partner delivery apps</Text>
+            </View>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+            {/* Quick toggle chips */}
+            <View style={s.prefGrid}>
+              {[
+                { key: 'autoApproveBlinkit', name: 'Blinkit (10-min)', color: '#FACC15' },
+                { key: 'autoApproveSwiggy', name: 'Swiggy / Instamart', color: '#EA580C' },
+                { key: 'autoApproveZomato', name: 'Zomato', color: '#DC2626' },
+                { key: 'autoApproveZepto', name: 'Zepto', color: '#9333EA' },
+                { key: 'autoApproveAmazon', name: 'Amazon Express', color: '#2563EB' },
+              ].map(platform => {
+                const active = Boolean(deliveryPref[platform.key as keyof typeof deliveryPref]);
+                return (
+                  <TouchableOpacity
+                    key={platform.key}
+                    style={[s.prefRow, active && s.prefRowActive]}
+                    onPress={() => setDeliveryPref(prev => ({ ...prev, [platform.key]: !prev[platform.key as keyof typeof deliveryPref] }))}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={[s.partnerDot, { backgroundColor: platform.color }]} />
+                      <Text style={s.prefLabel}>{platform.name}</Text>
+                    </View>
+                    <Ionicons
+                      name={active ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={22}
+                      color={active ? COLORS.primary : COLORS.textMuted}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Leave at Gate Toggle */}
+            <TouchableOpacity
+              style={[s.prefRow, deliveryPref.defaultLeaveAtGate && s.prefRowActive, { marginTop: 10 }]}
+              onPress={() => setDeliveryPref(prev => ({ ...prev, defaultLeaveAtGate: !prev.defaultLeaveAtGate }))}
+              activeOpacity={0.7}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.prefLabel}>Leave Parcels at Security Gate</Text>
+                  <Text style={s.prefSub}>Rider drops package at gate parcel hub without entering tower</Text>
+                </View>
+              </View>
+              <Ionicons
+                name={deliveryPref.defaultLeaveAtGate ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={deliveryPref.defaultLeaveAtGate ? COLORS.primary : COLORS.textMuted}
+              />
+            </TouchableOpacity>
+
+            {/* Doorstep Instructions */}
+            <Text style={[s.etaSheetSub, { marginTop: 12, fontWeight: '600' }]}>Rider Instructions (sent on gate check-in):</Text>
+            <TextInput
+              style={[s.etaInput, { marginTop: 6 }]}
+              value={deliveryPref.deliveryInstructions}
+              onChangeText={text => setDeliveryPref(prev => ({ ...prev, deliveryInstructions: text }))}
+              placeholder="e.g. Leave parcel outside door and ring bell once."
+              placeholderTextColor={COLORS.textMuted}
+              maxLength={120}
+            />
+          </ScrollView>
+
+          <View style={[s.etaActions, { marginTop: 8 }]}>
+            <TouchableOpacity style={s.etaCancelBtn} onPress={() => setShowDeliveryPrefModal(false)}>
+              <Text style={s.etaCancelText}>Close</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.etaSaveBtn, { backgroundColor: '#EA580C' }]} onPress={handleSaveDeliveryPref}>
+              <Text style={s.etaSaveText}>Save Settings</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1243,5 +1391,31 @@ const s = StyleSheet.create({
   etaCancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, fontFamily: 'DMSans-Medium' },
   etaSaveBtn: { flex: 2, paddingVertical: 13, borderRadius: RADIUS.md, backgroundColor: '#2563EB', alignItems: 'center' },
   etaSaveText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Outfit-Bold' },
+
+  // Express Delivery Preferences sheet
+  deliverySheet: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    paddingBottom: 36,
+    gap: 8,
+    ...SHADOWS.lg,
+  },
+  deliverySheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  deliverySheetIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' },
+  prefGrid: { gap: 6, marginTop: 4 },
+  prefRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingVertical: 10,
+    backgroundColor: '#F8FAFC', borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  prefRowActive: { borderColor: COLORS.primary, backgroundColor: '#F5F3FF' },
+  partnerDot: { width: 10, height: 10, borderRadius: 5 },
+  prefLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text, fontFamily: 'Outfit-Bold' },
+  prefSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontFamily: 'DMSans-Regular' },
 });
 
