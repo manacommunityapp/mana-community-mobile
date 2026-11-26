@@ -172,7 +172,8 @@ function QRModal({
         activeOpacity={1}
         onPress={onClose}
       >
-        <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+        {/* Stop event propagation to modal backdrop */}
+        <TouchableOpacity activeOpacity={1} onPress={(e) => (e as any)?.stopPropagation?.()}>
           <View style={modalStyles.sheet}>
             {/* Handle */}
             <View style={modalStyles.handle} />

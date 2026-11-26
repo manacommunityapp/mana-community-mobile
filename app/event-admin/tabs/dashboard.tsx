@@ -4,6 +4,7 @@ import {
   ScrollView, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import WorkspaceSwitcherBar from '@/components/common/WorkspaceSwitcherBar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,6 +41,7 @@ function StatCard({ icon, label, value, color, bg, sub }: StatCardProps) {
 }
 
 export default function EventAdminDashboardScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const [stats, setStats] = useState<EventAdminDashboardStats | null>(null);
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -107,7 +109,7 @@ export default function EventAdminDashboardScreen() {
 
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>Recent Events</Text>
-          <TouchableOpacity><Text style={s.seeAll}>See All</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/event-admin/tabs/events')}><Text style={s.seeAll}>See All</Text></TouchableOpacity>
         </View>
         {events.map(ev => {
           const meta = statusMeta[ev.status] || statusMeta.DRAFT;

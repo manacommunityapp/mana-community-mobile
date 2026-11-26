@@ -102,6 +102,53 @@ export default function SportsAdminDashboardScreen() {
           <StatCard icon="fitness" label="Players" value={String(stats?.totalPlayers ?? 0)} color="#D97706" bg="#FEF3C7" sub="participating" />
         </View>
 
+        {/* Quick Operations Bar */}
+        <View style={s.quickActionsRow}>
+          <TouchableOpacity
+            style={s.quickActionBtn}
+            onPress={() => router.push('/sports/auction')}
+            activeOpacity={0.8}
+          >
+            <View style={[s.quickActionIcon, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="hammer" size={16} color="#DC2626" />
+            </View>
+            <Text style={s.quickActionLabel}>Auctions</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.quickActionBtn}
+            onPress={() => router.push('/sports-admin/tabs/matches')}
+            activeOpacity={0.8}
+          >
+            <View style={[s.quickActionIcon, { backgroundColor: '#EEF2FF' }]}>
+              <Ionicons name="football" size={16} color="#4F46E5" />
+            </View>
+            <Text style={s.quickActionLabel}>Matches</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.quickActionBtn}
+            onPress={() => router.push('/sports-ops')}
+            activeOpacity={0.8}
+          >
+            <View style={[s.quickActionIcon, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="location" size={16} color="#D97706" />
+            </View>
+            <Text style={s.quickActionLabel}>Venues</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.quickActionBtn}
+            onPress={() => router.push('/sports-admin/tabs/analytics')}
+            activeOpacity={0.8}
+          >
+            <View style={[s.quickActionIcon, { backgroundColor: '#EDE9FE' }]}>
+              <Ionicons name="stats-chart" size={16} color="#7C3AED" />
+            </View>
+            <Text style={s.quickActionLabel}>Analytics</Text>
+          </TouchableOpacity>
+        </View>
+
         {liveMatches.length > 0 && (
           <>
             <View style={s.sectionHeader}>
@@ -208,6 +255,17 @@ const s = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: '800', color: COLORS.text, letterSpacing: -0.5 },
   statLabel: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted, marginTop: 2 },
   statSub: { fontSize: 10, color: COLORS.textMuted },
+
+  quickActionsRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginHorizontal: 12, marginTop: 8, marginBottom: 4,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    padding: 10, borderWidth: 1, borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  quickActionBtn: { flex: 1, alignItems: 'center', gap: 5 },
+  quickActionIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  quickActionLabel: { fontSize: 11, fontWeight: '700', color: COLORS.text },
 
   sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

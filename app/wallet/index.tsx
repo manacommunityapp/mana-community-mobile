@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '@/constants/config';
@@ -53,6 +54,7 @@ function TxnRow({ txn }: { txn: WalletTransaction }) {
 type Method = 'UPI' | 'CARD';
 
 export default function WalletScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const communityId = user?.communityId ?? 0;
 
@@ -121,11 +123,11 @@ export default function WalletScreen() {
             <Ionicons name="add-circle-outline" size={18} color={THEME.brandDark} />
             <Text style={styles.actionLabel}>Top Up</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/tabs/pay')}>
             <Ionicons name="receipt-outline" size={18} color={THEME.brandDark} />
             <Text style={styles.actionLabel}>Pay Dues</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/payments/history')}>
             <Ionicons name="time-outline" size={18} color={THEME.brandDark} />
             <Text style={styles.actionLabel}>History</Text>
           </TouchableOpacity>

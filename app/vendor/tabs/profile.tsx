@@ -133,8 +133,8 @@ export default function VendorProfileScreen() {
         <Text style={s.sectionHeader}>Account</Text>
         <View style={s.menuSection}>
           <MenuItem icon="notifications-outline" label="Notifications" onPress={() => router.push('/notifications')} />
-          <MenuItem icon="lock-closed-outline" label="Change Password" onPress={() => {}} />
-          <MenuItem icon="settings-outline" label="Settings" onPress={() => {}} />
+          <MenuItem icon="lock-closed-outline" label="Change Password" onPress={() => router.push('/settings/password')} />
+          <MenuItem icon="settings-outline" label="Settings" onPress={() => router.push('/settings')} />
         </View>
 
         {/* Sign Out */}

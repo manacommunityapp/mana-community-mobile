@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  ActivityIndicator, StatusBar, Platform,
+  ActivityIndicator, StatusBar, Platform, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -48,10 +48,12 @@ function ShowtimeSelector({
   movie,
   showtimes,
   onSelect,
+  onBack,
 }: {
   movie: Movie;
   showtimes: Showtime[];
   onSelect: (st: Showtime) => void;
+  onBack?: () => void;
 }) {
   const today = new Date().toISOString().split('T')[0];
   const dates = [...new Set(showtimes.map(s => s.date))].sort();
@@ -72,7 +74,7 @@ function ShowtimeSelector({
     <View style={{ flex: 1 }}>
       {/* Movie header */}
       <View style={{ backgroundColor: movie.backdrop_color, padding: 16, paddingTop: 52 }}>
-        <TouchableOpacity style={{ marginBottom: 12 }} onPress={() => {}}>
+        <TouchableOpacity style={{ marginBottom: 12 }} onPress={onBack}>
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontFamily: FONTS.medium, fontSize: 13 }}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', gap: 14, alignItems: 'flex-start' }}>
@@ -199,6 +201,7 @@ export default function MoviesScreen() {
           movie={selectedMovie}
           showtimes={showtimes ?? []}
           onSelect={handleShowtimeSelect}
+          onBack={() => setSelectedMovie(null)}
         />
         {/* Provide back from within ShowtimeSelector via state */}
         <TouchableOpacity
@@ -289,7 +292,11 @@ export default function MoviesScreen() {
               <Text style={{ fontFamily: FONTS.bold, fontSize: 16, color: THEME.text, marginBottom: 12, paddingHorizontal: 16 }}>Coming Soon</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
                 {comingSoon.map(movie => (
-                  <MovieCard key={movie.id} movie={movie} onPress={() => {}} />
+                  <MovieCard
+                    key={movie.id}
+                    movie={movie}
+                    onPress={() => Alert.alert(movie.title, `${movie.title} is releasing soon in theatres!\n\nDuration: ${movie.duration_mins} mins\nDirector: ${movie.director}\nGenre: ${movie.genre.join(', ')}`)}
+                  />
                 ))}
               </ScrollView>
             </View>

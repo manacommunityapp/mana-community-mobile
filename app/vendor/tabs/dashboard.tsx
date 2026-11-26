@@ -172,7 +172,7 @@ export default function VendorDashboardScreen() {
         </TouchableOpacity>
 
         {/* Availability toggle */}
-        <TouchableOpacity style={s.availCard} activeOpacity={0.8}>
+        <TouchableOpacity style={s.availCard} activeOpacity={0.8} onPress={() => router.push('/vendor/availability')}>
           <View style={s.availLeft}>
             <View style={s.availDot} />
             <View>
@@ -186,7 +186,7 @@ export default function VendorDashboardScreen() {
         {/* Upcoming bookings */}
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>Upcoming Bookings</Text>
-          <TouchableOpacity><Text style={s.seeAll}>See All</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/vendor/tabs/bookings')}><Text style={s.seeAll}>See All</Text></TouchableOpacity>
         </View>
         {upcomingBookings.map(b => (
           <View key={b.id} style={s.activityCard}>
@@ -213,7 +213,7 @@ export default function VendorDashboardScreen() {
         {/* Active work orders */}
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>Active Work Orders</Text>
-          <TouchableOpacity><Text style={s.seeAll}>See All</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/vendor/tabs/work-orders')}><Text style={s.seeAll}>See All</Text></TouchableOpacity>
         </View>
         {activeOrders.map(w => {
           const isUrgent = w.priority === 'URGENT' || w.priority === 'HIGH';

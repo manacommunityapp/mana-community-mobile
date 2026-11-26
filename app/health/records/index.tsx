@@ -189,7 +189,7 @@ export default function HealthRecordsScreen() {
                       <Ionicons name="share-social-outline" size={14} color="#2563EB" />
                       <Text style={[styles.actionBtnText, { color: "#2563EB" }]}>Share</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleViewRecord(rec)}>
                       <Ionicons name="download-outline" size={14} color="#0D9488" />
                       <Text style={[styles.actionBtnText, { color: "#0D9488" }]}>View</Text>
                     </TouchableOpacity>

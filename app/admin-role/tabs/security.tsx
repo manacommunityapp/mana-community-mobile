@@ -60,6 +60,30 @@ export default function AdminSecurityScreen() {
     ]);
   };
 
+  const handleAssign = (alert: SecurityAlert) => {
+    Alert.alert(
+      'Assign Guard',
+      `Assign security guard to "${alert.title}" (${alert.location}):`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Duty Guard - Gate 1',
+          onPress: async () => {
+            await adminRoleService.assignAlert(alert.id, 'Duty Guard (Gate 1)');
+            await loadAlerts();
+          },
+        },
+        {
+          text: 'Patrol Team A',
+          onPress: async () => {
+            await adminRoleService.assignAlert(alert.id, 'Patrol Team A');
+            await loadAlerts();
+          },
+        },
+      ]
+    );
+  };
+
   const renderAlert = ({ item }: { item: SecurityAlert }) => {
     const meta = LEVEL_META[item.level];
 
@@ -99,7 +123,7 @@ export default function AdminSecurityScreen() {
               <Ionicons name="checkmark-circle" size={16} color="#fff" />
               <Text style={s.actionBtnTextLight}>Mark Resolved</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.actionBtn, s.actionBtnOutline]}>
+            <TouchableOpacity style={[s.actionBtn, s.actionBtnOutline]} onPress={() => handleAssign(item)}>
               <Ionicons name="person-add" size={16} color={ADMIN_COLORS.accent} />
               <Text style={s.actionBtnTextOutline}>Assign</Text>
             </TouchableOpacity>

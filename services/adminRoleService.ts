@@ -737,6 +737,11 @@ export const adminRoleService = {
     if (alert) alert.resolved = true;
   },
 
+  async assignAlert(id: number, guardName: string): Promise<void> {
+    const alert = inMemoryAlerts.find(a => a.id === id);
+    if (alert) alert.assignedGuard = guardName;
+  },
+
   async getGovernanceItems(): Promise<GovernanceItem[]> {
     return sampleGovernance;
   },

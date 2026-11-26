@@ -120,8 +120,8 @@ export default function AdminProfileScreen() {
         <View style={s.menuSection}>
           <MenuItem icon="people-outline" label="Member Management" onPress={() => router.push('/admin/members')} iconColor="#4F46E5" iconBg="#EEF2FF" />
           <MenuItem icon="megaphone-outline" label="Announcements" onPress={() => router.push('/admin/announcements')} iconColor="#D97706" iconBg="#FEF3C7" />
-          <MenuItem icon="document-text-outline" label="Governance & Policies" onPress={() => {}} iconColor="#7C3AED" iconBg="#EDE9FE" />
-          <MenuItem icon="bar-chart-outline" label="Analytics & Reports" onPress={() => {}} iconColor="#059669" iconBg="#D1FAE5" />
+          <MenuItem icon="document-text-outline" label="Governance & Policies" onPress={() => router.push('/admin/privacy')} iconColor="#7C3AED" iconBg="#EDE9FE" />
+          <MenuItem icon="bar-chart-outline" label="Analytics & Reports" onPress={() => router.push('/admin/audit-logs')} iconColor="#059669" iconBg="#D1FAE5" />
           <MenuItem icon="settings-outline" label="Community Settings" onPress={() => router.push('/admin/community-settings')} iconColor="#0891B2" iconBg="#CFFAFE" />
         </View>
 
@@ -129,7 +129,7 @@ export default function AdminProfileScreen() {
         <Text style={s.sectionHeader}>Account</Text>
         <View style={s.menuSection}>
           <MenuItem icon="notifications-outline" label="Notifications" onPress={() => router.push('/notifications')} />
-          <MenuItem icon="lock-closed-outline" label="Change Password" onPress={() => {}} />
+          <MenuItem icon="lock-closed-outline" label="Change Password" onPress={() => router.push('/settings/password')} />
         </View>
 
         {/* Sign Out */}

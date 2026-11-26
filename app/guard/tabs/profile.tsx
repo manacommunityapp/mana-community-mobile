@@ -364,10 +364,10 @@ export default function GuardProfileScreen() {
         {/* ── Account ── */}
         <Text style={s.sectionHeader}>Account</Text>
         <View style={s.menuSection}>
-          <MenuItem icon="person-outline"        label="My Profile"        sublabel={user?.email} onPress={() => {}} iconColor={GUARD_COLORS.accent} iconBg={GUARD_COLORS.accentLight} />
+          <MenuItem icon="person-outline"        label="My Profile"        sublabel={user?.email} onPress={() => router.push('/profile/edit')} iconColor={GUARD_COLORS.accent} iconBg={GUARD_COLORS.accentLight} />
           <MenuItem icon="notifications-outline" label="Notifications"     onPress={() => router.push('/notifications')} />
-          <MenuItem icon="lock-closed-outline"   label="Change Password"   onPress={() => {}} />
-          <MenuItem icon="settings-outline"      label="App Settings"      onPress={() => {}} />
+          <MenuItem icon="lock-closed-outline"   label="Change Password"   onPress={() => router.push('/settings/password')} />
+          <MenuItem icon="settings-outline"      label="App Settings"      onPress={() => router.push('/settings')} />
         </View>
 
         {/* ── Sign out ── */}

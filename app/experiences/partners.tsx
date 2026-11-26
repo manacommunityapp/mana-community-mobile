@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
-  Platform, StatusBar, Linking, TextInput,
+  Platform, StatusBar, Linking, TextInput, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -246,6 +246,16 @@ export default function PartnersScreen() {
       )
     : partners;
 
+  const handlePartnerPress = (p: Partner) => {
+    if (p.booking_url) {
+      Linking.openURL(p.booking_url);
+    } else if (p.contact_phone) {
+      Linking.openURL(`tel:${p.contact_phone}`);
+    } else {
+      Alert.alert(p.name, `${p.description}\n\nCategory: ${p.category}\nOpen: ${p.open_hours || 'Standard Hours'}${p.discount_for_members ? `\nDiscount: ${p.discount_for_members}` : ''}`);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: THEME.background }}>
       <StatusBar barStyle="light-content" />
@@ -342,7 +352,7 @@ export default function PartnersScreen() {
                     </Text>
                   )}
                   {filteredPartners.filter(p => p.is_featured).map(p => (
-                    <PartnerCard key={p.id} partner={p} onPress={() => {}} />
+                    <PartnerCard key={p.id} partner={p} onPress={() => handlePartnerPress(p)} />
                   ))}
                   {filteredPartners.some(p => !p.is_featured) && (
                     <Text style={{ fontFamily: FONTS.bold, fontSize: 14, color: THEME.text, marginBottom: 10, marginTop: 4 }}>
@@ -350,7 +360,7 @@ export default function PartnersScreen() {
                     </Text>
                   )}
                   {filteredPartners.filter(p => !p.is_featured).map(p => (
-                    <PartnerCard key={p.id} partner={p} onPress={() => {}} />
+                    <PartnerCard key={p.id} partner={p} onPress={() => handlePartnerPress(p)} />
                   ))}
                 </>
               )}

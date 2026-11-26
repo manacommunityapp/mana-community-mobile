@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
 import { useModuleGuard } from '@/hooks/useRoleGuard';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +28,13 @@ const FORMAT_LABEL: Record<string, string> = {
 };
 
 // ── Category Card ──────────────────────────────────────────────
-function CategoryCard({ ev, onRegister }: { ev: DashboardEventCardDto; onRegister?: (ev: DashboardEventCardDto) => void }) {
+function CategoryCard({
+  ev, onRegister, onAuction,
+}: {
+  ev: DashboardEventCardDto;
+  onRegister?: (ev: DashboardEventCardDto) => void;
+  onAuction?: (ev: DashboardEventCardDto) => void;
+}) {
   const sportEmoji = SPORT_EMOJI[(ev.sportName ?? '').toUpperCase().replace(/\s+/g, '_')] ?? '🏅';
   const isOpen = (ev.registrationStatus ?? '').toUpperCase() === 'REGISTRATION_OPEN';
   const isClosed = !isOpen;
@@ -57,21 +64,29 @@ function CategoryCard({ ev, onRegister }: { ev: DashboardEventCardDto; onRegiste
           <Text style={cat.sportEmoji}>{sportEmoji}</Text>
           <Text style={cat.sportName} numberOfLines={1}>{ev.sportName ?? 'Sport'}</Text>
         </View>
-        {isRegistered ? (
-          <View style={cat.registeredChip}>
-            <Ionicons name="checkmark-circle" size={11} color="#065F46" />
-            <Text style={cat.registeredChipText}>Registered</Text>
-          </View>
-        ) : isOpen ? (
-          <View style={cat.openChip}>
-            <View style={cat.openDot} />
-            <Text style={cat.openChipText}>Open</Text>
-          </View>
-        ) : (
-          <View style={cat.closedChip}>
-            <Text style={cat.closedChipText}>{isFull ? 'Full' : 'Closed'}</Text>
-          </View>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {['ACTIVE', 'LIVE'].includes(String(ev.auctionStatus).toUpperCase()) && onAuction && (
+            <TouchableOpacity style={cat.auctionBadge} onPress={() => onAuction(ev)} activeOpacity={0.8}>
+              <Text style={{ fontSize: 10 }}>🏷️</Text>
+              <Text style={cat.auctionBadgeText}>Auction</Text>
+            </TouchableOpacity>
+          )}
+          {isRegistered ? (
+            <View style={cat.registeredChip}>
+              <Ionicons name="checkmark-circle" size={11} color="#065F46" />
+              <Text style={cat.registeredChipText}>Registered</Text>
+            </View>
+          ) : isOpen ? (
+            <View style={cat.openChip}>
+              <View style={cat.openDot} />
+              <Text style={cat.openChipText}>Open</Text>
+            </View>
+          ) : (
+            <View style={cat.closedChip}>
+              <Text style={cat.closedChipText}>{isFull ? 'Full' : 'Closed'}</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       <Text style={cat.catName} numberOfLines={2}>{ev.categoryName ?? ev.name}</Text>
@@ -187,8 +202,15 @@ const st = StyleSheet.create({
 export default function TournamentDetailScreen() {
   const { id }   = useLocalSearchParams<{ id: string }>();
   const router   = useRouter();
+  const { user, isAnyAdmin, isAdmin, isSuperAdmin, hasRole } = useAuth();
   useModuleGuard('SPORTS');
   const [tab, setTab] = useState<Tab>('Overview');
+
+  const isSportsAdmin = Boolean(
+    isAnyAdmin || isAdmin || isSuperAdmin ||
+    hasRole('SPORTS_ADMIN', 'ADMIN', 'SUPER_ADMIN', 'COMMUNITY_ADMIN', 'SPORTS_REFEREE') ||
+    user?.role?.toUpperCase().includes('ADMIN')
+  );
 
   const { data: tournament, isLoading } = useQuery({
     queryKey: ['tournament', id],
@@ -304,6 +326,16 @@ export default function TournamentDetailScreen() {
           <Ionicons name="arrow-back" size={18} color="#fff" />
         </TouchableOpacity>
         <Text style={scr.headerTitle} numberOfLines={1}>{tournament.name}</Text>
+        {isSportsAdmin && (
+          <TouchableOpacity
+            style={scr.adminPill}
+            onPress={() => router.push('/sports-admin')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="shield-checkmark" size={11} color="#FBBF24" />
+            <Text style={scr.adminPillText}>Admin</Text>
+          </TouchableOpacity>
+        )}
         {tournament.myTeamRegistered && (
           <View style={scr.registeredBadge}><Text style={scr.registeredText}>Registered</Text></View>
         )}
@@ -464,6 +496,7 @@ export default function TournamentDetailScreen() {
                       onRegister={ev.myRegistrationId == null && (ev.registrationStatus ?? '').toUpperCase() === 'REGISTRATION_OPEN'
                         ? () => router.push('/sports/tournaments' as any)
                         : undefined}
+                      onAuction={() => router.push(`/sports/auction/${ev.id}` as any)}
                     />
                   ))}
                 </View>
@@ -511,7 +544,7 @@ export default function TournamentDetailScreen() {
           </View>
         )}
 
-        {/* ── QUICK LINKS (announcements / leaderboard) ── */}
+        {/* ── QUICK LINKS (announcements / leaderboard / auction) ── */}
         <View style={scr.quickLinks}>
           <TouchableOpacity
             style={scr.quickLink}
@@ -534,6 +567,18 @@ export default function TournamentDetailScreen() {
             <View style={{ flex: 1 }}>
               <Text style={scr.quickLinkTitle}>Leaderboard</Text>
               <Text style={scr.quickLinkSub}>Points table & rankings</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={15} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={scr.quickLink}
+            onPress={() => router.push('/sports/auction' as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={scr.quickLinkEmoji}>🔨</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={scr.quickLinkTitle}>Player Auction</Text>
+              <Text style={scr.quickLinkSub}>Live bidding, squad purse & rosters</Text>
             </View>
             <Ionicons name="chevron-forward" size={15} color={COLORS.textMuted} />
           </TouchableOpacity>
@@ -583,6 +628,12 @@ const cat = StyleSheet.create({
   },
   openDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#10B981' },
   openChipText: { fontSize: 9, fontWeight: '800', color: '#065F46' },
+  auctionBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#F5F3FF', borderRadius: 20, borderWidth: 1, borderColor: '#DDD6FE',
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  auctionBadgeText: { fontSize: 9, fontWeight: '800', color: '#7C3AED' },
   closedChip: {
     backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
   },
@@ -627,6 +678,12 @@ const scr = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
   },
   headerTitle:    { fontSize: 16, fontWeight: '800', color: '#fff', flex: 1 },
+  adminPill:      {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(251,191,36,0.2)', borderWidth: 1, borderColor: '#FBBF24',
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12,
+  },
+  adminPillText:  { fontSize: 10, fontWeight: '800', color: '#FDE68A', letterSpacing: 0.5 },
   registeredBadge:{ backgroundColor: '#D1FAE5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   registeredText: { fontSize: 11, fontWeight: '700', color: '#065F46' },
 

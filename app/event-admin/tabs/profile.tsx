@@ -101,17 +101,17 @@ export default function EventAdminProfileScreen() {
 
         <Text style={s.sectionHeader}>Management</Text>
         <View style={s.menuSection}>
-          <MenuItem icon="calendar-outline" label="Event Management" onPress={() => {}} iconColor={EVENT_ADMIN_COLORS.accent} iconBg={EVENT_ADMIN_COLORS.accentLight} />
-          <MenuItem icon="location-outline" label="Venue Management" onPress={() => {}} iconColor="#059669" iconBg="#D1FAE5" />
-          <MenuItem icon="people-outline" label="Registration Management" onPress={() => {}} iconColor="#4F46E5" iconBg="#EEF2FF" />
-          <MenuItem icon="stats-chart-outline" label="Reports & Analytics" onPress={() => {}} iconColor="#D97706" iconBg="#FEF3C7" />
+          <MenuItem icon="calendar-outline" label="Event Management" onPress={() => router.push('/event-admin/tabs/events')} iconColor={EVENT_ADMIN_COLORS.accent} iconBg={EVENT_ADMIN_COLORS.accentLight} />
+          <MenuItem icon="location-outline" label="Venue Management" onPress={() => router.push('/event-admin/tabs/venues')} iconColor="#059669" iconBg="#D1FAE5" />
+          <MenuItem icon="people-outline" label="Registration Management" onPress={() => router.push('/events/register')} iconColor="#4F46E5" iconBg="#EEF2FF" />
+          <MenuItem icon="stats-chart-outline" label="Reports & Analytics" onPress={() => router.push('/event-admin/tabs/analytics')} iconColor="#D97706" iconBg="#FEF3C7" />
         </View>
 
         <Text style={s.sectionHeader}>Account</Text>
         <View style={s.menuSection}>
           <MenuItem icon="arrow-back-outline" label="Return to Resident App" onPress={() => router.replace('/tabs/feed')} iconColor="#4F46E5" iconBg="#EEF2FF" />
           <MenuItem icon="notifications-outline" label="Notifications" onPress={() => router.push('/notifications')} />
-          <MenuItem icon="lock-closed-outline" label="Change Password" onPress={() => {}} />
+          <MenuItem icon="lock-closed-outline" label="Change Password" onPress={() => router.push('/settings/password')} />
         </View>
 
         <View style={[s.menuSection, { marginTop: 8 }]}>

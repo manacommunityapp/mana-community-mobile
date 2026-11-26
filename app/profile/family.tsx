@@ -74,6 +74,7 @@ export default function FamilyScreen() {
     return (
       <TouchableOpacity
         style={s.card}
+        onPress={() => handleLongPress(item)}
         onLongPress={() => handleLongPress(item)}
         delayLongPress={500}
         activeOpacity={0.85}

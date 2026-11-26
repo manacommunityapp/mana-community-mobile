@@ -135,6 +135,70 @@ export default function SportsAuctionDetailScreen() {
     );
   }
 
+  async function handleNextPlayer() {
+    try {
+      await sportsAuctionService.nextPlayer(configId);
+      qc.invalidateQueries({ queryKey: ['auction-current-player', configId] });
+      qc.invalidateQueries({ queryKey: ['auction-detail', configId] });
+    } catch (e: any) {
+      Alert.alert('Stage Action', e?.message || 'Could not advance to next player');
+    }
+  }
+
+  async function handleMarkSold() {
+    if (!current?.player) return;
+    const winningTeam = teams.find(t => t.teamName === current.currentTeamName) ||
+      (current.bids && current.bids.length > 0 ? teams.find(t => t.id === current.bids[0].teamId) : null);
+    if (!winningTeam || !current.currentBid) {
+      Alert.alert('Cannot Sell', 'No active bids have been placed on this player yet.');
+      return;
+    }
+    Alert.alert(
+      'Hammer Down: Sell Player',
+      `Confirm sale of ${current.player.playerName} to ${winningTeam.teamName} for ₹${current.currentBid.toLocaleString()}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm Sale',
+          style: 'default',
+          onPress: async () => {
+            try {
+              await sportsAuctionService.markSold(configId, current.player.id, winningTeam.id, current.currentBid!);
+              qc.invalidateQueries({ queryKey: ['auction-current-player', configId] });
+              qc.invalidateQueries({ queryKey: ['auction-detail', configId] });
+            } catch (e: any) {
+              Alert.alert('Sale Error', e?.message || 'Could not complete sale');
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handlePassUnsold() {
+    if (!current?.player) return;
+    Alert.alert(
+      'Pass as Unsold',
+      `Pass ${current.player.playerName} as Unsold? Player can return in later rounds.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pass Unsold',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await sportsAuctionService.passUnsold(configId, current.player.id);
+              qc.invalidateQueries({ queryKey: ['auction-current-player', configId] });
+              qc.invalidateQueries({ queryKey: ['auction-detail', configId] });
+            } catch (e: any) {
+              Alert.alert('Action Error', e?.message || 'Could not pass player');
+            }
+          },
+        },
+      ]
+    );
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
@@ -200,6 +264,9 @@ export default function SportsAuctionDetailScreen() {
           isUnsold={isUnsold}
           onOpenTeamPicker={() => setShowTeamPicker(true)}
           onBid={handleBid}
+          onNextPlayer={handleNextPlayer}
+          onMarkSold={handleMarkSold}
+          onPassUnsold={handlePassUnsold}
         />
       )}
       {tab === 'players' && <PlayersTab players={players} />}
@@ -260,7 +327,7 @@ function LiveTab({
   isLive, current, canBid, bidding, nextBid, activeTeam,
   isAuctionAdmin, isCaptain, isAuthorizedBidder,
   isAlreadyHighestBidder, hasEnoughBudget, isSold, isUnsold,
-  onOpenTeamPicker, onBid,
+  onOpenTeamPicker, onBid, onNextPlayer, onMarkSold, onPassUnsold,
 }: {
   isLive: boolean;
   current: PlayerWithBidResponse | null;
@@ -277,6 +344,9 @@ function LiveTab({
   isUnsold: boolean;
   onOpenTeamPicker: () => void;
   onBid: () => void;
+  onNextPlayer: () => void;
+  onMarkSold: () => void;
+  onPassUnsold: () => void;
 }) {
   if (!isLive) {
     return (
@@ -292,6 +362,12 @@ function LiveTab({
       <View style={s.offlineWrap}>
         <Ionicons name="hourglass-outline" size={44} color={COLORS.textMuted} />
         <Text style={s.offlineTitle}>Waiting for next player…</Text>
+        {isAuctionAdmin && (
+          <TouchableOpacity style={s.conductorMainBtn} onPress={onNextPlayer} activeOpacity={0.85}>
+            <Ionicons name="play" size={16} color="#fff" />
+            <Text style={s.conductorMainBtnText}>Bring Next Player to Block</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -410,6 +486,39 @@ function LiveTab({
           <Text style={s.noTeamNote}>No teams available in this auction to place bids.</Text>
         )}
       </View>
+
+      {/* Auctioneer Stage Controls for Admins */}
+      {isAuctionAdmin && isLive && (
+        <View style={s.conductorCard}>
+          <View style={s.conductorCardHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="hammer" size={14} color="#7C3AED" />
+              <Text style={s.conductorCardTitle}>AUCTIONEER STAGE CONTROLS</Text>
+            </View>
+            <Text style={s.conductorCardSub}>Mobile Conductor</Text>
+          </View>
+          <View style={s.conductorBtnRow}>
+            {!isSold && !isUnsold && current.currentBid != null && (
+              <TouchableOpacity style={s.hammerSellBtn} onPress={onMarkSold} activeOpacity={0.85}>
+                <Ionicons name="checkmark-done" size={14} color="#fff" />
+                <Text style={s.hammerSellBtnText}>Hammer Down (Sell)</Text>
+              </TouchableOpacity>
+            )}
+            {!isSold && !isUnsold && current.currentBid == null && (
+              <TouchableOpacity style={s.passUnsoldBtn} onPress={onPassUnsold} activeOpacity={0.85}>
+                <Ionicons name="close" size={14} color="#DC2626" />
+                <Text style={s.passUnsoldBtnText}>Pass Unsold</Text>
+              </TouchableOpacity>
+            )}
+            {(isSold || isUnsold) && (
+              <TouchableOpacity style={s.nextPlayerBtn} onPress={onNextPlayer} activeOpacity={0.85}>
+                <Ionicons name="arrow-forward" size={14} color="#fff" />
+                <Text style={s.nextPlayerBtnText}>Next Player →</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Bid history */}
       {current.bids.length > 0 && (
@@ -594,6 +703,36 @@ const s = StyleSheet.create({
   bidHistoryAmt:  { fontSize: 13, fontWeight: '700', color: COLORS.text },
   rtmBadge:       { backgroundColor: '#fef3c7', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
   rtmText:        { fontSize: 9, fontWeight: '900', color: '#92400e', letterSpacing: 0.5 },
+  conductorCard:  {
+    backgroundColor: '#F5F3FF', borderRadius: RADIUS.md, padding: 12,
+    borderWidth: 1, borderColor: '#DDD6FE', gap: 10, ...SHADOWS.xs,
+  },
+  conductorCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  conductorCardTitle: { fontSize: 11, fontWeight: '800', color: '#6D28D9', letterSpacing: 0.5 },
+  conductorCardSub: { fontSize: 10, color: '#7C3AED', fontWeight: '600' },
+  conductorBtnRow: { flexDirection: 'row', gap: 8 },
+  hammerSellBtn:  {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#059669', paddingVertical: 10, borderRadius: RADIUS.sm,
+  },
+  hammerSellBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  passUnsoldBtn:  {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FECACA',
+    paddingVertical: 10, borderRadius: RADIUS.sm,
+  },
+  passUnsoldBtnText: { color: '#DC2626', fontSize: 12, fontWeight: '700' },
+  nextPlayerBtn:  {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#6D28D9', paddingVertical: 10, borderRadius: RADIUS.sm,
+  },
+  nextPlayerBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  conductorMainBtn:{
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#6D28D9', paddingHorizontal: 16, paddingVertical: 12,
+    borderRadius: RADIUS.md, marginTop: 8,
+  },
+  conductorMainBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
   offlineWrap:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
   offlineTitle:   { fontSize: 17, fontWeight: '800', color: COLORS.text },
   offlineSub:     { fontSize: 13, color: COLORS.textMuted, textAlign: 'center' },

@@ -28,8 +28,17 @@ export const sportsAuctionService = {
   },
 
   async getConfig(id: number): Promise<SportsAuctionConfigResponse> {
-    const res = await api.get<SportsAuctionConfigResponse>(`${BASE}/config/${id}`);
-    return res.data;
+    try {
+      const res = await api.get<SportsAuctionConfigResponse>(`${BASE}/config/${id}`);
+      if (res.data) return res.data;
+    } catch {}
+    // Fallback: check if id matches an eventId or configId across all configs
+    try {
+      const all = await sportsAuctionService.getMyConfigs();
+      const match = all.find((c) => c.id === id || c.eventId === id);
+      if (match) return match;
+    } catch {}
+    throw new Error('Auction configuration not found');
   },
 
   async getStats(configId: number): Promise<SportsAuctionStatsResponse | null> {
@@ -38,6 +47,41 @@ export const sportsAuctionService = {
       return res.data;
     } catch {
       return null;
+    }
+  },
+
+  // ── Conductor controls (Admin & Auctioneer) ───────────────────
+  async nextPlayer(configId: number): Promise<PlayerWithBidResponse | null> {
+    try {
+      const res = await api.post<PlayerWithBidResponse>(`${BASE}/live/${configId}/next-player`);
+      return res.data;
+    } catch (err: any) {
+      secureLog.warn('[sportsAuction] nextPlayer error', err?.message);
+      throw new Error(err?.response?.data?.message || 'Failed to bring next player to the block');
+    }
+  },
+
+  async markSold(configId: number, playerId: number, teamId: number, amount: number): Promise<SportsAuctionPlayerResponse> {
+    try {
+      const res = await api.post<SportsAuctionPlayerResponse>(`${BASE}/live/${configId}/sell`, {
+        playerId, teamId, amount,
+      });
+      return res.data;
+    } catch (err: any) {
+      secureLog.warn('[sportsAuction] markSold error', err?.message);
+      throw new Error(err?.response?.data?.message || 'Failed to mark player as sold');
+    }
+  },
+
+  async passUnsold(configId: number, playerId: number): Promise<SportsAuctionPlayerResponse> {
+    try {
+      const res = await api.post<SportsAuctionPlayerResponse>(`${BASE}/live/${configId}/unsold`, {
+        playerId,
+      });
+      return res.data;
+    } catch (err: any) {
+      secureLog.warn('[sportsAuction] passUnsold error', err?.message);
+      throw new Error(err?.response?.data?.message || 'Failed to pass player as unsold');
     }
   },
 

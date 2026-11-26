@@ -166,7 +166,7 @@ export default function GroupBuyingHome() {
         {/* Footer */}
         <View style={s.dealFooter}>
           <Countdown endsAt={deal.dealEndsAt || deal.endDate || new Date().toISOString()} label="Ends in" />
-          <TouchableOpacity style={s.joinBtn}>
+          <TouchableOpacity style={s.joinBtn} onPress={() => router.push(('/group-buying/deal/' + deal.id) as any)}>
             <Text style={s.joinBtnText}>Join Deal</Text>
             <Ionicons name="arrow-forward" size={13} color="#fff" />
           </TouchableOpacity>

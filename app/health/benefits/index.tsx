@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { healthService } from "@/services/healthService";
@@ -219,7 +219,7 @@ export default function HealthBenefitsScreen() {
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Cashless Network Hospitals</Text>
               <Text style={styles.sectionSub}>6,000+ hospitals across India</Text>
-              <TouchableOpacity style={styles.findHospBtn} onPress={() => {}}>
+              <TouchableOpacity style={styles.findHospBtn} onPress={() => Linking.openURL('https://www.google.com/maps/search/cashless+network+hospital+near+me')}>
                 <Ionicons name="location" size={14} color="#2563EB" />
                 <Text style={styles.findHospBtnText}>Find Nearest Network Hospital</Text>
               </TouchableOpacity>

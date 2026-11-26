@@ -64,6 +64,8 @@ export default function SplitBillScreen() {
   const { palette, isDark } = useAppTheme();
 
   const [activeGroup, setActiveGroup] = useState('1');
+  const [expenseTitle, setExpenseTitle] = useState("Nature's Basket Organic Groceries");
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>(['1', '2', '3', '4']);
   const [splitMode, setSplitMode] = useState<'itemized' | 'equally' | 'exact' | 'shares'>('itemized');
   const [auditNote, setAuditNote] = useState('Flat breakfast replenishment & weekly dairy run');
   const [attachProof, setAttachProof] = useState(true);
@@ -249,9 +251,15 @@ export default function SplitBillScreen() {
               </View>
               <View style={{ flex: 1, marginHorizontal: 8 }}>
                 <Text style={styles.fieldLabelMicro}>EXPENSE TITLE</Text>
-                <Text style={styles.expenseTitleText} numberOfLines={1}>Nature's Basket Organic Groceries</Text>
+                <Text style={styles.expenseTitleText} numberOfLines={1}>{expenseTitle}</Text>
               </View>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => {
+                if (typeof Alert.prompt === 'function') {
+                  Alert.prompt('Edit Expense Title', 'Enter new title:', t => t && setExpenseTitle(t), 'plain-text', expenseTitle);
+                } else {
+                  Alert.alert('Expense Title', `Current title: ${expenseTitle}`);
+                }
+              }}>
                 <Ionicons name="pencil" size={16} color={TOKENS.textVariant} />
               </TouchableOpacity>
             </View>
@@ -340,8 +348,14 @@ export default function SplitBillScreen() {
           <View style={styles.card}>
             <View style={styles.itemizedCardHeader}>
               <Text style={styles.subtleTip}>Tap avatar bubbles to reassign items</Text>
-              <TouchableOpacity>
-                <Text style={styles.selectAllBtn}>Select All</Text>
+              <TouchableOpacity onPress={() => {
+                if (selectedItemIds.length === EXTRACTED_ITEMS.length) {
+                  setSelectedItemIds([]);
+                } else {
+                  setSelectedItemIds(EXTRACTED_ITEMS.map(i => i.id));
+                }
+              }}>
+                <Text style={styles.selectAllBtn}>{selectedItemIds.length === EXTRACTED_ITEMS.length ? 'Deselect All' : 'Select All'}</Text>
               </TouchableOpacity>
             </View>
 

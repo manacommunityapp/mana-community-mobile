@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, StatusBar, RefreshControl, Dimensions,
+  StyleSheet, StatusBar, RefreshControl, Dimensions, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -237,7 +237,11 @@ export default function VehicleCareHubScreen() {
           <Text style={styles.communitySub}>
             Bulk apartment bookings get negotiated rates. Gather neighbours and save more!
           </Text>
-          <TouchableOpacity style={styles.communityBtn} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={styles.communityBtn}
+            activeOpacity={0.85}
+            onPress={() => Alert.alert('Interest Registered!', 'Thank you! We will notify your community manager and update you when enough flats join the Community Wash Day.')}
+          >
             <Text style={styles.communityBtnText}>Express Interest</Text>
           </TouchableOpacity>
         </LinearGradient>

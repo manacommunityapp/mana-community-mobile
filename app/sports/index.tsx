@@ -931,7 +931,7 @@ export default function SportsHubScreen() {
                             </View>
 
                             <View style={s.eventActionRow}>
-                              {ev.auctionStatus === 'ACTIVE' && (
+                              {['ACTIVE', 'LIVE'].includes(String(ev.auctionStatus).toUpperCase()) && (
                                 <TouchableOpacity
                                   style={s.auctionBadge}
                                   onPress={() => router.push(`/sports/auction/${ev.id}` as any)}
