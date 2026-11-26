@@ -13,7 +13,44 @@ export type QueueOperation =
   | { type: 'MARK_BILL_PAID'; billId: string }
   | { type: 'VISITOR_CHECK_IN'; passCode: string; gate: string; visitorName?: string }
   | { type: 'VISITOR_CHECK_OUT'; passCode: string; gate: string }
-  | { type: 'EXPRESS_CLEARANCE'; passCode: string; gate: string };
+  | { type: 'EXPRESS_CLEARANCE'; passCode: string; gate: string }
+  | {
+      type: 'GATE_VISITOR_CHECK_IN';
+      entityId?: number;
+      passCode: string;
+      gate: string;
+      direction?: 'PICKUP' | 'DROP' | 'CHECK_IN' | 'CHECK_OUT';
+      visitorName?: string;
+      passNonce: string;
+      localSeq: number;
+      deviceId: string;
+      deviceSignature: string;
+      occurredAt: string;
+    }
+  | {
+      type: 'GATE_SCHOOL_BUS_ENTRY';
+      entityId?: number;
+      passCode: string;
+      gate: string;
+      direction: 'PICKUP' | 'DROP' | 'CHECK_IN' | 'CHECK_OUT';
+      passNonce: string;
+      localSeq: number;
+      deviceId: string;
+      deviceSignature: string;
+      occurredAt: string;
+    }
+  | {
+      type: 'GATE_DIGITAL_PASS_SCAN';
+      entityId?: number;
+      passCode: string;
+      gate: string;
+      direction?: 'PICKUP' | 'DROP' | 'CHECK_IN' | 'CHECK_OUT';
+      passNonce: string;
+      localSeq: number;
+      deviceId: string;
+      deviceSignature: string;
+      occurredAt: string;
+    };
 
 export interface QueuedRequest {
   id: string;
@@ -136,6 +173,37 @@ export const requestQueue = {
     });
     notify();
     return queuedId;
+  },
+
+  async enqueue(operation: QueueOperation, identity: QueueIdentity, customId?: string): Promise<QueuedRequest> {
+    if (!Number.isFinite(identity.userId) || identity.userId <= 0) {
+      throw new Error('Signed-in identity required to queue offline operation.');
+    }
+    const id = customId || `op-${operation.type.toLowerCase()}-${identity.userId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    let created!: QueuedRequest;
+
+    await withMutex(async () => {
+      const queue = await readQueue();
+      const existing = queue.find((item) => item.id === id);
+      if (existing) {
+        created = existing;
+        return;
+      }
+      const seqId = await allocateSeqId();
+      created = {
+        id,
+        seqId,
+        operation,
+        identity,
+        retryCount: 0,
+        createdAt: new Date().toISOString(),
+        status: 'PENDING',
+      };
+      queue.push(created);
+      await writeQueue(queue);
+    });
+    notify();
+    return created;
   },
 
   /**

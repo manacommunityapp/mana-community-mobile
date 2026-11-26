@@ -45,6 +45,7 @@ export default function GuardWalkInScreen() {
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const walkInIdempotencyRef = useRef<string>(`walkin_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -97,11 +98,13 @@ export default function GuardWalkInScreen() {
       vehicleNumber: vehicleNumber.trim() || undefined,
       flatNumber: flatNumber.trim().toUpperCase(),
       gate: 'Main Gate',
+      idempotencyKey: walkInIdempotencyRef.current,
     };
 
     setSubmitting(true);
     try {
       const pending = await visitorApprovalService.createWalkInRequest(req);
+      walkInIdempotencyRef.current = `walkin_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       setPendingId(pending.id);
       setPhase('waiting');
       startPolling(pending.id);

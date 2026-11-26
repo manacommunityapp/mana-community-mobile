@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, RefreshControl, TextInput, Linking,
-  ActivityIndicator, Animated, Modal, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Animated, Modal, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,6 +16,10 @@ import {
   type VisitorDto,
   type VisitorAnalyticsDto,
 } from '@/services/visitorService';
+import { useAuth } from '@/hooks/useAuth';
+import { offlineSyncService } from '@/services/offlineSyncService';
+import { backgroundSync } from '@/services/backgroundSync';
+import { offlineGateEngine } from '@/services/offlineGateEngine';
 
 // ─────────────── Types ───────────────
 
@@ -262,8 +266,30 @@ export default function GuardVisitorsScreen() {
   const [denyTarget, setDenyTarget] = useState<VisitorDto | null>(null);
   const [denyReason, setDenyReason] = useState('');
   const [denying, setDenying] = useState(false);
+  const [isOnline, setIsOnline] = useState(offlineSyncService.isOnline);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [syncConflicts, setSyncConflicts] = useState(0);
+  const [rosterEntriesCount, setRosterEntriesCount] = useState(0);
 
   const searchAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    offlineSyncService.init();
+    const unsubNet = offlineSyncService.onStatusChange(setIsOnline);
+    const unsubSync = backgroundSync.addListener((_status, pending, conflicts) => {
+      setPendingSyncCount(pending);
+      setSyncConflicts(conflicts);
+    });
+    backgroundSync.refresh().catch(() => undefined);
+    offlineGateEngine
+      .getCachedRoster()
+      .then((r) => setRosterEntriesCount(r?.entries?.length ?? 0))
+      .catch(() => undefined);
+    return () => {
+      unsubNet();
+      unsubSync();
+    };
+  }, []);
 
   const setAction = (id: number, action: ActionType | null) => {
     setActionLoading(prev => {
@@ -282,6 +308,10 @@ export default function GuardVisitorsScreen() {
     ]);
     if (vRes.status === 'fulfilled') setVisitors(vRes.value);
     if (aRes.status === 'fulfilled') setAnalytics(aRes.value);
+    offlineGateEngine
+      .registerAndRefreshRoster('Main Gate')
+      .then((r) => setRosterEntriesCount(r.entries?.length ?? 0))
+      .catch(() => undefined);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -348,9 +378,44 @@ export default function GuardVisitorsScreen() {
           photo = `data:image/jpeg;base64,${captured.assets[0].base64}`;
         }
       }
+      if (!offlineSyncService.isOnline && v.passCode) {
+        const user = useAuth.getState().user;
+        if (user?.id) {
+          const offlineRes = await offlineGateEngine.approveEntryOffline({
+            identity: { userId: Number(user.id), communityId: user.communityId ?? null },
+            passCode: v.passCode,
+            passNonce: `${v.passCode}-${Math.floor(Date.now() / 30_000)}`,
+            gateName: 'Main Gate',
+            direction: 'CHECK_IN',
+          });
+          if (!offlineRes.approved) {
+            Alert.alert('Offline Gate Blocked', offlineRes.reason || 'Could not approve offline.');
+            setVisitors(prev => prev.map(x => x.id === v.id ? { ...x, status: v.status, checkedInAt: v.checkedInAt } : x));
+          } else {
+            await backgroundSync.refresh().catch(() => undefined);
+          }
+          return;
+        }
+      }
       await visitorService.checkIn(v.id, 'Main Gate', undefined, photo);
       loadData(true);
     } catch {
+      if (v.passCode) {
+        const user = useAuth.getState().user;
+        if (user?.id) {
+          const fallbackRes = await offlineGateEngine.approveEntryOffline({
+            identity: { userId: Number(user.id), communityId: user.communityId ?? null },
+            passCode: v.passCode,
+            passNonce: `${v.passCode}-${Math.floor(Date.now() / 30_000)}`,
+            gateName: 'Main Gate',
+            direction: 'CHECK_IN',
+          });
+          if (fallbackRes.approved) {
+            await backgroundSync.refresh().catch(() => undefined);
+            return;
+          }
+        }
+      }
       // Rollback optimistic update
       setVisitors(prev => prev.map(x => x.id === v.id ? { ...x, status: v.status, checkedInAt: v.checkedInAt } : x));
     } finally {
@@ -446,6 +511,27 @@ export default function GuardVisitorsScreen() {
           )}
         </View>
       </Animated.View>
+
+      {/* Offline Gate Sync & Pre-Auth Rush Strip */}
+      {(!isOnline || pendingSyncCount > 0 || syncConflicts > 0 || rosterEntriesCount > 0) && (
+        <View style={s.syncStrip}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.syncStripTitle}>
+              {isOnline ? 'Gate Sync Online' : 'Offline Mode Active'} · {rosterEntriesCount} pre-auth cached
+            </Text>
+            {(pendingSyncCount > 0 || syncConflicts > 0) && (
+              <Text style={s.syncStripSub}>
+                {pendingSyncCount} queued offline · {syncConflicts} conflict(s) logged
+              </Text>
+            )}
+          </View>
+          {isOnline && pendingSyncCount > 0 && (
+            <TouchableOpacity style={s.syncNowBtn} onPress={() => backgroundSync.run().catch(() => undefined)}>
+              <Text style={s.syncNowText}>Sync</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Analytics strip */}
       {analytics && !loading && (
@@ -602,6 +688,15 @@ export default function GuardVisitorsScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  syncStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: SPACING.md, marginVertical: 6, paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: '#EEF2FF', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#C7D2FE',
+  },
+  syncStripTitle: { fontSize: 11.5, fontWeight: '700', color: '#3730A3' },
+  syncStripSub: { fontSize: 10.5, color: '#B45309', marginTop: 1 },
+  syncNowBtn: { backgroundColor: GUARD_COLORS.accent, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.sm },
+  syncNowText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

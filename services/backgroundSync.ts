@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import api from './apiClient';
 import { useAuth } from '@/hooks/useAuth';
 import { requestQueue, QueuedRequest, QueueIdentity } from './requestQueue';
+import { offlineGateEngine, type BatchSyncResponse } from './offlineGateEngine';
 
 export type SyncStatus = 'IDLE' | 'SYNCING' | 'ERROR';
 
@@ -47,6 +48,10 @@ function operationEndpoint(op: QueuedRequest['operation']): string {
       return '/visitors/check-in';
     case 'VISITOR_CHECK_OUT':
       return '/visitors/check-out';
+    case 'GATE_VISITOR_CHECK_IN':
+    case 'GATE_SCHOOL_BUS_ENTRY':
+    case 'GATE_DIGITAL_PASS_SCAN':
+      return '/v1/sync/push';
   }
 }
 
@@ -104,6 +109,93 @@ export const backgroundSync = {
       emit(queued.length);
 
       const result: SyncResult = { processed: 0, succeeded: 0, failed: 0, conflicts: [] };
+      const batchConflicts: ConflictRecord[] = [];
+      const gateQueued = queued.filter(
+        (q) =>
+          q.operation.type === 'GATE_VISITOR_CHECK_IN' ||
+          q.operation.type === 'GATE_SCHOOL_BUS_ENTRY' ||
+          q.operation.type === 'GATE_DIGITAL_PASS_SCAN',
+      );
+
+      // Reconcile signed offline gate entries as an ordered atomic batch via /api/v1/sync/push
+      if (gateQueued.length > 0 && identity.communityId != null) {
+        const firstGateOp = gateQueued[0].operation as Extract<
+          QueuedRequest['operation'],
+          { deviceId: string }
+        >;
+        const deviceId = firstGateOp.deviceId || (await offlineGateEngine.getOrCreateDeviceId());
+        try {
+          const mutations = gateQueued.map((q) => {
+            const op = q.operation as Extract<QueuedRequest['operation'], { deviceId: string }>;
+            const entityType =
+              op.type === 'GATE_SCHOOL_BUS_ENTRY'
+                ? 'SCHOOL_BUS_ENTRY'
+                : op.type === 'GATE_DIGITAL_PASS_SCAN'
+                ? 'DIGITAL_PASS'
+                : 'VISITOR_PASS';
+            return {
+              clientMutationId: q.id,
+              entityType,
+              entityId: op.entityId ?? null,
+              operation: 'UPDATE',
+              payloadJson: JSON.stringify({
+                passCode: op.passCode,
+                childId: op.entityId,
+                direction: op.direction ?? 'PICKUP',
+                action: op.direction === 'CHECK_OUT' ? 'CHECK_OUT' : 'CHECK_IN',
+                gate: op.gate,
+              }),
+              clientTimestamp: op.occurredAt,
+              localSeq: op.localSeq,
+              passNonce: op.passNonce,
+              passCode: op.passCode,
+              gateName: op.gate,
+              deviceSignature: op.deviceSignature,
+            };
+          });
+
+          const pushRes = await api.post<BatchSyncResponse>('/v1/sync/push', {
+            userId: identity.userId,
+            deviceId,
+            communityId: identity.communityId,
+            mutations,
+          });
+          const ackMap = new Map((pushRes.data?.acks ?? []).map((a) => [a.clientMutationId, a]));
+
+          for (const req of gateQueued) {
+            result.processed++;
+            const ack = ackMap.get(req.id);
+            if (!ack || ack.status === 'APPLIED') {
+              await requestQueue.remove(req.id);
+              result.succeeded++;
+            } else {
+              // Quarantine conflict / replay rejection in DLQ while preserving other synced items
+              await requestQueue.remove(req.id);
+              result.failed++;
+              batchConflicts.push({
+                requestId: req.id,
+                url: '/v1/sync/push',
+                method: 'POST',
+                serverResponse: `${ack.status}: ${ack.conflictReason || ack.message}`,
+                detectedAt: new Date().toISOString(),
+              });
+            }
+          }
+
+          await api
+            .post('/v1/sync/pull', {
+              userId: identity.userId,
+              deviceId,
+              communityId: identity.communityId,
+              sinceChangeId: pushRes.data?.newCheckpointChangeId ?? 0,
+            })
+            .catch(() => undefined);
+          await offlineGateEngine.registerAndRefreshRoster().catch(() => undefined);
+        } catch {
+          result.failed += gateQueued.length;
+        }
+      }
+
       const processed = await requestQueue.processQueue(identity, async (req: QueuedRequest) => {
         if (req.operation.type === 'MARK_BILL_PAID') {
           await api.post(`/personal-finance/bills/${encodeURIComponent(req.operation.billId)}/mark-paid`, {}, { headers: { 'Idempotency-Key': req.id } });
@@ -113,12 +205,22 @@ export const backgroundSync = {
           await api.post('/visitors/check-in', { passCode: req.operation.passCode, gate: req.operation.gate, visitorName: req.operation.visitorName }, { headers: { 'Idempotency-Key': req.id } });
         } else if (req.operation.type === 'VISITOR_CHECK_OUT') {
           await api.post('/visitors/check-out', { passCode: req.operation.passCode, gate: req.operation.gate }, { headers: { 'Idempotency-Key': req.id } });
+        } else if (
+          req.operation.type === 'GATE_VISITOR_CHECK_IN' ||
+          req.operation.type === 'GATE_SCHOOL_BUS_ENTRY' ||
+          req.operation.type === 'GATE_DIGITAL_PASS_SCAN'
+        ) {
+          // Already reconciled in batch above when online
+          return;
         }
       });
-      result.processed = processed.processed;
-      result.succeeded = processed.succeeded;
-      result.failed = processed.failed;
+      result.processed += processed.processed;
+      result.succeeded += processed.succeeded;
+      result.failed += processed.failed;
       await refreshConflicts(identity);
+      if (batchConflicts.length > 0) {
+        conflictLog = [...conflictLog, ...batchConflicts];
+      }
       result.conflicts = [...conflictLog];
       const remaining = (await requestQueue.getAll()).filter((item) => item.status === 'PENDING' && item.identity.userId === identity.userId && item.identity.communityId === identity.communityId);
       currentStatus = result.failed > 0 || processed.conflicts > 0 ? 'ERROR' : 'IDLE';

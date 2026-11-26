@@ -29,6 +29,7 @@ export interface WalkInRequest {
   flatNumber: string;
   gate?: string;
   guardName?: string;
+  idempotencyKey?: string;
 }
 
 export interface ApprovalDecision {
@@ -111,7 +112,14 @@ export const visitorApprovalService = {
 
   async createWalkInRequest(req: WalkInRequest): Promise<PendingApproval> {
     try {
-      const res = await api.post<PendingApproval>('/visitors/walk-in', req);
+      const key =
+        req.idempotencyKey ||
+        `walkin_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      const res = await api.post<PendingApproval>(
+        '/visitors/walk-in',
+        { ...req, idempotencyKey: key },
+        { headers: { 'Idempotency-Key': key } }
+      );
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to send approval request to resident.');
