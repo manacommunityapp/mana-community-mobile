@@ -36,16 +36,31 @@ const MOCK_WHITELIST: WhitelistEntry[] = [
 export const whitelistService = {
   async getMyWhitelist(): Promise<WhitelistEntry[]> {
     try {
-      const res = await api.get<WhitelistEntry[]>('/visitors/whitelist');
-      if (res.data?.length > 0) return res.data;
+      const res = await api.get<any[]>('/visitors/whitelist');
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        return res.data.map(e => ({
+          ...e,
+          visitorName: e.visitorName || e.name || 'Trusted Visitor',
+          visitorPhone: e.visitorPhone || e.phone || '',
+        }));
+      }
     } catch {}
     return MOCK_WHITELIST;
   },
 
   async addToWhitelist(data: AddWhitelistRequest): Promise<WhitelistEntry> {
     try {
-      const res = await api.post<WhitelistEntry>('/visitors/whitelist', data);
-      return res.data;
+      const payload = {
+        ...data,
+        name: data.visitorName,
+        phone: data.visitorPhone,
+      };
+      const res = await api.post<any>('/visitors/whitelist', payload);
+      return {
+        ...res.data,
+        visitorName: res.data?.visitorName || res.data?.name || data.visitorName,
+        visitorPhone: res.data?.visitorPhone || res.data?.phone || data.visitorPhone,
+      };
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to add to whitelist. Please try again.');
     }

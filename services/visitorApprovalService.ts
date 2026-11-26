@@ -55,6 +55,15 @@ export const visitorApprovalService = {
     }
   },
 
+  async leaveAtGate(id: number): Promise<VisitorDto> {
+    try {
+      const res = await api.put<VisitorDto>(`/visitors/${id}/leave-at-gate`);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to instruct gate.');
+    }
+  },
+
   async reject(id: number, reason?: string): Promise<VisitorDto> {
     try {
       const res = await api.put<VisitorDto>(`/visitors/${id}/reject`, { reason });

@@ -74,20 +74,38 @@ export default function SportsAuctionDetailScreen() {
     teams.find((t) => t.id === selectedTeamId) ??
     (isAuctionAdmin && teams.length > 0 ? teams[0] : null);
 
+  const isLive = config?.status === 'LIVE';
+
   const { data: current = null } = useQuery({
     queryKey: ['auction-current-player', configId],
     queryFn: () => sportsAuctionService.getCurrentPlayer(configId),
     enabled: !!configId,
-    refetchInterval: 4000,
+    refetchInterval: isLive ? 2000 : 8000,
   });
 
-  const isLive    = config?.status === 'LIVE';
-  const canBid    = isLive && isAuthorizedBidder && !!activeTeam && !!current?.player;
-  const nextBid   = current ? (current.currentBid ?? current.player.basePrice ?? 0) + (config?.bidIncrementDefault ?? 100) : 0;
+  const nextBid = current?.player
+    ? computeNextBid(current.currentBid, current.player.basePrice, config)
+    : 0;
+
+  const isAlreadyHighestBidder = Boolean(
+    activeTeam && current?.currentTeamName &&
+    (current.currentTeamName === activeTeam.teamName ||
+     (current.bids && current.bids.length > 0 && current.bids[0].teamId === activeTeam.id))
+  );
+
+  const hasEnoughBudget = activeTeam
+    ? (activeTeam.remainingBudget == null || activeTeam.remainingBudget >= nextBid)
+    : true;
+
+  const playerStatus = current?.player?.status;
+  const isSold = playerStatus === 'SOLD';
+  const isUnsold = playerStatus === 'UNSOLD';
+  const isPlayerAvailable = current?.player != null && !isSold && !isUnsold;
+
+  const canBid = isLive && isAuthorizedBidder && !!activeTeam && isPlayerAvailable && !isAlreadyHighestBidder && hasEnoughBudget;
 
   async function handleBid() {
     if (!current?.player || !activeTeam || !canBid) return;
-    const nextBid = (current.currentBid ?? current.player.basePrice ?? 0) + (config?.bidIncrementDefault ?? 100);
     const confirmMessage = isAuctionAdmin && !isCaptain
       ? `Place bid of ₹${nextBid.toLocaleString()} for ${current.player.playerName} on behalf of ${activeTeam.teamName}?`
       : `Place bid of ₹${nextBid.toLocaleString()} for ${current.player.playerName}?`;
@@ -176,6 +194,10 @@ export default function SportsAuctionDetailScreen() {
           isAuctionAdmin={isAuctionAdmin}
           isCaptain={isCaptain}
           isAuthorizedBidder={isAuthorizedBidder}
+          isAlreadyHighestBidder={isAlreadyHighestBidder}
+          hasEnoughBudget={hasEnoughBudget}
+          isSold={isSold}
+          isUnsold={isUnsold}
           onOpenTeamPicker={() => setShowTeamPicker(true)}
           onBid={handleBid}
         />
@@ -236,7 +258,9 @@ export default function SportsAuctionDetailScreen() {
 
 function LiveTab({
   isLive, current, canBid, bidding, nextBid, activeTeam,
-  isAuctionAdmin, isCaptain, isAuthorizedBidder, onOpenTeamPicker, onBid,
+  isAuctionAdmin, isCaptain, isAuthorizedBidder,
+  isAlreadyHighestBidder, hasEnoughBudget, isSold, isUnsold,
+  onOpenTeamPicker, onBid,
 }: {
   isLive: boolean;
   current: PlayerWithBidResponse | null;
@@ -247,6 +271,10 @@ function LiveTab({
   isAuctionAdmin: boolean;
   isCaptain: boolean;
   isAuthorizedBidder: boolean;
+  isAlreadyHighestBidder: boolean;
+  hasEnoughBudget: boolean;
+  isSold: boolean;
+  isUnsold: boolean;
   onOpenTeamPicker: () => void;
   onBid: () => void;
 }) {
@@ -319,12 +347,13 @@ function LiveTab({
         {/* Current high bid */}
         <View style={s.bidRow}>
           <View>
-            <Text style={s.bidLabel}>Current Bid</Text>
+            <Text style={s.bidLabel}>{current.currentBid ? 'Current Bid' : 'Base Price'}</Text>
             <Text style={s.bidAmount}>₹{(current.currentBid ?? p.basePrice ?? 0).toLocaleString()}</Text>
             {current.currentTeamName && (
               <Text style={s.bidTeam}>{current.currentTeamName}</Text>
             )}
           </View>
+
           {canBid && (
             <TouchableOpacity
               style={[s.bidBtn, bidding && s.bidBtnDisabled]}
@@ -336,7 +365,37 @@ function LiveTab({
                 : <Text style={s.bidBtnText}>Bid ₹{nextBid.toLocaleString()}</Text>}
             </TouchableOpacity>
           )}
+
+          {isAuthorizedBidder && isAlreadyHighestBidder && !isSold && !isUnsold && (
+            <View style={s.holdingBidBadge}>
+              <Ionicons name="checkmark-circle" size={14} color="#059669" />
+              <Text style={s.holdingBidText}>Highest Bidder</Text>
+            </View>
+          )}
+
+          {isAuthorizedBidder && !hasEnoughBudget && !isAlreadyHighestBidder && !isSold && !isUnsold && (
+            <View style={s.insufficientBudgetBadge}>
+              <Ionicons name="alert-circle" size={13} color="#DC2626" />
+              <Text style={s.insufficientBudgetText}>Purse Exceeded</Text>
+            </View>
+          )}
         </View>
+
+        {isSold && (
+          <View style={s.soldBanner}>
+            <Ionicons name="checkmark-done-circle" size={16} color="#059669" />
+            <Text style={s.soldBannerText}>
+              SOLD to {p.assignedTeamName || current.currentTeamName || 'Winning Team'} for ₹{(p.soldPrice || current.currentBid || 0).toLocaleString()}
+            </Text>
+          </View>
+        )}
+
+        {isUnsold && (
+          <View style={s.unsoldBanner}>
+            <Ionicons name="close-circle" size={16} color="#DC2626" />
+            <Text style={s.unsoldBannerText}>Player Unsold / Passed</Text>
+          </View>
+        )}
 
         {!isAuthorizedBidder && isLive && (
           <View style={s.restrictedBox}>
@@ -441,6 +500,22 @@ function TeamsTab({ teams, budgetPerTeam }: { teams: SportsAuctionTeamResponse[]
 
 // ── Helpers ────────────────────────────────────────────────────
 
+function computeNextBid(
+  currentBid: number | null | undefined,
+  basePrice: number | null | undefined,
+  config: SportsAuctionConfigResponse | null,
+): number {
+  const base = basePrice && basePrice > 0 ? basePrice : (config?.basePrice ?? 100);
+  if (currentBid == null || currentBid <= 0) {
+    return base;
+  }
+  const defaultInc = config?.bidIncrementDefault || 100;
+  const threshold = config?.bidIncrementThreshold || 0;
+  const aboveInc = config?.bidIncrementAbove || defaultInc;
+  const increment = (threshold > 0 && currentBid >= threshold) ? aboveInc : defaultInc;
+  return currentBid + increment;
+}
+
 function StatBit({ label, value }: { label: string; value: string | number }) {
   return (
     <View style={s.statBit}>
@@ -485,6 +560,14 @@ const s = StyleSheet.create({
   bidBtn:         { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: 20, paddingVertical: 12 },
   bidBtnDisabled: { opacity: 0.5 },
   bidBtnText:     { color: '#fff', fontWeight: '800', fontSize: 14 },
+  holdingBidBadge:{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: '#A7F3D0' },
+  holdingBidText: { fontSize: 12, fontWeight: '700', color: '#065F46' },
+  insufficientBudgetBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: '#FECACA' },
+  insufficientBudgetText: { fontSize: 12, fontWeight: '700', color: '#991B1B' },
+  soldBanner:     { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', borderRadius: RADIUS.sm, padding: 10, borderWidth: 1, borderColor: '#A7F3D0' },
+  soldBannerText: { flex: 1, fontSize: 12, fontWeight: '700', color: '#065F46' },
+  unsoldBanner:   { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF2F2', borderRadius: RADIUS.sm, padding: 10, borderWidth: 1, borderColor: '#FECACA' },
+  unsoldBannerText:{ flex: 1, fontSize: 12, fontWeight: '700', color: '#991B1B' },
   noTeamNote:     { textAlign: 'center', fontSize: 12, color: COLORS.textMuted, fontStyle: 'italic' },
   bidderBanner:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderRadius: RADIUS.sm, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.border, marginBottom: 4 },
   adminRoleBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },

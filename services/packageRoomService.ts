@@ -36,32 +36,59 @@ export interface PackageStats {
 
 export const packageRoomService = {
   async getMyPackages(): Promise<PackageEntry[]> {
-    const res = await api.get<PackageEntry[]>('/package-room/my');
-    return res.data ?? [];
+    try {
+      const res = await api.get<PackageEntry[]>('/parcels/my');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    try {
+      const res = await api.get<PackageEntry[]>('/parcels');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+    return [];
   },
 
   async getAllPackages(status?: PackageStatus): Promise<PackageEntry[]> {
-    const res = await api.get<PackageEntry[]>('/package-room/all', { params: { status } });
-    return res.data ?? [];
+    try {
+      const res = await api.get<PackageEntry[]>('/parcels', { params: { status } });
+      return res.data ?? [];
+    } catch {
+      return [];
+    }
   },
 
   async getStats(): Promise<PackageStats> {
-    const res = await api.get<PackageStats>('/package-room/stats');
-    return res.data;
+    try {
+      const res = await api.get<PackageStats>('/parcels/stats');
+      return res.data;
+    } catch {
+      return { pendingCount: 0, collectedTodayCount: 0, totalThisMonth: 0 };
+    }
   },
 
   async generateCollectionOtp(packageId: number): Promise<{ otp: string; expiresAt: string }> {
-    const res = await api.post<{ otp: string; expiresAt: string }>(`/package-room/${packageId}/generate-otp`);
-    return res.data;
+    try {
+      const res = await api.post<{ otp: string; expiresAt: string }>(`/parcels/${packageId}/generate-otp`);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to generate pickup OTP');
+    }
   },
 
   async collectPackage(req: CollectPackageRequest): Promise<{ success: boolean; message: string }> {
-    const res = await api.post<{ success: boolean; message: string }>('/package-room/collect', req);
-    return res.data;
+    try {
+      const res = await api.post<{ success: boolean; message: string }>(`/parcels/${req.packageId}/collect`, { otp: req.otp });
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to collect parcel');
+    }
   },
 
   async addPackage(data: Partial<PackageEntry>): Promise<PackageEntry> {
-    const res = await api.post<PackageEntry>('/package-room/add', data);
-    return res.data;
+    try {
+      const res = await api.post<PackageEntry>('/parcels', data);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to register parcel');
+    }
   },
 };

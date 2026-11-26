@@ -20,7 +20,7 @@ const TYPE_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: s
   COURIER:  { icon: 'mail',            color: '#0891B2',      bg: '#CFFAFE', label: 'Courier' },
 };
 
-type DecisionState = 'idle' | 'approved' | 'denied';
+type DecisionState = 'idle' | 'approved' | 'denied' | 'leave_at_gate';
 
 function useWaitTimer(arrivedAt: string) {
   const [secs, setSecs] = useState(() =>
@@ -77,6 +77,15 @@ export default function ApproveVisitorScreen() {
     onError: (err: any) => setDenyErr(err?.message || 'Could not deny entry. Please try again.'),
   });
 
+  const leaveAtGateMutation = useMutation({
+    mutationFn: (id: number) => visitorApprovalService.leaveAtGate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
+      setDecision('leave_at_gate');
+    },
+    onError: (err: any) => setApproveErr(err?.message || 'Could not instruct gate. Please try again.'),
+  });
+
   if (!visitor) {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
@@ -125,6 +134,25 @@ export default function ApproveVisitorScreen() {
             {visitor.visitorName} has been turned away.{'\n'}Security gate has been notified.
           </Text>
           <TouchableOpacity style={[s.decisionBtn, { backgroundColor: '#DC2626' }]} onPress={() => router.back()}>
+            <Text style={s.decisionBtnText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (decision === 'leave_at_gate') {
+    return (
+      <SafeAreaView style={[s.container, s.decisionBg]} edges={['top', 'bottom']}>
+        <View style={s.decisionScreen}>
+          <View style={[s.decisionIcon, { backgroundColor: '#D97706' }]}>
+            <Ionicons name="cube" size={40} color="#fff" />
+          </View>
+          <Text style={s.decisionTitle}>Leave at Gate Instructed</Text>
+          <Text style={s.decisionSub}>
+            Guard instructed to hold parcel at gate desk for {visitor.visitorName}.{'\n'}Security gate has been notified.
+          </Text>
+          <TouchableOpacity style={[s.decisionBtn, { backgroundColor: '#D97706' }]} onPress={() => router.back()}>
             <Text style={s.decisionBtnText}>Done</Text>
           </TouchableOpacity>
         </View>
@@ -230,25 +258,41 @@ export default function ApproveVisitorScreen() {
         <TouchableOpacity
           style={s.denyBtn}
           onPress={() => { setApproveErr(''); setShowDenySheet(true); }}
-          disabled={approveMutation.isPending}
+          disabled={approveMutation.isPending || leaveAtGateMutation.isPending}
           activeOpacity={0.85}
         >
-          <Ionicons name="close-circle" size={20} color="#DC2626" />
+          <Ionicons name="close-circle" size={18} color="#DC2626" />
           <Text style={s.denyBtnText}>Deny</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.gateHoldBtn, leaveAtGateMutation.isPending && { opacity: 0.7 }]}
+          onPress={() => { setApproveErr(''); leaveAtGateMutation.mutate(visitor.id); }}
+          disabled={approveMutation.isPending || leaveAtGateMutation.isPending}
+          activeOpacity={0.85}
+        >
+          {leaveAtGateMutation.isPending ? (
+            <ActivityIndicator size="small" color="#D97706" />
+          ) : (
+            <>
+              <Ionicons name="cube-outline" size={18} color="#D97706" />
+              <Text style={s.gateHoldBtnText}>Leave at Gate</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[s.approveBtn, approveMutation.isPending && { opacity: 0.7 }]}
           onPress={() => { setApproveErr(''); approveMutation.mutate(visitor.id); }}
-          disabled={approveMutation.isPending}
+          disabled={approveMutation.isPending || leaveAtGateMutation.isPending}
           activeOpacity={0.85}
         >
           {approveMutation.isPending ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={s.approveBtnText}>Allow Entry</Text>
+              <Ionicons name="checkmark-circle" size={18} color="#fff" />
+              <Text style={s.approveBtnText}>Allow</Text>
             </>
           )}
         </TouchableOpacity>
@@ -417,17 +461,23 @@ const s = StyleSheet.create({
   },
   inlineErrText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#991B1B' },
   denyBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
     paddingVertical: 14, borderRadius: RADIUS.lg,
     backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FECACA',
   },
-  denyBtnText: { fontSize: 15, fontWeight: '800', color: '#DC2626' },
+  denyBtnText: { fontSize: 13, fontWeight: '800', color: '#DC2626' },
+  gateHoldBtn: {
+    flex: 1.3, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    paddingVertical: 14, borderRadius: RADIUS.lg,
+    backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A',
+  },
+  gateHoldBtnText: { fontSize: 13, fontWeight: '800', color: '#D97706' },
   approveBtn: {
-    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flex: 1.3, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
     paddingVertical: 14, borderRadius: RADIUS.lg,
     backgroundColor: '#059669', ...SHADOWS.sm,
   },
-  approveBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  approveBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 
   // Bottom sheet
   sheetOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
