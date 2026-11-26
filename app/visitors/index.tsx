@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 import { visitorApprovalService } from '@/services/visitorApprovalService';
 import { expressDeliveryService } from '@/services/expressDeliveryService';
+import { offlineSyncService } from '@/services/offlineSyncService';
 import GatePassQR from '@/components/common/GatePassQR';
 import { getBrandIconForText } from '@/components/common/BrandIcon';
 
@@ -291,37 +292,87 @@ export default function VisitorsScreen() {
     return INITIAL_VISITORS;
   }, [rawVisitors, localVisitors, mapDtoToEntry]);
 
-  // ── 2. Pre-Approve Visitor Mutation ─────────────────────────────────────────
-  const preApproveMutation = useMutation({
+  // ── 2. Optimistic Pre-Approve Visitor Mutation with Snapshot Rollback ───────
+  const preApproveMutation = useMutation<
+    VisitorDto,
+    Error,
+    PreApproveVisitorRequest,
+    { previousVisitors?: VisitorDto[]; tempId: number }
+  >({
     mutationFn: (req: PreApproveVisitorRequest) => visitorService.preApprove(req),
-    onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['visitors'] });
+    onMutate: async (req) => {
+      // 1. Cancel active refetches so stale reads cannot overwrite optimistic entry
+      await queryClient.cancelQueries({ queryKey: ['visitors', 'my-visitors'] });
+
+      // 2. Capture exact cache snapshot for deterministic rollback
+      const previousVisitors = queryClient.getQueryData<VisitorDto[]>(['visitors', 'my-visitors']);
+      const tempId = -Date.now();
+
+      const optimisticDto: VisitorDto = {
+        id: tempId,
+        passCode: 'SYNCING…',
+        visitorName: req.visitorName,
+        visitorPhone: req.visitorPhone,
+        vehicleNumber: req.vehicleNumber,
+        purpose: req.purpose || 'Guest Entry',
+        passType: req.passType,
+        status: 'EXPECTED',
+        flatNumber: req.flatNumber,
+        expectedAt: 'Today, Syncing…',
+      };
+
+      // 3. Optimistically prepend to React Query cache immediately
+      queryClient.setQueryData<VisitorDto[]>(['visitors', 'my-visitors'], (old = []) => [
+        optimisticDto,
+        ...old,
+      ]);
+      setIsPreApproveModal(false);
+
+      return { previousVisitors, tempId };
+    },
+    onSuccess: (res, _req, context) => {
+      // Replace optimistic temp item with authoritative server record (signed QR passCode)
+      queryClient.setQueryData<VisitorDto[]>(['visitors', 'my-visitors'], (old = []) =>
+        [res, ...old.filter(item => item.id !== context?.tempId && item.id !== res.id)]
+      );
       const newEntry = mapDtoToEntry(res);
       setLocalVisitors(prev => [newEntry, ...prev]);
-      setIsPreApproveModal(false);
       setGuestName(''); setGuestPhone(''); setGuestVehicle(''); setGuestPurpose('');
       setGuestValidFrom(''); setGuestValidUntil('');
       setSelectedPass(newEntry);
     },
-    onError: () => {
-      // Offline fallback — create a local pass so the guard can scan it immediately
-      const newCode = `MANA-${Math.floor(1000 + Math.random() * 9000)}`;
-      const newEntry: VisitorEntry = {
-        id: Date.now(),
-        name: guestName.trim(),
-        type: guestType,
-        purpose: guestPurpose.trim() || `${VISITOR_TYPE_CONFIG[guestType].label} Entry`,
-        vehicleNumber: guestVehicle.trim() || undefined,
-        expectedAt: 'Today, Just Now',
-        status: 'EXPECTED',
-        flat: `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`,
-        passCode: newCode,
-      };
-      setLocalVisitors(prev => [newEntry, ...prev]);
-      setIsPreApproveModal(false);
-      setGuestName(''); setGuestPhone(''); setGuestVehicle(''); setGuestPurpose('');
-      setGuestValidFrom(''); setGuestValidUntil('');
-      setSelectedPass(newEntry);
+    onError: (err, req, context) => {
+      // 4. Deterministic cache rollback on rejection/error
+      queryClient.setQueryData(['visitors', 'my-visitors'], context?.previousVisitors);
+
+      if (!offlineSyncService.isOnline) {
+        // Explicit deep-offline mode fallback: keep pending local entry
+        const offlineCode = `MANA-${Math.floor(1000 + Math.random() * 9000)}`;
+        const fallbackEntry: VisitorEntry = {
+          id: Date.now(),
+          name: req.visitorName,
+          type: guestType,
+          purpose: req.purpose || `${VISITOR_TYPE_CONFIG[guestType].label} Entry`,
+          vehicleNumber: req.vehicleNumber,
+          expectedAt: 'Today (Offline)',
+          status: 'EXPECTED',
+          flat: req.flatNumber || `Tower ${user?.tower || 'A'} - Unit ${user?.flatNumber || '1204'}`,
+          passCode: offlineCode,
+        };
+        setLocalVisitors(prev => [fallbackEntry, ...prev]);
+        setGuestName(''); setGuestPhone(''); setGuestVehicle(''); setGuestPurpose('');
+        setGuestValidFrom(''); setGuestValidUntil('');
+        setSelectedPass(fallbackEntry);
+        return;
+      }
+
+      // Online rejection (e.g., 409 / validation) -> roll back UI & restore modal with clear error
+      setCreateError(err?.message || 'Could not create visitor pass. Rolled back.');
+      setIsPreApproveModal(true);
+    },
+    onSettled: () => {
+      // 5. Reconcile with server truth
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
     },
   });
 

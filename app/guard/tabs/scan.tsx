@@ -2,9 +2,10 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ActivityIndicator, ScrollView, Modal,
-  KeyboardAvoidingView, Platform, Vibration,
+  KeyboardAvoidingView, Platform, Vibration, AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,9 +93,30 @@ export default function GuardScanScreen() {
   const [deliveryOtpError, setDeliveryOtpError] = useState('');
   const [deliveryOtpSuccess, setDeliveryOtpSuccess] = useState(false);
 
-  // Prevent double-scans: ignore same QR code for 3 seconds
+  // Prevent double-scans & release Camera2 native memory immediately when unfocused or backgrounded
   const lastScanned = useRef<{ code: string; at: number } | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
+  const [screenFocused, setScreenFocused] = useState(true);
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const [torchOn, setTorchOn] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreenFocused(true);
+      return () => {
+        setScreenFocused(false);
+        setTorchOn(false);
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', next => {
+      setAppActive(next === 'active');
+      if (next !== 'active') setTorchOn(false);
+    });
+    return () => sub.remove();
+  }, []);
 
   const pushHistory = useCallback((rec: ScanRecord) => {
     setHistory(prev => [rec, ...prev].slice(0, 6));
@@ -388,12 +410,28 @@ export default function GuardScanScreen() {
             <View style={s.cameraBlock}>
               {permission?.granted ? (
                 <View style={s.cameraWrap}>
-                  <CameraView
-                    style={s.camera}
-                    facing="back"
-                    barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-                    onBarcodeScanned={({ data }) => !loading && lookup(data)}
-                  />
+                  {screenFocused && appActive ? (
+                    <CameraView
+                      style={s.camera}
+                      facing="back"
+                      enableTorch={torchOn}
+                      barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                      onBarcodeScanned={({ data }) => !loading && lookup(data)}
+                    />
+                  ) : (
+                    <View style={[s.camera, { backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center' }]}>
+                      <ActivityIndicator size="small" color="#fff" />
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={s.torchBtn}
+                    onPress={() => setTorchOn(t => !t)}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Toggle flashlight"
+                  >
+                    <Ionicons name={torchOn ? 'flashlight' : 'flashlight-outline'} size={18} color="#fff" />
+                    <Text style={s.torchBtnText}>{torchOn ? 'Light On' : 'Torch'}</Text>
+                  </TouchableOpacity>
                   {/* Frame overlay */}
                   <View style={s.frameOverlay} pointerEvents="none">
                     <View style={s.frameBorder}>
@@ -1002,6 +1040,13 @@ const s = StyleSheet.create({
     color: '#fff', fontSize: 12, fontWeight: '700',
     backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
   },
+  torchBtn: {
+    position: 'absolute', top: 12, right: 12, zIndex: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(15, 23, 42, 0.78)', borderRadius: RADIUS.full,
+    paddingHorizontal: 11, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+  },
+  torchBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   cameraLoading: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.65)', alignItems: 'center', justifyContent: 'center', gap: 10,

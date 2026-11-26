@@ -104,6 +104,15 @@
       "expo-image",
       "expo-localization",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Mana Mobility needs your location to find the nearest pickup point.",
