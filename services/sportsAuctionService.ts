@@ -43,8 +43,26 @@ export const sportsAuctionService = {
 
   async getStats(configId: number): Promise<SportsAuctionStatsResponse | null> {
     try {
-      const res = await api.get<SportsAuctionStatsResponse>(`${BASE}/config/${configId}/stats`);
-      return res.data;
+      const res = await api.get<any>(`${BASE}/config/${configId}/stats`);
+      if (!res.data) return null;
+      const raw = res.data;
+      const totalPlayers = raw.totalPlayers ?? 0;
+      const soldPlayers = raw.soldPlayers ?? 0;
+      const queuedPlayers = raw.queuedPlayers ?? raw.remainingPlayers ?? 0;
+      const unsoldPlayers = raw.unsoldPlayers ?? Math.max(0, totalPlayers - soldPlayers - queuedPlayers);
+      const totalSpent = raw.totalSpent ?? raw.totalAmountSpent ?? 0;
+      return {
+        totalPlayers,
+        soldPlayers,
+        queuedPlayers,
+        remainingPlayers: queuedPlayers,
+        unsoldPlayers,
+        totalTeams: raw.totalTeams ?? 0,
+        totalBudget: raw.totalBudget ?? 0,
+        totalSpent,
+        totalAmountSpent: totalSpent,
+        totalBids: raw.totalBids ?? 0,
+      };
     } catch {
       return null;
     }
@@ -53,18 +71,19 @@ export const sportsAuctionService = {
   // ── Conductor controls (Admin & Auctioneer) ───────────────────
   async nextPlayer(configId: number): Promise<PlayerWithBidResponse | null> {
     try {
-      const res = await api.post<PlayerWithBidResponse>(`${BASE}/live/${configId}/next-player`);
-      return res.data;
+      await api.get(`${BASE}/live/${configId}/random-player`);
+      return sportsAuctionService.getCurrentPlayer(configId);
     } catch (err: any) {
       secureLog.warn('[sportsAuction] nextPlayer error', err?.message);
       throw new Error(err?.response?.data?.message || 'Failed to bring next player to the block');
     }
   },
 
-  async markSold(configId: number, playerId: number, teamId: number, amount: number): Promise<SportsAuctionPlayerResponse> {
+  async markSold(configId: number, playerId: number, teamId: number): Promise<SportsAuctionPlayerResponse> {
     try {
-      const res = await api.post<SportsAuctionPlayerResponse>(`${BASE}/live/${configId}/sell`, {
-        playerId, teamId, amount,
+      const res = await api.post<SportsAuctionPlayerResponse>(`${BASE}/live/sold`, {
+        playerId,
+        teamId,
       });
       return res.data;
     } catch (err: any) {
@@ -75,9 +94,7 @@ export const sportsAuctionService = {
 
   async passUnsold(configId: number, playerId: number): Promise<SportsAuctionPlayerResponse> {
     try {
-      const res = await api.post<SportsAuctionPlayerResponse>(`${BASE}/live/${configId}/unsold`, {
-        playerId,
-      });
+      const res = await api.post<SportsAuctionPlayerResponse>(`${BASE}/live/${playerId}/pass`);
       return res.data;
     } catch (err: any) {
       secureLog.warn('[sportsAuction] passUnsold error', err?.message);
@@ -88,8 +105,61 @@ export const sportsAuctionService = {
   // ── Live auction ─────────────────────────────────────────────
   async getCurrentPlayer(configId: number): Promise<PlayerWithBidResponse | null> {
     try {
-      const res = await api.get<PlayerWithBidResponse>(`${BASE}/live/${configId}/current-player`);
-      return res.data;
+      const res = await api.get<any>(`${BASE}/live/${configId}/current-player`);
+      if (!res.data) return null;
+      const raw = res.data;
+      const playerId = raw.playerId ?? raw.player?.id;
+      if (!playerId) return null;
+
+      let bids: SportsAuctionBidResponse[] = [];
+      try {
+        bids = await sportsAuctionService.getBidHistory(playerId);
+      } catch {}
+
+      const player: SportsAuctionPlayerResponse = {
+        id: playerId,
+        configId,
+        playerName: raw.playerName ?? raw.player?.playerName ?? '',
+        category: raw.category ?? raw.player?.category,
+        playerRole: raw.playerRole ?? raw.player?.playerRole,
+        age: raw.age ?? raw.player?.age,
+        basePrice: raw.basePrice ?? raw.player?.basePrice ?? 0,
+        statsJson: raw.statsJson ?? raw.player?.statsJson,
+        queueOrder: raw.queueOrder ?? raw.player?.queueOrder ?? 0,
+        status: raw.status ?? raw.player?.status ?? 'QUEUED',
+        assignedTeamId: raw.assignedTeamId ?? raw.player?.assignedTeamId,
+        assignedTeamName: raw.assignedTeamName ?? raw.player?.assignedTeamName,
+        soldPrice: raw.soldPrice ?? raw.player?.soldPrice,
+        innings: raw.innings ?? raw.player?.innings,
+        bestBowling: raw.bestBowling ?? raw.player?.bestBowling,
+        cricHeroesId: raw.cricHeroesId ?? raw.player?.cricHeroesId,
+        cricHeroesUrl: raw.cricHeroesUrl ?? raw.player?.cricHeroesUrl,
+      };
+
+      const resolvedTeamName = raw.currentBidTeamName ?? raw.currentTeamName ?? (bids.length > 0 ? bids[0].teamName : undefined);
+
+      return {
+        player,
+        playerId,
+        playerName: player.playerName,
+        category: player.category,
+        playerRole: player.playerRole,
+        age: player.age,
+        basePrice: player.basePrice,
+        statsJson: player.statsJson,
+        currentBid: raw.currentBid,
+        nextBid: raw.nextBid,
+        nextIncrement: raw.nextIncrement,
+        currentTeamName: resolvedTeamName,
+        currentBidTeamName: resolvedTeamName,
+        status: raw.status ?? player.status,
+        queueOrder: player.queueOrder,
+        innings: player.innings,
+        bestBowling: player.bestBowling,
+        cricHeroesId: player.cricHeroesId,
+        cricHeroesUrl: player.cricHeroesUrl,
+        bids,
+      };
     } catch {
       return null;
     }

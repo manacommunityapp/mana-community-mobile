@@ -74,7 +74,7 @@ export default function SportsAuctionDetailScreen() {
     teams.find((t) => t.id === selectedTeamId) ??
     (isAuctionAdmin && teams.length > 0 ? teams[0] : null);
 
-  const isLive = config?.status === 'LIVE';
+  const isLive = config?.status === 'LIVE' || config?.status === 'ACTIVE';
 
   const { data: current = null } = useQuery({
     queryKey: ['auction-current-player', configId],
@@ -83,13 +83,15 @@ export default function SportsAuctionDetailScreen() {
     refetchInterval: isLive ? 2000 : 8000,
   });
 
-  const nextBid = current?.player
+  const nextBid = (current?.nextBid && current.nextBid > (current.currentBid ?? 0))
+    ? current.nextBid
+    : current?.player
     ? computeNextBid(current.currentBid, current.player.basePrice, config)
     : 0;
 
   const isAlreadyHighestBidder = Boolean(
-    activeTeam && current?.currentTeamName &&
-    (current.currentTeamName === activeTeam.teamName ||
+    activeTeam && (current?.currentBidTeamName || current?.currentTeamName) &&
+    ((current.currentBidTeamName ?? current.currentTeamName) === activeTeam.teamName ||
      (current.bids && current.bids.length > 0 && current.bids[0].teamId === activeTeam.id))
   );
 
@@ -97,9 +99,9 @@ export default function SportsAuctionDetailScreen() {
     ? (activeTeam.remainingBudget == null || activeTeam.remainingBudget >= nextBid)
     : true;
 
-  const playerStatus = current?.player?.status;
+  const playerStatus = current?.status ?? current?.player?.status;
   const isSold = playerStatus === 'SOLD';
-  const isUnsold = playerStatus === 'UNSOLD';
+  const isUnsold = playerStatus === 'UNSOLD' || playerStatus === 'PASSED';
   const isPlayerAvailable = current?.player != null && !isSold && !isUnsold;
 
   const canBid = isLive && isAuthorizedBidder && !!activeTeam && isPlayerAvailable && !isAlreadyHighestBidder && hasEnoughBudget;
@@ -163,7 +165,7 @@ export default function SportsAuctionDetailScreen() {
           style: 'default',
           onPress: async () => {
             try {
-              await sportsAuctionService.markSold(configId, current.player.id, winningTeam.id, current.currentBid!);
+              await sportsAuctionService.markSold(configId, current.player.id, winningTeam.id);
               qc.invalidateQueries({ queryKey: ['auction-current-player', configId] });
               qc.invalidateQueries({ queryKey: ['auction-detail', configId] });
             } catch (e: any) {
@@ -230,9 +232,9 @@ export default function SportsAuctionDetailScreen() {
       {stats && (
         <View style={s.statsBar}>
           <StatBit label="Sold"      value={stats.soldPlayers} />
-          <StatBit label="Left"      value={stats.remainingPlayers} />
-          <StatBit label="Unsold"    value={stats.unsoldPlayers} />
-          <StatBit label="Spent"     value={`₹${(stats.totalAmountSpent / 100).toFixed(0)}L`} />
+          <StatBit label="Queued"    value={stats.queuedPlayers ?? stats.remainingPlayers ?? 0} />
+          <StatBit label="Unsold"    value={stats.unsoldPlayers ?? 0} />
+          <StatBit label="Spent"     value={formatBudgetAmount(stats.totalSpent ?? stats.totalAmountSpent ?? 0)} />
         </View>
       )}
 
@@ -540,10 +542,14 @@ function LiveTab({
 // ── Players tab ────────────────────────────────────────────────
 
 const PLAYER_STATUS_COLOR: Record<string, string> = {
-  AVAILABLE: COLORS.success ?? '#16a34a',
+  QUEUED:    '#2563EB',
+  AVAILABLE: '#16a34a',
+  SELLING:   '#f59e0b',
   ON_BLOCK:  '#f59e0b',
-  SOLD:      '#6b7280',
-  UNSOLD:    '#9ca3af',
+  SOLD:      '#059669',
+  PASSED:    '#DC2626',
+  UNSOLD:    '#DC2626',
+  RETAINED:  '#7C3AED',
 };
 
 function PlayersTab({ players }: { players: SportsAuctionPlayerResponse[] }) {
@@ -608,6 +614,14 @@ function TeamsTab({ teams, budgetPerTeam }: { teams: SportsAuctionTeamResponse[]
 }
 
 // ── Helpers ────────────────────────────────────────────────────
+
+function formatBudgetAmount(raw?: number | null): string {
+  if (!raw || raw <= 0) return '₹0';
+  if (raw >= 10000000) return `₹${(raw / 10000000).toFixed(1)}Cr`;
+  if (raw >= 100000) return `₹${(raw / 100000).toFixed(1)}L`;
+  if (raw >= 1000) return `₹${Math.round(raw / 1000)}K`;
+  return `₹${raw.toLocaleString()}`;
+}
 
 function computeNextBid(
   currentBid: number | null | undefined,

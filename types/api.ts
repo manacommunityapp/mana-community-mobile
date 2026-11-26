@@ -1610,7 +1610,7 @@ export interface StreamChatRequest {
 }
 
 // ── Sports Player Auction ───────────────────────────────────────
-export type SportsAuctionStatus = 'DRAFT' | 'REGISTRATION' | 'LIVE' | 'ENDED' | 'CANCELLED';
+export type SportsAuctionStatus = 'DRAFT' | 'ACTIVE' | 'REGISTRATION' | 'LIVE' | 'COMPLETED' | 'ENDED' | 'CANCELLED';
 
 export interface SportsAuctionConfigResponse {
   id: number;
@@ -1692,16 +1692,37 @@ export interface SportsAuctionBidResponse {
 export interface SportsAuctionStatsResponse {
   totalPlayers: number;
   soldPlayers: number;
-  unsoldPlayers: number;
-  remainingPlayers: number;
-  totalAmountSpent: number;
-  totalBids: number;
+  queuedPlayers?: number;
+  remainingPlayers?: number;
+  unsoldPlayers?: number;
+  totalTeams?: number;
+  totalBudget?: number;
+  totalSpent?: number;
+  totalAmountSpent?: number;
+  totalBids?: number;
 }
 
 export interface PlayerWithBidResponse {
   player: SportsAuctionPlayerResponse;
+  playerId?: number;
+  playerName?: string;
+  category?: string;
+  playerRole?: string;
+  age?: number;
+  basePrice?: number;
+  statsJson?: string;
   currentBid?: number;
+  nextBid?: number;
+  nextIncrement?: number;
   currentTeamName?: string;
+  currentBidTeamName?: string;
+  queueOrder?: number;
+  status?: string;
+  innings?: number;
+  bestBowling?: string;
+  cricHeroesId?: string;
+  cricHeroesUrl?: string;
+  verifiedAt?: string;
   bids: SportsAuctionBidResponse[];
 }
 
