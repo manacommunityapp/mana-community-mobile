@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { visitorService, VisitorDto, PreApproveVisitorRequest } from '@/services/visitorService';
 import { visitorApprovalService } from '@/services/visitorApprovalService';
 import GatePassQR from '@/components/common/GatePassQR';
+import { getBrandIconForText } from '@/components/common/BrandIcon';
 
 type VisitorStatus = 'EXPECTED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'DENIED';
 type VisitorType = 'GUEST' | 'DELIVERY' | 'CAB' | 'SERVICE';
@@ -349,7 +350,10 @@ export default function VisitorsScreen() {
           </View>
           <View style={{ flex: 1, marginLeft: SPACING.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={s.visitorName} numberOfLines={1}>{item.name}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
+                {getBrandIconForText(item.name || item.purpose, 16)}
+                <Text style={s.visitorName} numberOfLines={1}>{item.name}</Text>
+              </View>
               <View style={[s.statusBadge, { backgroundColor: statusMeta.bg }]}>
                 <Text style={[s.statusText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
               </View>

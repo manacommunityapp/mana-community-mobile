@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, Share, Linking } from 'react-native';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { toQR } from 'toqr';
 import { COLORS, RADIUS, SPACING, SHADOWS } from '@/constants/config';
+import { getBrandIconForText } from './BrandIcon';
 
 export interface GatePassData {
   passCode: string;
@@ -69,17 +70,34 @@ export default function GatePassQR({ pass, onClose, showCloseButton = true }: Ga
   // QR payload: pass code only — guard scanner looks up details from backend
   const qrPayload = pass.passCode;
 
+  const formatShareMessage = () =>
+    `🏠 Mana Community Gate Pass\n` +
+    `Visitor: ${pass.visitorName}\n` +
+    `Passcode: ${pass.passCode}\n` +
+    `Flat: ${pass.flat}\n` +
+    `Purpose: ${pass.purpose}` +
+    (pass.vehicleNumber ? `\nVehicle: ${pass.vehicleNumber}` : '') +
+    `\n\nShow this pass to the guard at the gate.`;
+
   const handleShare = async () => {
-    await Share.share({
-      message:
-        `🏠 Mana Community Gate Pass\n` +
-        `Visitor: ${pass.visitorName}\n` +
-        `Passcode: ${pass.passCode}\n` +
-        `Flat: ${pass.flat}\n` +
-        `Purpose: ${pass.purpose}` +
-        (pass.vehicleNumber ? `\nVehicle: ${pass.vehicleNumber}` : '') +
-        `\n\nShow this pass to the guard at the gate.`,
-    });
+    try {
+      await Share.share({ message: formatShareMessage() });
+    } catch {}
+  };
+
+  const handleWhatsAppShare = async () => {
+    const text = formatShareMessage();
+    const waUrl = `whatsapp://send?text=${encodeURIComponent(text)}`;
+    try {
+      const canOpen = await Linking.canOpenURL(waUrl);
+      if (canOpen) {
+        await Linking.openURL(waUrl);
+      } else {
+        await Share.share({ message: text });
+      }
+    } catch {
+      await Share.share({ message: text });
+    }
   };
 
   const statusColor = STATUS_COLOR[pass.status ?? ''] ?? COLORS.textMuted;
@@ -101,7 +119,10 @@ export default function GatePassQR({ pass, onClose, showCloseButton = true }: Ga
       </View>
 
       {/* Visitor info */}
-      <Text style={s.visitorName}>{pass.visitorName}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+        {getBrandIconForText(pass.visitorName || pass.purpose, 20)}
+        <Text style={s.visitorName}>{pass.visitorName}</Text>
+      </View>
       <Text style={s.flat}>{pass.flat}</Text>
 
       {/* QR code */}
@@ -136,9 +157,12 @@ export default function GatePassQR({ pass, onClose, showCloseButton = true }: Ga
 
       {/* Actions */}
       <View style={s.actions}>
-        <TouchableOpacity style={s.shareBtn} onPress={handleShare}>
-          <Ionicons name="share-social-outline" size={16} color="#fff" />
-          <Text style={s.shareBtnText}>Share Pass</Text>
+        <TouchableOpacity style={s.whatsappBtn} onPress={handleWhatsAppShare} activeOpacity={0.8}>
+          <FontAwesome6 name="whatsapp" size={16} color="#fff" />
+          <Text style={s.whatsappBtnText}>Share on WhatsApp</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.shareBtn} onPress={handleShare} activeOpacity={0.8} hitSlop={4}>
+          <Ionicons name="share-social-outline" size={18} color="#475569" />
         </TouchableOpacity>
       </View>
     </View>
@@ -193,10 +217,16 @@ const s = StyleSheet.create({
   metaKey: { fontSize: 12, color: COLORS.textMuted, width: 62 },
   metaVal: { flex: 1, fontSize: 12, color: COLORS.text, fontWeight: '600' },
 
-  actions: { marginTop: 4 },
+  actions: { marginTop: 4, flexDirection: 'row', gap: SPACING.sm },
+  whatsappBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    backgroundColor: '#25D366', borderRadius: RADIUS.lg, paddingVertical: 13,
+  },
+  whatsappBtnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
   shareBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.lg, paddingVertical: 13,
+    width: 48, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#F1F5F9', borderRadius: RADIUS.lg, paddingVertical: 13,
+    borderWidth: 1, borderColor: '#E2E8F0',
   },
   shareBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 });

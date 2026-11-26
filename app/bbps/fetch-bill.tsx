@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FONTS, SHADOWS } from '@/constants/config';
 import { THEME } from '@/constants/theme';
 import { billerService, FetchedBillDto } from '@/services/billerService';
+import { UpiLogo } from '@/components/common/BrandIcon';
 
 type Step = 'ENTER_ID' | 'BILL_PREVIEW' | 'PAYING';
 
@@ -257,7 +258,7 @@ export default function FetchBillScreen() {
                 activeOpacity={0.75}
               >
                 <View style={s.methodIconBox}>
-                  <Ionicons name="qr-code-outline" size={20} color={THEME.brandDark} />
+                  <UpiLogo size={22} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.methodName}>UPI · PhonePe / GPay / Paytm</Text>

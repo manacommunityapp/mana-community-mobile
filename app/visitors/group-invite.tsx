@@ -2,11 +2,11 @@ import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
   ActivityIndicator, RefreshControl, Modal, TextInput, ScrollView,
+  Share, Linking,
 } from 'react-native';
-import { Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { THEME } from '@/constants/theme';
@@ -151,13 +151,32 @@ export default function GroupInviteScreen() {
             <Text style={s.passCode}>{item.passCode}</Text>
           </View>
           {item.status === 'ACTIVE' && (
-            <TouchableOpacity
-              style={s.shareBtn}
-              onPress={() => Share.share({ message: `Mana Community Group Invite\nEvent: ${item.title}\nPass Code: ${item.passCode}\nDate: ${fmtDate(item.eventDate)}\n\nShare this code with your guests at the gate.` })}
-            >
-              <Ionicons name="share-outline" size={14} color={ACCENT} />
-              <Text style={s.shareBtnText}>Share</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <TouchableOpacity
+                style={s.waShareBtn}
+                onPress={async () => {
+                  const msg = `🎉 You are cordially invited to our community event: *${item.title}*!\nDate: ${fmtDate(item.eventDate)}\nGate Pass Code: *${item.passCode}*\n\nShow this code at the security gate for express entry.`;
+                  const url = `whatsapp://send?text=${encodeURIComponent(msg)}`;
+                  try {
+                    const canOpen = await Linking.canOpenURL(url);
+                    if (canOpen) await Linking.openURL(url);
+                    else await Share.share({ message: msg });
+                  } catch {
+                    await Share.share({ message: msg });
+                  }
+                }}
+              >
+                <FontAwesome6 name="whatsapp" size={13} color="#25D366" />
+                <Text style={s.waShareBtnText}>WhatsApp</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.shareBtn}
+                onPress={() => Share.share({ message: `Mana Community Group Invite\nEvent: ${item.title}\nPass Code: ${item.passCode}\nDate: ${fmtDate(item.eventDate)}\n\nShare this code with your guests at the gate.` })}
+              >
+                <Ionicons name="share-outline" size={14} color={ACCENT} />
+                <Text style={s.shareBtnText}>Share</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -446,6 +465,8 @@ const s = StyleSheet.create({
   passRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.sm },
   passPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F5F3FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 7 },
   passCode: { fontSize: 13, fontWeight: '800', color: ACCENT, fontFamily: 'monospace', letterSpacing: 0.5 },
+  waShareBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 5, borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#86EFAC', backgroundColor: '#F0FDF4' },
+  waShareBtnText: { fontSize: 12, fontWeight: '700', color: '#16A34A', fontFamily: 'Outfit-Bold' },
   shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.md, borderWidth: 1, borderColor: ACCENT },
   shareBtnText: { fontSize: 12, fontWeight: '700', color: ACCENT, fontFamily: 'Outfit-Bold' },
 

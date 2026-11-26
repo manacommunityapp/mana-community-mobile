@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '@/constants/config';
 import { THEME } from '@/constants/theme';
@@ -27,6 +27,16 @@ const COURIER_ICON: Record<string, string> = {
   AMAZON: '📦', FLIPKART: '🛍️', BLUEDART: '🚀', DTDC: '🚚',
   EKART: '🛒', DELHIVERY: '🔵', FEDEX: '🦊', OTHER: '📬',
 };
+
+function renderCourierBrandIcon(partner?: string, size = 26) {
+  const p = partner?.toUpperCase() || '';
+  if (p === 'AMAZON') return <FontAwesome6 name="amazon" size={size} color="#FF9900" />;
+  if (p === 'FEDEX') return <FontAwesome6 name="fedex" size={size} color="#4D148C" />;
+  if (p === 'UPS') return <FontAwesome6 name="ups" size={size} color="#351C15" />;
+  if (p === 'DHL') return <FontAwesome6 name="dhl" size={size} color="#D40511" />;
+  const emoji = COURIER_ICON[p] ?? '📬';
+  return <Text style={{ fontSize: size }}>{emoji}</Text>;
+}
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -101,7 +111,9 @@ export default function PackagesScreen() {
         activeOpacity={0.85}
       >
         <View style={styles.pkgLeft}>
-          <Text style={styles.emoji}>{emoji}</Text>
+          <View style={styles.brandIconWrapper}>
+            {renderCourierBrandIcon(item.courierPartner?.toString(), 24)}
+          </View>
           <View style={styles.pkgInfo}>
             <Text style={styles.pkgTitle}>{item.senderName || item.courierPartner}</Text>
             {item.trackingNumber ? (
@@ -199,7 +211,9 @@ export default function PackagesScreen() {
               const emoji = COURIER_ICON[selectedPkg.courierPartner?.toString()] ?? '📬';
               return (
                 <View style={styles.modalBody}>
-                  <Text style={styles.pkgEmoji}>{emoji}</Text>
+                  <View style={styles.modalBrandWrapper}>
+                    {renderCourierBrandIcon(selectedPkg.courierPartner?.toString(), 42)}
+                  </View>
                   <Text style={styles.modalCourier}>{selectedPkg.senderName || selectedPkg.courierPartner}</Text>
                   {selectedPkg.trackingNumber && <Text style={styles.modalTracking}>#{selectedPkg.trackingNumber}</Text>}
                   <View style={[styles.statusBadge, { backgroundColor: meta.bg, alignSelf: 'center', marginVertical: 8 }]}>
@@ -301,6 +315,7 @@ const styles = StyleSheet.create({
   list: { padding: SPACING.md, gap: 10 },
   pkgCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: THEME.card, borderRadius: RADIUS.lg, padding: 14, ...SHADOWS.sm },
   pkgLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  brandIconWrapper: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   emoji: { fontSize: 28 },
   pkgInfo: {},
   pkgTitle: { fontSize: 15, fontWeight: '600', color: THEME.text, fontFamily: 'DMSans-SemiBold' },
@@ -318,6 +333,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: THEME.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: THEME.text, fontFamily: 'DMSans-Bold' },
   modalBody: { padding: 20, alignItems: 'center', gap: 8 },
+  modalBrandWrapper: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', borderRadius: RADIUS.full },
   pkgEmoji: { fontSize: 48 },
   modalCourier: { fontSize: 20, fontWeight: '700', color: THEME.text, fontFamily: 'DMSans-Bold' },
   modalTracking: { fontSize: 13, color: COLORS.textMuted },
