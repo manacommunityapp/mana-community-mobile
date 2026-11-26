@@ -1,13 +1,16 @@
 import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs';
 import { AppState, type AppStateStatus } from 'react-native';
+import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { CONFIG } from '@/constants/config';
 import { tokenStore } from '@/services/apiClient';
+import { backgroundSync } from '@/services/backgroundSync';
 import { secureLog } from '@/security';
 
 export type WsState = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED' | 'FAILED';
 
 type MessageHandler = (data: any) => void;
 type VoidCallback = () => void;
+type StateCallback = (state: WsState, meta: { attempt: number; networkType: string }) => void;
 
 interface TrackedSubscription {
   topic: string;
@@ -15,7 +18,17 @@ interface TrackedSubscription {
   sub?: StompSubscription;
 }
 
-const BACKOFF_MS = [1000, 2000, 4000, 8000, 16000, 30000];
+export const BACKOFF_MS = [1000, 2000, 4000, 8000, 16000, 30000, 60000];
+
+/**
+ * Full-jitter exponential backoff (50%-100% of each tier) to prevent thundering-herd
+ * reconnection storms across guard tablets and resident mobile devices.
+ */
+export function computeJitteredBackoff(attempt: number, rng: () => number = Math.random): number {
+  const idx = Math.min(Math.max(0, attempt), BACKOFF_MS.length - 1);
+  const ceiling = BACKOFF_MS[idx];
+  return Math.floor(ceiling * 0.5 + rng() * ceiling * 0.5);
+}
 
 class WebSocketManager {
   private client: Client | null = null;
@@ -24,16 +37,28 @@ class WebSocketManager {
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private _state: WsState = 'IDLE';
+  private _networkType = 'unknown';
+  private _isInternetReachable = true;
+  private hasDisconnectedOnce = false;
   private connectCallbacks = new Set<VoidCallback>();
   private disconnectCallbacks = new Set<VoidCallback>();
+  private stateCallbacks = new Set<StateCallback>();
 
   constructor() {
-    // Monitor mobile app foreground / background transitions
     AppState.addEventListener('change', this.handleAppStateChange);
+    NetInfo.addEventListener(this.handleNetInfoChange);
   }
 
   get state(): WsState {
     return this._state;
+  }
+
+  get networkType(): string {
+    return this._networkType;
+  }
+
+  get attemptCount(): number {
+    return this.reconnectAttempt;
   }
 
   get isConnected(): boolean {
@@ -43,7 +68,23 @@ class WebSocketManager {
   private setState(newState: WsState) {
     if (this._state === newState) return;
     this._state = newState;
+
+    if (newState === 'DISCONNECTED' || newState === 'RECONNECTING' || newState === 'FAILED') {
+      this.hasDisconnectedOnce = true;
+    }
+
+    this.stateCallbacks.forEach((cb) => {
+      try {
+        cb(newState, { attempt: this.reconnectAttempt, networkType: this._networkType });
+      } catch {}
+    });
+
     if (newState === 'CONNECTED') {
+      // Phase 2 & 3 reconciliation: flush offline queue + notify subscribers
+      if (this.hasDisconnectedOnce) {
+        this.hasDisconnectedOnce = false;
+        void backgroundSync.run();
+      }
       this.connectCallbacks.forEach((cb) => {
         try { cb(); } catch {}
       });
@@ -56,15 +97,82 @@ class WebSocketManager {
 
   private handleAppStateChange = (nextStatus: AppStateStatus) => {
     if (nextStatus === 'active') {
-      if (this.tracked.size > 0 && !this.isConnected) {
-        this.ensureClient();
+      if (this.tracked.size > 0 && !this.isConnected && this._isInternetReachable) {
+        this.forceReconnect();
       }
     }
   };
 
+  private handleNetInfoChange = (state: NetInfoState) => {
+    const prevType = this._networkType;
+    const prevReachable = this._isInternetReachable;
+    const nextType = String(state.type ?? 'unknown');
+    const nextReachable = !!state.isConnected && state.isInternetReachable !== false;
+
+    this._networkType = nextType;
+    this._isInternetReachable = nextReachable;
+
+    if (!nextReachable) {
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      this.setState('DISCONNECTED');
+      return;
+    }
+
+    // Active Wi-Fi <-> Cellular interface switch or offline -> online recovery:
+    // Tear down zombie half-open TCP socket immediately and reconnect cleanly.
+    const interfaceChanged = prevType !== 'unknown' && prevType !== nextType;
+    const recoveredFromOffline = !prevReachable && nextReachable;
+
+    if ((interfaceChanged || recoveredFromOffline) && this.tracked.size > 0) {
+      secureLog.info('[STOMP] Network interface transition detected, forcing clean reconnect', {
+        prevType,
+        nextType,
+      });
+      this.forceReconnect();
+    }
+  };
+
+  /**
+   * Immediately tear down any potentially hung TCP socket and reconnect with reset backoff.
+   */
+  forceReconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempt = 0;
+
+    if (!this._isInternetReachable) {
+      this.setState('DISCONNECTED');
+      return;
+    }
+
+    const oldClient = this.client;
+    this.client = null;
+    if (oldClient) {
+      Promise.resolve(oldClient.deactivate({ force: true }))
+        .catch(() => {})
+        .finally(() => {
+          if (this.tracked.size > 0) {
+            void this.ensureClient();
+          }
+        });
+    } else if (this.tracked.size > 0) {
+      void this.ensureClient();
+    }
+  }
+
   private scheduleReconnect() {
     if (this.reconnectTimer) return;
-    const delay = BACKOFF_MS[Math.min(this.reconnectAttempt, BACKOFF_MS.length - 1)];
+    if (!this._isInternetReachable) {
+      this.setState('DISCONNECTED');
+      return;
+    }
+
+    const delay = computeJitteredBackoff(this.reconnectAttempt);
     this.reconnectAttempt++;
     this.setState('RECONNECTING');
 
@@ -73,7 +181,7 @@ class WebSocketManager {
       this.client?.deactivate().then(() => {
         this.client = null;
         if (this.tracked.size > 0) {
-          this.ensureClient();
+          void this.ensureClient();
         }
       });
     }, delay);
@@ -93,7 +201,7 @@ class WebSocketManager {
     const client = new Client({
       brokerURL: CONFIG.WS_URL,
       connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 0, // Managed manually with exponential backoff
+      reconnectDelay: 0, // Managed manually with jittered exponential backoff
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       onConnect: () => {
@@ -152,7 +260,7 @@ class WebSocketManager {
     if (this.client?.connected) {
       this.applySubscription(entry);
     } else {
-      this.ensureClient();
+      void this.ensureClient();
     }
 
     return () => {
@@ -162,9 +270,8 @@ class WebSocketManager {
       }
       this.tracked.delete(id);
 
-      // If no topics remain subscribed after a delay, could idle
+      // Keep warm for 10 seconds in case navigating to another screen
       if (this.tracked.size === 0) {
-        // Keep warm for 10 seconds in case navigating to another screen
         setTimeout(() => {
           if (this.tracked.size === 0 && this.client) {
             this.client.deactivate();
@@ -193,6 +300,11 @@ class WebSocketManager {
   onDisconnect(cb: VoidCallback): () => void {
     this.disconnectCallbacks.add(cb);
     return () => this.disconnectCallbacks.delete(cb);
+  }
+
+  onStateChange(cb: StateCallback): () => void {
+    this.stateCallbacks.add(cb);
+    return () => this.stateCallbacks.delete(cb);
   }
 }
 
