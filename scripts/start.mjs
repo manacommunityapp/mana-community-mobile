@@ -3,17 +3,18 @@ import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import http from 'http';
+import https from 'https';
 import net from 'net';
 import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, URL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 // ── Default Targets ───────────────────────────────────────────
-const CLOUD_API_URL = 'http://3.111.198.165:8081';
-const CLOUD_WS_URL  = 'ws://3.111.198.165:8081/ws';
+const CLOUD_API_URL = 'https://api.manacommunity.in';
+const CLOUD_WS_URL  = 'wss://api.manacommunity.in/ws';
 const DEFAULT_LOCAL_PORT = process.env.LOCAL_BACKEND_PORT || '8082';
 const DEFAULT_PROXY_PORT = process.env.LOCAL_PROXY_PORT || '8085';
 
@@ -120,7 +121,8 @@ function checkHealth(baseUrl, timeoutMs = 3000) {
   return new Promise((resolve) => {
     try {
       const u = new URL(baseUrl);
-      const req = http.get(
+      const transport = u.protocol === 'https:' ? https : http;
+      const req = transport.get(
         {
           hostname: u.hostname,
           port: u.port || 80,

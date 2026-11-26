@@ -2,8 +2,8 @@ export * from './theme';
 // ── API Configuration ──────────────────────────────────────────
 // Switch between dev (local Spring Boot) and prod (Lightsail) easily.
 
-const DEFAULT_API_URL = "http://3.111.198.165:8081";
-const DEFAULT_WS_URL  = "ws://3.111.198.165:8081/ws";
+const DEFAULT_API_URL = "https://api.manacommunity.in";
+const DEFAULT_WS_URL  = "wss://api.manacommunity.in/ws";
 
 const API_BASE_URL: string = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
 const WS_URL: string       = process.env.EXPO_PUBLIC_WS_URL || DEFAULT_WS_URL;

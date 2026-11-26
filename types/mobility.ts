@@ -70,6 +70,8 @@ export interface MobilityDriverDto {
   status:        DriverStatus;
   availability:  DriverAvailability;
   phone:         string;
+  serviceZoneId?: number;
+  serviceZoneName?: string;
   currentLat?:   number;
   currentLng?:   number;
   locationUpdatedAt?: string;
@@ -96,7 +98,21 @@ export interface MobilityTripDto {
   passengerPhone:  string;
   rating?:         number;
   receiptUrl?:     string;
+  receiptNumber?:  string;
+  paymentMethod?:  'CASH' | 'ONLINE' | 'UPI' | 'CARD' | 'WALLET';
   paymentStatus:   'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED';
+  paymentOrderId?: string;
+  paymentRef?:     string;
+  gateway?:        string;
+  refundStatus?:   'NONE' | 'INITIATED' | 'PROCESSED' | 'FAILED';
+  refundAmount?:   number;
+  refundRef?:      string;
+  platformFee?:    number;
+  driverPayout?:   number;
+  settled?:        boolean;
+  paidAt?:         string;
+  serviceZoneId?:  number;
+  serviceZoneName?: string;
 }
 
 export interface MobilityLocationUpdateDto {
@@ -136,6 +152,7 @@ export interface DriverEarningsSummaryDto {
   monthEarnings:    number;
   totalTrips:       number;
   pendingSettlement: number;
+  settledEarnings?: number;
   currency:         string;
 }
 
@@ -146,6 +163,7 @@ export interface RegisterDriverRequest {
   vehicleModel:   string;
   vehicleColor:   string;
   vehicleYear:    number;
+  serviceZoneId?: number;
 }
 
 // ── Ride Requests ────────────────────────────────────────────────
@@ -159,6 +177,7 @@ export interface CreateRideRequest {
   destAddress:     string;
   quoteId:         string;
   idempotencyKey:  string;
+  paymentMethod?:  string;
   scheduledAt?:    string;
 }
 
@@ -196,6 +215,63 @@ export interface MobilityServiceZoneDto {
   centerLng: number;
   radiusKm:  number;
   active:    boolean;
+}
+
+export interface ServiceZoneRequest {
+  name:      string;
+  centerLat: number;
+  centerLng: number;
+  radiusKm:  number;
+  active?:   boolean;
+}
+
+export interface MobilityReceiptDto {
+  tripId:         number;
+  tripRef:        string;
+  receiptNumber?: string;
+  serviceType:    MobilityServiceType;
+  passengerName:  string;
+  driverName?:    string;
+  vehicleNumber?: string;
+  pickupAddress:  string;
+  destAddress:    string;
+  paymentMethod?: string;
+  paymentStatus:  string;
+  gateway?:       string;
+  paymentOrderId?: string;
+  paymentRef?:    string;
+  fareAmount:     number;
+  platformFee?:   number;
+  driverPayout?:  number;
+  refundStatus?:  string;
+  refundAmount?:  number;
+  currency:       string;
+  paidAt?:        string;
+  completedAt?:   string;
+}
+
+export interface MobilityOpsAnalyticsDto {
+  totalTrips:              number;
+  completedTrips:          number;
+  cancelledTrips:          number;
+  activeTrips:             number;
+  cancellationRatePct:     number;
+  grossRevenue:            number;
+  onlineRevenue:           number;
+  cashRevenue:             number;
+  platformFeeRevenue:      number;
+  totalRefunded:           number;
+  pendingDriverSettlement: number;
+  settledDriverPayouts:    number;
+  approvedDrivers:         number;
+  onlineDrivers:           number;
+  averageDriverRating:     number;
+  averageTripDurationMin:  number;
+  totalCarpoolOffers:      number;
+  totalCarpoolSeats:       number;
+  bookedCarpoolSeats:      number;
+  carpoolUtilizationPct:   number;
+  currency:                string;
 }
 
 // ── Ops / Admin ──────────────────────────────────────────────────

@@ -184,6 +184,8 @@ function mapBackendDealToGroupDeal(deal: any): GroupDeal {
 }
 
 function mapBackendOrderToGroupOrder(o: any): GroupOrder {
+  if (!o?.id && !o?.orderNumber) throw new Error('Order response has no server order ID.');
+  if (!o?.status) throw new Error('Order response has no confirmed status.');
   return {
     id: o.orderNumber || String(o.id),
     dealId: String(o.dealId || o.id),
@@ -201,35 +203,35 @@ function mapBackendOrderToGroupOrder(o: any): GroupOrder {
     total: o.totalAmount || 0,
     finalAmount: o.totalAmount || 0,
     savings: o.savingsAmount || 0,
-    status: o.status || 'CONFIRMED',
-    joinedAt: o.createdAt || new Date().toISOString(),
-    createdAt: o.createdAt || new Date().toISOString(),
+    status: o.status,
+    joinedAt: o.createdAt,
+    createdAt: o.createdAt,
     pickupLocation: o.pickupPoint || o.deliveryAddress || 'Clubhouse Desk',
     pickupPoint: o.pickupPoint || 'Clubhouse Desk',
-    pickupOtp: o.deliveryOtp || '8421',
+    pickupOtp: o.pickupOtp,
     deliveryOtp: o.deliveryOtp,
-    pickupQrCode: o.qrToken || `QR-${o.orderNumber || o.id}`,
-    qrCode: o.qrToken || `QR-${o.orderNumber || o.id}`,
+    pickupQrCode: o.qrToken,
+    qrCode: o.qrToken,
     qrToken: o.qrToken,
-    pickupDate: o.pickupDate ? String(o.pickupDate).split('T')[0] : '2026-10-10',
-    pickupSlot: 'Morning (9 AM - 12 PM)',
+    pickupDate: o.pickupDate ? String(o.pickupDate).split('T')[0] : undefined,
+    pickupSlot: o.pickupSlot,
     deliveryAddress: o.deliveryAddress,
     deliveryPartnerName: o.deliveryPartnerName,
     deliveryPartnerPhone: o.deliveryPartnerPhone,
     trackingNumber: o.trackingNumber,
     paymentMethod: o.paymentMethod || 'UPI',
-    paymentStatus: o.paymentStatus || 'PAID',
+    paymentStatus: o.paymentStatus,
     refundAmount: o.refundAmount,
     refundReason: o.refundReason,
     tierPriceRefundAmount: o.tierPriceRefundAmount,
     commerceOrderId: o.commerceOrderId,
     authorizedCollectors: o.collectorName ? [
       {
-        id: 'col-1',
+        id: String(o.collectorId || ''),
         name: o.collectorName,
-        relationship: o.collectorRelation || 'Authorized Resident / Helper',
-        authPin: o.collectorPin || '1234',
-        expiresAt: new Date(Date.now() + 24 * 3600000).toISOString(),
+        relationship: o.collectorRelation,
+        authPin: o.collectorPin,
+        expiresAt: o.collectorExpiresAt,
       }
     ] : [],
   };
@@ -506,21 +508,13 @@ export const groupBuyingService = {
         return list;
       }
     } catch (err) {
-      console.warn('Failed to fetch deals from /group-buying/deals', err);
-    }
-    if (__DEV__) {
-      let seed = SEED_DEALS;
-      if (filters && typeof filters === 'object') {
-        if (filters.category && filters.category !== 'ALL') seed = seed.filter(d => d.category === filters.category);
-        if (filters.search) { const q = filters.search.toLowerCase(); seed = seed.filter(d => d.title.toLowerCase().includes(q)); }
-      }
-      return seed;
+      throw err;
     }
     return [];
   },
 
   getFestivalCategories: async (): Promise<string[]> => {
-    return ['All', 'Diwali Sweets & Snacks', 'Puja Essentials', 'Dry Fruits Gift Boxes', 'Ethnic Grocery'];
+    throw new Error('Festival categories are not available from the backend.');
   },
 
   getFestivalDeals: async (): Promise<GroupDeal[]> => {
@@ -530,7 +524,7 @@ export const groupBuyingService = {
         return res.data.map(mapBackendDealToGroupDeal);
       }
     } catch (err) {
-      console.warn('Failed to fetch festival deals', err);
+      throw err;
     }
     return [];
   },
@@ -542,7 +536,7 @@ export const groupBuyingService = {
         return res.data.map(mapBackendDealToGroupDeal);
       }
     } catch (err) {
-      console.warn('Failed to fetch almost unlocked deals', err);
+      throw err;
     }
     return [];
   },
@@ -554,9 +548,8 @@ export const groupBuyingService = {
         return mapBackendDealToGroupDeal(res.data);
       }
     } catch (err) {
-      console.warn(`Failed to fetch deal ${dealId}`, err);
+      throw err;
     }
-    if (__DEV__) return SEED_DEALS.find(d => d.id === dealId) ?? null;
     return null;
   },
 
@@ -605,9 +598,8 @@ export const groupBuyingService = {
         return res.data.map(mapBackendOrderToGroupOrder);
       }
     } catch (err) {
-      console.warn('Failed to fetch user orders', err);
+      throw err;
     }
-    if (__DEV__) return SEED_ORDERS;
     return [];
   },
 
@@ -666,7 +658,7 @@ export const groupBuyingService = {
         orderNumber: qrOrOtp,
       });
       return {
-        success: res.data?.valid ?? res.data?.success ?? true,
+        success: res.data?.valid === true || res.data?.success === true,
         message: res.data?.message || 'Pickup verified successfully',
         order: res.data?.order ? mapBackendOrderToGroupOrder(res.data.order) : undefined,
       };
@@ -736,88 +728,31 @@ export const groupBuyingService = {
         }));
       }
     } catch (err) {
-      console.warn('Failed to fetch tower groups', err);
+      throw err;
     }
     return [];
   },
 
   joinBuyingGroup: async (groupId: string): Promise<BuyingGroup> => {
-    const groups = await groupBuyingService.getBuyingGroups();
-    const grp = groups.find(g => g.id === groupId);
-    if (!grp) throw new Error('Buying group not found');
-    grp.isMember = true;
-    return grp;
+    void groupId;
+    throw new Error('Joining a tower group is not implemented by the backend yet.');
   },
 
   getFestivalCampaigns: async (): Promise<FestivalCampaign[]> => {
-    return [
-      {
-        id: 'fest-diwali',
-        name: 'Diwali Dhamaka',
-        tagline: 'Save up to 40% on Dry Fruits, Sweets & Puja essentials',
-        bannerImage: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=500',
-        festivalDate: '2026-11-01',
-        daysRemaining: 27,
-        categories: [
-          { id: 'DIWALI', name: 'Diwali Specials', emoji: '🪔', dealsCount: 12 },
-          { id: 'SWEETS', name: 'Mithai & Sweets', emoji: '🍬', dealsCount: 8 },
-          { id: 'DRY_FRUITS', name: 'Premium Dry Fruits', emoji: '🥜', dealsCount: 15 },
-          { id: 'PUJA', name: 'Puja Samagri', emoji: '🌸', dealsCount: 6 },
-        ],
-      },
-    ];
+    throw new Error('Festival campaigns are not available from the backend.');
   },
 
   getMonthlyBaskets: async (): Promise<MonthlyBasket[]> => {
-    return [
-      {
-        id: 'mb-1',
-        name: 'Essential Monthly Grocery Kit',
-        tagline: 'Atta, Rice, Oil, Pulses & Spices for a family of 4',
-        month: 'October 2026',
-        items: [
-          { id: 'i1', name: 'Aashirvaad Atta 10kg', quantity: 1, unit: 'Bag', estimatedPrice: 680, savedAmount: 95, groupPrice: 585 },
-          { id: 'i2', name: 'Fortune Sunflower Oil 5L', quantity: 1, unit: 'Jar', estimatedPrice: 750, savedAmount: 110, groupPrice: 640 },
-        ],
-        totalEstimated: 1430,
-        totalSavings: 205,
-        isRecurring: true,
-        savingsPct: 14.3,
-        groupPrice: 1225,
-        mrpTotal: 1430,
-        savings: 205,
-        committedFamilies: 78,
-        targetFamilies: 100,
-        cutoffDate: '2026-10-07',
-        nextDeliveryDate: '2026-10-10',
-      },
-    ];
+    throw new Error('Monthly baskets are not available from the backend.');
   },
 
-  joinBasket: async (_basketId: string): Promise<any> => {
-    return { success: true };
+  joinBasket: async (basketId: string): Promise<{ success: boolean }> => {
+    void basketId;
+    throw new Error('Joining a monthly basket is not implemented by the backend yet.');
   },
 
   getBuyAgainSuggestions: async (): Promise<BuyAgainSuggestion[]> => {
-    return [
-      {
-        id: 'ba-1',
-        productName: 'Fresh Devgad Alphonso Mangoes (1 Dozen)',
-        category: 'Fruits & Vegetables',
-        imageUrl: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&auto=format&fit=crop&q=80',
-        lastPurchasedPrice: 850,
-        lastPrice: 850,
-        currentPrice: 850,
-        currentDealPrice: 850,
-        lastBoughtDaysAgo: 14,
-        activeGroupBuyAvailable: true,
-        groupBuyPrice: 850,
-        unit: 'Dozen',
-        lastOrderedDate: '2026-10-03',
-        dealId: '1',
-        savings: 350,
-      },
-    ];
+    throw new Error('Buy-again suggestions are not available from the backend.');
   },
 
   askCommunityAI: async (query: string): Promise<CommunityAIQueryResponse> => {
@@ -830,15 +765,7 @@ export const groupBuyingService = {
         matchedDemands: res.data.matchedDemands || [],
         confidence: res.data.confidence || 0.95,
       };
-    } catch {
-      return {
-        answer: `I looked up deals and community demands matching "${query}".`,
-        action: 'JOIN_DEAL',
-        matchedDeals: [],
-        matchedDemands: [],
-        confidence: 0.8,
-      };
-    }
+    } catch (error) { throw error; }
   },
 
   getDemands: async (): Promise<DemandPool[]> => {
@@ -893,9 +820,9 @@ export const groupBuyingService = {
         }));
       }
     } catch (err) {
-      console.warn('Failed to fetch demand board', err);
+      throw err;
     }
-    return SEED_DEMANDS;
+    return [];
   },
 
   getDemandBoard: async (): Promise<DemandPool[]> => {
@@ -1000,7 +927,7 @@ export const groupBuyingService = {
         };
       }
     } catch (err) {
-      console.warn('Failed to fetch community savings', err);
+      throw err;
     }
     return {
       totalSavedAllTime: 1840000,

@@ -267,26 +267,13 @@ export const biometricAccessService = {
     selfieBase64?: string;
     punchType: 'CLOCK_IN' | 'CLOCK_OUT';
   }): Promise<{ success: boolean; withinGeofence: boolean; message: string }> {
-    try {
-      const res = await api.post('/api/v1/hr/attendance/field-punch', data);
-      return res.data;
-    } catch {
-      // Fallback geofence distance calculation (e.g. society center 12.9716, 77.5946, 500m radius)
-      return {
-        success: true,
-        withinGeofence: true,
-        message: `${data.punchType === 'CLOCK_IN' ? 'Clock In' : 'Clock Out'} registered within geofence perimeter.`,
-      };
-    }
+    const res = await api.post('/api/v1/hr/attendance/field-punch', data);
+    return res.data;
   },
 
   async triggerManualRelay(turnstileId: number, durationSec: number = 3): Promise<{ success: boolean; message: string }> {
-    try {
-      const res = await api.post(`/v1/access/turnstiles/${turnstileId}/relay-unlock`, { durationSeconds: durationSec });
-      return res.data;
-    } catch {
-      return { success: true, message: `Turnstile relay pulsed for ${durationSec}s` };
-    }
+    const res = await api.post(`/v1/access/turnstiles/${turnstileId}/relay-unlock`, { durationSeconds: durationSec });
+    return res.data;
   },
 };
 

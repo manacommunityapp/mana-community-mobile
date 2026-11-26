@@ -1,4 +1,5 @@
 import api from './apiClient';
+import type { MobilityOpsAnalyticsDto, MobilityServiceZoneDto, ServiceZoneRequest } from '@/types/mobility';
 
 export interface PendingMobilityDocument {
   documentId: number;
@@ -35,5 +36,29 @@ export const mobilityOpsService = {
   },
   async reinstateDriver(driverId: number): Promise<void> {
     await api.post(`/mobility/ops/drivers/${driverId}/reinstate`);
+  },
+  async getAllServiceZones(): Promise<MobilityServiceZoneDto[]> {
+    const res = await api.get<MobilityServiceZoneDto[]>('/mobility/ops/service-zones');
+    return res.data ?? [];
+  },
+  async createServiceZone(req: ServiceZoneRequest): Promise<MobilityServiceZoneDto> {
+    const res = await api.post<MobilityServiceZoneDto>('/mobility/ops/service-zones', req);
+    return res.data;
+  },
+  async updateServiceZone(zoneId: number, req: ServiceZoneRequest): Promise<MobilityServiceZoneDto> {
+    const res = await api.put<MobilityServiceZoneDto>(`/mobility/ops/service-zones/${zoneId}`, req);
+    return res.data;
+  },
+  async updateServiceZoneStatus(zoneId: number, active: boolean): Promise<MobilityServiceZoneDto> {
+    const res = await api.patch<MobilityServiceZoneDto>(`/mobility/ops/service-zones/${zoneId}/status`, { active });
+    return res.data;
+  },
+  async getAnalytics(): Promise<MobilityOpsAnalyticsDto> {
+    const res = await api.get<MobilityOpsAnalyticsDto>('/mobility/ops/analytics');
+    return res.data;
+  },
+  async settleDriver(driverId: number): Promise<{ driverId: number; settledAmount: number }> {
+    const res = await api.post<{ driverId: number; settledAmount: number }>(`/mobility/ops/drivers/${driverId}/settle`);
+    return res.data;
   },
 };

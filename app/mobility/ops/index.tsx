@@ -1,17 +1,19 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity,
-  ActivityIndicator, Alert, BackHandler, RefreshControl, Linking,
+  ActivityIndicator, Alert, BackHandler, Linking, Modal, TextInput, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mobilityOpsService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS, CONFIG } from '@/constants/config';
+import type { MobilityServiceZoneDto } from '@/types/mobility';
 
-type Tab = 'DOCUMENTS' | 'TRIPS';
+type Tab = 'DOCUMENTS' | 'TRIPS' | 'ZONES' | 'ANALYTICS';
 
 const DOC_LABEL: Record<string, string> = {
   DRIVING_LICENCE:     'Driving Licence',
@@ -27,6 +29,13 @@ export default function OpsScreen() {
   const router      = useRouter();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('DOCUMENTS');
+  const [previewDoc, setPreviewDoc] = useState<{ title: string; driver: string; url: string } | null>(null);
+  const [zoneModalOpen, setZoneModalOpen] = useState(false);
+  const [editingZone, setEditingZone] = useState<MobilityServiceZoneDto | null>(null);
+  const [zoneName, setZoneName] = useState('');
+  const [zoneLat, setZoneLat] = useState('17.4401');
+  const [zoneLng, setZoneLng] = useState('78.3489');
+  const [zoneRadius, setZoneRadius] = useState('15');
 
   useFocusEffect(
     useCallback(() => {
@@ -46,6 +55,50 @@ export default function OpsScreen() {
     queryFn:  () => mobilityOpsService.getActiveTrips(),
     enabled:  tab === 'TRIPS',
     refetchInterval: 20_000,
+  });
+
+  const { data: zonesData, isLoading: loadingZones, refetch: refetchZones } = useQuery({
+    queryKey: ['ops-service-zones'],
+    queryFn:  mobilityOpsService.getAllServiceZones,
+    enabled:  tab === 'ZONES',
+  });
+
+  const { data: analytics, isLoading: loadingAnalytics, refetch: refetchAnalytics } = useQuery({
+    queryKey: ['ops-analytics'],
+    queryFn:  mobilityOpsService.getAnalytics,
+    enabled:  tab === 'ANALYTICS',
+  });
+
+  const saveZoneMutation = useMutation({
+    mutationFn: () => {
+      const payload = {
+        name: zoneName.trim(),
+        centerLat: Number(zoneLat),
+        centerLng: Number(zoneLng),
+        radiusKm: Number(zoneRadius),
+        active: editingZone ? editingZone.active : true,
+      };
+      return editingZone
+        ? mobilityOpsService.updateServiceZone(editingZone.id, payload)
+        : mobilityOpsService.createServiceZone(payload);
+    },
+    onSuccess: () => {
+      setZoneModalOpen(false);
+      setEditingZone(null);
+      queryClient.invalidateQueries({ queryKey: ['ops-service-zones'] });
+      queryClient.invalidateQueries({ queryKey: ['mobility-service-zones'] });
+    },
+    onError: () => Alert.alert('Error', 'Please check zone coordinates and radius.'),
+  });
+
+  const toggleZoneMutation = useMutation({
+    mutationFn: ({ id, active }: { id: number; active: boolean }) =>
+      mobilityOpsService.updateServiceZoneStatus(id, active),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ops-service-zones'] });
+      queryClient.invalidateQueries({ queryKey: ['mobility-service-zones'] });
+    },
+    onError: () => Alert.alert('Error', 'Could not update zone status.'),
   });
 
   const reviewMutation = useMutation({
@@ -101,7 +154,12 @@ export default function OpsScreen() {
 
       {/* Tabs */}
       <View style={s.tabs}>
-        {([['DOCUMENTS', 'Documents', 'document-text-outline'], ['TRIPS', 'Active Trips', 'navigate-outline']] as const).map(
+        {([
+          ['DOCUMENTS', 'Docs', 'document-text-outline'],
+          ['TRIPS', 'Trips', 'navigate-outline'],
+          ['ZONES', 'Zones', 'map-outline'],
+          ['ANALYTICS', 'Analytics', 'stats-chart-outline'],
+        ] as const).map(
           ([key, label, icon]) => (
             <TouchableOpacity
               key={key}
@@ -149,9 +207,25 @@ export default function OpsScreen() {
                   </View>
                 </View>
                 <View style={s.docActions}>
-                  <TouchableOpacity style={s.viewBtn} onPress={() => { if (!item.fileUrl) { Alert.alert('Document unavailable', 'No file is attached to this review.'); return; } const url = /^https?:\/\//i.test(item.fileUrl) ? item.fileUrl : `${CONFIG.API_BASE_URL}${item.fileUrl.startsWith('/api') ? '' : '/api'}${item.fileUrl}`; Linking.openURL(url).catch(() => Alert.alert('Unable to open document', 'The stored document could not be opened.')); }}>
+                  <TouchableOpacity
+                    style={s.viewBtn}
+                    onPress={() => {
+                      if (!item.fileUrl) {
+                        Alert.alert('Document unavailable', 'No file is attached to this review.');
+                        return;
+                      }
+                      const url = /^https?:\/\//i.test(item.fileUrl)
+                        ? item.fileUrl
+                        : `${CONFIG.API_BASE_URL}${item.fileUrl.startsWith('/api') ? '' : '/api'}${item.fileUrl}`;
+                      setPreviewDoc({
+                        title: DOC_LABEL[item.documentType] ?? item.documentType,
+                        driver: item.driverName,
+                        url,
+                      });
+                    }}
+                  >
                     <Ionicons name="eye-outline" size={14} color={COLORS.primary} />
-                    <Text style={s.viewBtnText}>View</Text>
+                    <Text style={s.viewBtnText}>Preview</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={s.reviewBtn}
@@ -233,6 +307,163 @@ export default function OpsScreen() {
           />
         )
       )}
+
+      {/* ── Service Zones Tab ──────────────────────────────────── */}
+      {tab === 'ZONES' && (
+        loadingZones ? (
+          <View style={s.centered}><ActivityIndicator size="large" color={COLORS.primary} /></View>
+        ) : (
+          <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>
+            <TouchableOpacity
+              style={s.addZoneBtn}
+              onPress={() => {
+                setEditingZone(null);
+                setZoneName('');
+                setZoneLat('17.4401');
+                setZoneLng('78.3489');
+                setZoneRadius('15');
+                setZoneModalOpen(true);
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={18} color="#fff" />
+              <Text style={s.reviewBtnText}>Create Service Zone</Text>
+            </TouchableOpacity>
+
+            {(zonesData ?? []).map((zone) => (
+              <View key={zone.id} style={s.docCard}>
+                <View style={s.tripTop}>
+                  <Text style={s.docType}>{zone.name}</Text>
+                  <View style={[s.statusPill, { backgroundColor: zone.active ? '#ECFDF5' : '#F3F4F6' }]}>
+                    <Text style={[s.statusText, { color: zone.active ? '#059669' : COLORS.textMuted }]}>
+                      {zone.active ? 'ACTIVE' : 'DISABLED'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={s.docDriver}>
+                  Center: {zone.centerLat.toFixed(4)}, {zone.centerLng.toFixed(4)} · Radius: {zone.radiusKm} km
+                </Text>
+                <View style={s.docActions}>
+                  <TouchableOpacity
+                    style={s.viewBtn}
+                    onPress={() => {
+                      setEditingZone(zone);
+                      setZoneName(zone.name);
+                      setZoneLat(String(zone.centerLat));
+                      setZoneLng(String(zone.centerLng));
+                      setZoneRadius(String(zone.radiusKm));
+                      setZoneModalOpen(true);
+                    }}
+                  >
+                    <Text style={s.viewBtnText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.reviewBtn, !zone.active && { backgroundColor: '#059669' }]}
+                    onPress={() => toggleZoneMutation.mutate({ id: zone.id, active: !zone.active })}
+                    disabled={toggleZoneMutation.isPending}
+                  >
+                    <Text style={s.reviewBtnText}>{zone.active ? 'Disable' : 'Enable'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+
+            {(zonesData ?? []).length === 0 && (
+              <View style={s.centered}>
+                <Text style={s.emptyTitle}>No service zones configured</Text>
+                <Text style={s.emptySubtitle}>Create a geofenced community zone above.</Text>
+              </View>
+            )}
+          </ScrollView>
+        )
+      )}
+
+      {/* ── Analytics Tab ──────────────────────────────────────── */}
+      {tab === 'ANALYTICS' && (
+        loadingAnalytics ? (
+          <View style={s.centered}><ActivityIndicator size="large" color={COLORS.primary} /></View>
+        ) : !analytics ? (
+          <View style={s.centered}>
+            <Text style={s.emptyTitle}>Analytics unavailable</Text>
+            <TouchableOpacity style={s.viewBtn} onPress={() => refetchAnalytics()}><Text style={s.viewBtnText}>Retry</Text></TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>
+            <View style={s.kpiGrid}>
+              {[
+                { label: 'Gross Revenue', value: `₹${Number(analytics.grossRevenue || 0).toFixed(0)}`, sub: `Platform fee ₹${Number(analytics.platformFeeRevenue || 0).toFixed(0)}` },
+                { label: 'Online vs Cash', value: `₹${Number(analytics.onlineRevenue || 0).toFixed(0)}`, sub: `Cash ₹${Number(analytics.cashRevenue || 0).toFixed(0)}` },
+                { label: 'Trip Completion', value: `${analytics.completedTrips}/${analytics.totalTrips}`, sub: `Cancel rate ${Number(analytics.cancellationRatePct || 0).toFixed(1)}%` },
+                { label: 'Driver SLA', value: `${Number(analytics.averageDriverRating || 0).toFixed(1)}★`, sub: `${analytics.onlineDrivers}/${analytics.approvedDrivers} online · ${Number(analytics.averageTripDurationMin || 0).toFixed(0)}m avg` },
+                { label: 'Settlements', value: `₹${Number(analytics.pendingDriverSettlement || 0).toFixed(0)}`, sub: `Settled ₹${Number(analytics.settledDriverPayouts || 0).toFixed(0)}` },
+                { label: 'Carpool Utilization', value: `${Number(analytics.carpoolUtilizationPct || 0).toFixed(1)}%`, sub: `${analytics.bookedCarpoolSeats}/${analytics.totalCarpoolSeats} seats · Refunded ₹${Number(analytics.totalRefunded || 0).toFixed(0)}` },
+              ].map((kpi) => (
+                <View key={kpi.label} style={s.kpiCard}>
+                  <Text style={s.kpiLabel}>{kpi.label}</Text>
+                  <Text style={s.kpiValue}>{kpi.value}</Text>
+                  <Text style={s.kpiSub}>{kpi.sub}</Text>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity style={s.viewBtn} onPress={() => { refetchZones(); refetchAnalytics(); }}>
+              <Ionicons name="refresh-outline" size={14} color={COLORS.primary} />
+              <Text style={s.viewBtnText}>Refresh Metrics</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        )
+      )}
+
+      {/* ── In-App Document Preview Modal ──────────────────────── */}
+      <Modal visible={!!previewDoc} animationType="slide" onRequestClose={() => setPreviewDoc(null)}>
+        <SafeAreaView style={s.container} edges={['top', 'bottom']}>
+          <View style={s.header}>
+            <TouchableOpacity onPress={() => setPreviewDoc(null)} style={s.backBtn}>
+              <Ionicons name="close" size={20} color={COLORS.text} />
+            </TouchableOpacity>
+            <View style={s.headerCenter}>
+              <Text style={s.headerTitle}>{previewDoc?.title}</Text>
+              <Text style={s.headerSub}>{previewDoc?.driver}</Text>
+            </View>
+            <TouchableOpacity
+              style={s.backBtn}
+              onPress={() => previewDoc?.url && Linking.openURL(previewDoc.url).catch(() => undefined)}
+            >
+              <Ionicons name="open-outline" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+          {previewDoc && /\.(png|jpe?g|webp|gif)(\?|$)/i.test(previewDoc.url) ? (
+            <View style={{ flex: 1, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
+              <Image source={{ uri: previewDoc.url }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+            </View>
+          ) : previewDoc ? (
+            <WebView source={{ uri: previewDoc.url }} style={{ flex: 1 }} startInLoadingState />
+          ) : null}
+        </SafeAreaView>
+      </Modal>
+
+      {/* ── Service Zone Create/Edit Modal ─────────────────────── */}
+      <Modal visible={zoneModalOpen} transparent animationType="slide" onRequestClose={() => setZoneModalOpen(false)}>
+        <View style={s.modalBackdrop}>
+          <View style={s.modalCard}>
+            <Text style={s.emptyTitle}>{editingZone ? 'Edit Service Zone' : 'New Service Zone'}</Text>
+            <TextInput style={s.zoneInput} placeholder="Zone name (e.g. Gachibowli Core)" value={zoneName} onChangeText={setZoneName} />
+            <TextInput style={s.zoneInput} placeholder="Center latitude" value={zoneLat} onChangeText={setZoneLat} keyboardType="numeric" />
+            <TextInput style={s.zoneInput} placeholder="Center longitude" value={zoneLng} onChangeText={setZoneLng} keyboardType="numeric" />
+            <TextInput style={s.zoneInput} placeholder="Radius (km)" value={zoneRadius} onChangeText={setZoneRadius} keyboardType="numeric" />
+            <View style={s.docActions}>
+              <TouchableOpacity style={s.viewBtn} onPress={() => setZoneModalOpen(false)}>
+                <Text style={s.viewBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.reviewBtn}
+                disabled={saveZoneMutation.isPending || !zoneName.trim()}
+                onPress={() => saveZoneMutation.mutate()}
+              >
+                <Text style={s.reviewBtnText}>{saveZoneMutation.isPending ? 'Saving…' : 'Save Zone'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -321,4 +552,13 @@ const s = StyleSheet.create({
   emptyIcon:       { width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
   emptyTitle:      { fontSize: 17, fontFamily: FONTS.bold, color: COLORS.text },
   emptySubtitle:   { fontSize: 13, color: COLORS.textMuted, fontFamily: FONTS.regular, textAlign: 'center' },
+  addZoneBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12 },
+  kpiGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  kpiCard:         { width: '48%', backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: 13, gap: 4, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+  kpiLabel:        { fontSize: 11, fontFamily: FONTS.semiBold, color: COLORS.textMuted },
+  kpiValue:        { fontSize: 18, fontFamily: FONTS.displayBold, color: COLORS.text },
+  kpiSub:          { fontSize: 11, fontFamily: FONTS.regular, color: COLORS.textSecondary },
+  modalBackdrop:   { flex: 1, backgroundColor: 'rgba(15,23,42,0.5)', justifyContent: 'center', padding: 20 },
+  modalCard:       { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 18, gap: 10 },
+  zoneInput:       { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 10, fontFamily: FONTS.regular, color: COLORS.text },
 });

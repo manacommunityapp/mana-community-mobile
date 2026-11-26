@@ -8,10 +8,12 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { mobilityPassengerService } from '@/services/mobilityService';
+import { LiveRouteMap } from '@/components/mobility/LiveRouteMap';
+import { usePayment } from '@/hooks/usePayment';
+import { PaymentModal } from '@/components/payment/PaymentModal';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
-import type { MobilityRideStatus } from '@/types/mobility';
+import type { MobilityReceiptDto, MobilityRideStatus } from '@/types/mobility';
 
 const STATUS_CONFIG: Record<MobilityRideStatus, { label: string; color: string; bg: string; icon: keyof typeof Ionicons.glyphMap; step: number }> = {
   REQUESTED:       { label: 'Connecting to Drivers…', color: '#D97706', bg: '#FFFBEB', icon: 'search', step: 1 },
@@ -57,6 +59,9 @@ export default function TrackScreen() {
   const [selectedTags, setSelectedTags]       = useState<string[]>([]);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason]       = useState<string | null>(null);
+  const [receipt, setReceipt]                 = useState<MobilityReceiptDto | null>(null);
+  const [loadingReceipt, setLoadingReceipt]   = useState(false);
+  const { status: payStatus, order: payOrder, error: payError, canRetry, startPayment, checkStatus, retry, reset: resetPayment } = usePayment();
 
   const { data: trip, isLoading, error } = useQuery({
     queryKey: ['mobility-trip', tripId],
@@ -244,34 +249,24 @@ export default function TrackScreen() {
           {isLive && <ActivityIndicator size="small" color={cfg.color} />}
         </View>
 
-        {/* ── Vector Map Visual ────────────────────────────────── */}
+        {/* ── Live Interactive Map ───────────────────────────────── */}
         <View style={s.mapArea}>
-          <LinearGradient
-            colors={['#E0E7FF', '#EFF6FF', '#F1F5F9']}
-            style={s.mapCanvas}
-          >
-            <View style={s.roadH} />
-            <View style={s.roadV} />
-
-            <View style={s.mapMarkerRow}>
-              <View style={s.markerBeacon}>
-                <Ionicons name="car" size={18} color="#2563EB" />
-              </View>
-              <View style={s.markerPathLine} />
-              <View style={s.markerDestBeacon}>
-                <Ionicons name="location" size={18} color="#EF4444" />
-              </View>
-            </View>
-
-            <View style={s.mapInfoPill}>
-              <Ionicons name="navigate-circle" size={14} color={COLORS.primary} />
-              <Text style={s.mapInfoText}>
-                {driverLocation?.driverLat != null && driverLocation?.driverLng != null
-                  ? `Driver GPS ${driverLocation.driverLat.toFixed(5)}, ${driverLocation.driverLng.toFixed(5)}`
-                  : 'Waiting for driver GPS…'}
-              </Text>
-            </View>
-          </LinearGradient>
+          <LiveRouteMap
+            pickup={trip.pickup}
+            destination={trip.destination}
+            driver={{
+              lat: driverLocation?.driverLat ?? trip.driver?.currentLat,
+              lng: driverLocation?.driverLng ?? trip.driver?.currentLng,
+              label: trip.driver?.driverName,
+            }}
+            height={220}
+            followDriverDefault={isLive}
+            statusBanner={
+              driverLocation?.driverLat != null && driverLocation?.driverLng != null
+                ? `Driver GPS ${driverLocation.driverLat.toFixed(4)}, ${driverLocation.driverLng.toFixed(4)}${driverLocation.etaMinutes ? ` · ${driverLocation.etaMinutes}m ETA` : ''}`
+                : undefined
+            }
+          />
         </View>
 
         {/* ── Pickup PIN Card ──────────────────────────────────── */}
@@ -360,12 +355,62 @@ export default function TrackScreen() {
         {/* ── Fare & Payment Card ──────────────────────────────── */}
         <View style={s.fareCard}>
           <View style={s.fareCardLeft}>
-            <Text style={s.fareCardLabel}>Trip Fare ({trip.paymentStatus})</Text>
+            <Text style={s.fareCardLabel}>
+              Trip Fare ({trip.paymentMethod || 'CASH'} · {trip.paymentStatus})
+            </Text>
             <Text style={s.fareCardTotal}>₹{(trip.finalFare ?? trip.fareQuote?.total ?? 0).toFixed(2)}</Text>
+            {trip.refundStatus && trip.refundStatus !== 'NONE' && (
+              <Text style={{ fontSize: 11, color: '#059669', fontFamily: FONTS.semiBold, marginTop: 2 }}>
+                Refund {trip.refundStatus}: ₹{(trip.refundAmount ?? 0).toFixed(2)}
+              </Text>
+            )}
           </View>
-          <View style={s.fareGuaranteePill}>
-            <Ionicons name="lock-closed" size={12} color="#059669" />
-            <Text style={s.fareGuaranteeText}>Fare Locked</Text>
+          <View style={{ alignItems: 'flex-end', gap: 6 }}>
+            <View style={s.fareGuaranteePill}>
+              <Ionicons name="lock-closed" size={12} color="#059669" />
+              <Text style={s.fareGuaranteeText}>Fare Locked</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {trip.paymentStatus === 'PENDING' && trip.status !== 'CANCELLED' && (
+                <TouchableOpacity
+                  style={s.miniActionBtn}
+                  onPress={async () => {
+                    const total = trip.finalFare ?? trip.fareQuote?.total ?? 0;
+                    const paid = await startPayment({
+                      amount: total,
+                      referenceType: 'MOBILITY_TRIP',
+                      referenceId: trip.id,
+                      description: `Mana Mobility Ride #${trip.tripRef}`,
+                    });
+                    if (paid?.status === 'PAID') {
+                      await mobilityPassengerService
+                        .confirmTripPayment(trip.id, { paymentOrderId: paid.manaOrderId, paymentRef: paid.manaOrderId, gateway: 'CASHFREE' })
+                        .catch(() => undefined);
+                      queryClient.invalidateQueries({ queryKey: ['mobility-trip', tripId] });
+                    }
+                  }}
+                >
+                  <Text style={s.miniActionText}>Pay Online</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={s.miniReceiptBtn}
+                disabled={loadingReceipt}
+                onPress={async () => {
+                  setLoadingReceipt(true);
+                  try {
+                    const r = await mobilityPassengerService.getTripReceipt(trip.id);
+                    setReceipt(r);
+                  } catch {
+                    Alert.alert('Receipt unavailable', 'Trip receipt could not be fetched yet.');
+                  } finally {
+                    setLoadingReceipt(false);
+                  }
+                }}
+              >
+                <Text style={s.miniReceiptText}>{loadingReceipt ? '...' : 'Receipt'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -516,6 +561,46 @@ export default function TrackScreen() {
           </View>
         </View>
       )}
+
+      {/* ── Receipt Modal ─────────────────────────────────────── */}
+      <Modal visible={!!receipt} transparent animationType="fade" onRequestClose={() => setReceipt(null)}>
+        <TouchableOpacity style={s.modalBackdrop} activeOpacity={1} onPress={() => setReceipt(null)} />
+        {receipt && (
+          <View style={s.cancelSheet}>
+            <View style={s.sheetHandle} />
+            <Text style={s.cancelSheetTitle}>Ride Receipt</Text>
+            <Text style={s.cancelSheetSub}>{receipt.receiptNumber || receipt.tripRef}</Text>
+            <View style={{ gap: 8, marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={s.fareCardLabel}>Service</Text><Text style={s.routeStopAddr}>{receipt.serviceType}</Text></View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={s.fareCardLabel}>Pickup</Text><Text style={[s.routeStopAddr, { flex: 1, textAlign: 'right', marginLeft: 12 }]} numberOfLines={1}>{receipt.pickupAddress}</Text></View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={s.fareCardLabel}>Dropoff</Text><Text style={[s.routeStopAddr, { flex: 1, textAlign: 'right', marginLeft: 12 }]} numberOfLines={1}>{receipt.destAddress}</Text></View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={s.fareCardLabel}>Payment</Text><Text style={s.routeStopAddr}>{receipt.paymentMethod || 'CASH'} · {receipt.paymentStatus}</Text></View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={s.fareCardLabel}>Total Fare</Text><Text style={s.fareCardTotal}>₹{Number(receipt.fareAmount || 0).toFixed(2)}</Text></View>
+              {receipt.refundAmount != null && Number(receipt.refundAmount) > 0 && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={s.fareCardLabel}>Refund</Text><Text style={{ color: '#059669', fontFamily: FONTS.bold }}>₹{Number(receipt.refundAmount).toFixed(2)} ({receipt.refundStatus})</Text></View>
+              )}
+            </View>
+            <TouchableOpacity style={s.confirmCancelBtn} onPress={() => setReceipt(null)}>
+              <Text style={s.confirmCancelText}>Close Receipt</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Modal>
+
+      <PaymentModal
+        visible={payStatus !== 'idle'}
+        order={payOrder}
+        status={payStatus}
+        error={payError}
+        canRetry={canRetry}
+        onVerify={(startPayment as any)._handleVerify}
+        onCheckStatus={checkStatus}
+        onRetry={retry}
+        onDismiss={() => {
+          resetPayment();
+          queryClient.invalidateQueries({ queryKey: ['mobility-trip', tripId] });
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -1290,5 +1375,28 @@ const s = StyleSheet.create({
     color: '#fff',
     fontFamily: FONTS.bold,
     fontSize: 13,
+  },
+  miniActionBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+  },
+  miniActionText: {
+    color: '#fff',
+    fontFamily: FONTS.bold,
+    fontSize: 11,
+  },
+  miniReceiptBtn: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+  },
+  miniReceiptText: {
+    color: COLORS.primary,
+    fontFamily: FONTS.bold,
+    fontSize: 11,
   },
 });

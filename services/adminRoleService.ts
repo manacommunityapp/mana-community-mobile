@@ -91,40 +91,9 @@ export interface AnalyticsData {
 
 // ── Backend response types ──────────────────────────────────────
 
-interface AdminStatsResponse {
-  totalMembers?: number;
-  pendingApprovals?: number;
-  totalPosts?: number;
-  reportedContent?: number;
-  activeAnnouncements?: number;
-}
 
-interface DashboardAdminStatsResponse {
-  totalUsers?: number;
-  pendingKycCount?: number;
-  verifiedUsersCount?: number;
-  totalRolesCount?: number;
-  totalCommunitiesCount?: number;
-  ownerCount?: number;
-  tenantCount?: number;
-  residentCount?: number;
-  maintenanceCollectedThisMonthAmount?: number;
-  outstandingInvoiceCount?: number;
-  outstandingDuesAmount?: number;
-  activeVisitorsCount?: number;
-  expectedVisitorsTodayCount?: number;
-  slaBreachedTicketsCount?: number;
-  openTicketsCount?: number;
-  eventAttendanceCount?: number;
-  facilityUtilizationPercent?: number;
-  monthlyFacilityBookingsCount?: number;
-  activeVendorContractsCount?: number;
-  contractsExpiringWithin30DaysCount?: number;
-  currentFinancialYearBudgetAmount?: number;
-  currentFinancialYearSpentAmount?: number;
-  communityPostsLast30DaysCount?: number;
-  recentActivities?: any[];
-}
+
+
 
 interface AdminMemberResponse {
   id: number;
@@ -158,12 +127,7 @@ interface ExpenseResponse {
   createdAt?: string;
 }
 
-interface ExpenseSummaryResponse {
-  totalExpenses?: number;
-  pendingExpenses?: number;
-  approvedExpenses?: number;
-  rejectedExpenses?: number;
-}
+
 
 interface BillingInvoiceResponse {
   id: number;
@@ -247,207 +211,15 @@ interface FinanceVendorPaymentResponse {
   notes?: string;
 }
 
-interface AuditStatsResponse {
-  eventsToday?: number;
-  usersCreatedToday?: number;
-  auctionEventsToday?: number;
-  permissionChangesToday?: number;
-  bidsToday?: number;
-}
 
-interface EngagementAnalyticsResponse {
-  totalPosts?: number;
-  totalComments?: number;
-  totalReactions?: number;
-  activeUsers?: number;
-  postsThisWeek?: number;
-  postsLastWeek?: number;
-}
 
-// ── Sample Data (fallback when API is unavailable) ──────────────
 
-const sampleApprovals: AdminApproval[] = [
-  { id: 1, type: 'MEMBER', title: 'New Member Registration', submittedBy: 'Rohit Sharma', flat: 'D-402', submittedAt: '2026-09-28T08:00:00Z', status: 'PENDING', details: 'New tenant registration for D-402. Lease agreement uploaded.' },
-  { id: 2, type: 'VENDOR', title: 'Vendor Registration', submittedBy: 'QuickFix Services', flat: 'N/A', submittedAt: '2026-09-27T14:00:00Z', status: 'PENDING', details: 'Plumbing and electrical services vendor. Licensed and insured.' },
-  { id: 3, type: 'POST', title: 'Community Post Review', submittedBy: 'Priya Patel', flat: 'B-105', submittedAt: '2026-09-28T06:30:00Z', status: 'PENDING', details: 'Post flagged by 3 members for potential misinformation.' },
-  { id: 4, type: 'EVENT', title: 'Diwali Celebration Event', submittedBy: 'Meera Reddy', flat: 'A-404', submittedAt: '2026-09-26T10:00:00Z', status: 'APPROVED', details: 'Community hall booking for Oct 20. Budget: ₹50,000.' },
-  { id: 5, type: 'MEMBER', title: 'New Member Registration', submittedBy: 'Kavita Joshi', flat: 'C-108', submittedAt: '2026-09-28T09:00:00Z', status: 'PENDING', details: 'Owner moving in. Property documents verified.' },
-  { id: 6, type: 'VENDOR', title: 'Vendor Registration', submittedBy: 'GreenScape Gardens', flat: 'N/A', submittedAt: '2026-09-25T11:00:00Z', status: 'REJECTED', details: 'Landscaping service. Missing insurance documentation.' },
-];
-
-const sampleFinance: FinanceEntry[] = [
-  { id: 1, category: 'Maintenance Dues', description: 'Sept 2026 collection – Tower A', amount: 285000, type: 'INCOME', date: '2026-09-01', status: 'COMPLETED' },
-  { id: 2, category: 'Maintenance Dues', description: 'Sept 2026 collection – Tower B', amount: 248000, type: 'INCOME', date: '2026-09-01', status: 'COMPLETED' },
-  { id: 3, category: 'Security Services', description: 'Guard agency monthly payment', amount: 95000, type: 'EXPENSE', date: '2026-09-05', status: 'COMPLETED' },
-  { id: 4, category: 'Housekeeping', description: 'Common area cleaning contract', amount: 45000, type: 'EXPENSE', date: '2026-09-05', status: 'COMPLETED' },
-  { id: 5, category: 'Repairs', description: 'Elevator maintenance – Tower C', amount: 32000, type: 'EXPENSE', date: '2026-09-15', status: 'COMPLETED' },
-  { id: 6, category: 'Utilities', description: 'Common area electricity – Sept', amount: 58000, type: 'EXPENSE', date: '2026-09-20', status: 'PENDING' },
-  { id: 7, category: 'Maintenance Dues', description: 'Sept 2026 – overdue flats', amount: 67000, type: 'INCOME', date: '2026-09-28', status: 'OVERDUE' },
-  { id: 8, category: 'Insurance', description: 'Building insurance premium Q4', amount: 120000, type: 'EXPENSE', date: '2026-10-01', status: 'PENDING' },
-];
-
-const sampleAlerts: SecurityAlert[] = [
-  { id: 1, title: 'Unauthorized vehicle in parking', description: 'Unknown vehicle parked in reserved slot B-23 for 48+ hours.', level: 'WARNING', location: 'Basement Parking B', reportedAt: '2026-09-28T07:00:00Z', resolved: false, assignedGuard: 'Raju Kumar' },
-  { id: 2, title: 'CCTV camera offline', description: 'Camera #14 at Tower C entrance offline since midnight.', level: 'CRITICAL', location: 'Tower C Gate', reportedAt: '2026-09-28T00:00:00Z', resolved: false, assignedGuard: 'Sunil Yadav' },
-  { id: 3, title: 'Fire exit door propped open', description: 'Tower A 5th floor fire exit found propped open during patrol.', level: 'WARNING', location: 'Tower A, 5th Floor', reportedAt: '2026-09-27T22:00:00Z', resolved: true, assignedGuard: 'Raju Kumar' },
-  { id: 4, title: 'Suspicious activity reported', description: 'Resident reported unfamiliar person loitering near children park after 10 PM.', level: 'INFO', location: 'Children Park', reportedAt: '2026-09-27T22:30:00Z', resolved: true },
-  { id: 5, title: 'Water leak in basement', description: 'Water pooling near electrical panel in parking area A.', level: 'CRITICAL', location: 'Basement A', reportedAt: '2026-09-28T05:30:00Z', resolved: false },
-];
-
-const sampleGovernance: GovernanceItem[] = [
-  { id: 1, type: 'RULE', title: 'Pet Policy', description: 'All pets must be leashed in common areas. Pet owners must clean up after their pets.', status: 'ACTIVE', effectiveDate: '2026-01-01', lastUpdated: '2026-06-15', author: 'Admin Committee' },
-  { id: 2, type: 'POLICY', title: 'Vehicle Parking Allotment', description: 'Each unit gets 1 covered + 1 open parking slot. Additional slots at ₹2,000/month.', status: 'ACTIVE', effectiveDate: '2026-03-01', lastUpdated: '2026-03-01', author: 'Admin Committee' },
-  { id: 3, type: 'BYLAW', title: 'Renovation Guidelines', description: 'All interior renovations require 7-day advance notice. No structural changes without RWA approval.', status: 'ACTIVE', effectiveDate: '2025-06-01', lastUpdated: '2026-01-10', author: 'RWA Board' },
-  { id: 4, type: 'RESOLUTION', title: 'Solar Panel Installation', description: 'Proposal to install solar panels on Tower A & B rooftops. Estimated cost: ₹15 lakhs.', status: 'UNDER_REVIEW', effectiveDate: '2026-11-01', lastUpdated: '2026-09-20', author: 'Green Committee' },
-  { id: 5, type: 'POLICY', title: 'Guest Entry Hours', description: 'Guest entry permitted from 6 AM to 10 PM. Overnight guests require pre-registration.', status: 'DRAFT', effectiveDate: '2026-10-01', lastUpdated: '2026-09-25', author: 'Security Committee' },
-];
-
-const SAMPLE_ANALYTICS: AnalyticsData = {
-  monthlyRevenue: [520, 545, 560, 580, 590, 600],
-  monthlyExpenses: [310, 325, 340, 355, 330, 350],
-  monthLabels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
-  occupancyTrend: [88, 89, 90, 91, 93, 94],
-  ticketsByCategory: [
-    { category: 'Plumbing', count: 18 },
-    { category: 'Electrical', count: 14 },
-    { category: 'Housekeeping', count: 22 },
-    { category: 'Security', count: 8 },
-    { category: 'Parking', count: 11 },
-    { category: 'Other', count: 6 },
-  ],
-  memberGrowth: [
-    { month: 'Apr', count: 798 },
-    { month: 'May', count: 810 },
-    { month: 'Jun', count: 818 },
-    { month: 'Jul', count: 825 },
-    { month: 'Aug', count: 834 },
-    { month: 'Sep', count: 842 },
-  ],
-};
-
-// ── In-Memory Hybrid Mutation Buffers ───────────────────────────
-let inMemoryApprovals: AdminApproval[] = [...sampleApprovals];
-let inMemoryAlerts: SecurityAlert[] = [...sampleAlerts];
-let inMemoryFinance: FinanceEntry[] = [...sampleFinance];
-const resolvedAlertIds = new Set<number>();
 
 // ── Service ─────────────────────────────────────────────────────
 
 export const adminRoleService = {
   async getDashboardStats(): Promise<AdminDashboardStats> {
-    try {
-      const [
-        adminStats,
-        dashboardStats,
-        expenseSummary,
-        billingRes,
-        receiptsRes,
-        financeInvoicesRes,
-        purchasesRes,
-        vendorPaymentsRes,
-        activeVisitorsRes,
-      ] = await Promise.all([
-        api.get<AdminStatsResponse>('/admin/stats').catch(() => null),
-        api.get<DashboardAdminStatsResponse>('/dashboard/admin/stats').catch(() => null),
-        api.get<ExpenseSummaryResponse>('/expenses/summary').catch(() => null),
-        api.get<{ content: BillingInvoiceResponse[] }>('/billing/invoices', {
-          params: { page: 0, size: 100, status: 'PAID' },
-        }).catch(() => null),
-        api.get<FinanceReceiptResponse[]>('/finance/receipts').catch(() => null),
-        api.get<FinanceInvoiceResponse[]>('/finance/invoices').catch(() => null),
-        api.get<FinancePurchaseResponse[]>('/finance/purchases').catch(() => null),
-        api.get<FinanceVendorPaymentResponse[]>('/finance/vendor-payments').catch(() => null),
-        api.get<any[]>('/visitors/active').catch(() => null),
-      ]);
-
-      const stats = adminStats?.data;
-      const dashboard = dashboardStats?.data;
-      const expenses = expenseSummary?.data;
-
-      // Dynamic revenue calculation from live queries
-      const paidBillingSum = (billingRes?.data?.content || []).reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
-      const receiptsSum = (receiptsRes?.data || []).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-      const paidFinanceInvoicesSum = (financeInvoicesRes?.data || [])
-        .filter(inv => inv.status === 'PAID' || inv.status === 'COMPLETED')
-        .reduce((sum, inv) => sum + (Number(inv.grandTotal ?? inv.subtotal) || 0), 0);
-      const totalLiveRevenue = paidBillingSum + receiptsSum + paidFinanceInvoicesSum;
-      const monthlyRevenue = totalLiveRevenue > 0 ? totalLiveRevenue : 600000;
-
-      // Dynamic expense calculation from live queries
-      const directExpenses = expenses?.totalExpenses ?? 0;
-      const purchasesSum = (purchasesRes?.data || [])
-        .filter(p => p.status === 'PAID' || p.status === 'COMPLETED' || p.status === 'APPROVED')
-        .reduce((sum, p) => sum + (Number(p.grandTotal ?? p.subtotal) || 0), 0);
-      const vendorPaymentsSum = (vendorPaymentsRes?.data || []).reduce((sum, vp) => sum + (Number(vp.amount) || 0), 0);
-      const totalLiveExpenses = directExpenses + purchasesSum + vendorPaymentsSum;
-      const monthlyExpenses = totalLiveExpenses > 0 ? totalLiveExpenses : 350000;
-
-      // Active visitor & alerts count
-      const liveVisitorsCount = Array.isArray(activeVisitorsRes?.data)
-        ? activeVisitorsRes.data.filter((v: any, i: number) => !resolvedAlertIds.has(50000 + (v.id || i))).length
-        : 0;
-      const activeAlerts = liveVisitorsCount + inMemoryAlerts.filter(a => !a.resolved).length;
-
-      return {
-        totalResidents: dashboard?.residentCount ?? dashboard?.totalUsers ?? stats?.totalMembers ?? 842,
-        pendingApprovals: (stats?.pendingApprovals ?? 0) + (stats?.reportedContent ?? 0) || inMemoryApprovals.filter(a => a.status === 'PENDING').length,
-        monthlyRevenue,
-        monthlyExpenses,
-        activeAlerts,
-        occupancyRate: 94,
-        openTickets: dashboard?.openTicketsCount ?? stats?.reportedContent ?? 12,
-        totalUnits: 450,
-
-        // 10-point Community Admin Dashboard parity
-        ownerCount: dashboard?.ownerCount ?? 280,
-        tenantCount: dashboard?.tenantCount ?? 170,
-        residentCount: dashboard?.residentCount ?? dashboard?.totalUsers ?? 450,
-        maintenanceCollectedThisMonthAmount: dashboard?.maintenanceCollectedThisMonthAmount ?? 533000,
-        outstandingInvoiceCount: dashboard?.outstandingInvoiceCount ?? 14,
-        outstandingDuesAmount: dashboard?.outstandingDuesAmount ?? 84000,
-        activeVisitorsCount: dashboard?.activeVisitorsCount ?? liveVisitorsCount ?? 8,
-        expectedVisitorsTodayCount: dashboard?.expectedVisitorsTodayCount ?? 19,
-        slaBreachedTicketsCount: dashboard?.slaBreachedTicketsCount ?? 2,
-        eventAttendanceCount: dashboard?.eventAttendanceCount ?? 64,
-        facilityUtilizationPercent: dashboard?.facilityUtilizationPercent ?? 68.5,
-        monthlyFacilityBookingsCount: dashboard?.monthlyFacilityBookingsCount ?? 42,
-        activeVendorContractsCount: dashboard?.activeVendorContractsCount ?? 12,
-        contractsExpiringWithin30DaysCount: dashboard?.contractsExpiringWithin30DaysCount ?? 3,
-        currentFinancialYearBudgetAmount: dashboard?.currentFinancialYearBudgetAmount ?? 4800000,
-        currentFinancialYearSpentAmount: dashboard?.currentFinancialYearSpentAmount ?? 3950000,
-        communityPostsLast30DaysCount: dashboard?.communityPostsLast30DaysCount ?? 28,
-      };
-    } catch (err) {
-      secureLog.warn('AdminRoleService: Live stats query failed, falling back to cached dashboard stats', err);
-      return {
-        totalResidents: 842,
-        pendingApprovals: inMemoryApprovals.filter(a => a.status === 'PENDING').length,
-        monthlyRevenue: 600000,
-        monthlyExpenses: 350000,
-        activeAlerts: inMemoryAlerts.filter(a => !a.resolved).length,
-        occupancyRate: 94,
-        openTickets: 12,
-        totalUnits: 450,
-
-        ownerCount: 280,
-        tenantCount: 170,
-        residentCount: 450,
-        maintenanceCollectedThisMonthAmount: 533000,
-        outstandingInvoiceCount: 14,
-        outstandingDuesAmount: 84000,
-        activeVisitorsCount: 8,
-        expectedVisitorsTodayCount: 19,
-        slaBreachedTicketsCount: 2,
-        eventAttendanceCount: 64,
-        facilityUtilizationPercent: 68.5,
-        monthlyFacilityBookingsCount: 42,
-        activeVendorContractsCount: 12,
-        contractsExpiringWithin30DaysCount: 3,
-        currentFinancialYearBudgetAmount: 4800000,
-        currentFinancialYearSpentAmount: 3950000,
-        communityPostsLast30DaysCount: 28,
-      };
-    }
+    throw new Error('Admin dashboard metrics are not fully backed by live data yet.');
   },
 
   async getApprovals(): Promise<AdminApproval[]> {
@@ -455,13 +227,13 @@ export const adminRoleService = {
       const [membersRes, reportsRes, vendorRes] = await Promise.all([
         api.get<{ content: AdminMemberResponse[] }>('/admin/members', {
           params: { page: 0, size: 50 },
-        }).catch(() => null),
+        }),
         api.get<{ content: ReportResponse[] }>('/admin/reports', {
           params: { page: 0, size: 50 },
-        }).catch(() => null),
+        }),
         api.get<any>('/vendor/registrations', {
           params: { page: 0, size: 20 },
-        }).catch(() => null),
+        }),
       ]);
 
       const memberApprovals: AdminApproval[] = (membersRes?.data?.content || [])
@@ -524,47 +296,33 @@ export const adminRoleService = {
         ...reportApprovals.filter(r => r.status !== 'PENDING'),
       ];
 
-      if (combinedLive.length > 0) {
-        return combinedLive;
-      }
+      return combinedLive;
     } catch (err) {
-      secureLog.warn('AdminRoleService: Live approvals API unavailable, using fallback', err);
+      secureLog.warn('AdminRoleService: Live approvals API unavailable', err);
+      throw err;
     }
-    return inMemoryApprovals;
   },
 
   async approveItem(id: number): Promise<void> {
-    try {
-      if (id >= 200000) {
-        await api.put(`/vendor/registrations/${id - 200000}/approve`);
-      } else if (id >= 100000) {
-        await api.put(`/admin/reports/${id - 100000}/resolve`);
-      } else {
-        await api.put(`/admin/members/${id}/approve`);
-      }
-    } catch (err) {
-      secureLog.warn('AdminRoleService: approveItem API failed, applying local state update', err);
+    if (id >= 200000) {
+      await api.put(`/vendor/registrations/${id - 200000}/approve`);
+    } else if (id >= 100000) {
+      await api.put(`/admin/reports/${id - 100000}/resolve`);
+    } else {
+      await api.put(`/admin/members/${id}/approve`);
     }
-    const item = inMemoryApprovals.find(a => a.id === id);
-    if (item) item.status = 'APPROVED';
   },
 
   async rejectItem(id: number, reason?: string): Promise<void> {
-    try {
-      if (id >= 200000) {
-        await api.put(`/vendor/registrations/${id - 200000}/reject`, null, {
-          params: { reason: reason || 'Application rejected by community admin' },
-        });
-      } else if (id >= 100000) {
-        await api.put(`/admin/reports/${id - 100000}/dismiss`);
-      } else {
-        await api.put(`/admin/members/${id}/reject`, reason ? { reason } : undefined);
-      }
-    } catch (err) {
-      secureLog.warn('AdminRoleService: rejectItem API failed, applying local state update', err);
+    if (id >= 200000) {
+      await api.put(`/vendor/registrations/${id - 200000}/reject`, null, {
+        params: { reason: reason || 'Application rejected by community admin' },
+      });
+    } else if (id >= 100000) {
+      await api.put(`/admin/reports/${id - 100000}/dismiss`);
+    } else {
+      await api.put(`/admin/members/${id}/reject`, reason ? { reason } : undefined);
     }
-    const item = inMemoryApprovals.find(a => a.id === id);
-    if (item) item.status = 'REJECTED';
   },
 
   async getFinanceEntries(): Promise<FinanceEntry[]> {
@@ -696,7 +454,7 @@ export const adminRoleService = {
     } catch (err) {
       secureLog.warn('AdminRoleService: Live finance API unavailable, using fallback', err);
     }
-    return inMemoryFinance;
+    throw new Error('Finance data is unavailable. No live records could be loaded.');
   },
 
   async getSecurityAlerts(): Promise<SecurityAlert[]> {
@@ -712,74 +470,35 @@ export const adminRoleService = {
             level: 'INFO' as SecurityAlertLevel,
             location: `Gate: ${v.gateIn || 'Main Gate'}`,
             reportedAt: v.checkedInAt || v.createdAt || new Date().toISOString(),
-            resolved: resolvedAlertIds.has(passId),
+            resolved: false,
             assignedGuard: v.guardIn || 'Gate Officer',
           };
         });
-        return [...liveAlerts, ...inMemoryAlerts];
+        return liveAlerts;
       }
     } catch (err) {
-      secureLog.warn('AdminRoleService: Live visitors/security alerts unavailable, using fallback', err);
+      secureLog.warn('AdminRoleService: Live visitors/security alerts unavailable', err);
+      throw err;
     }
-    return inMemoryAlerts;
+    return [];
   },
 
   async resolveAlert(id: number): Promise<void> {
-    try {
-      if (id >= 50000) {
-        await api.put(`/visitors/${id - 50000}/check-out`);
-      }
-    } catch (err) {
-      secureLog.warn('AdminRoleService: resolveAlert checkout API failed, applying local state update', err);
-    }
-    resolvedAlertIds.add(id);
-    const alert = inMemoryAlerts.find(a => a.id === id);
-    if (alert) alert.resolved = true;
+    if (id < 50000) throw new Error('This alert cannot be resolved through the server yet.');
+    await api.put(`/visitors/${id - 50000}/check-out`);
   },
 
   async assignAlert(id: number, guardName: string): Promise<void> {
-    const alert = inMemoryAlerts.find(a => a.id === id);
-    if (alert) alert.assignedGuard = guardName;
+    void guardName;
+    throw new Error(`Assigning alert ${id} to a guard is not connected to the server yet.`);
   },
 
   async getGovernanceItems(): Promise<GovernanceItem[]> {
-    return sampleGovernance;
+    throw new Error('Governance data is not connected to the mobile API yet.');
   },
 
   async getAnalytics(): Promise<AnalyticsData> {
-    try {
-      const [adminStats, engagementRes, expenseSummary] = await Promise.all([
-        api.get<AdminStatsResponse>('/admin/stats'),
-        api.get<EngagementAnalyticsResponse>('/engagement/analytics').catch(() => null),
-        api.get<ExpenseSummaryResponse>('/expenses/summary').catch(() => null),
-      ]);
-
-      const stats = adminStats.data;
-      const engagement = engagementRes?.data;
-
-      const ticketsByCategory: { category: string; count: number }[] = [];
-      if (engagement) {
-        if (engagement.totalPosts) ticketsByCategory.push({ category: 'Posts', count: engagement.totalPosts });
-        if (engagement.totalComments) ticketsByCategory.push({ category: 'Comments', count: engagement.totalComments });
-        if (engagement.totalReactions) ticketsByCategory.push({ category: 'Reactions', count: engagement.totalReactions });
-      }
-      if (stats.reportedContent) ticketsByCategory.push({ category: 'Reports', count: stats.reportedContent });
-      if (stats.activeAnnouncements) ticketsByCategory.push({ category: 'Announcements', count: stats.activeAnnouncements });
-
-      if (ticketsByCategory.length === 0) {
-        return SAMPLE_ANALYTICS;
-      }
-
-      return {
-        ...SAMPLE_ANALYTICS,
-        ticketsByCategory: ticketsByCategory.length > 0 ? ticketsByCategory : SAMPLE_ANALYTICS.ticketsByCategory,
-        memberGrowth: stats.totalMembers
-          ? [{ month: 'Current', count: stats.totalMembers }]
-          : SAMPLE_ANALYTICS.memberGrowth,
-      };
-    } catch {
-      return SAMPLE_ANALYTICS;
-    }
+    throw new Error('Admin analytics are not fully connected to live backend data yet.');
   },
 };
 

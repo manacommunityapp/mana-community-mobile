@@ -7,6 +7,7 @@ import type {
   PendingDocumentReviewDto, DriverRideOfferDto, MobilityOffer,
   CreateRideRequest, FareQuoteRequest, CancelRideRequest, RateTripRequest,
   RegisterDriverRequest, ReviewDocumentRequest, AcceptRejectOfferRequest,
+  MobilityReceiptDto, ServiceZoneRequest, MobilityOpsAnalyticsDto,
 } from '@/types/mobility';
 import type { PageResponse } from '@/types/api';
 
@@ -123,6 +124,19 @@ export const mobilityPassengerService = {
     const res = await api.get<MobilityServiceZoneDto[]>('/mobility/service-zones');
     return res.data;
   },
+
+  async getTripReceipt(tripId: number): Promise<MobilityReceiptDto> {
+    const res = await api.get<MobilityReceiptDto>(`/mobility/trips/${tripId}/receipt`);
+    return res.data;
+  },
+
+  async confirmTripPayment(
+    tripId: number,
+    payload: { paymentOrderId?: string; paymentRef?: string; gateway?: string },
+  ): Promise<MobilityTripDto> {
+    const res = await api.post<MobilityTripDto>(`/mobility/trips/${tripId}/payment-confirm`, payload);
+    return res.data;
+  },
 };
 
 // ── Driver ───────────────────────────────────────────────────────
@@ -139,6 +153,11 @@ export const mobilityDriverService = {
 
   async setAvailability(availability: 'ONLINE' | 'OFFLINE'): Promise<void> {
     await api.patch('/mobility/driver/availability', { availability });
+  },
+
+  async updateServiceZone(serviceZoneId: number): Promise<MobilityDriverDto> {
+    const res = await api.patch<MobilityDriverDto>('/mobility/driver/service-zone', { serviceZoneId });
+    return res.data;
   },
 
   async updateLocation(latitude: number, longitude: number): Promise<void> {
@@ -245,5 +264,40 @@ export const mobilityOpsService = {
 
   async reinstateDriver(driverId: number): Promise<void> {
     await api.post(`/mobility/ops/drivers/${driverId}/reinstate`);
+  },
+
+  async getAllServiceZones(): Promise<MobilityServiceZoneDto[]> {
+    const res = await api.get<MobilityServiceZoneDto[]>('/mobility/ops/service-zones');
+    return res.data ?? [];
+  },
+
+  async createServiceZone(req: ServiceZoneRequest): Promise<MobilityServiceZoneDto> {
+    const res = await api.post<MobilityServiceZoneDto>('/mobility/ops/service-zones', req);
+    return res.data;
+  },
+
+  async updateServiceZone(zoneId: number, req: ServiceZoneRequest): Promise<MobilityServiceZoneDto> {
+    const res = await api.put<MobilityServiceZoneDto>(`/mobility/ops/service-zones/${zoneId}`, req);
+    return res.data;
+  },
+
+  async updateServiceZoneStatus(zoneId: number, active: boolean): Promise<MobilityServiceZoneDto> {
+    const res = await api.patch<MobilityServiceZoneDto>(`/mobility/ops/service-zones/${zoneId}/status`, { active });
+    return res.data;
+  },
+
+  async assignDriverServiceZone(driverId: number, serviceZoneId: number): Promise<MobilityDriverDto> {
+    const res = await api.post<MobilityDriverDto>(`/mobility/ops/drivers/${driverId}/service-zone`, { serviceZoneId });
+    return res.data;
+  },
+
+  async getAnalytics(): Promise<MobilityOpsAnalyticsDto> {
+    const res = await api.get<MobilityOpsAnalyticsDto>('/mobility/ops/analytics');
+    return res.data;
+  },
+
+  async settleDriver(driverId: number): Promise<{ driverId: number; settledAmount: number }> {
+    const res = await api.post<{ driverId: number; settledAmount: number }>(`/mobility/ops/drivers/${driverId}/settle`);
+    return res.data;
   },
 };

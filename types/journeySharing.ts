@@ -27,6 +27,14 @@ export interface JourneyOffer {
   vehicleModel?: string;
   vehicleNumber?: string;
   status: 'ACTIVE' | 'FULL' | 'CANCELLED' | 'COMPLETED';
+  originLat?: number;
+  originLng?: number;
+  destLat?: number;
+  destLng?: number;
+  maxDetourKm?: number;
+  routeDetourKm?: number;
+  allowCrossCommunity?: boolean;
+  parentConsentRequired?: boolean;
 }
 
 export interface JourneySearchRequest {
@@ -38,6 +46,12 @@ export interface JourneySearchRequest {
   timeWindowMinutes?: number;
   seats?: number;
   luggageCount?: number;
+  pickupLat?: number;
+  pickupLng?: number;
+  destLat?: number;
+  destLng?: number;
+  maxDetourKm?: number;
+  allowCrossCommunity?: boolean;
   page?: number;
   size?: number;
 }
@@ -52,6 +66,15 @@ export interface CreateJourneyRequest {
   timeWindowMinutes: number;
   seats: number;
   luggageCount: number;
+  pickupLat?: number;
+  pickupLng?: number;
+  destLat?: number;
+  destLng?: number;
+  maxDetourKm?: number;
+  allowCrossCommunity?: boolean;
+  autoReserve?: boolean;
+  guardianName?: string;
+  guardianPhone?: string;
 }
 
 export interface CreateJourneyOfferRequest {
@@ -67,6 +90,13 @@ export interface CreateJourneyOfferRequest {
   pricePerSeat: number;
   vehicleModel?: string;
   vehicleNumber?: string;
+  originLat?: number;
+  originLng?: number;
+  destLat?: number;
+  destLng?: number;
+  maxDetourKm?: number;
+  allowCrossCommunity?: boolean;
+  parentConsentRequired?: boolean;
 }
 
 export interface JourneyDemand {
@@ -82,6 +112,13 @@ export interface JourneyDemand {
   luggageCount: number;
   status: string;
   createdAt: string;
+  allowCrossCommunity?: boolean;
+  autoReserve?: boolean;
+  maxDetourKm?: number;
+  parentConsentRequired?: boolean;
+  guardianName?: string;
+  guardianPhone?: string;
+  guardianConsentStatus?: 'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'REJECTED' | string;
 }
 
 export interface JourneySlot {
@@ -97,6 +134,9 @@ export interface JourneySlot {
   luggageCapacity: number;
   pricePerSeat: number;
   status: 'ACTIVE' | 'PAUSED';
+  allowCrossCommunity?: boolean;
+  autoGenerate?: boolean;
+  maxDetourKm?: number;
 }
 
 export interface JourneyMatchProposal {
@@ -117,6 +157,13 @@ export interface JourneyBooking {
   bookedAt: string;
   offer: JourneyOffer;
   offerOwner?: boolean;
+  totalAmount?: number;
+  paymentStatus?: string;
+  paymentOrderId?: string;
+  paymentRef?: string;
+  guardianConsentStatus?: string;
+  guardianName?: string;
+  guardianPhone?: string;
 }
 
 export interface JourneyPassenger {
@@ -141,6 +188,9 @@ export interface CreateJourneySlotRequest {
   seatCapacity: number;
   luggageCapacity: number;
   pricePerSeat: number;
+  allowCrossCommunity?: boolean;
+  autoGenerate?: boolean;
+  maxDetourKm?: number;
 }
 
 export interface JourneyPage<T> {

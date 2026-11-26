@@ -9,12 +9,39 @@ export default function JourneyRequestScreen() {
   const router = useRouter(); const params = useLocalSearchParams<{ journeyType?: string; direction?: string; hubCode?: string; area?: string; contextName?: string; travelAt?: string }>();
   const param = (value?: string | string[]) => Array.isArray(value) ? value[0] || '' : value || '';
   const [journeyType, setJourneyType] = useState<JourneyTypeCode>((param(params.journeyType) as JourneyTypeCode) || 'OFFICE'); const [direction, setDirection] = useState<'TO_HUB' | 'FROM_HUB'>(param(params.direction) === 'FROM_HUB' ? 'FROM_HUB' : 'TO_HUB');
-  const [hubCode, setHubCode] = useState(param(params.hubCode)); const [area, setArea] = useState(param(params.area)); const [contextName, setContextName] = useState(param(params.contextName)); const [travelAt, setTravelAt] = useState(param(params.travelAt)); const [windowMinutes, setWindowMinutes] = useState('30'); const [seats, setSeats] = useState('1'); const [bags, setBags] = useState('0'); const [saving, setSaving] = useState(false);
-  const submit = async () => { if (!hubCode.trim() || !area.trim() || !travelAt.trim()) { Alert.alert('Missing details', 'Hub, area and ISO-8601 travel time are required.'); return; } setSaving(true); try { await journeySharingService.createRequest({ journeyType, direction, hubCode: hubCode.trim().toUpperCase(), area: area.trim(), contextName: contextName.trim() || undefined, travelAt: travelAt.trim(), timeWindowMinutes: Math.min(180, Math.max(15, Number(windowMinutes) || 30)), seats: Number(seats) || 1, luggageCount: Number(bags) || 0 }); Alert.alert('Request posted', 'We will match you with nearby community journeys.', [{ text: 'Done', onPress: () => router.back() }]); } catch { Alert.alert('Unable to post request', 'Please check the time format and try again.'); } finally { setSaving(false); } };
+  const [hubCode, setHubCode] = useState(param(params.hubCode)); const [area, setArea] = useState(param(params.area)); const [contextName, setContextName] = useState(param(params.contextName)); const [travelAt, setTravelAt] = useState(param(params.travelAt)); const [windowMinutes, setWindowMinutes] = useState('30'); const [seats, setSeats] = useState('1'); const [bags, setBags] = useState('0');
+  const [maxDetourKm, setMaxDetourKm] = useState('5');
+  const [allowCrossCommunity, setAllowCrossCommunity] = useState(false);
+  const [autoReserve, setAutoReserve] = useState(false);
+  const [guardianName, setGuardianName] = useState('');
+  const [guardianPhone, setGuardianPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+  const submit = async () => {
+    if (!hubCode.trim() || !area.trim() || !travelAt.trim()) { Alert.alert('Missing details', 'Hub, area and ISO-8601 travel time are required.'); return; }
+    if (journeyType === 'SCHOOL' && (!guardianName.trim() || !guardianPhone.trim())) {
+      Alert.alert('Guardian details required', 'School travel requires a verified parent or guardian contact for safeguarding.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await journeySharingService.createRequest({
+        journeyType, direction, hubCode: hubCode.trim().toUpperCase(), area: area.trim(),
+        contextName: contextName.trim() || undefined, travelAt: travelAt.trim(),
+        timeWindowMinutes: Math.min(180, Math.max(15, Number(windowMinutes) || 30)),
+        seats: Number(seats) || 1, luggageCount: Number(bags) || 0,
+        maxDetourKm: Number(maxDetourKm) || 5,
+        allowCrossCommunity, autoReserve,
+        guardianName: guardianName.trim() || undefined,
+        guardianPhone: guardianPhone.trim() || undefined,
+      });
+      Alert.alert('Request posted', journeyType === 'SCHOOL' ? 'Request posted. Parent/guardian consent must be approved before boarding.' : 'We will match you with nearby community journeys.', [{ text: 'Done', onPress: () => router.back() }]);
+    } catch { Alert.alert('Unable to post request', 'Please check the time format and try again.'); } finally { setSaving(false); }
+  };
   const fields: [string, string, (v: string) => void][] = [
     ['Hub code', hubCode, setHubCode], ['Area / origin', area, setArea],
     ['Event or route name (optional)', contextName, setContextName],
     ['Travel time (ISO-8601)', travelAt, setTravelAt], ['Flexible window (minutes)', windowMinutes, setWindowMinutes], ['Seats', seats, setSeats], ['Luggage count', bags, setBags],
+    ['Max route detour (km)', maxDetourKm, setMaxDetourKm],
   ];
   return <ScrollView style={s.container} contentContainerStyle={s.content}>
     <TouchableOpacity onPress={() => router.back()}><Text style={s.back}>‹ Back</Text></TouchableOpacity>
@@ -22,6 +49,17 @@ export default function JourneyRequestScreen() {
     <View style={s.card}><Text style={s.type}>Journey type: {journeyType}</Text>
       {fields.map(([label, value, setter], i) => <View key={label}><Text style={s.label}>{label}</Text><TextInput style={s.input} value={value} onChangeText={setter} autoCapitalize={i === 0 ? 'characters' : 'none'} keyboardType={i > 3 ? 'numeric' : 'default'} /></View>)}
       <Text style={s.label}>Direction</Text><View style={s.row}>{(['TO_HUB', 'FROM_HUB'] as const).map((item) => <TouchableOpacity key={item} style={[s.toggle, direction === item && s.toggleActive]} onPress={() => setDirection(item)}><Text style={[s.toggleText, direction === item && s.toggleTextActive]}>{item === 'TO_HUB' ? 'To hub' : 'From hub'}</Text></TouchableOpacity>)}</View>
+      <View style={s.row}>
+        <TouchableOpacity style={[s.toggle, allowCrossCommunity && s.toggleActive]} onPress={() => setAllowCrossCommunity((v) => !v)}><Text style={[s.toggleText, allowCrossCommunity && s.toggleTextActive]}>Nearby Communities: {allowCrossCommunity ? 'On' : 'Off'}</Text></TouchableOpacity>
+        <TouchableOpacity style={[s.toggle, autoReserve && s.toggleActive]} onPress={() => setAutoReserve((v) => !v)}><Text style={[s.toggleText, autoReserve && s.toggleTextActive]}>Auto-Reserve: {autoReserve ? 'On' : 'Off'}</Text></TouchableOpacity>
+      </View>
+      {journeyType === 'SCHOOL' && (
+        <View style={{ gap: 8, padding: 10, borderRadius: RADIUS.md, backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A' }}>
+          <Text style={[s.label, { color: '#92400E', marginBottom: 0 }]}>School Travel Safeguarding (Mandatory)</Text>
+          <TextInput style={s.input} placeholder="Parent / Guardian Name" value={guardianName} onChangeText={setGuardianName} />
+          <TextInput style={s.input} placeholder="Guardian Phone (+91...)" value={guardianPhone} onChangeText={setGuardianPhone} keyboardType="phone-pad" />
+        </View>
+      )}
       <TouchableOpacity style={s.button} onPress={submit} disabled={saving}><Text style={s.buttonText}>{saving ? 'Posting…' : 'Post request'}</Text></TouchableOpacity>
     </View>
   </ScrollView>;

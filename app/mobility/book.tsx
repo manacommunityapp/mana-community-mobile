@@ -14,11 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { mobilityPassengerService } from '@/services/mobilityService';
+import { LiveRouteMap } from '@/components/mobility/LiveRouteMap';
+import { usePayment } from '@/hooks/usePayment';
+import { PaymentModal } from '@/components/payment/PaymentModal';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
-import type { MobilityServiceType, MobilityFareQuoteDto, CreateRideRequest } from '@/types/mobility';
+import type { MobilityServiceType, MobilityFareQuoteDto, CreateRideRequest, MobilityTripDto } from '@/types/mobility';
 
 // ── Types ─────────────────────────────────────────────────────────
 type Phase = 'LOCATION' | 'SELECT_RIDE' | 'CONFIRM';
@@ -107,6 +110,8 @@ const DEFAULT_LNG = 78.4867;
 
 // ── Payment options ────────────────────────────────────────────────
 const PAYMENT_OPTIONS: { method: PaymentMethod; icon: keyof typeof Ionicons.glyphMap; label: string; sub: string }[] = [
+  { method: 'UPI',    icon: 'flash-outline',          label: 'UPI / Cards', sub: 'Instant Cashfree online checkout' },
+  { method: 'WALLET', icon: 'wallet-outline',         label: 'Wallets / NB','sub': 'Netbanking & digital wallets' },
   { method: 'CASH',   icon: 'cash-outline',           label: 'Cash',        sub: 'Pay driver directly' },
 ];
 
@@ -142,6 +147,15 @@ export default function BookRideScreen() {
   const [bookErr, setBookErr] = useState('');
   const [savedNote, setSavedNote] = useState('');
   const [promoMsg, setPromoMsg] = useState('');
+  const [pendingOnlineTrip, setPendingOnlineTrip] = useState<MobilityTripDto | null>(null);
+  const { status: payStatus, order: payOrder, error: payError, canRetry, startPayment, checkStatus, retry, reset: resetPayment } = usePayment();
+  const { data: serviceZones } = useQuery({
+    queryKey: ['mobility-service-zones'],
+    queryFn: mobilityPassengerService.getServiceZones,
+  });
+  const activeZone = serviceZones?.[0]
+    ? { lat: serviceZones[0].centerLat, lng: serviceZones[0].centerLng, radiusKm: serviceZones[0].radiusKm, name: serviceZones[0].name }
+    : null;
 
   async function handleGps() {
     setGpsLoading(true);
@@ -240,8 +254,30 @@ export default function BookRideScreen() {
 
   const bookMutation = useMutation({
     mutationFn: (req: CreateRideRequest) => mobilityPassengerService.requestRide(req),
-    onSuccess:  (trip) => router.replace(`/mobility/track/${trip.id}` as any),
-    onError:    (e: any) => setBookErr(e?.response?.data?.message || 'Booking failed. Please try again.'),
+    onSuccess: async (trip) => {
+      if (payment === 'CASH') {
+        router.replace(`/mobility/track/${trip.id}` as any);
+        return;
+      }
+      setPendingOnlineTrip(trip);
+      const total = trip.finalFare ?? trip.fareQuote?.total ?? 0;
+      const paidOrder = await startPayment({
+        amount: total,
+        referenceType: 'MOBILITY_TRIP',
+        referenceId: trip.id,
+        description: `Mana Mobility Ride #${trip.tripRef}`,
+      });
+      if (paidOrder && paidOrder.status === 'PAID') {
+        await mobilityPassengerService
+          .confirmTripPayment(trip.id, {
+            paymentOrderId: paidOrder.manaOrderId,
+            paymentRef: paidOrder.manaOrderId,
+            gateway: 'CASHFREE',
+          })
+          .catch(() => undefined);
+      }
+    },
+    onError: (e: any) => setBookErr(e?.response?.data?.message || 'Booking failed. Please try again.'),
   });
 
   function handleConfirmBook() {
@@ -261,6 +297,7 @@ export default function BookRideScreen() {
       destAddress:     destAddr,
       quoteId:         chosen.quote.quoteId,
       idempotencyKey:  `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      paymentMethod:   payment === 'CASH' ? 'CASH' : 'ONLINE',
     });
   }
 
@@ -307,61 +344,33 @@ export default function BookRideScreen() {
         </View>
       </View>
 
-      {/* ── Vector Map Preview ───────────────────────────────── */}
+      {/* ── Interactive Live Route Map Preview ─────────────── */}
       <View style={s.mapWrapper}>
-        <LinearGradient
-          colors={['#E0E7FF', '#EFF6FF', '#F8FAFC']}
-          style={s.mapCanvas}
+        <LiveRouteMap
+          pickup={pickupResolved ? { lat: pickupLat, lng: pickupLng, address: pickupAddr } : null}
+          destination={destLat != null && destLng != null ? { lat: destLat, lng: destLng, address: destAddr } : null}
+          serviceZone={activeZone}
+          followDriverDefault={false}
+          height={190}
+          statusBanner={activeZone ? `Zone: ${activeZone.name} (${activeZone.radiusKm} km)` : undefined}
+        />
+
+        {/* GPS Quick Button on Map */}
+        <TouchableOpacity
+          style={s.floatingGpsBtn}
+          onPress={handleGps}
+          disabled={gpsLoading}
+          activeOpacity={0.85}
         >
-          {/* Decorative transit road grid */}
-          <View style={s.mapRoadH1} />
-          <View style={s.mapRoadH2} />
-          <View style={s.mapRoadV1} />
-          <View style={s.mapRoadV2} />
-
-          {/* Interactive route path simulation */}
-          <View style={s.mapRoutePath}>
-            {/* Origin Pin */}
-            <View style={s.mapPinWrap}>
-              <View style={s.mapPinOriginOuter}>
-                <View style={s.mapPinOriginInner} />
-              </View>
-              <View style={s.mapPinLabel}>
-                <Text style={s.mapPinLabelText}>Pickup</Text>
-              </View>
-            </View>
-
-            {/* Dashed connector */}
-            <View style={s.mapConnectorLine} />
-
-            {/* Destination Pin */}
-            <View style={s.mapPinWrap}>
-              <View style={s.mapPinDestOuter}>
-                <Ionicons name="location" size={14} color="#EF4444" />
-              </View>
-              <View style={s.mapPinLabel}>
-                <Text style={s.mapPinLabelText}>Destination</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* GPS Quick Button on Map */}
-          <TouchableOpacity
-            style={s.floatingGpsBtn}
-            onPress={handleGps}
-            disabled={gpsLoading}
-            activeOpacity={0.85}
-          >
-            {gpsLoading ? (
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            ) : (
-              <>
-                <Ionicons name="locate" size={16} color={COLORS.primary} />
-                <Text style={s.floatingGpsText}>Locate</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </LinearGradient>
+          {gpsLoading ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <>
+              <Ionicons name="locate" size={16} color={COLORS.primary} />
+              <Text style={s.floatingGpsText}>Locate</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* ── Phase 1: Location Inputs ──────────────────────────── */}
@@ -695,7 +704,7 @@ export default function BookRideScreen() {
               ) : (
                 <>
                   <Text style={s.primaryCtaText}>
-                    Confirm {vehicleMeta?.label} · ₹{selectedQuote.quote.total.toFixed(0)}
+                    {payment === 'CASH' ? 'Confirm' : 'Pay & Book'} {vehicleMeta?.label} · ₹{selectedQuote.quote.total.toFixed(0)}
                   </Text>
                   <Ionicons name="checkmark-circle" size={18} color="#fff" />
                 </>
@@ -704,6 +713,25 @@ export default function BookRideScreen() {
           </ScrollView>
         </View>
       )}
+
+      <PaymentModal
+        visible={payStatus !== 'idle'}
+        order={payOrder}
+        status={payStatus}
+        error={payError}
+        canRetry={canRetry}
+        onVerify={(startPayment as any)._handleVerify}
+        onCheckStatus={checkStatus}
+        onRetry={retry}
+        onDismiss={() => {
+          const tripId = pendingOnlineTrip?.id;
+          resetPayment();
+          setPendingOnlineTrip(null);
+          if (tripId) {
+            router.replace(`/mobility/track/${tripId}` as any);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -769,13 +797,13 @@ const s = StyleSheet.create({
     backgroundColor: '#10B981',
   },
 
-  // ── Vector Map Preview ─────────────────────────────────────
+  // ── Live Route Map Preview ───────────────────────────────────
   mapWrapper: {
-    height: 180,
-    overflow: 'hidden',
+    height: 190,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     position: 'relative',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.background,
   },
   mapCanvas: {
     flex: 1,

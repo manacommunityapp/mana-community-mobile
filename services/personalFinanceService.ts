@@ -1,4 +1,7 @@
 
+import api from './apiClient';
+import { requestQueue, QueueIdentity } from './requestQueue';
+
 export interface PersonalReceiptDto {
   id: string;
   merchantName: string;
@@ -13,9 +16,6 @@ export interface PersonalReceiptDto {
   notes?: string;
   createdAt: string;
 }
-
-import api from './apiClient';
-import { requestQueue, QueueIdentity } from './requestQueue';
 
 /**
  * Thrown when a write could not reach the server but was persisted to the offline retry
@@ -705,83 +705,35 @@ let LOCAL_GOALS = [...FALLBACK_GOALS];
 
 // ─── Service Implementation ──────────────────────────────────────────────────
 
-async function tryPaths<T>(paths: string[], fallback: () => T): Promise<T> {
+async function tryPaths<T>(paths: string[], _fallback: () => T): Promise<T> {
+  let lastError: unknown;
   for (const path of paths) {
     try {
       const { data } = await api.get<T>(path);
       return data;
-    } catch {
-      // try next
+    } catch (error) {
+      lastError = error;
     }
   }
-  return fallback();
+  throw lastError ?? new Error('Personal finance API is unavailable.');
 }
 
-
-let MOCK_RECEIPTS: PersonalReceiptDto[] = [
-  {
-    id: 'rcpt-1',
-    merchantName: 'Nature Basket Supermarket',
-    amount: 3420,
-    date: '2026-10-02',
-    category: 'Groceries',
-    imageUrl: 'https://images.unsplash.com/photo-1554415707-9e4c29729ff7?w=600&auto=format&fit=crop&q=80',
-    ocrExtracted: true,
-    taxAmount: 171,
-    itemsCount: 14,
-    transactionId: 'txn-1',
-    notes: 'Monthly staples & organic veggies',
-    createdAt: '2026-10-02T16:30:00Z',
-  },
-  {
-    id: 'rcpt-2',
-    merchantName: 'BESCOM Electricity Bill',
-    amount: 2850,
-    date: '2026-09-28',
-    category: 'Utilities',
-    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
-    ocrExtracted: true,
-    taxAmount: 0,
-    itemsCount: 1,
-    transactionId: 'txn-2',
-    notes: 'Meter #482910 September bill',
-    createdAt: '2026-09-28T10:15:00Z',
-  },
-  {
-    id: 'rcpt-3',
-    merchantName: 'Prestige Society Maintenance',
-    amount: 4500,
-    date: '2026-10-01',
-    category: 'Housing',
-    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
-    ocrExtracted: true,
-    taxAmount: 405,
-    itemsCount: 1,
-    transactionId: 'txn-3',
-    notes: 'Flat B-402 October Maintenance',
-    createdAt: '2026-10-01T09:00:00Z',
-  },
-];
 
 export const personalFinanceService = {
 
   getReceipts: async (): Promise<PersonalReceiptDto[]> => {
-    return MOCK_RECEIPTS;
+    const { data } = await api.get<PersonalReceiptDto[]>('/api/v1/personal-finance/receipts');
+    return data;
   },
 
   uploadReceipt: async (receipt: Omit<PersonalReceiptDto, 'id' | 'createdAt'>): Promise<PersonalReceiptDto> => {
-    const newReceipt: PersonalReceiptDto = {
-      ...receipt,
-      id: `rcpt-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    MOCK_RECEIPTS.unshift(newReceipt);
-    return newReceipt;
+    const { data } = await api.post<PersonalReceiptDto>('/api/v1/personal-finance/receipts', receipt);
+    return data;
   },
 
   deleteReceipt: async (receiptId: string): Promise<{ success: boolean }> => {
-    MOCK_RECEIPTS = MOCK_RECEIPTS.filter(r => r.id !== receiptId);
-    return { success: true };
+    const { data } = await api.delete<{ success: boolean }>(`/api/v1/personal-finance/receipts/${encodeURIComponent(receiptId)}`);
+    return data;
   },
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
@@ -826,8 +778,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalAccountDto>(path, dto);
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const newAcc: PersonalAccountDto = {
@@ -861,8 +813,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalCategoryDto>(path, dto);
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const newCat: PersonalCategoryDto = {
@@ -917,8 +869,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalTransactionDto>(path, dto);
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const cat = LOCAL_CATEGORIES.find(c => c.id === dto.categoryId);
@@ -966,8 +918,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<CreatePersonalTransactionDto>(path, { text });
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     // Fallback client-side parsing
@@ -1005,8 +957,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<BatchImportResultDto>(path, { transactions });
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const imported: PersonalTransactionDto[] = [];
@@ -1026,8 +978,8 @@ export const personalFinanceService = {
       try {
         await api.delete(path);
         return;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     LOCAL_TRANSACTIONS = LOCAL_TRANSACTIONS.filter(t => t.id !== id);
@@ -1047,8 +999,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalBudgetDto>(path, dto);
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const cat = LOCAL_CATEGORIES.find(c => c.id === dto.categoryId);
@@ -1088,8 +1040,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalRecurringDto>(path, dto);
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const newRec: PersonalRecurringDto = {
@@ -1112,8 +1064,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalRecurringDto>(path, {});
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const item = LOCAL_RECURRING.find(r => r.id === id);
@@ -1125,8 +1077,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<{ processedCount: number }>(path, {});
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     return { processedCount: 0 };
@@ -1134,17 +1086,8 @@ export const personalFinanceService = {
 
   // ── Bills ───────────────────────────────────────────────────────────────────
   createBill: async (bill: any): Promise<PersonalBillDto> => {
-    return {
-      id: 'bill-' + Date.now(),
-      name: bill.name || bill.billerName || bill.title || 'New Bill',
-      amount: bill.amount || 0,
-      dueDate: bill.dueDate || new Date().toISOString(),
-      categoryName: bill.category || bill.categoryName || 'Utilities',
-      categoryIcon: bill.categoryIcon || 'receipt-outline',
-      isPaid: false,
-      isAutoPay: bill.isAutoPay || false,
-      reminderDaysBefore: bill.reminderDaysBefore || 3,
-    };
+    const { data } = await api.post<PersonalBillDto>('/api/v1/personal-finance/bills', bill);
+    return data;
   },
   getBills: async (): Promise<PersonalBillDto[]> => {
     return tryPaths<PersonalBillDto[]>(
@@ -1182,11 +1125,10 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalInstallmentDto>(path, dto);
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
-    const paidTenors = 0;
     const remainingTenors = dto.totalTenorMonths;
     const acc = LOCAL_ACCOUNTS.find(a => a.id === dto.accountId);
     const newInst: PersonalInstallmentDto = {
@@ -1216,8 +1158,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalInstallmentDto>(path, { amount, accountId });
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     // An EMI payment is only real once the server records it. Do not advance the local
@@ -1230,8 +1172,8 @@ export const personalFinanceService = {
       try {
         await api.delete(path);
         return;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     LOCAL_INSTALLMENTS = LOCAL_INSTALLMENTS.filter(i => i.id !== id);
@@ -1250,8 +1192,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalGoalDto>(path, dto);
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const current = dto.currentAmount || 0;
@@ -1280,8 +1222,8 @@ export const personalFinanceService = {
       try {
         const { data } = await api.post<PersonalGoalDto>(path, dto);
         return data;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     const goal = LOCAL_GOALS.find(g => g.id === id);
@@ -1299,8 +1241,8 @@ export const personalFinanceService = {
       try {
         await api.delete(path);
         return;
-      } catch {
-        // try next
+      } catch (error) {
+        throw error;
       }
     }
     LOCAL_GOALS = LOCAL_GOALS.filter(g => g.id !== id);
@@ -1322,43 +1264,8 @@ export const personalFinanceService = {
     paidDate?: string;
     accountId?: string;
   }): Promise<PersonalTransactionDto> => {
-    const existing = LOCAL_TRANSACTIONS.find(
-      t => t.sourceModule === 'COMMUNITY_FINANCE' && t.sourceId === params.communityInvoiceId
-    );
-    if (existing) {
-      return existing; // Avoid duplicate transactions
-    }
-
-    const housingCat = LOCAL_CATEGORIES.find(c => c.name.includes('Housing')) || LOCAL_CATEGORIES[0];
-    const acc = LOCAL_ACCOUNTS.find(a => a.id === params.accountId) || LOCAL_ACCOUNTS[0];
-
-    const linkedTxn: PersonalTransactionDto = {
-      id: `txn-link-${Date.now()}`,
-      type: 'EXPENSE',
-      amount: params.amount,
-      currency: acc.currency || '₹',
-      categoryId: housingCat.id,
-      categoryName: housingCat.name,
-      categoryIcon: housingCat.icon,
-      categoryColor: housingCat.color,
-      subcategoryName: 'Maintenance Dues',
-      accountId: acc.id,
-      accountName: acc.name,
-      description: params.description || `Community Maintenance - Invoice #${params.communityInvoiceId}`,
-      date: params.paidDate || new Date().toISOString().split('T')[0],
-      isManaProjection: true,
-      sourceModule: 'COMMUNITY_FINANCE',
-      sourceType: 'INVOICE',
-      sourceId: params.communityInvoiceId,
-      sourceLabel: `Mana Community Finance (Invoice #${params.communityInvoiceId})`,
-      createdAt: new Date().toISOString(),
-    };
-
-    LOCAL_TRANSACTIONS.unshift(linkedTxn);
-    if (acc) {
-      acc.balance -= params.amount;
-    }
-    return linkedTxn;
+    void params;
+    throw new Error('Community finance transaction linking is not implemented by the backend yet.');
   },
 
   // ── Mana Projections ────────────────────────────────────────────────────────

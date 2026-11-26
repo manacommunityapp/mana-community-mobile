@@ -59,9 +59,6 @@ export default function CreateExperienceScreen() {
   const [membersOnly, setMembersOnly] = useState(true);
   const [ageSuitability, setAgeSuitability] = useState('');
 
-  // Submitted
-  const [submitted, setSubmitted] = useState(false);
-
   const validateStep = (): boolean => {
     if (step === 0) {
       if (!title.trim()) { Alert.alert('Required', 'Please enter an event title.'); return false; }
@@ -86,39 +83,11 @@ export default function CreateExperienceScreen() {
 
   const handleSubmit = () => {
     if (!validateStep()) return;
-    // Simulate API submission
-    setTimeout(() => setSubmitted(true), 800);
-  };
-
-  if (submitted) {
-    return (
-      <View style={{ flex: 1, backgroundColor: THEME.background, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-        <StatusBar barStyle="dark-content" />
-        <Text style={{ fontSize: 64 }}>🎉</Text>
-        <Text style={{ fontFamily: FONTS.bold, fontSize: 22, color: THEME.text, marginTop: 16, textAlign: 'center' }}>
-          Experience Submitted!
-        </Text>
-        <Text style={{ fontFamily: FONTS.regular, fontSize: 14, color: THEME.muted, marginTop: 10, textAlign: 'center', lineHeight: 21 }}>
-          Your experience listing has been submitted for community review. You'll receive a notification once it's approved and published.
-        </Text>
-        <View style={{ backgroundColor: '#EEF2FF', borderRadius: 16, padding: 16, marginTop: 24, width: '100%', gap: 6 }}>
-          <Text style={{ fontFamily: FONTS.semiBold, fontSize: 13, color: COLORS.primary }}>What happens next?</Text>
-          <Text style={{ fontFamily: FONTS.regular, fontSize: 12, color: THEME.muted, lineHeight: 18 }}>
-            1. Community admin reviews your listing{'\n'}
-            2. You get notified when approved{'\n'}
-            3. Members can register immediately after publishing{'\n'}
-            4. You receive attendee reports and QR check-in tools
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => router.replace('/experiences')}
-          style={{ marginTop: 28, backgroundColor: COLORS.primary, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14 }}
-        >
-          <Text style={{ fontFamily: FONTS.bold, fontSize: 15, color: '#fff' }}>Back to Experiences</Text>
-        </TouchableOpacity>
-      </View>
+    Alert.alert(
+      'Submission unavailable',
+      'Experience submission is not connected yet. Your information has not been sent or saved.',
     );
-  }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: THEME.background }}>

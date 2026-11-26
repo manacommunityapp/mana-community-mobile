@@ -9,7 +9,7 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { mobilityDriverService } from '@/services/mobilityService';
+import { mobilityDriverService, mobilityPassengerService } from '@/services/mobilityService';
 import { COLORS, SHADOWS, RADIUS, FONTS } from '@/constants/config';
 import type { VehicleType, DocumentType } from '@/types/mobility';
 
@@ -41,6 +41,7 @@ export default function DriverOnboardScreen() {
   const [vehicleModel, setVehicleModel]   = useState('');
   const [vehicleColor, setVehicleColor]   = useState('');
   const [vehicleYear, setVehicleYear]     = useState('');
+  const [serviceZoneId, setServiceZoneId] = useState<number | undefined>(undefined);
 
   const goBack = useCallback(() => {
     if (step === 'VEHICLE')   { router.back(); return true; }
@@ -61,13 +62,21 @@ export default function DriverOnboardScreen() {
     queryFn:  mobilityDriverService.getDocuments,
   });
 
+  const { data: serviceZones } = useQuery({
+    queryKey: ['mobility-service-zones'],
+    queryFn:  mobilityPassengerService.getServiceZones,
+  });
+
+  const selectedZone = serviceZones?.find((z) => z.id === serviceZoneId) ?? serviceZones?.[0];
+
   const registerMutation = useMutation({
     mutationFn: () => mobilityDriverService.register({
-      vehicleType:    vehicleType!,
+      vehicleType:        vehicleType!,
       vehicleNumberPlate: vehicleNumber.trim().toUpperCase(),
-      vehicleModel:   vehicleModel.trim(),
-      vehicleColor:   vehicleColor.trim(),
-      vehicleYear:    Number(vehicleYear),
+      vehicleModel:       vehicleModel.trim(),
+      vehicleColor:       vehicleColor.trim(),
+      vehicleYear:        Number(vehicleYear),
+      serviceZoneId:      selectedZone?.id,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mobility-driver-profile'] });
@@ -185,6 +194,31 @@ export default function DriverOnboardScreen() {
               </View>
             ))}
 
+            {(serviceZones?.length ?? 0) > 0 && (
+              <View style={{ gap: 8, marginTop: 4 }}>
+                <Text style={s.inputLabel}>Primary Service Zone</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {serviceZones!.map((zone) => {
+                    const active = selectedZone?.id === zone.id;
+                    return (
+                      <TouchableOpacity
+                        key={zone.id}
+                        style={[
+                          { paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface },
+                          active && { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+                        ]}
+                        onPress={() => setServiceZoneId(zone.id)}
+                      >
+                        <Text style={{ fontSize: 12, fontFamily: FONTS.semiBold, color: active ? '#fff' : COLORS.text }}>
+                          {zone.name} ({zone.radiusKm} km)
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
             <TouchableOpacity style={s.ctaBtn} onPress={handleVehicleNext} activeOpacity={0.85}>
               <Text style={s.ctaBtnText}>Continue to Documents</Text>
               <Ionicons name="arrow-forward" size={16} color="#fff" />
@@ -247,6 +281,9 @@ export default function DriverOnboardScreen() {
               <View style={s.reviewRow}><Text style={s.reviewLabel}>Registration</Text><Text style={s.reviewValue}>{vehicleNumber}</Text></View>
               <View style={s.reviewRow}><Text style={s.reviewLabel}>Model</Text><Text style={s.reviewValue}>{vehicleModel}</Text></View>
               <View style={s.reviewRow}><Text style={s.reviewLabel}>Year</Text><Text style={s.reviewValue}>{vehicleYear}</Text></View>
+              {selectedZone && (
+                <View style={s.reviewRow}><Text style={s.reviewLabel}>Service Zone</Text><Text style={s.reviewValue}>{selectedZone.name}</Text></View>
+              )}
               <View style={s.reviewRow}>
                 <Text style={s.reviewLabel}>Documents</Text>
                 <Text style={s.reviewValue}>{uploadedTypes.size} / {REQUIRED_DOCS.length} uploaded</Text>

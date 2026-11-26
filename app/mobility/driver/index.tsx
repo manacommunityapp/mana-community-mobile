@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, BackHandler, Switch, Alert, Linking, StatusBar,
+  ActivityIndicator, BackHandler, Switch, Alert, Linking, StatusBar, AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -104,35 +104,72 @@ export default function DriverDashboardScreen() {
     queryFn:  mobilityDriverService.getEarnings,
   });
 
-  // Publish live GPS only while an approved driver is online. The backend
-  // stores the last location and exposes it to the passenger tracking screen.
+  const [gpsBgEnabled, setGpsBgEnabled] = useState(false);
+  const [lastGpsSyncAt, setLastGpsSyncAt] = useState<string | null>(null);
+
+  // Publish live GPS while an approved driver is online, request background
+  // permission where available, and force an immediate coordinate sync whenever
+  // the app returns to foreground during active shifts/trips.
   useEffect(() => {
     if (profile?.status !== 'APPROVED' || profile.availability !== 'ONLINE') return;
     let disposed = false;
     let subscription: Location.LocationSubscription | undefined;
+    const isBusyTrip = !!activeTrip;
+
+    const pushCoords = async (lat: number, lng: number) => {
+      if (disposed) return;
+      await mobilityDriverService.updateLocation(lat, lng).catch(() => undefined);
+      if (!disposed) {
+        setLastGpsSyncAt(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      }
+    };
 
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted' || disposed) return;
+      try {
+        const bgPerm = await Location.requestBackgroundPermissionsAsync();
+        if (!disposed) setGpsBgEnabled(bgPerm.status === 'granted');
+      } catch {
+        if (!disposed) setGpsBgEnabled(false);
+      }
+
+      try {
+        const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        await pushCoords(current.coords.latitude, current.coords.longitude);
+      } catch {
+        // fallback to watch stream
+      }
+
       subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 10_000,
-          distanceInterval: 50,
+          accuracy: isBusyTrip ? Location.Accuracy.High : Location.Accuracy.Balanced,
+          timeInterval: isBusyTrip ? 5_000 : 10_000,
+          distanceInterval: isBusyTrip ? 20 : 50,
         },
         ({ coords }) => {
-          if (!disposed) {
-            mobilityDriverService.updateLocation(coords.latitude, coords.longitude).catch(() => undefined);
-          }
+          pushCoords(coords.latitude, coords.longitude);
         },
       );
     })();
 
+    const appStateSub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active' && !disposed) {
+        try {
+          const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          await pushCoords(fresh.coords.latitude, fresh.coords.longitude);
+        } catch {
+          // ignore transient resume GPS errors
+        }
+      }
+    });
+
     return () => {
       disposed = true;
       subscription?.remove();
+      appStateSub.remove();
     };
-  }, [profile?.status, profile?.availability]);
+  }, [profile?.status, profile?.availability, activeTrip?.id]);
 
   const countdown = useOfferCountdown(pendingOffer);
 
@@ -290,7 +327,9 @@ export default function DriverDashboardScreen() {
                 </Text>
               </View>
               <Text style={s.availSub}>
-                {isOnline ? 'Active for incoming nearby trip offers' : 'Turn on to start receiving ride requests'}
+                {isOnline
+                  ? `Live GPS ${gpsBgEnabled ? 'Background + Foreground' : 'Active'}${lastGpsSyncAt ? ` · synced ${lastGpsSyncAt}` : ''}`
+                  : 'Turn on to start receiving ride requests'}
               </Text>
             </View>
             <Switch
@@ -493,7 +532,7 @@ export default function DriverDashboardScreen() {
               <View style={s.settlementCard}>
                 <Ionicons name="card-outline" size={16} color="#D97706" />
                 <Text style={s.settlementCardText}>
-                  ₹{(earnings.pendingSettlement ?? 0).toFixed(2)} scheduled for next settlement cycle
+                  ₹{(earnings.pendingSettlement ?? 0).toFixed(2)} pending payout · ₹{(earnings.settledEarnings ?? 0).toFixed(2)} settled to date
                 </Text>
               </View>
             )}

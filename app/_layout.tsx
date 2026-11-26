@@ -3,7 +3,6 @@ import { LogBox } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 
 // Suppress dev warning and error overlays in the mobile app UI
-LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs([
   'Unknown child element passed to Stack',
   'Unknown child element passed to Tabs',
@@ -25,6 +24,7 @@ import { useDeviceSecurity } from '@/hooks/useDeviceSecurity';
 import { setupGlobalFonts } from '@/utils/globalFonts';
 import { initSentry, setUser, clearUser } from '@/utils/sentry';
 import { validateEnvConfig } from '@/utils/security';
+import { CONFIG } from '@/constants/config';
 import { offlineSyncService } from '@/services/offlineSyncService';
 import { backgroundSync } from '@/services/backgroundSync';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
@@ -36,7 +36,7 @@ import { ThemeProvider, useAppTheme } from '@/context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
-validateEnvConfig();
+validateEnvConfig(CONFIG.API_BASE_URL, CONFIG.WS_URL);
 offlineSyncService.init();
 
 const queryClient = new QueryClient({

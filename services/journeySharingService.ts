@@ -109,4 +109,14 @@ export const journeySharingService = {
     const res = await api.get<JourneyPassenger[]>(`/mobility/journeys/offers/${offerId}/passengers`);
     return res.data ?? [];
   },
+
+  async approveRequestGuardianConsent(requestId: number, approved = true): Promise<JourneyDemand> {
+    const res = await api.post<JourneyDemand>(`/mobility/journeys/requests/${requestId}/guardian-consent`, { approved });
+    return res.data;
+  },
+
+  async approveBookingGuardianConsent(bookingId: number, approved = true): Promise<JourneyBooking> {
+    const res = await api.post<JourneyBooking>(`/mobility/journeys/bookings/${bookingId}/guardian-consent`, { approved });
+    return res.data;
+  },
 };

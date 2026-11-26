@@ -1,14 +1,19 @@
-import Constants from 'expo-constants';
+export function validateEnvConfig(apiUrl: string, wsUrl: string): void {
+  if (process.env.NODE_ENV !== 'production') return;
 
-export function validateEnvConfig(): void {
-  const required = ['EXPO_PUBLIC_API_BASE_URL'];
-  const missing = required.filter(k => {
-    const fromProcess = process.env[k];
-    const fromExtra = Constants.expoConfig?.extra?.[k as keyof typeof Constants.expoConfig.extra];
-    return !fromProcess && !fromExtra;
-  });
-  if (missing.length > 0 && process.env.NODE_ENV === 'production') {
-    console.error(`[Security] Missing required env vars: ${missing.join(', ')}`);
+  for (const [name, value, protocol] of [
+    ['EXPO_PUBLIC_API_URL', apiUrl, 'https:'],
+    ['EXPO_PUBLIC_WS_URL', wsUrl, 'wss:'],
+  ] as const) {
+    let parsed: URL;
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw new Error(`[Security] ${name} must be an absolute ${protocol} URL in production.`);
+    }
+    if (parsed.protocol !== protocol || parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+      throw new Error(`[Security] ${name} must use ${protocol} and a public host in production.`);
+    }
   }
 }
 
@@ -17,7 +22,7 @@ export function assertNoLocalhostInProd(url: string): void {
     process.env.NODE_ENV === 'production' &&
     (url.includes('localhost') || url.includes('127.0.0.1'))
   ) {
-    console.error(`[Security] Localhost URL detected in production build: ${url}`);
+    throw new Error(`[Security] Localhost URL detected in production build: ${url}`);
   }
 }
 

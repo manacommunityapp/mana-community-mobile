@@ -9,15 +9,13 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '@/constants/config';
 import { freshKitchenService } from '@/services/freshKitchenService';
 import type { DeliveryPassDto } from '@/types/freshKitchen';
 
 export default function RunnerDeliveryScannerScreen() {
-  const router = useRouter();
-
   const [lookupQuery, setLookupQuery] = useState('');
   const [lookingUp, setLookingUp] = useState(false);
   const [activeOrder, setActiveOrder] = useState<DeliveryPassDto | null>(null);
@@ -33,44 +31,14 @@ export default function RunnerDeliveryScannerScreen() {
       return;
     }
     setLookingUp(true);
+    setActiveOrder(null);
+    setVerifiedSuccess(false);
     try {
       const order = await freshKitchenService.lookupDeliveryOrder(lookupQuery.trim());
       setActiveOrder(order);
       setVerifiedSuccess(order.status === 'DELIVERED');
-    } catch {
-      // Mock lookup fallback for runner demonstration
-      setActiveOrder({
-        orderId: 9021,
-        orderNumber: lookupQuery.toUpperCase(),
-        buyerName: 'Priya Sharma',
-        deliveryAddress: 'Flat 402, Tower B, Mana Premiere Residences',
-        deliverySlot: '06:00 AM - 07:30 AM',
-        estimatedDeliveryDate: new Date().toISOString().split('T')[0],
-        status: 'CONFIRMED',
-        handoverOtp: '481923',
-        qrToken: 'MANA-BASKET-PASS-9021-SECURE',
-        totalAmount: 175,
-        paymentStatus: 'PAID',
-        paymentMethod: 'COMMERCE_WALLET',
-        isEscrowLocked: true,
-        items: [
-          {
-            productId: 'prod-std-idli-1',
-            productName: 'Classic Malgudi Idli Batter (1 kg)',
-            quantity: 1,
-            unitPrice: 85,
-            totalPrice: 85,
-          },
-          {
-            productId: 'prod-chutney-coconut-5',
-            productName: 'Tadkewali Coconut Chutney (250g)',
-            quantity: 2,
-            unitPrice: 45,
-            totalPrice: 90,
-          },
-        ],
-      });
-      setVerifiedSuccess(false);
+    } catch (error) {
+      Alert.alert('Order not found', error instanceof Error ? error.message : 'The delivery service could not confirm this order.');
     } finally {
       setLookingUp(false);
     }
@@ -93,16 +61,9 @@ export default function RunnerDeliveryScannerScreen() {
       setActiveOrder(result);
       setVerifiedSuccess(true);
       Alert.alert('Handover Verified!', 'Delivery marked DELIVERED and vendor escrow unlocked.');
-    } catch {
-      // Offline / mock verification success
-      setActiveOrder({
-        ...activeOrder,
-        status: 'DELIVERED',
-        isEscrowLocked: false,
-        actualDeliveryAt: new Date().toISOString(),
-      });
-      setVerifiedSuccess(true);
-      Alert.alert('Handover Verified!', 'Delivery marked DELIVERED and vendor escrow unlocked.');
+    } catch (error) {
+      setVerifiedSuccess(false);
+      Alert.alert('Handover not confirmed', error instanceof Error ? error.message : 'The server could not verify this handover. The order status has not changed.');
     } finally {
       setVerifying(false);
     }
