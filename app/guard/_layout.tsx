@@ -20,6 +20,7 @@ export default function GuardLayout() {
     <Stack.Screen name="index" />
     <Stack.Screen name="tabs" />
     <Stack.Screen name="walk-in" />
+    <Stack.Screen name="voice-entry" />
     <Stack.Screen name="contractor-crew" />
     <Stack.Screen name="tabs/attendance" />
     <Stack.Screen name="tabs/handover" />
