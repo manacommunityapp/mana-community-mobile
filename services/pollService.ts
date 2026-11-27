@@ -43,13 +43,19 @@ export const pollService = {
     }
   },
 
-  async vote(postId: number, optionIds: number[]): Promise<PostDto> {
+  async vote(postId: number, optionIds: number[], flatId?: number): Promise<PostDto> {
     try {
-      const res = await api.post<PostDto>(`/polls/${postId}/vote`, { optionIds });
+      const payload = flatId != null ? { optionIds, flatId } : { optionIds };
+      const res = await api.post<PostDto>(`/polls/${postId}/vote`, payload);
       return res.data;
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to record vote. Please try again.');
     }
+  },
+
+  async checkFlatEligibility(postId: number, flatId: number): Promise<any> {
+    const res = await api.get<any>(`/polls/${postId}/eligibility`, { params: { flatId } });
+    return res.data;
   },
 
   async retractVote(postId: number): Promise<PostDto> {

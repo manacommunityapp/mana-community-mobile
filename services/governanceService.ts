@@ -343,6 +343,65 @@ export const governanceService = {
     }
   },
 
+  async getElectionPublicKey(electionId: number): Promise<{ electionId: number; modulusHex: string; publicExponentHex: string }> {
+    const res = await api.get<any>(`/governance/elections/${electionId}/public-key`);
+    return res.data?.data ?? res.data;
+  },
+
+  async requestBlindToken(electionId: number, flatId: number, blindedMessageHex: string): Promise<any> {
+    const res = await api.post<any>(`/governance/elections/${electionId}/blind-token`, {
+      flatId,
+      blindedMessageHex,
+    });
+    return res.data?.data ?? res.data;
+  },
+
+  async castSecretBallot(
+    electionId: number,
+    nominationId: number,
+    tokenHex: string,
+    unblindedSignatureHex: string,
+  ): Promise<{ accepted: boolean; receiptCode: string; ballotHash: string }> {
+    const res = await api.post<any>(`/governance/elections/${electionId}/secret-ballot`, {
+      nominationId,
+      tokenHex,
+      unblindedSignatureHex,
+    });
+    return res.data?.data ?? res.data;
+  },
+
+  async checkInAgm(
+    meetingId: number,
+    flatId: number,
+    attendeeRole: 'OWNER' | 'CO_OWNER' | 'PROXY' = 'OWNER',
+    attendanceMode: 'IN_PERSON_QR' | 'ONLINE_WS' = 'ONLINE_WS',
+  ): Promise<any> {
+    const res = await api.post<any>(`/governance/meetings/${meetingId}/checkin`, {
+      flatId,
+      attendeeRole,
+      attendanceMode,
+    });
+    return res.data;
+  },
+
+  async registerAgmProxy(meetingId: number, flatId: number, proxyHolderUserId: number): Promise<any> {
+    const res = await api.post<any>(`/governance/meetings/${meetingId}/register-proxy`, {
+      flatId,
+      proxyHolderUserId,
+    });
+    return res.data;
+  },
+
+  async revokeAgmProxy(meetingId: number, flatId: number): Promise<any> {
+    const res = await api.post<any>(`/governance/meetings/${meetingId}/revoke-proxy`, { flatId });
+    return res.data;
+  },
+
+  async openResolutionVoting(resolutionId: number, meetingId: number): Promise<any> {
+    const res = await api.post<any>(`/governance/resolutions/${resolutionId}/open-voting`, { meetingId });
+    return res.data;
+  },
+
   POSITION_LABELS,
 };
 
