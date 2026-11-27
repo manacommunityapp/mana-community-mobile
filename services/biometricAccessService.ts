@@ -275,5 +275,29 @@ export const biometricAccessService = {
     const res = await api.post(`/v1/access/turnstiles/${turnstileId}/relay-unlock`, { durationSeconds: durationSec });
     return res.data;
   },
+
+  async getBiometricDeltasSince(communityId: number, sinceVersion = 0): Promise<any[]> {
+    const res = await api.get<any[]>(`/api/v1/access/turnstiles/deltas/${communityId}`, {
+      params: { sinceVersion },
+    });
+    return res.data ?? [];
+  },
+
+  async revokeBiometricKillSwitch(userId: number, reason?: string): Promise<any> {
+    const res = await api.post<any>(`/api/v1/access/turnstiles/revoke/${userId}`, { reason });
+    return res.data;
+  },
+
+  async evaluateApbSwipe(payload: {
+    communityId?: number;
+    zoneId?: string;
+    credentialId: string;
+    direction?: 'ENTRY' | 'EXIT';
+    turnstileId?: string;
+    irPersonsDetected?: number;
+  }): Promise<any> {
+    const res = await api.post<any>('/api/v1/access/turnstiles/apb-swipe', payload);
+    return res.data;
+  },
 };
 

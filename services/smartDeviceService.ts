@@ -63,4 +63,19 @@ export const smartDeviceService = {
     const d = res.data as any;
     return d?.data ?? d;
   },
+
+  async issueOfflineTimeBoundPin(
+    deviceId: number,
+    visitorName: string,
+    validFromIso: string,
+    validUntilIso: string,
+    singleUse = true,
+  ): Promise<any> {
+    const res = await api.post<ApiEnvelope<any>>(
+      `/api/devices/${deviceId}/offline-pin`,
+      { visitorName, validFrom: validFromIso, validUntil: validUntilIso, singleUse },
+    );
+    const d = res.data as any;
+    return d?.data ?? d;
+  },
 };
