@@ -20,6 +20,9 @@ describe('Express Delivery Partner API Suite (Mobile Spec)', () => {
       const parts = clean.split(':');
       return { communityId: parts[1], partner: parts[2], orderId: parts[3], code: parts[4] };
     }
+    if (clean.startsWith('EXP-B-')) {
+      return { type: 'BATCH_MANIFEST', code: clean };
+    }
     if (clean.startsWith('EXP-')) {
       return { code: clean };
     }
@@ -69,5 +72,14 @@ describe('Express Delivery Partner API Suite (Mobile Spec)', () => {
     const shortNum = '8842';
     const parsedNum = parseExpressToken(shortNum);
     assert.equal(parsedNum.code, 'EXP-8842');
+  });
+
+  it('4. Parses EXP-B Master Manifest codes and computes dynamic courier overstay SLA', () => {
+    const manifestToken = parseExpressToken('exp-b-4410');
+    assert.equal(manifestToken.type, 'BATCH_MANIFEST');
+    assert.equal(manifestToken.code, 'EXP-B-4410');
+
+    const resolveCourierSla = (distinctFlats) => 15 + 3 * Math.max(1, distinctFlats);
+    assert.equal(resolveCourierSla(15), 60); // 15 + 3*15 = 60 mins for 15-flat bulk drop
   });
 });

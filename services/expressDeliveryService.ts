@@ -26,6 +26,28 @@ export interface ExpressVerifyResponse {
   timestamp: string;
 }
 
+export interface ExpressBatchManifestResponse {
+  success: boolean;
+  allowed: boolean;
+  manifestCode: string;
+  partner?: string;
+  status?: string;
+  totalPackages?: number;
+  distinctFlats?: number;
+  distinctFlatsNotified?: number;
+  deliveredPackages?: number;
+  pendingPackages?: number;
+  barrierAction: 'OPEN_BOOM_BARRIER' | 'OPEN_EXIT_BARRIER' | 'HOLD';
+  message: string;
+}
+
+export interface ExpressBatchCheckoutRequest {
+  manifestCode: string;
+  gateId?: string;
+  deliveredOrderIds?: string[];
+  undeliveredOrderIds?: string[];
+}
+
 export const expressDeliveryService = {
   async getPreferences(communityId: number, flatNumber: string): Promise<ResidentDeliveryPreference> {
     try {
@@ -75,6 +97,50 @@ export const expressDeliveryService = {
         message: isExp ? 'PRE-APPROVED: Express delivery authorized (Offline Cache)' : 'Code not found',
         barrierAction: isExp ? 'OPEN_BOOM_BARRIER' : 'HOLD',
         timestamp: new Date().toISOString(),
+      };
+    }
+  },
+
+  isBatchManifestCode(entryCode: string): boolean {
+    return entryCode.trim().toUpperCase().startsWith('EXP-B-');
+  },
+
+  async verifyBatchManifest(entryCode: string, gateId = 'GATE_1'): Promise<ExpressBatchManifestResponse> {
+    try {
+      const res = await apiClient.post<ExpressBatchManifestResponse>('/api/v1/partners/delivery/batch/verify', {
+        entryCode,
+        gateId,
+      });
+      return res.data;
+    } catch {
+      const valid = this.isBatchManifestCode(entryCode);
+      return {
+        success: valid,
+        allowed: valid,
+        manifestCode: entryCode.trim().toUpperCase(),
+        status: valid ? 'CHECKED_IN' : 'DENIED',
+        barrierAction: valid ? 'OPEN_BOOM_BARRIER' : 'HOLD',
+        message: valid ? '1-TAP BATCH CLEARANCE (Offline Cache)' : 'Batch manifest not found',
+      };
+    }
+  },
+
+  async reconcileBatchExit(req: ExpressBatchCheckoutRequest): Promise<ExpressBatchManifestResponse> {
+    try {
+      const res = await apiClient.post<ExpressBatchManifestResponse>('/api/v1/partners/delivery/batch/checkout', req);
+      return res.data;
+    } catch {
+      const pending = req.undeliveredOrderIds?.length ?? 0;
+      const delivered = req.deliveredOrderIds?.length ?? 0;
+      return {
+        success: true,
+        allowed: true,
+        manifestCode: req.manifestCode,
+        status: pending > 0 ? 'RTO_CARRIED_OUT' : 'COMPLETED',
+        deliveredPackages: delivered,
+        pendingPackages: pending,
+        barrierAction: 'OPEN_EXIT_BARRIER',
+        message: `Exit queued offline (${delivered} delivered, ${pending} RTO)`,
       };
     }
   },
