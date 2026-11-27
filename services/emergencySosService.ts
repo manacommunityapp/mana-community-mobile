@@ -69,4 +69,58 @@ export const emergencySosService = {
     const res = await api.post(`/v1/emergency/sos/${incidentId}/resolve`, { resolutionNotes });
     return res.data;
   },
+
+  encodeCompactSosFrame(params: {
+    communityId: number;
+    residentId: number;
+    towerBlock: string;
+    locationCode: string;
+    typeCode: 'L' | 'F' | 'G' | 'M' | 'S' | 'P';
+    epochSec?: number;
+    idempotencyKey: string;
+  }): string {
+    const ts = params.epochSec ?? Math.floor(Date.now() / 1000);
+    return `SOS1|${params.communityId}|${params.residentId}|${params.towerBlock}|${params.locationCode}|${params.typeCode}|${ts}|${params.idempotencyKey}`;
+  },
+
+  async triggerCompactLiftSos(params: {
+    communityId: number;
+    residentId: number;
+    towerBlock: string;
+    locationCode: string;
+    typeCode?: 'L' | 'F' | 'G' | 'M' | 'S' | 'P';
+    idempotencyKey?: string;
+    nearestGuardId?: number;
+    smsGatewayNumber?: string;
+  }): Promise<{ deliveredVia: 'COMPACT_2G' | 'SMS_FALLBACK'; frame: string; response?: any }> {
+    const idem = params.idempotencyKey ?? `sos-${Date.now().toString(36)}`;
+    const frame = this.encodeCompactSosFrame({
+      communityId: params.communityId,
+      residentId: params.residentId,
+      towerBlock: params.towerBlock,
+      locationCode: params.locationCode,
+      typeCode: params.typeCode ?? 'L',
+      idempotencyKey: idem,
+    });
+    try {
+      const res = await api.post(
+        '/api/v1/emergency/sos/compact',
+        { rawFrame: frame, ingestChannel: 'COMPACT_2G', nearestGuardId: params.nearestGuardId },
+        { timeout: 2500 },
+      );
+      return { deliveredVia: 'COMPACT_2G', frame, response: res.data };
+    } catch {
+      return { deliveredVia: 'SMS_FALLBACK', frame };
+    }
+  },
+
+  async broadcastTowerEvacuation(payload: {
+    towerBlock: string;
+    emergencyType: string;
+    message: string;
+    assemblyPoint?: string;
+  }): Promise<any> {
+    const res = await api.post('/api/v1/emergency/evacuation/broadcast', payload);
+    return res.data;
+  },
 };
