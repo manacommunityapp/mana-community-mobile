@@ -688,4 +688,22 @@ export const homeServicesService = {
     api.put<HsRecurringPlan>(`/api/home-services/plans/${id}/pause`, {}).then(r => r.data),
   cancelPlan: (id: number) =>
     api.delete<HsRecurringPlan>(`/api/home-services/plans/${id}`).then(r => r.data),
+  upsertMorningOverride: (planId: number, deliveryDate: string, overrideQty: number, paused = false) =>
+    api.put<any>(`/api/home-services/plans/${planId}/override`, { deliveryDate, overrideQty, paused }).then(r => r.data),
+  quoteDynamicSlot: (payload: { basePrice: number; isWeekend: boolean; zoneUtilizationPct: number; sameCommunityCluster: boolean }) =>
+    api.post<any>('/api/home-services/bookings/quote-dynamic', payload).then(r => r.data),
+  holdSlot: (slotId: number, holdToken: string) =>
+    api.post<any>(`/api/home-services/bookings/slots/${slotId}/hold`, { holdToken }).then(r => r.data),
+  confirmHeldSlot: (slotId: number, payload: { holdToken: string; flatNumber: string; category: string; quotedPrice: number }) =>
+    api.post<any>(`/api/home-services/bookings/slots/${slotId}/confirm`, payload).then(r => r.data),
+  initiateSplitOrder: (payload: {
+    orderRef: string;
+    bookingId?: number;
+    vendorId: number;
+    grossAmount: number;
+    pointsUsed: number;
+    couponCode?: string;
+    couponDiscount: number;
+    upiAmount: number;
+  }) => api.post<any>('/api/home-services/payouts/multi-tender/initiate', payload).then(r => r.data),
 };
