@@ -19,6 +19,9 @@ export default function FinanceLayout() {
       <Stack.Screen name="society-reports" />
       <Stack.Screen name="vendor-bills" />
       <Stack.Screen name="accounting" />
+      <Stack.Screen name="statutory-tax" />
+      <Stack.Screen name="tally-sync" />
+      <Stack.Screen name="finops" />
       <Stack.Screen name="unified-vendors" />
       <Stack.Screen name="payment-success" />
       <Stack.Screen name="payment-failed" />
